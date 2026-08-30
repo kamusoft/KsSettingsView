@@ -152,3 +152,4 @@
 - Kasane 側の反映 (オーナー実施) を確認した。`distill.archive-media` が既定 `delete` で新設されたため、当初想定した「プロジェクト側で config に opt-in を書く」作業は不要になった
 - **ADR**: 「開発ハーネスの記録を公開リポジトリに含める」判断を cross/ADR-0021 へ最小改訂で追記した (Decision に公開範囲、Consequences に「今後の change 記録もすべて公開される」制約と lint / hook がその担保である旨。status は proposed のまま)。選択肢は A) ADR-0021 に最小改訂 / B) 新規 ADR / C) ADR 化しない で、採用 **A** — ADR-0021 が既にこれを前提にしており (Consequences の「経緯は kasane/changes/archive・kasane/decisions に残る」)、決定として明示されていなかっただけのため
 - **research 完了**: roadmap.md の phase-2 を completed にし、後続 (phase-3) へ 2 論点を申し送った
+- **cross/ADR-0021 を accepted へ昇格** (2026-08-30、オーナー承認)。public 化が完了し決定が実体化したため。research フェーズは蒸留 (ksn-distill) を通らず自動昇格の経路がないので、ロードマップ本体の「accepted への昇格は各フェーズの蒸留時に行う」に research フェーズの扱いを補足した。同じく proposed の cross/ADR-0018 (SwiftPM の配信形) は実装が phase-4 のため proposed のまま

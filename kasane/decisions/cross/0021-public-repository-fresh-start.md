@@ -1,7 +1,7 @@
 ---
 id: 0021
 title: public リポジトリは新規に作り、既存の private リポジトリの履歴は引き継がない
-status: proposed
+status: accepted
 date: 2026-08-21
 ---
 

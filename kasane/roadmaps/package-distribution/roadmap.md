@@ -2,7 +2,7 @@
 
 KsSettingsView の 3 platform (iOS Swift / Android Kotlin / .NET MAUI) を公開レジストリへ lockstep で配信できる仕組み (パッケージング・検証・リリース CI) を整備し、初回リリースまで到達する。
 
-ksn-explore (2026-08-21) で配信先・バージョニング・各 platform のパッケージ形・CI・検証方法を確定した上で起案した ([exploration.md](exploration.md))。設計の正は proposed ADR 群 (下記) で、accepted への昇格は各フェーズの蒸留時に行う。姉妹ライブラリ KsDialogs の先行設計 (KsDialogs cross/ADR-0008・0009、maui/ADR-0004) の翻案であり、CI・検証 (phase-3・7・8) は本ロードマップが先行して KsDialogs へ逆流させる。
+ksn-explore (2026-08-21) で配信先・バージョニング・各 platform のパッケージ形・CI・検証方法を確定した上で起案した ([exploration.md](exploration.md))。設計の正は proposed ADR 群 (下記) で、accepted への昇格は各フェーズの蒸留時に行う (蒸留を伴わない research フェーズ由来の ADR は、フェーズ完了時にオーナーの明示承認で昇格する)。姉妹ライブラリ KsDialogs の先行設計 (KsDialogs cross/ADR-0008・0009、maui/ADR-0004) の翻案であり、CI・検証 (phase-3・7・8) は本ロードマップが先行して KsDialogs へ逆流させる。
 
 ## ゴール / 非ゴール
 
