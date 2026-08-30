@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CustomCell デモ mock — Plan A (ベーシック構成)</title>
+<style>
+  /* SampleTheme (MAUI 互換) 参照:
+     背景 #F2EFE6 / Cell 背景 #FFF / セパレータ #E6DAB9 / アクセント #FFBF00
+     ヘッダ文字 #CC9900 / タイトル #555 / 淡色文字 #999 */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #cfcabc; font-family: -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
+         display: flex; justify-content: center; padding: 24px; }
+  .phone { width: 390px; background: #F2EFE6; border-radius: 24px; overflow: hidden;
+           box-shadow: 0 8px 32px rgba(0,0,0,.25); }
+  .navbar { background: #F2EFE6; padding: 18px 16px 10px; text-align: center;
+            font-size: 17px; font-weight: 600; color: #555;
+            border-bottom: 1px solid #E6DAB9; }
+  .section-header { padding: 18px 16px 6px; font-size: 13px; color: #CC9900; }
+  .section-footer { padding: 6px 16px 2px; font-size: 12px; color: #999; }
+  .cells { background: #fff; border-top: 1px solid #E6DAB9; border-bottom: 1px solid #E6DAB9; }
+  .cell { display: flex; align-items: center; min-height: 48px; padding: 10px 16px;
+          border-bottom: 1px solid #E6DAB9; }
+  .cell:last-child { border-bottom: none; }
+  .chevron { color: #c9c2ad; font-size: 20px; font-weight: 600; margin-left: 10px; }
+  .grow { flex: 1; }
+  .title { font-size: 16px; color: #555; }
+  .sub { font-size: 12px; color: #999; margin-top: 2px; }
+
+  /* ① インライン */
+  .dot { width: 12px; height: 12px; border-radius: 50%; background: #34C759; margin-right: 12px; }
+  .badge { background: #FFBF00; color: #fff; font-size: 12px; font-weight: 600;
+           border-radius: 10px; padding: 3px 10px; }
+  .static-caption { width: 100%; text-align: center; font-size: 13px; color: #999; padding: 4px 0; }
+
+  /* ② SliderCell */
+  .slider-row { display: flex; align-items: center; gap: 12px; width: 100%; }
+  .slider-label { font-size: 16px; color: #555; width: 64px; }
+  .track { flex: 1; height: 4px; background: #E6DAB9; border-radius: 2px; position: relative; }
+  .fill { position: absolute; left: 0; top: 0; height: 4px; background: #FFBF00; border-radius: 2px; }
+  .knob { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 22px; height: 22px;
+          border-radius: 50%; background: #fff; border: 1px solid #ddd;
+          box-shadow: 0 2px 5px rgba(0,0,0,.25); }
+  .slider-value { font-size: 14px; color: #999; width: 40px; text-align: right; }
+
+  /* ③ 動的高さ */
+  .expander { width: 100%; }
+  .expander-head { display: flex; align-items: center; }
+  .disclose { color: #FFBF00; font-size: 13px; margin-right: 8px; }
+  .expand-body { margin-top: 8px; font-size: 13px; color: #777; line-height: 1.6;
+                 background: #FAF7EE; border-radius: 8px; padding: 10px 12px; }
+
+  /* ④ showArrow / onTap */
+  .count-pill { background: #FAF3D9; color: #CC9900; font-size: 13px; font-weight: 600;
+                border-radius: 12px; padding: 3px 10px; }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="navbar">CustomCell デモ — Plan A</div>
+
+  <div class="section-header">インライン CUSTOMCELL</div>
+  <div class="cells">
+    <div class="cell">
+      <div class="dot"></div>
+      <div class="grow">
+        <div class="title">同期ステータス</div>
+        <div class="sub">content: SyncState(ok: true)</div>
+      </div>
+      <div class="badge">同期済み</div>
+    </div>
+    <div class="cell">
+      <div class="static-caption">content なしの静的 CustomCell（キャプション行）</div>
+    </div>
+  </div>
+  <div class="section-footer">content + builder を DSL に直書きした例と、content 省略の静的糖衣の例。</div>
+
+  <div class="section-header">再利用（SLIDERCELL ラップ関数）</div>
+  <div class="cells">
+    <div class="cell">
+      <div class="slider-row">
+        <div class="slider-label">明るさ</div>
+        <div class="track"><div class="fill" style="width:70%"></div><div class="knob" style="left:70%"></div></div>
+        <div class="slider-value">70</div>
+      </div>
+    </div>
+    <div class="cell">
+      <div class="slider-row">
+        <div class="slider-label">音量</div>
+        <div class="track"><div class="fill" style="width:40%"></div><div class="knob" style="left:40%"></div></div>
+        <div class="slider-value">40</div>
+      </div>
+    </div>
+  </div>
+  <div class="section-footer">SliderCell(label:value:) 関数が CustomCell を返す再利用例。</div>
+
+  <div class="section-header">動的高さ</div>
+  <div class="cells">
+    <div class="cell">
+      <div class="expander">
+        <div class="expander-head">
+          <div class="disclose">▶</div>
+          <div class="title">利用規約（タップで展開）</div>
+        </div>
+      </div>
+    </div>
+    <div class="cell">
+      <div class="expander">
+        <div class="expander-head">
+          <div class="disclose">▼</div>
+          <div class="title">プライバシーポリシー（展開中）</div>
+        </div>
+        <div class="expand-body">
+          本アプリはお客様の設定情報を端末内にのみ保存します。収集した情報を第三者に提供することはありません。
+          設定のバックアップを有効にした場合のみ、暗号化した上でクラウドに保存します。
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="section-footer">content 内の状態で展開/折りたたみ。行高さは self-sizing で追従する。</div>
+
+  <div class="section-header">SHOWARROW / ONTAP</div>
+  <div class="cells">
+    <div class="cell">
+      <div class="grow">
+        <div class="title">詳細設定</div>
+        <div class="sub">showArrow: true / onTap で遷移</div>
+      </div>
+      <div class="chevron">›</div>
+    </div>
+    <div class="cell">
+      <div class="grow">
+        <div class="title">行タップカウンタ</div>
+        <div class="sub">onTap のみ（矢印なし）</div>
+      </div>
+      <div class="count-pill">3 回</div>
+    </div>
+  </div>
+  <div class="section-footer">chevron は既存 CommandCell と同一素材・同一位置で表示される。</div>
+
+  <div class="section-header">スクロール耐性（ダミー #01–#40）</div>
+  <div class="cells">
+    <div class="cell"><div class="dot" style="background:#FF8D28"></div><div class="grow"><div class="title">ダミー行 #01</div><div class="sub">content: DummyItem(1)</div></div><div class="count-pill">#01</div></div>
+    <div class="cell"><div class="dot" style="background:#CB30E0"></div><div class="grow"><div class="title">ダミー行 #02</div><div class="sub">content: DummyItem(2)</div></div><div class="count-pill">#02</div></div>
+    <div class="cell"><div class="dot" style="background:#00C3D0"></div><div class="grow"><div class="title">ダミー行 #03</div><div class="sub">content: DummyItem(3)</div></div><div class="count-pill">#03</div></div>
+    <div class="cell"><div class="dot" style="background:#FF2D55"></div><div class="grow"><div class="title">ダミー行 #04</div><div class="sub">content: DummyItem(4)</div></div><div class="count-pill">#04</div></div>
+    <div class="cell"><div class="dot" style="background:#34C759"></div><div class="grow"><div class="title">ダミー行 #05</div><div class="sub">content: DummyItem(5)</div></div><div class="count-pill">#05</div></div>
+    <div class="cell"><div class="dot" style="background:#0088FF"></div><div class="grow"><div class="title">ダミー行 #06</div><div class="sub">content: DummyItem(6)</div></div><div class="count-pill">#06</div></div>
+    <div class="cell"><div class="dot" style="background:#FF8D28"></div><div class="grow"><div class="title">ダミー行 #07</div><div class="sub">content: DummyItem(7)</div></div><div class="count-pill">#07</div></div>
+    <div class="cell"><div class="dot" style="background:#CB30E0"></div><div class="grow"><div class="title">ダミー行 #08</div><div class="sub">content: DummyItem(8)</div></div><div class="count-pill">#08</div></div>
+    <div class="cell" style="justify-content:center"><div class="sub">… 同型の行を #40 まで生成（実装は SampleTheme のアクセント6色を循環）…</div></div>
+  </div>
+  <div class="section-footer">十分なスクロール量を確保し、行の再利用（リサイクル）で表示・listener が混線しないことを確認する。</div>
+  <div style="height:24px"></div>
+</div>
+</body>
+</html>

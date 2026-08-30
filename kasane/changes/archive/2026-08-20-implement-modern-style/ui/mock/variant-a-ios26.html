@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Modern mock A — iOS 26 風 (radius 26)</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Hiragino Sans", "Helvetica Neue", sans-serif;
+    background: #E5E5EA;
+    display: flex; justify-content: center; padding: 24px;
+  }
+  .device {
+    /* 下地はサンプル共通 SampleTheme の PaleBackColorPrimary (#F2EFE6)。
+       Theme() 既定 (白) ではなくデモ Theme の backgroundColor を表す */
+    width: 393px; background: #F2EFE6; border-radius: 24px;
+    padding: 16px 0 32px; box-shadow: 0 4px 24px rgba(0,0,0,.15);
+  }
+  .screen-title { text-align: center; font-size: 17px; font-weight: 600; padding: 8px 0 14px; }
+  .annotation {
+    margin: 4px 16px 10px; padding: 8px 10px; background: #FFF8E1;
+    border: 1px dashed #C8A200; border-radius: 8px; font-size: 11px; color: #6b5900; line-height: 1.5;
+  }
+  /* ===== Modern 装飾: variant A ===== */
+  /* sectionMargin: top 22 / leading 16 / bottom 0 / trailing 16 (セクション間の見た目間隔は 22) */
+  /* sectionCornerRadius: 26 */
+  .section { margin: 22px 16px 0; }
+  .box {
+    background: #FFFFFF;
+    border-radius: 26px;
+    overflow: hidden;
+  }
+  .box.bordered { border: 2px solid #C7C7CC; }
+  .section-header {
+    font-size: 13px; color: #6D6D72; padding: 0 16px 7px; margin-top: 0;
+    display: flex; align-items: flex-end; min-height: 20px;
+  }
+  .section-footer { font-size: 13px; color: #6D6D72; padding: 7px 16px 0; line-height: 1.4; }
+  .cell {
+    display: flex; align-items: center; gap: 12px;
+    min-height: 46px; padding: 6px 16px; position: relative; background: transparent;
+  }
+  /* 中間 separator: 箱の内側左端から 16px、右端は箱の内側右端まで。上下端には無し */
+  /* 中間 separator は箱の両端から 16 空ける (trailing まで引くと箱が分断されて見える) */
+  .cell + .cell::before {
+    content: ""; position: absolute; top: 0; left: 16px; right: 16px;
+    height: 1px; background: #C8C7CC; transform: scaleY(.5);
+  }
+  .icon {
+    width: 29px; height: 29px; border-radius: 7px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 16px; color: #fff;
+  }
+  .title { font-size: 17px; color: #000; flex: 1; }
+  .value { font-size: 17px; color: #8E8E93; }
+  .chevron { color: #C7C7CC; font-size: 15px; margin-left: 2px; }
+  .switch {
+    width: 51px; height: 31px; border-radius: 16px; background: #E9E9EA; position: relative; flex-shrink: 0;
+  }
+  .switch.on { background: #34C759; }
+  .switch::after {
+    content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px;
+    border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25);
+  }
+  .switch.on::after { left: auto; right: 2px; }
+</style>
+</head>
+<body>
+<div class="device">
+  <div class="screen-title">設定</div>
+  <div class="annotation">
+    案 A「iOS 26 風」: sectionCornerRadius 26 / sectionMargin 上 22・左右 16。
+    Header / Footer は箱の外、separator は中間のみ (箱の内側 leading / trailing 両端から 16)。
+    下地はサンプルのデモ Theme (PaleBackColorPrimary) — Theme() 既定の白ではない。
+  </div>
+
+  <!-- Section 1: Header/Footer なし・icon あり -->
+  <div class="section">
+    <div class="box">
+      <div class="cell">
+        <div class="icon" style="background:#FF9500">✈️</div>
+        <div class="title">機内モード</div>
+        <div class="switch"></div>
+      </div>
+      <div class="cell">
+        <div class="icon" style="background:#007AFF">📶</div>
+        <div class="title">Wi-Fi</div>
+        <div class="value">demoAP-0a1b2c-5</div><div class="chevron">›</div>
+      </div>
+      <div class="cell">
+        <div class="icon" style="background:#0A84FF">🅱️</div>
+        <div class="title">Bluetooth</div>
+        <div class="value">オン</div><div class="chevron">›</div>
+      </div>
+      <div class="cell">
+        <div class="icon" style="background:#34C759">🔋</div>
+        <div class="title">バッテリー</div>
+        <div class="chevron">›</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: Header + Footer 付き (どちらも箱の外) -->
+  <div class="section">
+    <div class="section-header">外観モード</div>
+    <div class="box">
+      <div class="cell">
+        <div class="title">自動</div>
+        <div class="switch on"></div>
+      </div>
+      <div class="cell">
+        <div class="title">テキストサイズを変更</div>
+        <div class="chevron">›</div>
+      </div>
+    </div>
+    <div class="section-footer">好みに応じて外観モードを選択できます。Header と Footer は箱の外側に配置されます。</div>
+  </div>
+
+  <!-- Section 3: 単一 Cell (separator なし) -->
+  <div class="section">
+    <div class="box">
+      <div class="cell">
+        <div class="title">True Tone</div>
+        <div class="switch on"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 4: border 指定のデモ (borderWidth 2 / borderColor gray) -->
+  <div class="section">
+    <div class="section-header">ボーダー指定時の例</div>
+    <div class="box bordered">
+      <div class="cell">
+        <div class="title">sectionBorderWidth: 2</div>
+      </div>
+      <div class="cell">
+        <div class="title">sectionBorderColor: gray</div>
+      </div>
+    </div>
+    <div class="section-footer">既定はボーダーなし (width 0)。指定時のみ枠線が箱の輪郭に描かれます。</div>
+  </div>
+</div>
+</body>
+</html>

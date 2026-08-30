@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:ks="clr-namespace:KsSettingsView.Maui;assembly=KsSettingsView.Maui"
+             x:Class="KsSettingsView.MauiHost.SettingsPage"
+             Title="設定">
+  <Grid RowDefinitions="*,Auto">
+    <ks:SettingsView x:Name="Settings"
+                     RootHeaderText="ルートヘッダ"
+                     RootFooterText="ルートフッタ">
+
+      <!-- Root の accessory。text も同時に指定してあり、View がある間は View が表示される -->
+      <ks:SettingsView.RootHeaderView>
+        <Border BackgroundColor="#DDEBFF" StrokeThickness="0" Padding="16,10">
+          <Label TextColor="#1F4E9C" Text="Root Header View" />
+        </Border>
+      </ks:SettingsView.RootHeaderView>
+      <ks:SettingsView.RootFooterView>
+        <Border BackgroundColor="#DDEBFF" StrokeThickness="0" Padding="16,10">
+          <Label TextColor="#1F4E9C" Text="Root Footer View" />
+        </Border>
+      </ks:SettingsView.RootFooterView>
+
+      <ks:Section x:Name="AccessorySection" HeaderText="表示" FooterText="セクションフッタ">
+        <ks:Section.HeaderView>
+          <Border x:Name="SectionHeaderView" BackgroundColor="#E4F3E6" StrokeThickness="0" Padding="16,10">
+            <VerticalStackLayout Spacing="2">
+              <Label TextColor="#2E6B33" Text="Section Header View" />
+              <Label x:Name="GrowLabel" TextColor="#2E6B33" FontSize="12" Text="内容 1 行" />
+            </VerticalStackLayout>
+          </Border>
+        </ks:Section.HeaderView>
+        <ks:Section.FooterView>
+          <Border BackgroundColor="#E4F3E6" StrokeThickness="0" Padding="16,10">
+            <Label TextColor="#2E6B33" Text="Section Footer View" />
+          </Border>
+        </ks:Section.FooterView>
+
+        <ks:LabelCell x:Name="ValueCell"
+                      Title="テーマ"
+                      Description="配色の設定"
+                      ValueText="ライト" />
+        <ks:LabelCell Title="文字サイズ"
+                      HintText="端末の設定に従う"
+                      ValueText="標準" />
+      </ks:Section>
+
+      <ks:Section HeaderText="{Binding SectionHeader}">
+        <ks:LabelCell Title="{Binding BoundTitle}" ValueText="{Binding BoundValue}" />
+      </ks:Section>
+    </ks:SettingsView>
+
+    <Grid Grid.Row="1"
+          Padding="8"
+          ColumnSpacing="6"
+          RowSpacing="6"
+          ColumnDefinitions="*,*"
+          RowDefinitions="Auto,Auto,Auto">
+      <Button Text="ValueText を更新" FontSize="12" Clicked="OnUpdateClicked" />
+      <Button x:Name="GrowButton"
+              Grid.Column="1"
+              Text="Header の内容を増やす"
+              FontSize="12"
+              Clicked="OnGrowClicked" />
+      <Button x:Name="HeaderHeightButton"
+              Grid.Row="1"
+              Text="HeaderHeight を 44 に"
+              FontSize="12"
+              Clicked="OnHeaderHeightClicked" />
+      <Button x:Name="SectionVisibilityButton"
+              Grid.Row="1"
+              Grid.Column="1"
+              Text="Section を隠す"
+              FontSize="12"
+              Clicked="OnToggleSectionClicked" />
+      <Button Grid.Row="2"
+              Text="Header View を差し替え"
+              FontSize="12"
+              Clicked="OnSwapHeaderViewClicked" />
+      <Button x:Name="DetachButton"
+              Grid.Row="2"
+              Grid.Column="1"
+              Text="Header View を外す"
+              FontSize="12"
+              Clicked="OnToggleHeaderViewClicked" />
+    </Grid>
+  </Grid>
+</ContentPage>

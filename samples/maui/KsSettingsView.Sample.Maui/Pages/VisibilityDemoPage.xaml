@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+  Section.IsVisible / Cell.IsVisible の挙動を確認するデモ画面。
+  末尾 / 中間それぞれの位置で Cell・Section を出し入れし、アニメーションを比較する。
+  あわせて Section.IsHeaderVisible / Section.IsFooterVisible による Header / Footer 単位の出し入れも観察できる。
+  iOS / Android の同デモ画面と文言・構成を揃えてある。
+  タイトルは SampleScreen の一元定義から与えられるため、ここでは設定しない。
+-->
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:ks="clr-namespace:KsSettingsView.Maui;assembly=KsSettingsView.Maui"
+             xmlns:vm="clr-namespace:KsSettingsView.Sample.Maui.ViewModels"
+             x:Class="KsSettingsView.Sample.Maui.Pages.VisibilityDemoPage"
+             x:DataType="vm:VisibilityDemoViewModel">
+  <ks:SettingsView>
+
+    <!-- 制御用トグル群 (常に表示) -->
+    <ks:Section HeaderText="基本設定">
+      <ks:SwitchCell Title="末尾セル表示"
+                     Description="「観察対象 Section A」の末尾 Cell を出し入れ"
+                     On="{Binding ShowTailCell}" />
+      <ks:SwitchCell Title="中間セル表示"
+                     Description="「観察対象 Section A」の中間 Cell を出し入れ"
+                     On="{Binding ShowMiddleCell}" />
+      <ks:SwitchCell Title="末尾セクション表示"
+                     Description="末尾の Section C をまるごと出し入れ"
+                     On="{Binding ShowTailSection}" />
+      <ks:SwitchCell Title="中間セクション表示"
+                     Description="中間の Section B をまるごと出し入れ"
+                     On="{Binding ShowMiddleSection}" />
+      <ks:SwitchCell Title="ヘッダー表示"
+                     Description="「観察対象 Section D」の Header だけを出し入れ"
+                     On="{Binding ShowHeader}" />
+      <ks:SwitchCell Title="フッター表示"
+                     Description="「観察対象 Section D」の Footer だけを出し入れ"
+                     On="{Binding ShowFooter}" />
+    </ks:Section>
+
+    <!--
+      Cell visibility 観察用。
+      A-1 / A-3 は常に表示 (中間 Cell の前後を可視化するアンカー)、A-2 と A-4 をトグルで出し入れする。
+    -->
+    <ks:Section HeaderText="観察対象 Section A（Cell 単位）">
+      <ks:LabelCell Title="A-1: 常時表示" />
+      <ks:LabelCell Title="A-2: 中間セル"
+                    Description="「中間セル表示」トグルで出し入れ"
+                    IsVisible="{Binding ShowMiddleCell}" />
+      <ks:LabelCell Title="A-3: 常時表示（中間 Cell のアンカー）" />
+      <ks:LabelCell Title="A-4: 末尾セル"
+                    Description="「末尾セル表示」トグルで出し入れ"
+                    IsVisible="{Binding ShowTailCell}" />
+    </ks:Section>
+
+    <!--
+      Section 単位 (中間) の visibility 観察用。
+      前後 Section が押し下げ・押し上げされるスライドアニメを観察できる。
+    -->
+    <ks:Section HeaderText="観察対象 Section B（中間 Section）"
+                FooterText="Section 全体が非表示になります"
+                IsVisible="{Binding ShowMiddleSection}">
+      <ks:LabelCell Title="B-1" />
+      <ks:LabelCell Title="B-2" />
+      <ks:ButtonCell Title="B-3 （Button）" />
+    </ks:Section>
+
+    <!-- 中間 Section の出し入れを観察するための「動かない隣」。 -->
+    <ks:Section HeaderText="アンカー Section（中間 Section の隣）">
+      <ks:LabelCell Title="P-1: 常時表示" />
+      <ks:LabelCell Title="P-2: 常時表示" />
+    </ks:Section>
+
+    <!--
+      Header / Footer 単位の visibility 観察用。
+      Cell の内容と accessory の文言はそのまま保持され、表示だけが切り替わる。
+    -->
+    <ks:Section HeaderText="観察対象 Section D（Header / Footer）"
+                FooterText="Header / Footer は内容を保持したまま隠れます"
+                IsHeaderVisible="{Binding ShowHeader}"
+                IsFooterVisible="{Binding ShowFooter}">
+      <ks:LabelCell Title="D-1: 常時表示" />
+      <ks:LabelCell Title="D-2: 常時表示" />
+    </ks:Section>
+
+    <!-- Section 単位 (末尾) の visibility 観察用。末尾なので fade のみ。 -->
+    <ks:Section HeaderText="観察対象 Section C（末尾 Section）"
+                FooterText="末尾なので fade アニメのみ"
+                IsVisible="{Binding ShowTailSection}">
+      <ks:LabelCell Title="C-1" />
+      <ks:LabelCell Title="C-2" />
+    </ks:Section>
+
+  </ks:SettingsView>
+</ContentPage>

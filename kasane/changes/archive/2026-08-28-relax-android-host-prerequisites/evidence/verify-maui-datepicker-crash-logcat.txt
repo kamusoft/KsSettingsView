@@ -1,0 +1,17 @@
+08-27 18:05:10.712 23175 23175 I MonoDroid: UNHANDLED EXCEPTION:
+08-27 18:05:10.715 23175 23175 I MonoDroid: Java.Lang.NoSuchMethodError: No static method DatePicker(Landroidx/compose/material3/DatePickerState;Landroidx/compose/ui/Modifier;Landroidx/compose/material3/DatePickerFormatter;Lkotlin/jvm/functions/Function2;Lkotlin/jvm/functions/Function2;ZLandroidx/compose/material3/DatePickerColors;Landroidx/compose/runtime/Composer;II)V in class Landroidx/compose/material3/DatePickerKt; or its super classes (declaration of 'androidx.compose.material3.DatePickerKt' appears in /data/app/~~2rjOGZx2bz0kItAOzzjF4Q==/jp.kamusoft.kssettingsview.samples.maui-Bf6wUH_sHOqOtfF80AjDPA==/base.apk)
+08-27 18:05:10.715 23175 23175 I MonoDroid: 
+08-27 18:05:10.715 23175 23175 I MonoDroid:   --- End of managed Java.Lang.NoSuchMethodError stack trace ---
+08-27 18:05:10.715 23175 23175 I MonoDroid: java.lang.NoSuchMethodError: No static method DatePicker(Landroidx/compose/material3/DatePickerState;Landroidx/compose/ui/Modifier;Landroidx/compose/material3/DatePickerFormatter;Lkotlin/jvm/functions/Function2;Lkotlin/jvm/functions/Function2;ZLandroidx/compose/material3/DatePickerColors;Landroidx/compose/runtime/Composer;II)V in class Landroidx/compose/material3/DatePickerKt; or its super classes (declaration of 'androidx.compose.material3.DatePickerKt' appears in /data/app/~~2rjOGZx2bz0kItAOzzjF4Q==/jp.kamusoft.kssettingsview.samples.maui-Bf6wUH_sHOqOtfF80AjDPA==/base.apk)
+08-27 18:05:10.715 23175 23175 I MonoDroid: 	at jp.kamusoft.kssettingsview.ui.DateCalendarDialog.DialogContent$lambda$0$0$0(DateCalendarDialog.kt:360)
+08-27 18:05:10.715 23175 23175 I MonoDroid: 	at jp.kamusoft.kssettingsview.ui.DateCalendarDialog.$r8$lambda$LnKELWrPuz-g_iW_7l0yHzm4n7w(DateCalendarDialog.kt:0)
+08-27 18:05:10.715 23175 23175 I MonoDroid: 	at jp.kamusoft.kssettingsview.ui.DateCalendarDialog$$ExternalSyntheticLambda13.invoke(D8$$SyntheticClass:0)
+08-27 18:05:10.715 23175 23175 I MonoDroid: 	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:122)
+08-27 18:05:10.715 23175 23175 I MonoDroid: 	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:52)
+08-27 18:05:10.715 23175 23175 I MonoDroid: 	at androidx.compose.material3.SurfaceKt$Surface$1.invoke(Surface.kt:130)
+08-27 18:05:10.715 23175 23175 I MonoDroid: 	at androidx.compose.material3.SurfaceKt$Surface$1.invoke(Surface.kt:110)
+08-27 18:05:10.715 23175 23175 I MonoDroid: 	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:122)
+08-27 18:05:10.715 23175 23175 I MonoDroid: 	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:52)
+08-27 18:05:10.715 23175 23175 I MonoDroid: 	at androidx.compose.runtime.CompositionLocalKt.CompositionLocalProvider(CompositionLocal.kt:408)
+08-27 18:05:10.715 23175 23175 I MonoDroid: 	at androidx.compose.material3.SurfaceKt.Surface-T9BRK9s(Surface.kt:107)
+08-27 18:05:10.715 23175 23175 I MonoDroid: 	at jp.kamusoft.kssettingsview.ui.DateCalendarDialog.DialogContent$lambda$0(DateCalendarDialog.kt:342)

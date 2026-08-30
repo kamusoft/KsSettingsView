@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>align-sample-parity mock 案B</title>
+<style>
+  body { margin: 0; padding: 24px; background: #d9d9de; font-family: -apple-system, "Hiragino Sans", sans-serif; }
+  h1 { font-size: 16px; color: #333; }
+  .row { display: flex; gap: 32px; flex-wrap: wrap; }
+  .phone { width: 375px; background: #F2F2F7; border-radius: 24px; border: 6px solid #1c1c1e; overflow: hidden; }
+  .navbar { background: #f8f8f8ee; padding: 14px 16px 10px; border-bottom: 0.5px solid #c6c6c8; }
+  .navbar .large { font-size: 22px; font-weight: 700; }
+  .navbar .back { color: #007aff; font-size: 13px; margin-bottom: 2px; }
+  .caption { font-size: 12px; color: #333; padding: 10px 16px; }
+  .group { margin: 18px 16px 0; }
+  .group-header { font-size: 13px; color: #6d6d72; padding: 0 4px 6px; }
+  .list { background: #fff; border-radius: 10px; overflow: hidden; }
+  .item { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; font-size: 16px; border-bottom: 0.5px solid #c6c6c8; }
+  .item:last-child { border-bottom: none; }
+  .chev { color: #c6c6c8; font-weight: 600; }
+  .spacer { height: 24px; }
+  .maui { background: #F2EFE6; padding-bottom: 24px; }
+  .m-header { color: #CC9900; font-size: 13px; padding: 16px 16px 6px; }
+  .m-footer { color: #999999; font-size: 12px; padding: 6px 16px 0; }
+  .m-sec { background: #fff; }
+  .m-cell { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; font-size: 15px; border-bottom: 0.5px solid #E6DAB9; background: #fff; }
+  .m-sec .m-cell:last-child { border-bottom: none; }
+  .m-val { color: #8e8e93; font-size: 14px; }
+  .m-ph { color: #c0c0c0; font-size: 14px; }
+  .note { font-size: 12px; color: #555; margin: 8px 0 16px; }
+</style>
+</head>
+<body>
+<h1>案B — メニュー: 「デモ」「検証」の両見出しを表示</h1>
+<div class="row">
+
+  <!-- ルートメニュー -->
+  <div>
+    <div class="note">iOS ルートメニュー</div>
+    <div class="phone">
+      <div class="navbar"><div class="large">KsSettingsView Sample</div></div>
+      <div class="group">
+        <div class="group-header">デモ</div>
+        <div class="list">
+          <div class="item">Store 方式デモ <span class="chev">›</span></div>
+          <div class="item">DSL 方式デモ <span class="chev">›</span></div>
+          <div class="item">基本 Cell 7 種デモ <span class="chev">›</span></div>
+          <div class="item">入力 Cell 5 種デモ <span class="chev">›</span></div>
+          <div class="item">共通フィールド統合デモ <span class="chev">›</span></div>
+          <div class="item">isVisible デモ（条件付き非表示） <span class="chev">›</span></div>
+        </div>
+      </div>
+      <div class="group">
+        <div class="group-header">検証</div>
+        <div class="list">
+          <div class="item">Minimal Diffable 検証 <span class="chev">›</span></div>
+        </div>
+      </div>
+      <div class="spacer"></div>
+    </div>
+  </div>
+
+  <!-- 入力 Cell 5 種デモ (Theme 適用後) — 案A と同一 -->
+  <div>
+    <div class="note">入力 Cell 5 種デモ (MAUI 互換 Theme 適用・直近イベント1行) — 案A と共通</div>
+    <div class="phone">
+      <div class="navbar"><div class="back">‹ KsSettingsView Sample</div><div class="large">入力 Cell 5 種デモ</div></div>
+      <div class="caption">最後のイベント: (none)</div>
+      <div class="maui">
+        <div class="m-header">EntryCell</div>
+        <div class="m-sec">
+          <div class="m-cell">名前 <span class="m-val">Tanaka Taro</span></div>
+          <div class="m-cell">メール <span class="m-val">tanaka.taro@example.com</span></div>
+          <div class="m-cell">電話 <span class="m-val">090-0000-0000</span></div>
+          <div class="m-cell">パスワード <span class="m-val">•••••••••</span></div>
+          <div class="m-cell">ニックネーム (callback) <span class="m-ph">callback 経路で更新</span></div>
+        </div>
+        <div class="m-footer">ニックネーム (callback) は値変更コールバックで状態を更新する経路のデモ。他の入力欄は双方向バインディング経路。</div>
+
+        <div class="m-header">PickerCell（単一選択）</div>
+        <div class="m-sec"><div class="m-cell">テーマ <span class="m-val">ライト ›</span></div></div>
+
+        <div class="m-header">PickerCell（複数選択 / 上限 3）</div>
+        <div class="m-sec"><div class="m-cell">通知種別 <span class="m-val">メール, アプリ内 ›</span></div></div>
+        <div class="m-footer">3 つまで選択できます。4 つ目を選ぼうとすると触覚フィードバックが返ります。</div>
+
+        <div class="m-header">NumberPickerCell</div>
+        <div class="m-sec"><div class="m-cell">サイズ <span class="m-val">30 px</span></div></div>
+        <div class="m-footer">Picker UI と Cell の valueText に "px" suffix が付く。</div>
+
+        <div class="m-header">TimePickerCell</div>
+        <div class="m-sec"><div class="m-cell">アラーム <span class="m-val">07:30</span></div></div>
+
+        <div class="m-header">DatePickerCell（ホイール）</div>
+        <div class="m-sec"><div class="m-cell">誕生日 <span class="m-val">1990/01/01</span></div></div>
+        <div class="m-footer">ホイール形式で日付を選択するデモ。</div>
+
+        <div class="m-header">DatePickerCell（カレンダー）</div>
+        <div class="m-sec"><div class="m-cell">予約日 <span class="m-val">2026/06/01</span></div></div>
+        <div class="m-footer">カレンダー形式で日付を選択するデモ。</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

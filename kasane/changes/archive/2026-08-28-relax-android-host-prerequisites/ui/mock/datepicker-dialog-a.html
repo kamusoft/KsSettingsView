@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>カレンダーダイアログ 案A — 「今日」は操作行の左端 (現行 Material 配置の踏襲)</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:"Roboto","Hiragino Sans",sans-serif; }
+  body { background:#404246; padding:40px; display:flex; gap:48px; justify-content:center; align-items:flex-start; min-height:100vh; }
+  .stage { width:360px; height:640px; background:rgba(0,0,0,.32); border-radius:12px; display:flex; align-items:center; justify-content:center; position:relative; }
+  .label { position:absolute; top:14px; left:0; right:0; text-align:center; color:#fff; font-size:13px; opacity:.85; }
+  .dialog { width:328px; background:#fff; border-radius:28px; overflow:hidden; box-shadow:0 12px 48px rgba(0,0,0,.5); }
+  .head { padding:20px 24px 12px; }
+  .overline { font-size:12px; color:#5f5f66; letter-spacing:.5px; }
+  .headrow { display:flex; align-items:center; justify-content:space-between; margin-top:8px; }
+  .selected { font-size:26px; font-weight:500; color:#1c1c1e; }
+  .mode { width:40px; height:40px; border-radius:20px; display:flex; align-items:center; justify-content:center; color:#5f5f66; }
+  .mode svg { width:20px; height:20px; fill:currentColor; }
+  .sep { height:1px; background:#e3e3e6; }
+  .nav { display:flex; align-items:center; padding:8px 12px 0; }
+  .ym { display:flex; align-items:center; gap:4px; font-size:14px; font-weight:500; color:#3a3a3e; padding:8px; }
+  .ym svg { width:16px; height:16px; fill:#5f5f66; }
+  .spacer { flex:1; }
+  .chev { width:36px; height:36px; display:flex; align-items:center; justify-content:center; color:#5f5f66; }
+  .chev svg { width:20px; height:20px; fill:currentColor; }
+  .grid { padding:4px 12px 0; }
+  table { width:100%; border-collapse:collapse; table-layout:fixed; }
+  th { font-size:12px; font-weight:400; color:#5f5f66; height:32px; }
+  td { text-align:center; height:40px; font-size:13px; color:#1c1c1e; position:relative; }
+  td span { display:inline-flex; width:36px; height:36px; border-radius:18px; align-items:center; justify-content:center; }
+  td.sel span { background:#007aff; color:#fff; }
+  td.today span { border:1px solid #007aff; color:#007aff; }
+  .actions { display:flex; align-items:center; padding:8px 12px 12px; }
+  .btn { font-size:14px; font-weight:500; color:#007aff; padding:10px 12px; border-radius:100px; }
+  .actions .spacer { flex:1; }
+</style>
+</head>
+<body>
+
+  <div class="stage">
+    <div class="label">案A: 「今日」は操作行の左端 (todayText 指定時のみ) — 現行 Material と同じ位置</div>
+    <div class="dialog">
+      <div class="head">
+        <div class="overline">予定日</div>
+        <div class="headrow">
+          <div class="selected">2026年8月2日(日)</div>
+          <div class="mode">
+            <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+          </div>
+        </div>
+      </div>
+      <div class="sep"></div>
+      <div class="nav">
+        <div class="ym">2026年8月
+          <svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+        </div>
+        <div class="spacer"></div>
+        <div class="chev"><svg viewBox="0 0 24 24"><path d="M15.4 7.4 14 6l-6 6 6 6 1.4-1.4L10.8 12z"/></svg></div>
+        <div class="chev"><svg viewBox="0 0 24 24"><path d="M8.6 16.6 10 18l6-6-6-6-1.4 1.4 4.6 4.6z"/></svg></div>
+      </div>
+      <div class="grid">
+        <table>
+          <tr><th>日</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th><th>土</th></tr>
+          <tr><td></td><td></td><td></td><td></td><td></td><td></td><td><span>1</span></td></tr>
+          <tr><td class="sel"><span>2</span></td><td><span>3</span></td><td><span>4</span></td><td><span>5</span></td><td><span>6</span></td><td><span>7</span></td><td><span>8</span></td></tr>
+          <tr><td><span>9</span></td><td><span>10</span></td><td><span>11</span></td><td><span>12</span></td><td><span>13</span></td><td><span>14</span></td><td><span>15</span></td></tr>
+          <tr><td><span>16</span></td><td><span>17</span></td><td><span>18</span></td><td><span>19</span></td><td><span>20</span></td><td><span>21</span></td><td><span>22</span></td></tr>
+          <tr><td><span>23</span></td><td><span>24</span></td><td><span>25</span></td><td><span>26</span></td><td class="today"><span>27</span></td><td><span>28</span></td><td><span>29</span></td></tr>
+          <tr><td><span>30</span></td><td><span>31</span></td><td></td><td></td><td></td><td></td><td></td></tr>
+        </table>
+      </div>
+      <div class="actions">
+        <div class="btn">今日</div>
+        <div class="spacer"></div>
+        <div class="btn">キャンセル</div>
+        <div class="btn">OK</div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

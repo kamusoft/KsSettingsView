@@ -1,0 +1,62 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    MAUI アプリ利用者向けの公開層。XAML / C# から使う SettingsView と、その内容を
+    Native Bridge へ運ぶ変換経路を持つ。
+
+    素の net10.0 を TargetFrameworks に含めるのは、Binding assembly (platform TFM でしか
+    参照できない) から切り離した純ロジックをユニットテストで検証するため。
+    Bridge 呼び出しは internal な gateway 抽象越しに行い、gateway の実体だけを platform TFM が持つ。
+    (maui/ADR-0009)
+  -->
+  <PropertyGroup>
+    <TargetFrameworks>net10.0;net10.0-ios;net10.0-android</TargetFrameworks>
+    <UseMaui>true</UseMaui>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>KsSettingsView.Maui</RootNamespace>
+    <AssemblyName>KsSettingsView.Maui</AssemblyName>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios' ">
+    <SupportedOSPlatformVersion>16.0</SupportedOSPlatformVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android' ">
+    <SupportedOSPlatformVersion>29</SupportedOSPlatformVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Maui.Controls" Version="10.0.70" />
+  </ItemGroup>
+
+  <!--
+    Platforms/ 配下は対象 platform の TFM でだけコンパイルする。
+    既定の glob から一度外し、TFM ごとに明示して取り込む。
+  -->
+  <ItemGroup>
+    <Compile Remove="Platforms/**/*.cs" />
+  </ItemGroup>
+
+  <!-- Native Host を持たない TFM 用の Handler 実体は、platform TFM では使わない -->
+  <ItemGroup Condition=" $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) != '' ">
+    <Compile Remove="Handlers/SettingsViewHandler.Standard.cs" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios' ">
+    <Compile Include="Platforms/iOS/**/*.cs" />
+    <ProjectReference Include="../macios/KsSettingsView.Binding.iOS/KsSettingsView.Binding.iOS.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android' ">
+    <Compile Include="Platforms/Android/**/*.cs" />
+    <ProjectReference Include="../android/KsSettingsView.Binding.Android/KsSettingsView.Binding.Android.csproj" />
+  </ItemGroup>
+
+  <!-- gateway 抽象と変換経路は internal のため、テストからの参照を許可する -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="KsSettingsView.Maui.Tests" />
+  </ItemGroup>
+
+</Project>

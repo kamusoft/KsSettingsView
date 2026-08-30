@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    KsSettingsView.Maui のユニットテスト。Binding assembly を参照しない素の net10.0 で動かし、
+    Bridge 呼び出しは fake gateway、flush の予約は fake dispatcher に差し替えて検証する。
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <UseMaui>true</UseMaui>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>KsSettingsView.Maui.Tests</RootNamespace>
+    <AssemblyName>KsSettingsView.Maui.Tests</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Maui.Controls" Version="10.0.70" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="NUnit" Version="4.4.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="5.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../KsSettingsView.Maui/KsSettingsView.Maui.csproj" />
+  </ItemGroup>
+
+</Project>

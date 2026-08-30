@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+  入力系 Cell 5 種 (EntryCell / PickerCell / NumberPickerCell / TimePickerCell / DatePickerCell)
+  を 1 画面に並べて目視確認するデモ画面。基本 Cell 7 種デモと同じ様式 (共用 Theme + 直近イベント
+  1 行) で、iOS / Android の同デモ画面と文言・構成・デモデータを揃えてある。
+  タイトルは SampleScreen の一元定義から与えられるため、ここでは設定しない。
+  末尾の「EntryCell（下部配置）」Section は、画面下半分に置いた EntryCell の
+  キーボード回避 (フォーカス時のせり上がり) を確認するための検証用。
+-->
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:ks="clr-namespace:KsSettingsView.Maui;assembly=KsSettingsView.Maui"
+             xmlns:local="clr-namespace:KsSettingsView.Sample.Maui"
+             xmlns:vm="clr-namespace:KsSettingsView.Sample.Maui.ViewModels"
+             x:Class="KsSettingsView.Sample.Maui.Pages.InputCellsDemoPage"
+             x:DataType="vm:InputCellsDemoViewModel">
+  <Grid RowDefinitions="Auto,*">
+    <Label Margin="16"
+           FontSize="12"
+           Text="{Binding LastEvent, StringFormat='最後のイベント: {0}'}" />
+
+    <ks:SettingsView x:Name="Settings" Grid.Row="1">
+
+      <ks:Section HeaderText="EntryCell"
+                  FooterText="ニックネーム (callback) は値変更コールバックで状態を更新する経路のデモ。他の入力欄は双方向バインディング経路。表示名は placeholder 色を Cell 個別に指定した行。">
+        <ks:EntryCell Title="名前"
+                      ValueText="{Binding UserName}"
+                      Placeholder="山田 太郎"
+                      Keyboard="Default"
+                      MaxLength="20" />
+        <ks:EntryCell Title="メール"
+                      ValueText="{Binding Email}"
+                      Placeholder="example@example.com"
+                      Keyboard="Email" />
+        <ks:EntryCell Title="電話"
+                      ValueText="{Binding Phone}"
+                      Placeholder="090-0000-0000"
+                      Keyboard="Telephone" />
+        <ks:EntryCell Title="パスワード"
+                      ValueText="{Binding Password}"
+                      Placeholder="8 文字以上"
+                      IsPassword="True" />
+        <ks:EntryCell Title="ニックネーム (callback)"
+                      ValueText="{Binding Nickname}"
+                      Placeholder="callback 経路で更新" />
+        <!-- placeholder 色を Cell 個別に指定する行 (未指定の行は OS 既定色) -->
+        <ks:EntryCell Title="表示名"
+                      ValueText="{Binding DisplayName}"
+                      Placeholder="placeholder 色の指定例"
+                      PlaceholderColor="{x:Static local:SampleTheme.DemoPlaceholderOrange}" />
+      </ks:Section>
+
+      <ks:Section HeaderText="PickerCell（単一選択）">
+        <ks:PickerCell Title="テーマ"
+                       ItemsSource="{Binding Themes}"
+                       SelectedIndex="{Binding ThemeIndex}"
+                       PageTitle="テーマを選択" />
+      </ks:Section>
+
+      <ks:Section HeaderText="PickerCell（複数選択 / 上限 3）"
+                  FooterText="3 つまで選択できます。4 つ目を選ぼうとすると触覚フィードバックが返ります。">
+        <ks:PickerCell Title="通知種別"
+                       SelectionMode="Multiple"
+                       ItemsSource="{Binding NotificationTypes}"
+                       SelectedIndices="{Binding NotificationSelection}"
+                       MaxSelectedNumber="3"
+                       PageTitle="通知種別を選択" />
+      </ks:Section>
+
+      <ks:Section HeaderText="PickerCell（object 候補 / 副表示）"
+                  FooterText="任意の型の要素を候補にして、主表示と副表示に射影するデモ。担当者は選択した要素そのものを受け取る経路、通知先メンバーは確定時に選択要素の一覧を受け取る経路。副表示を持たない候補は 1 行で表示される。">
+        <ks:PickerCell Title="担当者"
+                       ItemsSource="{Binding Members}"
+                       DisplayMember="Name"
+                       SubDisplayMember="Role"
+                       SelectedItem="{Binding Assignee}"
+                       PageTitle="担当者を選択" />
+        <ks:PickerCell Title="通知先メンバー"
+                       SelectionMode="Multiple"
+                       ItemsSource="{Binding Members}"
+                       DisplayMember="Name"
+                       SubDisplayMember="Role"
+                       SelectedIndices="{Binding MemberSelection}"
+                       SelectedCommand="{Binding MemberSelectionCompletedCommand}"
+                       PageTitle="通知先メンバー" />
+      </ks:Section>
+
+      <ks:Section HeaderText="NumberPickerCell"
+                  FooterText="Picker UI と Cell の valueText に &quot;px&quot; suffix が付く。">
+        <ks:NumberPickerCell Title="サイズ"
+                             Min="10"
+                             Max="30"
+                             Step="1"
+                             Number="{Binding Size}"
+                             Unit="px"
+                             PickerTitle="サイズを選択" />
+      </ks:Section>
+
+      <ks:Section HeaderText="TimePickerCell">
+        <ks:TimePickerCell Title="アラーム"
+                           Time="{Binding AlarmTime}"
+                           Format="HH:mm"
+                           PickerTitle="アラーム時刻" />
+        <!--
+          Is24Hour="False" を指定すると選択面は午前／午後を含む 3 系列になる (並び順は端末 Locale の時刻表記に従う)。
+          Format は行の表示にだけ効き、選択面の時制には関与しない。
+        -->
+        <ks:TimePickerCell Title="就寝"
+                           Time="{Binding BedTime}"
+                           Format="h:mm a"
+                           Is24Hour="False"
+                           PickerTitle="就寝時刻" />
+      </ks:Section>
+
+      <ks:Section HeaderText="DatePickerCell（ホイール）"
+                  FooterText="ホイール形式で日付を選択するデモ。">
+        <ks:DatePickerCell Title="誕生日"
+                           Date="{Binding Birthday}"
+                           Format="yyyy/MM/dd"
+                           MinimumDate="{Binding BirthdayMinimum}"
+                           MaximumDate="{Binding BirthdayMaximum}"
+                           PickerTitle="誕生日"
+                           UIStyle="Wheels"
+                           TodayText="今日" />
+      </ks:Section>
+
+      <ks:Section HeaderText="DatePickerCell（カレンダー）"
+                  FooterText="カレンダー形式で日付を選択するデモ。">
+        <ks:DatePickerCell Title="予約日"
+                           Date="{Binding Reservation}"
+                           Format="yyyy/MM/dd"
+                           PickerTitle="予約日を選択"
+                           UIStyle="Calendar"
+                           TodayText="今日" />
+      </ks:Section>
+
+      <!-- EntryCell（下部配置）: キーボード回避の検証用 -->
+      <ks:Section HeaderText="EntryCell（下部配置）"
+                  FooterText="画面下半分に配置した EntryCell をフォーカスしたとき、キーボードに合わせてコンテンツがせり上がるかを確認するための検証用セクション。">
+        <ks:EntryCell Title="メモ"
+                      ValueText="{Binding Memo}"
+                      Placeholder="下部配置の検証用" />
+        <ks:EntryCell Title="署名"
+                      ValueText="{Binding Signature}"
+                      Placeholder="最下部の検証用" />
+      </ks:Section>
+
+    </ks:SettingsView>
+  </Grid>
+</ContentPage>

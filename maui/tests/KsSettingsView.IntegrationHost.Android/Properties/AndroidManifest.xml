@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!--
+    application にテーマを指定しない .NET Android テンプレート既定の形。ks-settingsview-ui は
+    ライブラリ側で自前のテーマをかぶせて描画するため、ホストのテーマ種別を問わない (android/ADR-0020)。
+  -->
+  <application android:label="KsBridge Host"
+      android:allowBackup="true" />
+  <uses-sdk android:minSdkVersion="29" android:targetSdkVersion="36" />
+</manifest>

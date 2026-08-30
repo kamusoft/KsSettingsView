@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+
+  <!--
+    生成される .NET namespace は既定では Java パッケージ由来 (Jp.Kamusoft.Kssettingsview.Bridge) に
+    なる。公開識別子の規約 (.NET namespace は KsSettingsView.*) と、iOS binding の namespace に
+    揃えるため変換する。
+  -->
+  <attr path="/api/package[@name='jp.kamusoft.kssettingsview.bridge']"
+      name="managedName">KsSettingsView.Bridge</attr>
+
+  <!--
+    Java の dispose() をそのまま束縛すると Java.Lang.Object.Dispose()
+    (JNI ハンドル解放) と同名になり、Bridge の破棄と区別できなくなるため改名する。
+  -->
+  <attr path="/api/package[@name='jp.kamusoft.kssettingsview.bridge']/class[@name='KsSettingsBridge']/method[@name='dispose']"
+      name="managedName">DisposeBridge</attr>
+
+  <!--
+    listener の setter は既定で event 化され、生成器が BG8501 (単一メソッドでない interface は
+    event にできない) を出す。eventName を空にすると event 生成を抑止でき、
+    `InteractionListener` プロパティはそのまま残る。
+  -->
+  <attr path="/api/package[@name='jp.kamusoft.kssettingsview.bridge']/class[@name='KsSettingsBridge']/method[@name='setInteractionListener' and count(parameter)=1 and parameter[1][@type='jp.kamusoft.kssettingsview.bridge.KsBridgeInteractionListener']]"
+      name="eventName"></attr>
+
+  <!--
+    Kotlin が when 式のために生成する内部ヘルパ。Bridge の API 表面ではないため束縛しない。
+    この remove-node は class-parse 後の fixup 段で一致し、対象の型を api.xml.fixed から除去する。
+    SDK は同じ Metadata.xml を generator 段でも適用するため、そこでは既に除去済みのノードを
+    探して BG8A00 (一致するノードなし) を出す。この警告は除去が効いていることの裏返しであり、
+    この entry を消すと WhenMappings が公開表面へ出る。
+  -->
+  <remove-node path="/api/package[@name='jp.kamusoft.kssettingsview.bridge']/class[@name='KsSettingsBridge.WhenMappings']" />
+
+</metadata>

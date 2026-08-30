@@ -1,0 +1,17 @@
+# 修正後ビルドの検証ログ抜粋 — Pixel 6a / Android 16 / Gboard (2026-08-01 22:47)
+# 手順1 (同一手順 A/B): k,a,m,u 実タップ → Enter(確定) → Enter/✓ → キーボード閉鎖・生存 (FATAL 0)
+# 手順2: ニックネーム欄フォーカス → adb keyevent 66 (生 KEYCODE_ENTER) → 依然クラッシュ (下記)
+
+1027:08-01 22:47:24.586 19295 19295 E AndroidRuntime: FATAL EXCEPTION: main
+1028-08-01 22:47:24.586 19295 19295 E AndroidRuntime: Process: jp.kamusoft.kssettingsview.samples.android, PID: 19295
+1029-08-01 22:47:24.586 19295 19295 E AndroidRuntime: java.lang.IllegalStateException: focus search returned a view that wasn't able to take focus!
+1030-08-01 22:47:24.586 19295 19295 E AndroidRuntime: 	at android.widget.TextView.onKeyUp(TextView.java:10065)
+1031-08-01 22:47:24.586 19295 19295 E AndroidRuntime: 	at android.view.KeyEvent.dispatch(KeyEvent.java:3856)
+1032-08-01 22:47:24.586 19295 19295 E AndroidRuntime: 	at android.view.View.dispatchKeyEvent(View.java:16806)
+1033-08-01 22:47:24.586 19295 19295 E AndroidRuntime: 	at android.view.ViewGroup.dispatchKeyEvent(ViewGroup.java:1986)
+1034-08-01 22:47:24.586 19295 19295 E AndroidRuntime: 	at android.view.ViewGroup.dispatchKeyEvent(ViewGroup.java:1986)
+1035-08-01 22:47:24.586 19295 19295 E AndroidRuntime: 	at android.view.ViewGroup.dispatchKeyEvent(ViewGroup.java:1986)
+1036-08-01 22:47:24.586 19295 19295 E AndroidRuntime: 	at android.view.ViewGroup.dispatchKeyEvent(ViewGroup.java:1986)
+1037-08-01 22:47:24.586 19295 19295 E AndroidRuntime: 	at android.view.ViewGroup.dispatchKeyEvent(ViewGroup.java:1986)
+1038-08-01 22:47:24.586 19295 19295 E AndroidRuntime: 	at android.view.ViewGroup.dispatchKeyEvent(ViewGroup.java:1986)
+1039-08-01 22:47:24.586 19295 19295 E AndroidRuntime: 	at android.view.ViewGroup.dispatchKeyEvent(ViewGroup.java:1986)

@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Android の Bridge binding を実機／エミュレータで縦に疎通させる検証ホスト。
+    C# から Builder で設定ツリーを組み立て、Bridge が生成した Native Host を画面へ取り付けて
+    表示できることを確認する。後続フェーズや SDK 更新時の回帰検証にそのまま使う。
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <SupportedOSPlatformVersion>29</SupportedOSPlatformVersion>
+    <RootNamespace>KsSettingsView.IntegrationHost</RootNamespace>
+    <AssemblyName>KsSettingsView.IntegrationHost.Android</AssemblyName>
+    <ApplicationId>jp.kamusoft.kssettingsview.integrationhost.android</ApplicationId>
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>0.1.0</ApplicationDisplayVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../android/KsSettingsView.Binding.Android/KsSettingsView.Binding.Android.csproj" />
+  </ItemGroup>
+
+  <!-- 操作シナリオは iOS ホストと共有する -->
+  <ItemGroup>
+    <Compile Include="../shared/KsBridgeScenario.cs" Link="KsBridgeScenario.cs" />
+    <Compile Include="../shared/KsBridgeScenarioHandles.cs" Link="KsBridgeScenarioHandles.cs" />
+  </ItemGroup>
+
+</Project>

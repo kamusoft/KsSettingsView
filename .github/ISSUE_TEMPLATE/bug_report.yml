@@ -1,0 +1,60 @@
+name: Bug report
+description: Report a reproducible problem with KsSettingsView
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a problem. You may write your answers in English or Japanese.
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Which version of KsSettingsView are you using?
+      placeholder: e.g. 0.1.0-beta.1
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      description: Which platform is affected?
+      options:
+        - iOS
+        - Android
+        - .NET MAUI
+        - Multiple platforms
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction_steps
+    attributes:
+      label: Reproduction steps
+      description: List the smallest sequence of steps that consistently reproduces the problem.
+      placeholder: |
+        1. Configure ...
+        2. Open ...
+        3. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual_behavior
+    attributes:
+      label: Actual behavior
+      description: What happened? Include error messages, logs, or screenshots when useful.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen instead?
+    validations:
+      required: true

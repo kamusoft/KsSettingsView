@@ -1,0 +1,6 @@
+# Deviation: upgrade-android-build-toolchain
+
+- Non-Goals「maven-publish の追加 … (配信計画側の責務)」/ proposal「csproj は変更しない」: spec では MAUI binding の csproj は確認のみで変更しない → 指示により `KsSettingsView.Binding.Android.csproj` の `KsAndroidModuleSource` (aar 再生成判定の入力) に `gradle/libs.versions.toml` / `gradle/wrapper/gradle-wrapper.properties` / `gradle.properties` を追加。理由: 新設した catalog がバージョンの SSoT になったため、catalog だけの更新で aar 再生成がスキップされる増分ビルドの穴を本 change 内で塞ぐ (オーナー指示: 小さな関連修正は起票せず即対応) (2026-08-21)
+- Scenario「MAUI binding からの native ビルド」の THEN「4 module の release aar が生成され」: spec では 4 module → 実際は core / ui / bridge の 3 module。理由: binding の Exec は設計上 (maui/ADR-0006) compose を束縛対象にしておらず、spec の「4」は記述の誤り。Exec への compose 追加は行わない (2026-08-21、オーナー承認: 完了報告後のコミット指示により確定)
+- What Changes「`samples/android/gradle.properties` に `org.gradle.tooling.parallel=true` を正式追加」: spec では samples 側のみ → 指示の趣旨 (小さな関連修正は即対応) に従い `android/gradle.properties` にも同設定を追加。理由: 本体 `android/` も Studio から直接開かれる対象で、IDE parallel sync の目的は同じ (2026-08-21)
+- wrapper 設定: spec は `distributionUrl` の更新のみ → 相方レビューの Suggestion を採用し `android/` `samples/android/` 両方の `gradle-wrapper.properties` に `distributionSha256Sum` (Gradle 9.5.0 bin の公式値、downloads.gradle.org で裏取り) を追加。理由: 配布物の内容固定 (2026-08-21)

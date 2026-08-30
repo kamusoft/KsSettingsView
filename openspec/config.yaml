@@ -1,0 +1,52 @@
+schema: spec-driven
+
+context: |
+  言語：日本語
+  すべてのアーティファクトは日本語で記述すること。技術用語は英語のまま使用する。
+
+rules:
+  proposal:
+    - Why（動機）、What Changes（変更内容）、Impact（影響）を明確に記述する
+    - 破壊的変更がある場合は Risks セクションでリスク評価を含める
+  specs:
+    - 構文キーワード (Purpose, Requirements, Requirement:, Scenario:, WHEN/THEN) は英語で記述する
+    - デルタファイルのキーワード (ADDED/MODIFIED/REMOVED Requirements) は英語で記述する
+    - ファイルタイトル・要件名・シナリオ名・本文は日本語で記述する
+    - 要件本文には必ず SHALL または MUST を含める（「〜しなければならない (SHALL)」パターン推奨）
+    - 要件は「### Requirement: <名前>」の形式で記述する
+    - 各要件に1つ以上の「#### Scenario:」ブロックを含める
+    - シナリオは GIVEN / WHEN / THEN 形式で記述する
+    - MODIFIED 要件には変更後の全文を記載する（差分記述は不可）
+    - REMOVED 要件には廃止理由を記載する
+    - ADDED/MODIFIED/REMOVED/RENAMED セクション外に要件を記載しない
+    - デルタスペックには差分のみを記述する（既存スペック全文コピーは不可）
+  design:
+    - Context, Goals/Non-Goals, Decisions, Risks/Trade-offs の構成にする
+    - 各 Decision に「理由」と「代替案」を明記する
+  tasks:
+    - Phase 分割 + チェックボックス形式にする
+    - 依存関係セクションと完了条件セクションを含める
+    - openspec/specs/ 配下のファイル編集指示を含めない
+    - git 操作（add, commit, push, merge 等）の指示を含めない
+    - proposal.md, design.md, spec.md の変更指示を含めない
+    - tasks.md 自体の内容変更指示を含めない（チェックボックス更新を除く）
+    - タスクは具体的で実行可能な単位で記述する
+
+# Project context (optional)
+# This is shown to AI when creating artifacts.
+# Add your tech stack, conventions, style guides, domain knowledge, etc.
+# Example:
+#   context: |
+#     Tech stack: TypeScript, React, Node.js
+#     We use conventional commits
+#     Domain: e-commerce platform
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    KsSettingsView Android Core — 最小 AndroidManifest
+
+    Android Library として認識させるための最小構成。
+    `package` 属性は AGP 8 以降で非推奨のため記載せず、`namespace` を build.gradle.kts で指定する。
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" />

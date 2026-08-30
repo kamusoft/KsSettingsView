@@ -1,0 +1,27 @@
+date=2026-08-22 17:25:01 label=before-store-direct-mobilecli udid=<ios-simulator-udid> device=iPhone 17
+screen=store prefix=store.entry inject=abcde mode=mobilecli freq=60 settle=2
+iterations=20 min_valid=15
+iter 1: OK   (...example.comabcde)
+iter 2: OK   (...le.comabcdeabcde)
+iter 3: OK   (...mabcdeabcdeabcde)
+iter 4: OK   (...eabcdeabcdeabcde)
+iter 5: OK   (...eabcdeabcdeabcde)
+iter 6: OK   (...eabcdeabcdeabcde)
+iter 7: OK   (...eabcdeabcdeabcde)
+iter 8: OK   (...eabcdeabcdeabcde)
+iter 9: OK   (...eabcdeabcdeabcde)
+iter 10: OK   (...eabcdeabcdeabcde)
+iter 11: OK   (...eabcdeabcdeabcde)
+iter 12: OK   (...eabcdeabcdeabcde)
+iter 13: OK   (...eabcdeabcdeabcde)
+iter 14: OK   (...eabcdeabcdeabcde)
+iter 15: OK   (...eabcdeabcdeabcde)
+iter 16: OK   (...eabcdeabcdeabcde)
+iter 17: OK   (...eabcdeabcdeabcde)
+iter 18: OK   (...eabcdeabcdeabcde)
+iter 19: OK   (...eabcdeabcdeabcde)
+iter 20: OK   (...eabcdeabcdeabcde)
+---
+pass=20 fail=0 skip=0 valid=20 / 20 (min_valid=15)
+判定: OK (有効試行 20・破損 0)
+result=0

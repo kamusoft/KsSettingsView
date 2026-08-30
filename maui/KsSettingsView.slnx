@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/binding/">
+    <Project Path="macios/KsSettingsView.Binding.iOS/KsSettingsView.Binding.iOS.csproj" />
+    <Project Path="android/KsSettingsView.Binding.Android/KsSettingsView.Binding.Android.csproj" />
+  </Folder>
+  <Folder Name="/samples/">
+    <Project Path="../samples/maui/KsSettingsView.Sample.Maui/KsSettingsView.Sample.Maui.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="KsSettingsView.Maui/KsSettingsView.Maui.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="KsSettingsView.Maui.Tests/KsSettingsView.Maui.Tests.csproj" />
+    <Project Path="tests/KsSettingsView.IntegrationHost.iOS/KsSettingsView.IntegrationHost.iOS.csproj" />
+    <Project Path="tests/KsSettingsView.IntegrationHost.Android/KsSettingsView.IntegrationHost.Android.csproj" />
+    <Project Path="tests/KsSettingsView.MauiHost/KsSettingsView.MauiHost.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>案A: 副表示は1行で末尾省略</title>
+<style>
+  :root {
+    --bg: #EFEFF4;            /* Theme.backgroundColor 相当 */
+    --cell-bg: #FFFFFF;        /* 実効セル背景色 */
+    --title: #000000;          /* 実効タイトル色 (候補行の主表示) */
+    --description: #6D6D72;    /* description 系統の実効値 (副表示) */
+    --separator: #C8C7CC;      /* Theme.separatorColor */
+    --accent: #007AFF;         /* 解決済み強調色 (選択印・ボタン) */
+    --scrim: rgba(0,0,0,.35);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif; background: #FAFAFA; padding: 24px; }
+  h1 { font-size: 16px; margin-bottom: 4px; }
+  p.note { font-size: 12px; color: #666; margin-bottom: 20px; }
+  .stage { display: flex; gap: 32px; flex-wrap: wrap; }
+  .device { width: 320px; }
+  .device > .label { font-size: 12px; color: #666; margin-bottom: 8px; font-weight: 600; }
+  .screen { position: relative; height: 560px; border-radius: 24px; border: 1px solid #ddd; overflow: hidden; background: var(--bg); }
+  .scrim { position: absolute; inset: 0; background: var(--scrim); }
+
+  /* ===== Android ボトムシート ===== */
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--cell-bg); border-radius: 16px 16px 0 0; }
+  .handle { width: 32px; height: 4px; border-radius: 2px; background: #C8C7CC; margin: 8px auto 4px; }
+  .sheet-header { display: flex; align-items: center; justify-content: space-between; padding: 6px 12px 10px; }
+  .sheet-header .cancel { color: var(--accent); font-size: 15px; }
+  .sheet-header .stitle { font-size: 17px; font-weight: 600; color: var(--title); }
+  .sheet-header .ok { background: var(--accent); color: var(--cell-bg); font-size: 15px; padding: 5px 16px; border-radius: 16px; }
+
+  /* ===== iOS ページシート ===== */
+  .pagesheet { position: absolute; left: 0; right: 0; top: 40px; bottom: 0; background: var(--cell-bg); border-radius: 12px 12px 0 0; }
+  .navbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; }
+  .navbar .cancel, .navbar .done { color: var(--accent); font-size: 16px; }
+  .navbar .done { font-weight: 600; }
+  .navbar .ntitle { font-size: 16px; font-weight: 600; color: var(--title); }
+
+  /* ===== 候補行 (共通) ===== */
+  .rows { border-top: 1px solid var(--separator); }
+  .row { display: flex; align-items: center; min-height: 44px; padding: 8px 16px; border-bottom: 1px solid var(--separator); background: var(--cell-bg); gap: 12px; }
+  .row .texts { flex: 1; min-width: 0; }
+  .row .t { font-size: 16px; color: var(--title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* 案A: 副表示は常に1行、収まらない分は末尾省略 → 副表示あり行の行高が一定 (副表示なし行は従来の1行構成) */
+  .row .s { font-size: 13px; color: var(--description); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row .check { width: 22px; text-align: center; color: var(--accent); font-size: 18px; font-weight: 700; flex: none; }
+  .row.highlight { background: #D9D9D9; }
+</style>
+</head>
+<body>
+<h1>案A: 副表示は1行で末尾省略</h1>
+<p class="note">長い副表示は1行に収め末尾を省略する。副表示あり行の行高が一定 (長さに依存しない) でリストの見通しがよい。副表示なし行は従来の1行構成のまま (混在リストを含む)。</p>
+<div class="stage">
+
+  <div class="device">
+    <div class="label">Android (ボトムシート・複数選択)</div>
+    <div class="screen">
+      <div class="scrim"></div>
+      <div class="sheet">
+        <div class="handle"></div>
+        <div class="sheet-header">
+          <span class="cancel">キャンセル</span>
+          <span class="stitle">通知先メンバー</span>
+          <span class="ok">OK</span>
+        </div>
+        <div class="rows">
+          <div class="row"><div class="texts"><div class="t">佐藤 花子</div><div class="s">プロダクトマネージャー</div></div><div class="check">✓</div></div>
+          <div class="row"><div class="texts"><div class="t">鈴木 一郎</div><div class="s">モバイルアプリ開発チーム / テックリード (iOS・Android 横断アーキテクチャ担当)</div></div><div class="check"></div></div>
+          <div class="row highlight"><div class="texts"><div class="t">高橋 次郎</div><div class="s">QA エンジニア</div></div><div class="check">✓</div></div>
+          <div class="row"><div class="texts"><div class="t">全体アナウンス</div></div><div class="check"></div></div>
+          <div class="row"><div class="texts"><div class="t">田中 三郎</div><div class="s">デザイナー</div></div><div class="check"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="device">
+    <div class="label">iOS (ページシート・複数選択)</div>
+    <div class="screen">
+      <div class="scrim"></div>
+      <div class="pagesheet">
+        <div class="navbar">
+          <span class="cancel">Cancel</span>
+          <span class="ntitle">通知先メンバー</span>
+          <span class="done">完了</span>
+        </div>
+        <div class="rows">
+          <div class="row"><div class="texts"><div class="t">佐藤 花子</div><div class="s">プロダクトマネージャー</div></div><div class="check">✓</div></div>
+          <div class="row"><div class="texts"><div class="t">鈴木 一郎</div><div class="s">モバイルアプリ開発チーム / テックリード (iOS・Android 横断アーキテクチャ担当)</div></div><div class="check"></div></div>
+          <div class="row"><div class="texts"><div class="t">高橋 次郎</div><div class="s">QA エンジニア</div></div><div class="check">✓</div></div>
+          <div class="row"><div class="texts"><div class="t">全体アナウンス</div></div><div class="check"></div></div>
+          <div class="row"><div class="texts"><div class="t">田中 三郎</div><div class="s">デザイナー</div></div><div class="check"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

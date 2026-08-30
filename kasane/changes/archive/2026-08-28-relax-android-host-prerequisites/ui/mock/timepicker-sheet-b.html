@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>TimeSelectionSheet 案B — 中央寄せ + コロン区切り (時計らしさ重視)</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:"Roboto","Hiragino Sans",sans-serif; }
+  body { background:#404246; padding:32px; display:flex; gap:48px; justify-content:center; align-items:flex-end; min-height:100vh; }
+  .phone { width:360px; background:#f2f2f7; border-radius:12px 12px 0 0; overflow:hidden; box-shadow:0 8px 40px rgba(0,0,0,.45); }
+  .scrim { background:rgba(0,0,0,.32); padding-top:120px; }
+  .label { text-align:center; color:#fff; font-size:13px; padding:10px 0 14px; opacity:.85; }
+  .sheet { background:#fff; border-radius:16px 16px 0 0; }
+  .handle { width:32px; height:4px; border-radius:2px; background:rgba(73,69,79,.4); margin:8px auto 4px; }
+  .header { height:48px; display:flex; align-items:center; padding:0 12px; }
+  .cancel { color:#007aff; font-size:15px; padding:8px 0; flex:0 0 auto; width:88px; white-space:nowrap; }
+  .title { flex:1; text-align:center; font-size:16px; font-weight:700; color:#1c1c1e; }
+  .ok { flex:0 0 auto; width:88px; display:flex; justify-content:flex-end; }
+  .ok span { background:#007aff; color:#fff; font-size:15px; padding:7px 18px; border-radius:100px; }
+  .sep { height:1px; background:#e3e3e6; }
+  .wheelrow { position:relative; height:220px; display:flex; justify-content:center; }
+  .wheel { width:88px; position:relative; z-index:1; }
+  .wheel.ampm { width:76px; }
+  .wheel .band { position:absolute; left:6px; right:6px; top:88px; height:44px; background:rgba(0,122,255,.14); border-radius:12px; z-index:0; }
+  .wheel .item { height:44px; display:flex; align-items:center; justify-content:center; font-size:20px; color:#1c1c1e; position:relative; z-index:1; }
+  .wheel.ampm .item { font-size:17px; }
+  .colon { width:20px; display:flex; align-items:center; justify-content:center; height:220px; font-size:22px; font-weight:600; color:#1c1c1e; }
+  .colon span { transform:translateY(-1px); }
+  .i2 { opacity:.25; transform:scale(.88); }
+  .i1 { opacity:.5; transform:scale(.94); }
+  .i0 { opacity:1; transform:scale(1.12); font-weight:500; }
+  .fade-t,.fade-b { position:absolute; left:0; right:0; height:60px; z-index:2; pointer-events:none; }
+  .fade-t { top:0; background:linear-gradient(#fff,rgba(255,255,255,0)); }
+  .fade-b { bottom:0; background:linear-gradient(rgba(255,255,255,0),#fff); }
+  .bottom-pad { height:14px; }
+</style>
+</head>
+<body>
+
+  <!-- 24時間制 (format 既定 "HH:mm", time=14:30) -->
+  <div class="phone">
+    <div class="scrim">
+      <div class="label">24時間制 — 系列ごとの帯 + コロン区切り・中央寄せ</div>
+      <div class="sheet">
+        <div class="handle"></div>
+        <div class="header">
+          <div class="cancel">キャンセル</div>
+          <div class="title">開始時刻</div>
+          <div class="ok"><span>OK</span></div>
+        </div>
+        <div class="sep"></div>
+        <div class="wheelrow">
+          <div class="fade-t"></div><div class="fade-b"></div>
+          <div class="wheel">
+            <div class="band"></div>
+            <div class="item i2">12</div><div class="item i1">13</div>
+            <div class="item i0">14</div>
+            <div class="item i1">15</div><div class="item i2">16</div>
+          </div>
+          <div class="colon"><span>:</span></div>
+          <div class="wheel">
+            <div class="band"></div>
+            <div class="item i2">28</div><div class="item i1">29</div>
+            <div class="item i0">30</div>
+            <div class="item i1">31</div><div class="item i2">32</div>
+          </div>
+        </div>
+        <div class="bottom-pad"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 12時間制 (format "h:mm a", time=14:30) -->
+  <div class="phone">
+    <div class="scrim">
+      <div class="label">12時間制 — 午前/午後は右側の独立ホイール</div>
+      <div class="sheet">
+        <div class="handle"></div>
+        <div class="header">
+          <div class="cancel">キャンセル</div>
+          <div class="title">開始時刻</div>
+          <div class="ok"><span>OK</span></div>
+        </div>
+        <div class="sep"></div>
+        <div class="wheelrow">
+          <div class="fade-t"></div><div class="fade-b"></div>
+          <div class="wheel">
+            <div class="band"></div>
+            <div class="item i2">12</div><div class="item i1">1</div>
+            <div class="item i0">2</div>
+            <div class="item i1">3</div><div class="item i2">4</div>
+          </div>
+          <div class="colon"><span>:</span></div>
+          <div class="wheel">
+            <div class="band"></div>
+            <div class="item i2">28</div><div class="item i1">29</div>
+            <div class="item i0">30</div>
+            <div class="item i1">31</div><div class="item i2">32</div>
+          </div>
+          <div class="wheel ampm">
+            <div class="band"></div>
+            <div class="item"></div>
+            <div class="item i1">午前</div>
+            <div class="item i0">午後</div>
+            <div class="item"></div><div class="item"></div>
+          </div>
+        </div>
+        <div class="bottom-pad"></div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

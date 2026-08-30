@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!--
+    KsSettingsView がホストから ID を与えられなかった場合に自分へ付ける ID。
+    View 階層のインスタンス状態は ID を持つ View にしか保存されないため、
+    ホストに ID 付与を要求せずに構成変更をまたげるようにする。
+  -->
+  <item name="ks_settings_view" type="id" />
+</resources>

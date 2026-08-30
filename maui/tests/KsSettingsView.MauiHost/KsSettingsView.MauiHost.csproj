@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    MAUI facade (SettingsView) を実機／シミュレータで縦に疎通させる検証ホスト。
+    XAML で並べた Section / Cell の表示、内容更新の反映、ページ再訪問での復元を
+    両 OS で確認する。後続フェーズや SDK 更新時の回帰検証にそのまま使う。
+  -->
+  <PropertyGroup>
+    <TargetFrameworks>net10.0-ios;net10.0-android</TargetFrameworks>
+    <OutputType>Exe</OutputType>
+    <UseMaui>true</UseMaui>
+    <SingleProject>true</SingleProject>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>KsSettingsView.MauiHost</RootNamespace>
+    <AssemblyName>KsSettingsView.MauiHost</AssemblyName>
+    <ApplicationId>jp.kamusoft.kssettingsview.mauihost</ApplicationId>
+    <ApplicationTitle>KsSettingsView MAUI Host</ApplicationTitle>
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>0.1.0</ApplicationDisplayVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios' ">
+    <SupportedOSPlatformVersion>16.0</SupportedOSPlatformVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android' ">
+    <SupportedOSPlatformVersion>29</SupportedOSPlatformVersion>
+  </PropertyGroup>
+
+  <!--
+    MAUI アプリのテンプレート必須参照。UseMaui は NuGet 参照を自動で含めず、
+    未宣言だと SDK 暗黙参照 (バンドル版) が KsSettingsView.Maui のピンと衝突して NU1605 になる
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Maui.Controls" Version="10.0.70" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../KsSettingsView.Maui/KsSettingsView.Maui.csproj" />
+  </ItemGroup>
+
+</Project>

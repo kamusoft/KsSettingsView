@@ -1,0 +1,6 @@
+# Deviation: fix-ios-root-accessory-theme-refresh
+
+- 探索前提の訂正: exploration.md の「Cell / Section Header 側は Theme 変更で色が追従するため、Root accessory だけ非対称」は実測で誤りと判明 (implement-modern-style review-003 の記述の引き写し。実際は `applyTheme` は Cell のみ再適用し、Section Header / Footer は追従しない)。証跡: evidence/ の A/B スクリーンショット (2026-08-24)
+- スコープ拡張 (オーナー指示): 上記により Root のみ追従させると非対称が反転するため、Section Header / Footer の text 形式 accessory も `applyTheme(_:)` で追従させる修正を本 change に同梱する。手法は Root と同じ (表示中の text 形式のみ in-place 再適用、View 形式は factory 再実行禁止のため対象外)。理由: (1)(a) 採用の動機が利用者から見える一貫性であるため (2026-08-24)
+- [付随修正] Android `setRootDirect` の Theme 未反映は Root accessory に限らず Cell・Section Header / Footer にも同一原因 (`bind` 経由で `themeBacking` 直接代入 + collect の同値スキップ) で影響していたため、通知ヘルパ (`notifyThemeChangedToAdapters`) を共有する形でまとめて修正した。実測プローブとエミュレータ A/B で確認 (evidence/android-setrootdirect-theme-capture.txt) (2026-08-24)
+- 探索前提の訂正 (2件目): 「Android は View 形式に Theme を適用しない (iOS と対称)」という調査所見は不正確だった。適用はしないが、`applyThemeInternal` の notify により View 形式 (`KsAnyView.AndroidView`) の factory が再実行され内部状態を失う (実測: theme 代入で factory 呼び出し 1→2 回。`KsAnyView.Compose` は再実行されない)。オーナー判断: iOS と揃えて View 形式 (`KsAnyView.AndroidView`) を Theme 通知の再 bind 対象外にする修正を本 change に同梱する (Root / Section とも)。理由: display-state-synchronization の「View accessory の内部状態を失わせない」原則に現挙動が反しており、公開前に両 OS を「text は追従・View は状態保持のため非追従」の単一ルールへ揃えるため (2026-08-24)

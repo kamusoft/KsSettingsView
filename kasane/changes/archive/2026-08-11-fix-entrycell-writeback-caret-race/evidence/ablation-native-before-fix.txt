@@ -1,0 +1,26 @@
+date=2026-08-11 15:12:07 label=native-ablation-BEFORE-fix serial=<android-device-serial> model=Pixel 6a android=16
+prefix=tanaka iterations=20 min_valid=15
+iter 1: FAIL (before=...taro@example.com after=....taro@example.comabc)
+iter 2: OK   (...mple.comabcabcde)
+iter 3: SKIP (bounds moved [189,652][1038,776] -> [189,694][1038,818], after=...comabcabcdeabcde)
+iter 4: OK   (...cabcdeabcdeabcde)
+iter 5: FAIL (before=...cabcdeabcdeabcde after=...bcabcdeabcdeabcdeabc)
+iter 6: OK   (...cdeabcdeabcabcde)
+iter 7: FAIL (before=...cdeabcdeabcabcde after=...cdeabcdeabcabcdeabcd)
+iter 8: FAIL (before=...bcdeabcabcdeabcd after=...bcdeabcabcdeabcdabce)
+iter 9: SKIP (bounds moved [189,694][1038,818] -> [189,736][1038,860], after=...bcdeabcdabceabcd)
+iter 10: OK   (...bcdabceabcdabcde)
+iter 11: FAIL (before=...bcdabceabcdabcde after=...abcdabceabcdabcdeabc)
+iter 12: FAIL (before=...abceabcdabcdeabc after=...dabceabcdabcdeabcabe)
+iter 13: FAIL (before=...eabcdabcdeabcabe after=...eabcdabcdeabcabeabde)
+iter 14: FAIL (before=...dabcdeabcabeabde after=...cdabcdeabcabeabdeabc)
+iter 15: FAIL (before=...cdeabcabeabdeabc after=...bcdeabcabeabdeabcabc)
+iter 16: OK   (...eabdeabcabcabcde)
+iter 17: FAIL (before=...eabdeabcabcabcde after=...beabdeabcabcabcdeabc)
+iter 18: OK   (...abcabcdeabcabcde)
+iter 19: OK   (...cdeabcabcdeabcde)
+iter 20: OK   (...cabcdeabcdeabcde)
+---
+pass=8 fail=10 skip=2 valid=18 / 20 (min_valid=15)
+判定: NG (破損 10 件)
+result=1

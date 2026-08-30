@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+  CustomCell（任意の View を行全体に描画する Cell）を 5 構成で目視確認できるデモ画面。
+
+    ① インライン        — 行の内容を XAML に直書きした例と、テキストだけの静的な例
+    ② 再利用            — CustomCell を継承したアプリ固有の Cell（Views/SampleSliderCell.cs）
+    ③ 動的高さ          — 内容の中の操作で展開/折りたたみし、行高さが追従する
+    ④ showArrow / onTap — Disclosure Indicator と行タップ（子要素タップとの二重発火なし）
+    ⑤ スクロール耐性    — 同型の CustomCell 40 行。行の再利用で表示・通知先が混線しないこと
+
+  iOS / Android の同デモ画面と文言・構成を揃えてある。対応する定義は
+  samples/ios/KsSettingsViewSample/CustomCellDemoView.swift と
+  samples/android/app/src/main/kotlin/jp/kamusoft/kssettingsview/samples/android/CustomCellDemoScreen.kt。
+  タイトルは SampleScreen の一元定義から与えられるため、ここでは設定しない。
+-->
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:ks="clr-namespace:KsSettingsView.Maui;assembly=KsSettingsView.Maui"
+             xmlns:local="clr-namespace:KsSettingsView.Sample.Maui"
+             xmlns:v="clr-namespace:KsSettingsView.Sample.Maui.Views"
+             xmlns:vm="clr-namespace:KsSettingsView.Sample.Maui.ViewModels"
+             x:Class="KsSettingsView.Sample.Maui.Pages.CustomCellDemoPage"
+             x:DataType="vm:CustomCellDemoViewModel">
+  <ks:SettingsView x:Name="Settings">
+
+    <!-- ① インライン CustomCell -->
+    <ks:Section HeaderText="インライン CustomCell"
+                FooterText="content + builder を DSL に直書きした例と、content 省略の静的糖衣の例。">
+      <ks:CustomCell>
+        <v:SampleAccentRow DotColor="{x:Static local:SampleTheme.DemoAccentGreen}"
+                           Title="同期ステータス"
+                           Subtitle="content: SyncState(ok: true)">
+          <v:SampleAccentRow.Trailing>
+            <v:SampleTagLabel Text="同期済み"
+                              TagBackground="{x:Static local:SampleTheme.MauiAccent}"
+                              TagForeground="{x:Static local:SampleTheme.MauiCellBackground}" />
+          </v:SampleAccentRow.Trailing>
+        </v:SampleAccentRow>
+      </ks:CustomCell>
+
+      <ks:CustomCell>
+        <Label Text="content なしの静的 CustomCell（キャプション行）"
+               FontSize="13"
+               TextColor="{x:Static local:SampleTheme.MauiFooterText}"
+               HorizontalTextAlignment="Center"
+               Padding="16,10" />
+      </ks:CustomCell>
+    </ks:Section>
+
+    <!-- ② 再利用（CustomCell を継承したアプリ固有の Cell） -->
+    <ks:Section HeaderText="再利用（SliderCell ラップ関数）"
+                FooterText="SliderCell(label:value:) 関数が CustomCell を返す再利用例。">
+      <v:SampleSliderCell Label="明るさ" Value="{Binding Brightness}" />
+      <v:SampleSliderCell Label="音量" Value="{Binding Volume}" />
+      <!-- 無効な行では、行タップだけでなく内容の中のスライダーの操作も抑止される。 -->
+      <v:SampleSliderCell Label="無効" Value="{Binding DisabledValue}" IsEnabled="False" />
+    </ks:Section>
+
+    <!-- ③ 動的高さ -->
+    <ks:Section HeaderText="動的高さ"
+                FooterText="content 内の状態で展開/折りたたみ。行高さは self-sizing で追従する。">
+      <ks:CustomCell>
+        <v:SampleExpanderRow Title="利用規約（タップで展開）" Body="{Binding PolicyBody}" />
+      </ks:CustomCell>
+
+      <ks:CustomCell>
+        <v:SampleExpanderRow Title="プライバシーポリシー（展開中）"
+                             Body="{Binding PolicyBody}"
+                             IsExpanded="True" />
+      </ks:CustomCell>
+    </ks:Section>
+
+    <!-- ④ showArrow / onTap -->
+    <ks:Section HeaderText="showArrow / onTap"
+                FooterText="chevron は既存 CommandCell と同一素材・同一位置で表示される。">
+      <!-- Disclosure Indicator あり。行タップは下の行タップカウンタと同じカウンタを進める。 -->
+      <ks:CustomCell ShowArrowIndicator="True" Command="{Binding CountRowTapCommand}">
+        <v:SampleAccentRow Title="詳細設定"
+                           Subtitle="showArrow: true / onTap で遷移"
+                           TrailingPadding="8" />
+      </ks:CustomCell>
+
+      <!-- chevron の見た目・位置を隣接比較するための既存 Cell（検証用の基準行）。 -->
+      <ks:CommandCell Title="詳細設定（CommandCell）" />
+
+      <!--
+        行タップのみ（矢印なし）。ピルは内容の中のタップ可能要素で、
+        押してもカウンタは進まず 0 に戻る（子要素の操作で行タップは発火しない）。
+      -->
+      <ks:CustomCell Command="{Binding CountRowTapCommand}">
+        <v:SampleAccentRow Title="行タップカウンタ" Subtitle="onTap のみ（矢印なし）">
+          <v:SampleAccentRow.Trailing>
+            <v:SampleTagLabel Text="{Binding RowTapCountText}">
+              <v:SampleTagLabel.GestureRecognizers>
+                <TapGestureRecognizer Command="{Binding ResetRowTapCountCommand}" />
+              </v:SampleTagLabel.GestureRecognizers>
+            </v:SampleTagLabel>
+          </v:SampleAccentRow.Trailing>
+        </v:SampleAccentRow>
+      </ks:CustomCell>
+    </ks:Section>
+
+    <!-- ⑤ スクロール耐性（ダミー #01–#40） -->
+    <ks:Section HeaderText="スクロール耐性（ダミー #01–#40）"
+                FooterText="十分なスクロール量を確保し、行の再利用（リサイクル）で表示・listener が混線しないことを確認する。"
+                ItemsSource="{Binding DummyItems}">
+      <ks:Section.ItemTemplate>
+        <DataTemplate x:DataType="vm:CustomCellDemoDummyItem">
+          <ks:CustomCell Command="{Binding ToggleCommand}">
+            <v:SampleAccentRow DotColor="{Binding DotColor}"
+                               Title="{Binding Title}"
+                               Subtitle="{Binding Subtitle}">
+              <v:SampleAccentRow.Trailing>
+                <v:SampleTagLabel Text="{Binding TagText}" />
+              </v:SampleAccentRow.Trailing>
+            </v:SampleAccentRow>
+          </ks:CustomCell>
+        </DataTemplate>
+      </ks:Section.ItemTemplate>
+    </ks:Section>
+
+  </ks:SettingsView>
+</ContentPage>

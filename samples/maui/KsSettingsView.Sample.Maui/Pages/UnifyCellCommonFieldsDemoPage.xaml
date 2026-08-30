@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+  Cell 共通行レイアウトが備える共通フィールド (Description / ValueText / IconSource / HintText) と
+  RadioCell / SimpleCheckCell の AccentColor を、組み合わせを変えながら一覧するデモ画面。
+  iOS / Android の同デモ画面と文言・構成・色指定を揃えてある。
+  タイトルは SampleScreen の一元定義から与えられるため、ここでは設定しない。
+-->
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:ks="clr-namespace:KsSettingsView.Maui;assembly=KsSettingsView.Maui"
+             xmlns:local="clr-namespace:KsSettingsView.Sample.Maui"
+             xmlns:vm="clr-namespace:KsSettingsView.Sample.Maui.ViewModels"
+             x:Class="KsSettingsView.Sample.Maui.Pages.UnifyCellCommonFieldsDemoPage"
+             x:DataType="vm:UnifyCellCommonFieldsDemoViewModel">
+  <ks:SettingsView>
+
+    <ks:Section HeaderText="SwitchCell — 共通フィールド">
+      <ks:SwitchCell Title="通知"
+                     Description="プッシュ通知を受信"
+                     ValueText="{Binding NotificationValueText}"
+                     IconSource="ic_notifications.png"
+                     HintText="推奨"
+                     On="{Binding Notification}" />
+      <ks:SwitchCell Title="Wi-Fi のみ同期"
+                     Description="従量回線では同期を停止"
+                     IconSource="ic_wifi.png"
+                     HintText="省データ"
+                     On="{Binding WifiOnlySync}" />
+    </ks:Section>
+
+    <ks:Section HeaderText="CheckboxCell — 共通フィールド">
+      <ks:CheckboxCell Title="規約に同意"
+                       Description="全文を読みました"
+                       IconSource="ic_description.png"
+                       Checked="{Binding AgreedTerms}" />
+    </ks:Section>
+
+    <ks:Section HeaderText="RadioCell — accentColor / description / icon / hintText">
+      <ks:RadioCell Title="ライト"
+                    Description="明るい背景"
+                    IconSource="ic_light_mode.png"
+                    GroupId="theme"
+                    Value="light"
+                    SelectedValue="{Binding SelectedTheme}"
+                    AccentColor="{x:Static local:SampleTheme.DemoAccentOrange}" />
+      <ks:RadioCell Title="ダーク"
+                    Description="暗い背景"
+                    IconSource="ic_dark_mode.png"
+                    HintText="推奨"
+                    GroupId="theme"
+                    Value="dark"
+                    SelectedValue="{Binding SelectedTheme}"
+                    AccentColor="{x:Static local:SampleTheme.DemoAccentPurple}" />
+      <ks:RadioCell Title="自動"
+                    Description="システム設定に従う"
+                    IconSource="ic_brightness_auto.png"
+                    GroupId="theme"
+                    Value="auto"
+                    SelectedValue="{Binding SelectedTheme}"
+                    AccentColor="{x:Static local:SampleTheme.DemoAccentTeal}" />
+    </ks:Section>
+
+    <ks:Section HeaderText="SimpleCheckCell — 共通フィールド + accentColor">
+      <ks:SimpleCheckCell Title="通知 1"
+                          Description="週次レポート"
+                          IconSource="ic_email.png"
+                          HintText="新規"
+                          Checked="{Binding Notice1}"
+                          AccentColor="{x:Static local:SampleTheme.DemoAccentPink}" />
+      <ks:SimpleCheckCell Title="通知 2"
+                          Description="月次サマリ"
+                          IconSource="ic_calendar_today.png"
+                          Checked="{Binding Notice2}"
+                          AccentColor="{x:Static local:SampleTheme.DemoAccentGreen}" />
+    </ks:Section>
+
+    <ks:Section HeaderText="ButtonCell — icon / valueText / hintText 指定時">
+      <ks:ButtonCell Title="登録"
+                     ValueText="送信"
+                     IconSource="ic_send.png"
+                     HintText="推奨"
+                     TitleColor="{x:Static local:SampleTheme.DemoTitleBlue}"
+                     TitleAlignment="Start" />
+      <ks:ButtonCell Title="ログアウト"
+                     TitleAlignment="Center" />
+    </ks:Section>
+
+  </ks:SettingsView>
+</ContentPage>

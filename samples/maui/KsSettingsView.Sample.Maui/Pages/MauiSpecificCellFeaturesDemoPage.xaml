@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+  PickerCell の MAUI facade 固有のバインディング契約を確認するデモ画面。
+  iOS / Android の Sample に対応画面はない。
+  タイトルは SampleScreen の一元定義から与えられるため、ここでは設定しない。
+-->
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:ks="clr-namespace:KsSettingsView.Maui;assembly=KsSettingsView.Maui"
+             xmlns:vm="clr-namespace:KsSettingsView.Sample.Maui.ViewModels"
+             x:Class="KsSettingsView.Sample.Maui.Pages.MauiSpecificCellFeaturesDemoPage"
+             x:DataType="vm:MauiSpecificCellFeaturesDemoViewModel">
+  <ks:SettingsView x:Name="Settings">
+
+    <ks:Section HeaderText="SelectedCommand（単一選択）"
+                FooterText="選択項目そのものの TwoWay バインドと、選択完了を Command で受け取る経路のデモ。">
+      <ks:PickerCell Title="表示テーマ"
+                     Description="{Binding SingleStatus}"
+                     ItemsSource="{Binding SingleItems}"
+                     SelectedItem="{Binding SingleSelectedItem}"
+                     SelectedCommand="{Binding SingleSelectionCompletedCommand}"
+                     PageTitle="表示テーマを選択" />
+    </ks:Section>
+
+    <ks:Section HeaderText="SelectedCommand（複数選択）"
+                FooterText="選択要素列そのものの TwoWay バインドと、選択完了を Command で受け取る経路のデモ。">
+      <ks:PickerCell Title="通知方法"
+                     Description="{Binding MultipleStatus}"
+                     SelectionMode="Multiple"
+                     ItemsSource="{Binding MultipleItems}"
+                     SelectedItems="{Binding MultipleSelectedItems}"
+                     SelectedCommand="{Binding MultipleSelectionCompletedCommand}"
+                     PageTitle="通知方法を選択" />
+    </ks:Section>
+
+  </ks:SettingsView>
+</ContentPage>

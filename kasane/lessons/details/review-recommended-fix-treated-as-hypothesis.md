@@ -1,0 +1,9 @@
+# 経緯: レビュー推奨修正は仮説として扱う (impl L-005)
+
+inbox パターン `review-recommended-fix-treated-as-hypothesis` (kind: success、count 5) から 2026-08-28 に昇格。5 件すべてで「指摘 = 問題の発見としては有効 / 推奨修正コード = そのまま採ると誤り」の分離が機能した。
+
+- 2026-08-28 restore-pickercell-object-items: review-002 Major「値等価な別インスタンスが snapshot 実体へ再正規化されない」の指摘自体は契約の穴の発見として有効だったが、推奨案 A (null を挟む強制伝播) は原典 AiForms に無い副作用 (ViewModel への null 一時通知) を持ち込むものだった。実装側が原典の書き戻し挙動を裏どりして案 B (正規化は Cell の公開値まで) をオーナー裁定で確定し、deviation.md に理由を記録、案 A への改変で落ちるガードテスト `NormalizationStopsAtCellAndDoesNotReachViewModel` を追加。review-003 がミューテーション実測で「案 A を実装するとこのテストだけが落ちる」ことを確認した。
+- 2026-08-11 add-maui-basic-input-cells: review-001 Minor-4 の `@JvmSynthetic` 推奨を実装者が Binding rebuild の実測で反証し、BG8605 容認を継続。警告の出力元は fixup / 除去より前の class-parse 段であり、メンバー可視性の注釈では抑止されない。review-001 が根拠にした前例は `internal` マングリングを同時に受けており synthetic 単独の効果の証拠になっていなかった。review-002 は反証の機構を独立検証して自らの推論誤りを認め、判断根拠を実測へ差し替えた記録の残し方を評価した。
+- 2026-08-09 頃 add-maui-native-bridge: review-001 Minor-1「Metadata.xml の remove-node は何にも一致していないので削除せよ」を実装者が鵜呑みにせず実測 — remove-node を消すと Kotlin 内部ヘルパ型 WhenMappings が public binding 表面に露出することを確認。BG8A00 は SDK の Metadata.xml 2段適用により「除去が fixup 段で成立済み」の裏返しで、指摘の代替案も原理的に達成不可能だった。remove-node 維持 + 実測どおりの文書化で解決。
+- 2026-08-03 fix-adapter-not-restored-on-reattach: review-001 は Store 経路の stale 復帰 (Major) の指摘自体は正確だったが、推奨修正形 (Theme も `setRootDirect` で渡す) は `theme` collect の同値スキップと干渉して `ItemDecoration` が古い Theme のまま残る退行を含んでいた。実装者は推奨を鵜呑みにせず root のみ取り込む `resyncFromStore` を設計し、理由を KDoc に残し、「detach 中の Theme 変更が再 attach 後に反映される」テストで推奨形への改変を禁じた。review-002 が M2 ミューテーションでこのガードの実効性と推奨の誤りを実証。
+- 2026-08 上旬 add-maui-custom-cell: 相方レビュー Major 3 の推奨修正 2 案のうち「失敗時ロールバック」を実装者が実測で反証 — BindableObject は再入 set を遅延キューへ回し例外時に drain しないため値が戻らない。ロールバック実装のテストが赤で検出し、もう一方の「値確定前の検査 (validateValue + guard)」へ切替。review-002 がプローブ実測で妥当性を独立確認した。

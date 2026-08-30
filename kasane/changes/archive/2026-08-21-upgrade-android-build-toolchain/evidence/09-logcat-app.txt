@@ -1,0 +1,87 @@
+# samples/android 実機起動ログ (Pixel 6a / bluejay, serial <android-device-serial>)
+# 抽出条件: アプリプロセス (pid 16373) の行 + FATAL EXCEPTION 検索結果
+
+## FATAL EXCEPTION の検索結果
+件数: 0
+
+## アプリプロセスの出力
+08-21 17:26:49.594 16373 16373 I Zygote  : Process 16373 created for jp.kamusoft.kssettingsview.samples.android
+08-21 17:26:49.594 16373 16373 I samples.android: Late-enabling -Xcheck:jni
+08-21 17:26:49.617 16373 16373 I samples.android: Using generational CollectorTypeCMC GC.
+08-21 17:26:49.662 16373 16373 D nativeloader: Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+08-21 17:26:49.845 16373 16373 D nativeloader: Configuring clns-9 for other apk /data/app/~~8ILPYOxh8rlg93YL45Moqg==/jp.kamusoft.kssettingsview.samples.android-fT--jpAy2M5zsUj1NJBNqw==/base.apk. target_sdk_version=35, uses_libraries=, library_path=/data/app/~~8ILPYOxh8rlg93YL45Moqg==/jp.kamusoft.kssettingsview.samples.android-fT--jpAy2M5zsUj1NJBNqw==/lib/arm64:/data/app/~~8ILPYOxh8rlg93YL45Moqg==/jp.kamusoft.kssettingsview.samples.android-fT--jpAy2M5zsUj1NJBNqw==/base.apk!/lib/arm64-v8a, permitted_path=/data:/mnt/expand:/data/user/0/jp.kamusoft.kssettingsview.samples.android
+08-21 17:26:49.846 16373 16373 D CompatChangeReporter: Compat change id reported: 202956589; UID 10761; state: ENABLED
+08-21 17:26:49.858 16373 16373 V GraphicsEnvironment: Currently set values for:
+08-21 17:26:49.858 16373 16373 V GraphicsEnvironment:   angle_gl_driver_selection_pkgs=[com.android.angle]
+08-21 17:26:49.858 16373 16373 V GraphicsEnvironment:   angle_gl_driver_selection_values=[angle]
+08-21 17:26:49.858 16373 16373 V GraphicsEnvironment: jp.kamusoft.kssettingsview.samples.android is not listed in per-application setting
+08-21 17:26:49.858 16373 16373 V GraphicsEnvironment: No special selections for ANGLE, returning default driver choice
+08-21 17:26:49.858 16373 16373 V GraphicsEnvironment: Neither updatable production driver nor prerelease driver is supported.
+08-21 17:26:49.883 16373 16418 I DisplayManager: Choreographer implicitly registered for the refresh rate.
+08-21 17:26:49.884 16373 16418 D vulkan  : searching for layers in '/data/app/~~8ILPYOxh8rlg93YL45Moqg==/jp.kamusoft.kssettingsview.samples.android-fT--jpAy2M5zsUj1NJBNqw==/lib/arm64'
+08-21 17:26:49.885 16373 16418 D vulkan  : searching for layers in '/data/app/~~8ILPYOxh8rlg93YL45Moqg==/jp.kamusoft.kssettingsview.samples.android-fT--jpAy2M5zsUj1NJBNqw==/base.apk!/lib/arm64-v8a'
+08-21 17:26:49.898 16373 16373 D DesktopExperienceFlags: Toggle override initialized to: false
+08-21 17:26:49.923 16373 16373 D CompatChangeReporter: Compat change id reported: 309578419; UID 10761; state: ENABLED
+08-21 17:26:49.924 16373 16373 D DesktopModeFlags: Toggle override initialized to: OVERRIDE_UNSET
+08-21 17:26:49.951 16373 16373 D CompatChangeReporter: Compat change id reported: 349153669; UID 10761; state: ENABLED
+08-21 17:26:50.099 16373 16373 D VRI[MainActivity]: WindowInsets changed: 1080x2400 statusBars:[0,132,0,0] navigationBars:[0,0,0,63] mandatorySystemGestures:[0,164,0,84] 
+08-21 17:26:50.100 16373 16373 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): android.view.ViewRootImpl$$ExternalSyntheticLambda25@729a606
+08-21 17:26:50.128 16373 16373 I HWUI    : Using FreeType backend (prop=Auto)
+08-21 17:26:50.212 16373 16379 I samples.android: Compiler allocated 5127KB to compile void android.view.ViewRootImpl.performTraversals()
+08-21 17:26:50.445 16373 16373 D InsetsController: hide(ime())
+08-21 17:26:50.446 16373 16373 I ImeTracker: jp.kamusoft.kssettingsview.samples.android:81863314: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+08-21 17:26:55.879 16373 16456 D ProfileInstaller: Installing profile for jp.kamusoft.kssettingsview.samples.android
+08-21 17:27:07.663 16373 16373 W WindowOnBackDispatcher: OnBackInvokedCallback is not enabled for the application.
+08-21 17:27:07.663 16373 16373 W WindowOnBackDispatcher: Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+08-21 17:27:07.728 16373 16373 D KsSettingsView: bind(): findViewTreeLifecycleOwner() returned null. Diff collection will be retried on onAttachedToWindow().
+08-21 17:27:13.618 16373 16380 I samples.android: Background concurrent mark compact GC freed 3469KB AllocSpace bytes, 0(0B) LOS objects, 97% free, 5253KB/256MB, paused 215us,3.694ms total 105.284ms
+08-21 17:27:36.929 16373 16373 W WindowOnBackDispatcher: OnBackInvokedCallback is not enabled for the application.
+08-21 17:27:36.929 16373 16373 W WindowOnBackDispatcher: Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+08-21 17:27:36.999 16373 16373 D KsSettingsView: bind(): findViewTreeLifecycleOwner() returned null. Diff collection will be retried on onAttachedToWindow().
+08-21 17:27:37.032 16373 16373 D CompatChangeReporter: Compat change id reported: 303326708; UID 10761; state: ENABLED
+08-21 17:27:52.529 16373 16373 I ImeTracker: jp.kamusoft.kssettingsview.samples.android:8d3ce5c1: onRequestShow at ORIGIN_CLIENT reason SHOW_SOFT_INPUT fromUser true userId 0 displayId 0
+08-21 17:27:52.541 16373 16373 D InsetsController: show(ime())
+08-21 17:27:52.542 16373 16373 D InsetsController: Setting requestedVisibleTypes to 511 (was 503)
+08-21 17:27:52.555 16373 16373 I AutofillManager: showAutofillDialog() return false due to improve fill dialog
+08-21 17:27:52.555 16373 16373 I ImeTracker: jp.kamusoft.kssettingsview.samples.android:c03ef4db: onRequestShow at ORIGIN_CLIENT reason SHOW_SOFT_INPUT fromUser true userId 0 displayId 0
+08-21 17:27:52.555 16373 16373 D InsetsController: show(ime())
+08-21 17:27:52.555 16373 16373 I ImeTracker: jp.kamusoft.kssettingsview.samples.android:c03ef4db: onCancelled at PHASE_CLIENT_REPORT_REQUESTED_VISIBLE_TYPES
+08-21 17:27:52.571 16373 16373 I AssistStructure: Flattened final assist data: 1808 bytes, containing 2 windows, 8 views
+08-21 17:27:52.572 16373 16373 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): android.view.ViewRootImpl$$ExternalSyntheticLambda25@2bdd7b2
+08-21 17:27:52.742 16373 16373 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): android.view.ImeBackAnimationController@acc2857
+08-21 17:27:52.932 16373 16373 D VRI[MainActivity]: WindowInsets changed: ime:[0,0,0,899] 
+08-21 17:27:52.938 16373 16373 W InteractionJankMonitor: Initializing without READ_DEVICE_CONFIG permission. enabled=false, interval=1, missedFrameThreshold=3, frameTimeThreshold=64, package=jp.kamusoft.kssettingsview.samples.android
+08-21 17:27:53.244 16373 16373 I ImeTracker: jp.kamusoft.kssettingsview.samples.android:8d3ce5c1: onShown
+08-21 17:27:55.735 16373 16373 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): null
+08-21 17:28:11.180 16373 16373 E SpannableStringBuilder: SPAN_EXCLUSIVE_EXCLUSIVE spans cannot have a zero length
+08-21 17:28:11.180 16373 16373 E SpannableStringBuilder: SPAN_EXCLUSIVE_EXCLUSIVE spans cannot have a zero length
+08-21 17:28:12.277 16373 16373 I ImeTracker: jp.kamusoft.kssettingsview.samples.android:75d08b3: onRequestHide at ORIGIN_CLIENT reason HIDE_SOFT_INPUT_REQUEST_HIDE_WITH_CONTROL fromUser true userId 0 displayId 0
+08-21 17:28:12.277 16373 16373 D InsetsController: hide(ime())
+08-21 17:28:12.277 16373 16373 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): android.view.ViewRootImpl$$ExternalSyntheticLambda25@729a606
+08-21 17:28:12.277 16373 16373 D InsetsController: Setting requestedVisibleTypes to 503 (was 511)
+08-21 17:28:12.278 16373 16373 D VRI[MainActivity]: WindowInsets changed: ime:null 
+08-21 17:28:12.316 16373 16373 I ImeTracker: system_server:5f0e08d4: onCancelled at PHASE_CLIENT_ON_CONTROLS_CHANGED
+08-21 17:28:13.385 16373 16373 I ImeTracker: jp.kamusoft.kssettingsview.samples.android:847476cd: onRequestShow at ORIGIN_CLIENT reason SHOW_SOFT_INPUT fromUser false userId 0 displayId 0
+08-21 17:28:13.387 16373 16373 D InsetsController: show(ime())
+08-21 17:28:13.388 16373 16373 D InsetsController: Setting requestedVisibleTypes to 511 (was 503)
+08-21 17:28:13.389 16373 16373 I ImeTracker: jp.kamusoft.kssettingsview.samples.android:d8b14cd4: onRequestShow at ORIGIN_CLIENT reason SHOW_SOFT_INPUT fromUser false userId 0 displayId 0
+08-21 17:28:13.389 16373 16373 D InsetsController: show(ime())
+08-21 17:28:13.389 16373 16373 I ImeTracker: jp.kamusoft.kssettingsview.samples.android:d8b14cd4: onCancelled at PHASE_CLIENT_REPORT_REQUESTED_VISIBLE_TYPES
+08-21 17:28:13.447 16373 16373 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): android.view.ImeBackAnimationController@acc2857
+08-21 17:28:13.495 16373 16373 D VRI[MainActivity]: WindowInsets changed: ime:[0,0,0,899] 
+08-21 17:28:13.813 16373 16373 I ImeTracker: jp.kamusoft.kssettingsview.samples.android:847476cd: onShown
+08-21 17:28:28.322 16373 16373 I ImeTracker: jp.kamusoft.kssettingsview.samples.android:79530fee: onRequestHide at ORIGIN_CLIENT reason HIDE_SOFT_INPUT_REQUEST_HIDE_WITH_CONTROL fromUser true userId 0 displayId 0
+08-21 17:28:28.323 16373 16373 D InsetsController: hide(ime())
+08-21 17:28:28.323 16373 16373 D WindowOnBackDispatcher: setTopOnBackInvokedCallback (unwrapped): android.view.ViewRootImpl$$ExternalSyntheticLambda25@729a606
+08-21 17:28:28.323 16373 16373 D InsetsController: Setting requestedVisibleTypes to 503 (was 511)
+08-21 17:28:28.337 16373 16373 D VRI[MainActivity]: WindowInsets changed: ime:null 
+08-21 17:28:28.359 16373 16373 I ImeTracker: system_server:f4963f8d: onCancelled at PHASE_CLIENT_ON_CONTROLS_CHANGED
+08-21 17:28:30.207 16373 16373 I ImeTracker: jp.kamusoft.kssettingsview.samples.android:66a2b3bb: onRequestHide at ORIGIN_CLIENT reason HIDE_CLOSE_CURRENT_SESSION fromUser false userId 0 displayId 0
+08-21 17:28:30.207 16373 16373 D InsetsController: hide(ime())
+08-21 17:28:30.207 16373 16373 I ImeTracker: jp.kamusoft.kssettingsview.samples.android:66a2b3bb: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+08-21 17:28:31.895 16373 16373 W WindowOnBackDispatcher: OnBackInvokedCallback is not enabled for the application.
+08-21 17:28:31.895 16373 16373 W WindowOnBackDispatcher: Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+08-21 17:28:31.942 16373 16373 D KsSettingsView: bind(): findViewTreeLifecycleOwner() returned null. Diff collection will be retried on onAttachedToWindow().
+08-21 17:29:03.793 16373 16373 W WindowOnBackDispatcher: OnBackInvokedCallback is not enabled for the application.
+08-21 17:29:03.793 16373 16373 W WindowOnBackDispatcher: Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+08-21 17:29:03.845 16373 16373 D KsSettingsView: bind(): findViewTreeLifecycleOwner() returned null. Diff collection will be retried on onAttachedToWindow().

@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+  基本 Cell 7 種 (LabelCell / CommandCell / ButtonCell / SwitchCell / CheckboxCell / RadioCell /
+  SimpleCheckCell) を 1 画面に並べて目視確認するデモ画面。
+  セクション構成は Cell タイプ別で、iOS / Android の同デモ画面と文言・構成を揃えてある。
+  タイトルは SampleScreen の一元定義から与えられるため、ここでは設定しない。
+-->
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:ks="clr-namespace:KsSettingsView.Maui;assembly=KsSettingsView.Maui"
+             xmlns:local="clr-namespace:KsSettingsView.Sample.Maui"
+             xmlns:vm="clr-namespace:KsSettingsView.Sample.Maui.ViewModels"
+             x:Class="KsSettingsView.Sample.Maui.Pages.BasicCellsDemoPage"
+             x:DataType="vm:BasicCellsDemoViewModel">
+  <Grid RowDefinitions="Auto,*">
+    <Label Margin="16"
+           FontSize="12"
+           Text="{Binding LastTapped, StringFormat='最後にタップ: {0}'}" />
+
+    <ks:SettingsView x:Name="Settings" Grid.Row="1">
+
+      <ks:Section HeaderText="CommandCell" HeaderHeight="60">
+        <ks:CommandCell Height="80"
+                        Title="Tanaka Taro"
+                        Description="tanaka.taro@example.com"
+                        IconSource="ic_account_circle.png"
+                        Command="{Binding Tap}"
+                        CommandParameter="Tanaka Taro" />
+        <ks:CommandCell Title="プロフィール"
+                        Command="{Binding Tap}"
+                        CommandParameter="プロフィール" />
+        <ks:CommandCell Title="通知設定"
+                        ValueText="オン"
+                        Command="{Binding Tap}"
+                        CommandParameter="通知設定" />
+      </ks:Section>
+
+      <ks:Section HeaderText="LabelCell">
+        <ks:LabelCell Title="Storage"
+                      Description="This is description. you can write detail explanation of the item here. long text wrap automatically."
+                      ValueText="256 GB"
+                      IconSource="ic_storage.png" />
+        <ks:LabelCell Title="バージョン"
+                      ValueText="1.0.0" />
+      </ks:Section>
+
+      <ks:Section HeaderText="SwitchCell">
+        <ks:SwitchCell Title="Notification"
+                       Description="This is description. you can write detail explanation of the item here. long text wrap automatically."
+                       On="{Binding NotificationEnabled}" />
+      </ks:Section>
+
+      <ks:Section HeaderText="CheckboxCell">
+        <ks:CheckboxCell Title="Agree to Terms"
+                         Checked="{Binding AgreedTerms}" />
+      </ks:Section>
+
+      <ks:Section HeaderText="RadioCell"
+                  FooterText="You can select either TypeA or TypeB.">
+        <ks:RadioCell Title="TypeA"
+                      GroupId="type"
+                      Value="TypeA"
+                      SelectedValue="{Binding SelectedType}" />
+        <ks:RadioCell Title="TypeB"
+                      GroupId="type"
+                      Value="TypeB"
+                      SelectedValue="{Binding SelectedType}" />
+      </ks:Section>
+
+      <ks:Section HeaderText="SimpleCheckCell">
+        <ks:SimpleCheckCell Title="Item 1" Checked="{Binding SimpleCheck1}" />
+        <ks:SimpleCheckCell Title="Item 2" Checked="{Binding SimpleCheck2}" />
+        <ks:SimpleCheckCell Title="Item 3" Checked="{Binding SimpleCheck3}" />
+      </ks:Section>
+
+      <ks:Section HeaderText="ButtonCell">
+        <ks:ButtonCell Title="ログアウト"
+                       TitleColor="{x:Static local:SampleTheme.MauiTitleText}"
+                       TitleAlignment="Center"
+                       Command="{Binding Tap}"
+                       CommandParameter="ログアウト" />
+      </ks:Section>
+
+    </ks:SettingsView>
+  </Grid>
+</ContentPage>

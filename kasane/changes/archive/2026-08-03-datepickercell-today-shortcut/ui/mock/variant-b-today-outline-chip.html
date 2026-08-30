@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>variant B — 今日 = outline chip (Spinner の今日 chip と同意匠)</title>
+<style>
+  :root {
+    --accent: #6750A4;        /* PickerDialogColors.accent (段階解決の例示値) */
+    --on-accent: #FFFFFF;
+    --bg: #FDF7FF;            /* PickerDialogColors.background */
+    --text: #1D1B20;          /* PickerDialogColors.text */
+    --text-sub: #49454F;
+    --divider: #CAC4D0;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Roboto", "Noto Sans JP", sans-serif;
+    background: #4a4458;
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .dialog {
+    width: 328px; background: var(--bg); border-radius: 28px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.35); overflow: hidden;
+  }
+  .header { padding: 16px 24px 12px; }
+  .overline { font-size: 13px; letter-spacing: .5px; color: var(--text-sub); margin-bottom: 28px; }
+  .headline-row { display: flex; align-items: center; justify-content: space-between; }
+  .headline { font-size: 28px; font-weight: 400; color: var(--text); }
+  .mode-toggle { font-size: 18px; color: var(--text-sub); padding: 6px; }
+  .divider { height: 1px; background: var(--divider); }
+  .month-nav { display: flex; align-items: center; padding: 12px 8px 4px 20px; }
+  .month-label { font-size: 14px; font-weight: 500; color: var(--text-sub); flex: 1; }
+  .month-label .caret { font-size: 10px; margin-left: 4px; }
+  .nav-arrow { color: var(--text-sub); font-size: 18px; padding: 8px 12px; }
+  .cal { padding: 0 12px 4px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { font-size: 12px; font-weight: 400; color: var(--text-sub); height: 32px; }
+  td { text-align: center; height: 40px; width: 40px; font-size: 13px; color: var(--text); }
+  td span { display: inline-flex; align-items: center; justify-content: center;
+            width: 36px; height: 36px; border-radius: 50%; }
+  td.selected span { background: var(--accent); color: var(--on-accent); }
+  .actions {
+    display: flex; align-items: center; padding: 8px 12px 12px;
+  }
+  .btn {
+    border: none; background: none; font-size: 14px; font-weight: 500;
+    color: var(--accent); padding: 10px 12px; border-radius: 20px; cursor: pointer;
+  }
+  .btn:hover { background: rgba(103,80,164,.08); }
+  .chip {
+    background: none; font-size: 14px; font-weight: 700; color: var(--accent);
+    border: 1.5px solid var(--accent); border-radius: 12px;
+    padding: 8px 16px; margin-left: 4px; cursor: pointer;
+  }
+  .chip:hover { background: rgba(103,80,164,.08); }
+  .spacer { flex: 1; }
+  .caption { color: #e6e0e9; font-size: 12px; text-align: center; margin-top: 16px; }
+  .wrap { display: flex; flex-direction: column; align-items: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="dialog">
+    <div class="header">
+      <div class="overline">予約日を選択</div>
+      <div class="headline-row">
+        <div class="headline">2026年8月3日</div>
+        <div class="mode-toggle">✎</div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="month-nav">
+      <div class="month-label">2026年8月<span class="caret">▼</span></div>
+      <div class="nav-arrow">‹</div>
+      <div class="nav-arrow">›</div>
+    </div>
+    <div class="cal">
+      <table>
+        <tr><th>日</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th><th>土</th></tr>
+        <tr><td></td><td></td><td></td><td></td><td></td><td></td><td><span>1</span></td></tr>
+        <tr><td><span>2</span></td><td class="selected"><span>3</span></td><td><span>4</span></td><td><span>5</span></td><td><span>6</span></td><td><span>7</span></td><td><span>8</span></td></tr>
+        <tr><td><span>9</span></td><td><span>10</span></td><td><span>11</span></td><td><span>12</span></td><td><span>13</span></td><td><span>14</span></td><td><span>15</span></td></tr>
+        <tr><td><span>16</span></td><td><span>17</span></td><td><span>18</span></td><td><span>19</span></td><td><span>20</span></td><td><span>21</span></td><td><span>22</span></td></tr>
+        <tr><td><span>23</span></td><td><span>24</span></td><td><span>25</span></td><td><span>26</span></td><td><span>27</span></td><td><span>28</span></td><td><span>29</span></td></tr>
+        <tr><td><span>30</span></td><td><span>31</span></td><td></td><td></td><td></td><td></td><td></td></tr>
+      </table>
+    </div>
+    <div class="actions">
+      <button class="chip">今日</button>
+      <div class="spacer"></div>
+      <button class="btn">キャンセル</button>
+      <button class="btn">OK</button>
+    </div>
+  </div>
+  <div class="caption">variant B: 「今日」= accent outline chip (Spinner の今日 chip と同意匠、左端)</div>
+</div>
+</body>
+</html>

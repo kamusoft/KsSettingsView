@@ -1,0 +1,26 @@
+date=2026-08-11 15:32:42 label=maui-ablation-BEFORE-fix serial=<android-device-serial> model=Pixel 6a android=16
+prefix=tanaka iterations=20 min_valid=15
+iter 1: FAIL (before=...taro@example.com after=....taro@example.comabc)
+iter 2: FAIL (before=...o@example.comabc after=...o@example.comabcabcd)
+iter 3: FAIL (before=...ample.comabcabcd after=...example.comabcabcdab)
+iter 4: OK   (...omabcabcdababcde)
+iter 5: SKIP (bounds moved [189,651][1038,775] -> [189,689][1038,813], after=...abcdababcdeabcde)
+iter 6: FAIL (before=...abcdababcdeabcde after=...cabcdababcdeabcdeabe)
+iter 7: OK   (...cdeabcdeabeabcde)
+iter 8: OK   (...cdeabeabcdeabcde)
+iter 9: OK   (...eabcdeabcdeabcde)
+iter 10: OK   (...eabcdeabcdeabcde)
+iter 11: FAIL (before=...eabcdeabcdeabcde after=...cdeabcdeabcdeabcdeab)
+iter 12: OK   (...bcdeabcdeababcde)
+iter 13: OK   (...bcdeababcdeabcde)
+iter 14: FAIL (before=...bcdeababcdeabcde after=...abcdeababcdeabcdeabe)
+iter 15: OK   (...cdeabcdeabeabcde)
+iter 16: OK   (...cdeabeabcdeabcde)
+iter 17: OK   (...eabcdeabcdeabcde)
+iter 18: FAIL (before=...eabcdeabcdeabcde after=...abeabcdeabcdeabcdeab)
+iter 19: SKIP (bounds moved [189,689][1038,813] -> [189,726][1038,850], after=...bcdeabcdeababcde)
+iter 20: OK   (...bcdeababcdeabcde)
+---
+pass=11 fail=7 skip=2 valid=18 / 20 (min_valid=15)
+判定: NG (破損 7 件)
+result=1

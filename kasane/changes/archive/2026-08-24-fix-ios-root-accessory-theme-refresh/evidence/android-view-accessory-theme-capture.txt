@@ -1,0 +1,40 @@
+Android: Theme 変更が View 形式 accessory の内部状態を壊さないかの A/B (Android Emulator Pixel_6 / API 31)
+
+対象: Theme 変更の通知で View 形式 (KsAnyView.AndroidView) の accessory が
+factory から作り直され、View の内部状態を失っていた挙動。
+Root Header / Footer は RootHeaderFooterAdapter、Section Header / Footer は
+KsSettingsListAdapter が、Theme 通知をそのままフル bind へ落としていたことによる。
+
+撮影手順: samples/android の「Store 方式デモ」画面を撮影用に一時改変し、
+  - Root Header = View 形式 (EditText、hint "Root Header の入力欄")
+  - Section Header = View 形式 (EditText、hint "Section Header の入力欄")
+  - Section Footer / Root Footer = text 形式
+を用意して、ボタン 1 つで store.applyTheme(Theme A / Theme B) を切り替えた。
+Theme A は文字色が灰・黒、Theme B は Section Footer が緑・Cell が青。
+両方の EditText に文字を入力してから Theme を切り替えている。
+撮影後、StoreDemoScreen.kt の一時改変は元に戻してある。
+
+- android-view-accessory-theme-before.png
+    Theme A のまま、Root Header と Section Header の EditText に入力した直後。
+    どちらの入力欄にも入力内容が入っている。
+
+- android-view-accessory-theme-after-unfixed.png
+    修正を入れていないビルドで Theme を切り替えた直後。
+    Cell と Section Footer の色は Theme B へ追従するが、**両方の EditText の入力内容が
+    消えて hint 表示に戻っている** = View が factory から作り直されている。
+
+- android-view-accessory-theme-after-fixed.png
+    修正を入れたビルドで同じ操作をした直後。
+    Cell と Section Footer は同じく Theme B へ追従し、**両方の EditText の入力内容は
+    そのまま残る** = View 形式は作り直していない。
+
+A/B の条件: sample アプリのソースとタップ座標・入力文字列は両ビルドで同一で、差分は
+ks-settingsview-ui の RootHeaderFooterAdapter.kt / KsSettingsListAdapter.kt のみ。
+同じ因果は Robolectric 側でも確認済みで、Root 側の振り分けを外すと
+RootAccessoryThemeRefreshTest の View 形式 3 件だけが、Section 側の振り分けを外すと
+SectionAccessoryThemeRefreshTest の View 形式 3 件だけが落ちる。
+
+入力文字は端末 IME がかな変換したまま撮影している (入力内容が保持されるかだけが観測対象で、
+文字列の中身は問わない)。
+
+個人情報: エミュレータ + デモデータのみ。端末名・アカウント・通知の写り込みなし。

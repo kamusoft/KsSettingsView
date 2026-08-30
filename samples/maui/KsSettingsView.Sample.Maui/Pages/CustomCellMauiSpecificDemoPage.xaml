@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+  CustomCell の MAUI facade 固有の意味論を確認するデモ画面。
+  ① 〜 ④ の番号は画面上で確認する項目の並びに対応する。
+  Content の差し替え・ItemTemplate 生成・Handler lifecycle は MAUI facade 固有の意味論で、
+  iOS / Android の Sample に対応画面はない。
+  タイトルは SampleScreen の一元定義から与えられるため、ここでは設定しない。
+-->
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:ks="clr-namespace:KsSettingsView.Maui;assembly=KsSettingsView.Maui"
+             xmlns:local="clr-namespace:KsSettingsView.Sample.Maui"
+             xmlns:v="clr-namespace:KsSettingsView.Sample.Maui.Views"
+             xmlns:vm="clr-namespace:KsSettingsView.Sample.Maui.ViewModels"
+             x:Class="KsSettingsView.Sample.Maui.Pages.CustomCellMauiSpecificDemoPage"
+             x:DataType="vm:CustomCellMauiSpecificDemoViewModel">
+  <ks:SettingsView x:Name="Settings">
+
+    <!-- ① Content を別インスタンスへ差し替え、null との往復も通す。 -->
+    <ks:Section HeaderText="① Content の差し替えと null 遷移"
+                FooterText="差し替えでは行の内容が別の View に置き換わり、null では空の内容の行になる。">
+      <ks:CustomCell x:Name="SwapCell" />
+
+      <ks:LabelCell Title="別インスタンスへの差し替え"
+                    Description="A と B を行き来する。同じインスタンスへ戻す往復も通る" />
+      <ks:ButtonCell x:Name="SwapContentCell"
+                     Title="Content を B に差し替える"
+                     Tapped="OnSwapContentTapped" />
+      <ks:ButtonCell x:Name="ClearContentCell"
+                     Title="Content を null にする"
+                     Tapped="OnToggleNullContentTapped" />
+    </ks:Section>
+
+    <!-- ② ItemsSource / ItemTemplate から生成した CustomCell 群。 -->
+    <ks:Section HeaderText="② ItemTemplate 生成の行の独立動作"
+                FooterText="生成された行は item を BindingContext として解決し、操作した行だけが変わる。"
+                ItemsSource="{Binding TemplateItems}">
+      <ks:Section.ItemTemplate>
+        <DataTemplate x:DataType="vm:CustomCellTemplateItem">
+          <ks:CustomCell>
+            <v:SampleAccentRow DotColor="{x:Static local:SampleTheme.DemoAccentTeal}"
+                               Title="{Binding Name}"
+                               Subtitle="ピルを押すとこの行だけが進む">
+              <v:SampleAccentRow.Trailing>
+                <v:SampleTagLabel Text="{Binding CountText}">
+                  <v:SampleTagLabel.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding IncrementCommand}" />
+                  </v:SampleTagLabel.GestureRecognizers>
+                </v:SampleTagLabel>
+              </v:SampleAccentRow.Trailing>
+            </v:SampleAccentRow>
+          </ks:CustomCell>
+        </DataTemplate>
+      </ks:Section.ItemTemplate>
+    </ks:Section>
+
+    <!-- ③ 同じページインスタンスのまま Handler の切断と再接続を起こし、復元を確認する。 -->
+    <ks:Section HeaderText="③ 切断・再接続をまたぐ復元"
+                FooterText="離脱中に差し替えた Content が、再接続後の表示に反映される。">
+      <ks:CustomCell x:Name="ReconnectCell" />
+
+      <ks:LabelCell Title="このページ" ValueText="{Binding InstanceText}" />
+      <ks:LabelCell Title="再接続の記録" Description="{Binding ReconnectText}" />
+      <ks:LabelCell Title="切断・再接続をまたぐ復元"
+                    Description="一覧まで戻ってから同じインスタンスを開き直す。離脱中に Content も差し替える" />
+      <ks:ButtonCell Title="離れて戻る（Handler 切断 → 再接続）" Tapped="OnReconnectTapped" />
+    </ks:Section>
+
+    <!-- ④ 同じ View のまま内容だけが変わるときの、行高さの追従。 -->
+    <ks:Section HeaderText="④ content サイズ変化への行高さ追従"
+                FooterText="View を置き直さずに内容だけを変える。行の高さが新しいサイズに追従する。">
+      <ks:CustomCell>
+        <VerticalStackLayout Padding="16,10" Spacing="6">
+          <v:SampleTagLabel Text="内容の行数を切り替える"
+                            TagBackground="{x:Static local:SampleTheme.DemoPillBackground}"
+                            HorizontalOptions="Start">
+            <v:SampleTagLabel.GestureRecognizers>
+              <TapGestureRecognizer Command="{Binding ToggleGrowingTextCommand}" />
+            </v:SampleTagLabel.GestureRecognizers>
+          </v:SampleTagLabel>
+          <Label Text="{Binding GrowingText}"
+                 FontSize="13"
+                 LineHeight="1.6"
+                 TextColor="{x:Static local:SampleTheme.DemoExpandText}" />
+        </VerticalStackLayout>
+      </ks:CustomCell>
+
+      <ks:LabelCell Title="内容変化への高さ追従"
+                    Description="上の行のピルを押して 1 行 ⇔ 3 行を切り替える。行の高さが内容に追従する" />
+    </ks:Section>
+
+  </ks:SettingsView>
+</ContentPage>

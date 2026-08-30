@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>Plan A — iOS 同型ヘッダー (ハンドルなし)</title>
+<style>
+  :root {
+    --accent: #C9A227;        /* accentColor (サンプルのゴールド系) */
+    --sheet-bg: #FFFFFF;      /* Theme.cellBackgroundColor 相当 */
+    --separator: #E4E0D8;     /* Theme.separatorColor 相当 */
+    --text: #1C1B1F;
+    --text-secondary: #6B6860;
+    --scrim: rgba(0,0,0,0.38);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Hiragino Sans", "Noto Sans JP", Roboto, sans-serif;
+    background: #F3F1EC; padding: 24px; color: var(--text);
+  }
+  h1 { font-size: 16px; margin-bottom: 4px; }
+  p.note { font-size: 12px; color: var(--text-secondary); margin-bottom: 20px; }
+  .frames { display: flex; gap: 32px; flex-wrap: wrap; }
+  .frame-label { font-size: 12px; color: var(--text-secondary); text-align: center; margin-top: 8px; }
+  .phone {
+    width: 340px; height: 560px; border-radius: 24px; overflow: hidden;
+    background: #FDFBF6; border: 1px solid #D8D4CB; position: relative;
+    display: flex; flex-direction: column; justify-content: flex-end;
+  }
+  .scrim { position: absolute; inset: 0; background: var(--scrim); }
+  .behind { padding: 20px 16px; font-size: 13px; color: #8a8676; }
+  .behind .row { padding: 14px 0; border-bottom: 1px solid #E9E5DC; display: flex; justify-content: space-between; }
+  .sheet {
+    position: relative; z-index: 2;
+    background: var(--sheet-bg);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -4px 24px rgba(0,0,0,0.18);
+  }
+  .sheet-header {
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+    padding: 14px 16px 12px;
+  }
+  .btn-cancel { justify-self: start; font-size: 15px; color: var(--accent); }
+  .sheet-title { font-size: 16px; font-weight: 700; }
+  .btn-done { justify-self: end; font-size: 15px; font-weight: 700; color: var(--accent); }
+  .list { border-top: 1px solid var(--separator); }
+  .item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 15px 16px; font-size: 15px;
+    border-bottom: 1px solid var(--separator);
+  }
+  .item:last-child { border-bottom: none; }
+  .item .check { width: 20px; height: 20px; visibility: hidden; }
+  .item.checked .check { visibility: visible; }
+  .check svg { width: 20px; height: 20px; stroke: var(--accent); stroke-width: 3; fill: none; }
+  .sheet-bottom-pad { height: 18px; }
+</style>
+</head>
+<body>
+<h1>Plan A — iOS 同型ヘッダー (ドラッグハンドルなし)</h1>
+<p class="note">左: 単一選択 (タップ即確定・閉じる) / 右: 複数選択 (OK で確定)。キャンセルはヘッダー左のボタンとシート外タップ・下スワイプ。文字列は OS リソース (android.R.string.ok / cancel)。</p>
+<div class="frames">
+  <div>
+    <div class="phone">
+      <div class="behind">
+        <div class="row"><span>テーマ</span><span>ライト &gt;</span></div>
+        <div class="row"><span>通知</span><span>オン &gt;</span></div>
+      </div>
+      <div class="scrim"></div>
+      <div class="sheet">
+        <div class="sheet-header">
+          <span class="btn-cancel">キャンセル</span>
+          <span class="sheet-title">テーマを選択</span>
+          <span></span>
+        </div>
+        <div class="list">
+          <div class="item checked"><span>ライト</span><span class="check"><svg viewBox="0 0 24 24"><path d="M4 12.5 L10 18.5 L20 6"/></svg></span></div>
+          <div class="item"><span>ダーク</span><span class="check"><svg viewBox="0 0 24 24"><path d="M4 12.5 L10 18.5 L20 6"/></svg></span></div>
+          <div class="item"><span>自動</span><span class="check"><svg viewBox="0 0 24 24"><path d="M4 12.5 L10 18.5 L20 6"/></svg></span></div>
+        </div>
+        <div class="sheet-bottom-pad"></div>
+      </div>
+    </div>
+    <div class="frame-label">単一選択 (項目3つ: コンテンツ高)</div>
+  </div>
+  <div>
+    <div class="phone">
+      <div class="behind">
+        <div class="row"><span>好きな言語</span><span>C#, JavaScript &gt;</span></div>
+        <div class="row"><span>サイズ</span><span>30 px &gt;</span></div>
+      </div>
+      <div class="scrim"></div>
+      <div class="sheet">
+        <div class="sheet-header">
+          <span class="btn-cancel">キャンセル</span>
+          <span class="sheet-title">好きな言語</span>
+          <span class="btn-done">OK</span>
+        </div>
+        <div class="list">
+          <div class="item"><span>Java</span><span class="check"><svg viewBox="0 0 24 24"><path d="M4 12.5 L10 18.5 L20 6"/></svg></span></div>
+          <div class="item checked"><span>C#</span><span class="check"><svg viewBox="0 0 24 24"><path d="M4 12.5 L10 18.5 L20 6"/></svg></span></div>
+          <div class="item checked"><span>JavaScript</span><span class="check"><svg viewBox="0 0 24 24"><path d="M4 12.5 L10 18.5 L20 6"/></svg></span></div>
+          <div class="item checked"><span>PHP</span><span class="check"><svg viewBox="0 0 24 24"><path d="M4 12.5 L10 18.5 L20 6"/></svg></span></div>
+          <div class="item"><span>Perl</span><span class="check"><svg viewBox="0 0 24 24"><path d="M4 12.5 L10 18.5 L20 6"/></svg></span></div>
+          <div class="item"><span>C++</span><span class="check"><svg viewBox="0 0 24 24"><path d="M4 12.5 L10 18.5 L20 6"/></svg></span></div>
+        </div>
+        <div class="sheet-bottom-pad"></div>
+      </div>
+    </div>
+    <div class="frame-label">複数選択 (項目多数: 半分上限で内部スクロール)</div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,43 @@
+tasks 1.1 / 1.2 スパイクの logcat 抜粋 (判定行のみ)
+端末: Pixel 6a 実機 / Android 16 (API 36) / 全文は手元保管
+ホスト: ComponentActivity (FragmentActivity ではない) / Compose BOM 2024.10.01 / activity-compose 1.9.3
+
+--- 1.1 ComposeView-in-ComponentDialog (ViewTree owner の供給) ---
+I KSN_SPIKE: SpikeActivity.onCreate mode=dialog savedInstanceState=null
+I KSN_SPIKE: dialog shown. lifecycleOwner=androidx.activity.ComponentDialog@<hash> savedStateOwner=androidx.activity.ComponentDialog@<hash> viewModelStoreOwner=null
+
+--- 1.1 ダイアログ表示中に回転した場合 (Activity 再生成) ---
+I KSN_SPIKE: dialog shown. ...
+E WindowManager: android.view.WindowLeaked: Activity ...SpikeActivity has leaked window com.android.internal.policy.DecorView{...}[SpikeActivity] that was originally added here
+I KSN_SPIKE: SpikeActivity.onCreate mode=dialog savedInstanceState=Bundle[{... SaveableStateRegistry:-1=Bundle[{}]}]
+  → 再生成後のダイアログは存在しない (自前の再提示が必要)。明示 dismiss をしないと WindowLeaked が出る。
+
+--- 1.2-A 素の View 直置き (setContentView) / View id あり ---
+I KSN_SPIKE: onSaveInstanceState called: caption=mode=view-id (setContentView, id あり) counter=3 id=2131231138
+I KSN_SPIKE: SpikeActivity.onCreate mode=view-id savedInstanceState=Bundle[{android:viewHierarchyState=Bundle[{android:views={16908290=..., 2131231138=Bundle[{super=..., counter=3}], ...}}], ...}]
+I KSN_SPIKE: onRestoreInstanceState applied: caption=mode=view-id (setContentView, id あり) counter=3
+  → 成立 (recreate() / 実回転の双方で同一結果)
+
+--- 1.2-B 素の View 直置き (setContentView) / View id なし (現行コード相当) ---
+I KSN_SPIKE: SpikeActivity.onCreate mode=view-noid savedInstanceState=null
+I KSN_SPIKE: SpikeActivity.onCreate mode=view-noid savedInstanceState=Bundle[{android:viewHierarchyState=Bundle[{android:views={16908290=...}}], ...}]
+  → onSaveInstanceState が一度も呼ばれない (android:views に probe の entry が無い)。不成立。
+
+--- 1.2-C Compose AndroidView 経由 / View id あり・中継なし ---
+I KSN_SPIKE: onSaveInstanceState called: caption=AndroidView relay=false withId=true counter=3 id=2131231138
+I KSN_SPIKE: SpikeActivity.onCreate mode=androidview savedInstanceState=Bundle[{..., SaveableStateRegistry:-1=Bundle[{<compositeKeyHash>=[{2131231138=Bundle[{super=..., counter=3}]}]}], ...}]
+I KSN_SPIKE: onRestoreInstanceState applied: caption=AndroidView relay=false withId=true counter=3
+  → 成立。AndroidView が内部で saveHierarchyState を SaveableStateRegistry に登録している
+    (Activity の android:viewHierarchyState ではなく Compose の saved state 側に入る)。
+
+--- 1.2-C' Compose AndroidView 経由 / View id なし (現行ラッパ相当) ---
+I KSN_SPIKE: SpikeActivity.onCreate mode=androidview-noid savedInstanceState=Bundle[{..., SaveableStateRegistry:-1=Bundle[{<compositeKeyHash>=[{}]}], ...}]
+  → 登録枠はあるが中身が空。onSave/onRestore とも呼ばれない。不成立 (id が唯一の分かれ目)。
+
+--- 1.2-D Compose AndroidView 経由 / View id あり + rememberSaveable での自前中継 ---
+I KSN_SPIKE: onSaveInstanceState called: ... counter=3 id=2131231138   (2 回)
+I KSN_SPIKE: relay saveHierarchyState size=1
+I KSN_SPIKE: SpikeActivity.onCreate mode=androidview-relay savedInstanceState=Bundle[{..., SaveableStateRegistry:-1=Bundle[{<key1>=[Bundle[{s={2131231138=...counter=3}}]], <key2>=[{2131231138=...counter=3}]}], ...}]
+I KSN_SPIKE: onRestoreInstanceState applied: ... counter=3
+I KSN_SPIKE: relay restoreHierarchyState applied counter=3
+  → 成立するが、AndroidView 標準経路と二重に保存・二重に復元される (自前中継は不要)。

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>Plan A — iOS ページシートのスタイル継承 (構造は現行のまま)</title>
+<style>
+  :root {
+    --accent: #FFBF00;         /* accent 3段解決 (サンプル: mauiAccent) */
+    --title-text: #555555;     /* 実効タイトル色 (サンプル: DeepTextColor) */
+    --cell-bg: #FFFFFF;        /* 実効セル背景色 */
+    --separator: #E6DAB9;      /* Theme.separatorColor */
+    --canvas: #F2EFE6;         /* Theme.backgroundColor (シート外の雰囲気用) */
+    --scrim: rgba(0,0,0,0.35);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: "Hiragino Sans", "Noto Sans JP", sans-serif; background: #EDEAE2; padding: 24px; color: var(--title-text); }
+  h1 { font-size: 16px; margin-bottom: 4px; }
+  p.note { font-size: 12px; color: #6B6860; margin-bottom: 20px; }
+  .frames { display: flex; gap: 32px; flex-wrap: wrap; }
+  .frame-label { font-size: 12px; color: #6B6860; text-align: center; margin-top: 8px; }
+  .phone {
+    width: 340px; height: 600px; border-radius: 28px; overflow: hidden;
+    background: #4a4741; border: 1px solid #D8D4CB; position: relative;
+    display: flex; flex-direction: column; justify-content: flex-end;
+  }
+  .sheet {
+    height: 560px; background: var(--cell-bg);
+    border-radius: 14px 14px 0 0; display: flex; flex-direction: column;
+  }
+  .navbar {
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+    padding: 16px 16px 12px; border-bottom: 1px solid var(--separator);
+  }
+  .btn-cancel { justify-self: start; font-size: 17px; color: var(--accent); }
+  .nav-title { font-size: 17px; font-weight: 600; color: var(--title-text); }
+  .btn-done { justify-self: end; font-size: 17px; font-weight: 600; color: var(--accent); }
+  .list { flex: 1; overflow: hidden; }
+  .item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 13px 16px; font-size: 17px; color: var(--title-text);
+    background: var(--cell-bg);
+    border-bottom: 1px solid var(--separator);
+  }
+  .item.highlight { background: #50FFBF00; background: rgba(255,191,0,0.31); }
+  .item .check { width: 20px; height: 20px; visibility: hidden; }
+  .item.checked .check { visibility: visible; }
+  .check svg { width: 20px; height: 20px; stroke: var(--accent); stroke-width: 3; fill: none; }
+  .hint { font-size: 11px; color: #999; padding: 8px 16px; }
+</style>
+</head>
+<body>
+<h1>Plan A — iOS ページシートのスタイル継承</h1>
+<p class="note">構造は現行のページシートのまま。変わるのは配色 (トークン継承) と初期スクロール位置。左: 単一選択 (項目多数、選択 index が中央付近に来た状態で開く) / 右: 複数選択。Cancel/完了 = accent、タイトル・行文字 = 実効タイトル色、区切り線 = separatorColor。</p>
+<div class="frames">
+  <div>
+    <div class="phone">
+      <div class="sheet">
+        <div class="navbar">
+          <span class="btn-cancel">Cancel</span>
+          <span class="nav-title">サイズを選択</span>
+          <span></span>
+        </div>
+        <div class="list">
+          <div class="item"><span>26 px</span><span class="check"><svg viewBox="0 0 24 24"><path d="M4 12.5 L10 18.5 L20 6"/></svg></span></div>
+          <div class="item"><span>27 px</span><span class="check"><svg viewBox="0 0 24 24"><path d="M4 12.5 L10 18.5 L20 6"/></svg></span></div>
+          <div class="item"><span>28 px</span><span class="check"><svg viewBox="0 0 24 24"><path d="M4 12.5 L10 18.5 L20 6"/></svg></span></div>
+          <div class="item"><span>29 px</span><span class="check"><svg viewBox="0 0 24 24"><path d="M4 12.5 L10 18.5 L20 6"/></svg></span></div>
+          <div class="item checked"><span>30 px</span><span class="check"><svg viewBox="0 0 24 24"><path d="M4 12.5 L10 18.5 L20 6"/></svg></span></div>
+          <div class="item"><span>31 px</span><span class="check"><svg viewBox="0 0 24 24"><path d="M4 12.5 L10 18.5 L20 6"/></svg></span></div>
+          <div class="item"><span>32 px</span><span class="check"><svg viewBox="0 0 24 24"><path d="M4 12.5 L10 18.5 L20 6"/></svg></span></div>
+          <div class="item"><span>33 px</span><span class="check"><svg viewBox="0 0 24 24"><path d="M4 12.5 L10 18.5 L20 6"/></svg></span></div>
+          <div class="item"><span>34 px</span><span class="check"><svg viewBox="0 0 24 24"><path d="M4 12.5 L10 18.5 L20 6"/></svg></span></div>
+          <div class="item"><span>35 px</span><span class="check"><svg viewBox="0 0 24 24"><path d="M4 12.5 L10 18.5 L20 6"/></svg></span></div>
+        </div>
+        <div class="hint">選択中の「30 px」(index 30/50) が可視領域の中央付近に来た状態で開く</div>
+      </div>
+    </div>
+    <div class="frame-label">単一選択・項目多数 (初期スクロール .middle)</div>
+  </div>
+  <div>
+    <div class="phone">
+      <div class="sheet">
+        <div class="navbar">
+          <span class="btn-cancel">Cancel</span>
+          <span class="nav-title">通知種別を選択</span>
+          <span class="btn-done">完了</span>
+        </div>
+        <div class="list">
+          <div class="item checked"><span>メール</span><span class="check"><svg viewBox="0 0 24 24"><path d="M4 12.5 L10 18.5 L20 6"/></svg></span></div>
+          <div class="item"><span>プッシュ</span><span class="check"><svg viewBox="0 0 24 24"><path d="M4 12.5 L10 18.5 L20 6"/></svg></span></div>
+          <div class="item checked"><span>SMS</span><span class="check"><svg viewBox="0 0 24 24"><path d="M4 12.5 L10 18.5 L20 6"/></svg></span></div>
+          <div class="item highlight"><span>アプリ内</span><span class="check"><svg viewBox="0 0 24 24"><path d="M4 12.5 L10 18.5 L20 6"/></svg></span></div>
+          <div class="item"><span>電話</span><span class="check"><svg viewBox="0 0 24 24"><path d="M4 12.5 L10 18.5 L20 6"/></svg></span></div>
+        </div>
+        <div class="hint">「アプリ内」はタップ中 (Theme.selectedColor のハイライト表現)</div>
+      </div>
+    </div>
+    <div class="frame-label">複数選択 (完了 = accent、タップハイライト = selectedColor)</div>
+  </div>
+</div>
+</body>
+</html>

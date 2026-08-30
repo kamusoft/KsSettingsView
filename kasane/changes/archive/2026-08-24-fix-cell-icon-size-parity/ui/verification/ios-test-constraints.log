@@ -1,0 +1,52 @@
+# iOS テスト実行ログ (AutoLayout 制約衝突の有無)
+
+実行日時: 2026-08-23 01:22 JST (レビュー指摘の修正サイクル反映後に再実行)
+実行環境: macOS 26.5.1 / Xcode 26.5 Build version 17F42 / Simulator: iPhone 17 / iOS 26.0
+実行コマンド:
+  cd ios && xcodebuild test -scheme KsSettingsView-Package -destination 'platform=iOS Simulator,name=iPhone 17'
+
+## 検証対象ソースの SHA-256 (このログが対応する実装の同定用)
+
+  fd4853a35199deefe0cf643fd1ab925ccce6cdbffa6b71537d80f892c3344b3c  ios/Sources/KsSettingsViewUI/KsListCellBase.swift
+  49b32aba0a1cd5826769ae4ead43e53d6135699e1519bfc404bd38167d8d4768  ios/Sources/KsSettingsViewUI/CellBaseLayout.swift
+  90e43cb1350413d3fe9d56ef814e7de5f4bc7c41a3c4baf91e3d163b89303718  ios/Sources/KsSettingsViewUI/EffectiveStyle.swift
+  d0b10222de0fb3a539acee240a6b4c35a095310e2ec3396353830a1b8825052e  ios/Tests/KsSettingsViewUITests/CellIconFrameTests.swift
+  f4161937ddd0ec088d3950b31ba27ece16f34968648dea13aff3e4ef8b78011a  ios/Tests/KsSettingsViewUITests/CellRowWidthAllocationTests.swift
+  497932a9a23e975acf0c5910597d06871ba48b8238eb0b1a383d1c6d84a79872  ios/Tests/KsSettingsViewUITests/EffectiveStyleResolutionTests.swift
+
+原出力 (xcodebuild の全出力) の SHA-256:
+  bfffe36396d6ac1f32a835e89bfc27b01780397a8fbb90c0e0483ca722e60464
+
+## 制約衝突の検出結果
+
+検索コマンド (原出力に対する固定文字列の件数):
+  grep -c '<パターン>' <xcodebuild の全出力>
+
+  Unable to simultaneously satisfy constraints     0 件
+  Will attempt to recover by breaking constraint   0 件
+  UIViewAlertForUnsatisfiableConstraints           0 件
+
+検索が空振りでないことの確認 (同じ原出力に対する既知の語):
+  Test Suite                                       160 件
+
+## テストターゲット別の実行結果
+
+  Test Suite 'KsSettingsViewBridgeTests.xctest' passed at 2026-08-23 01:23:14.355.
+  Test Suite 'KsSettingsViewCoreTests.xctest' passed at 2026-08-23 01:23:15.332.
+  Test Suite 'KsSettingsViewSwiftUITests.xctest' passed at 2026-08-23 01:23:17.094.
+  Test Suite 'KsSettingsViewUITests.xctest' passed at 2026-08-23 01:23:42.921.
+
+  icon 枠・幅配分・実効値解決のテストクラス:
+    Test Suite 'CellIconFrameTests' passed at 2026-08-23 01:23:27.756.
+    Test Suite 'CellRowWidthAllocationTests' passed at 2026-08-23 01:23:27.797.
+    Test Suite 'EffectiveStyleResolutionTests' passed at 2026-08-23 01:23:31.513.
+
+## 総計
+
+  	 Executed 581 tests, with 0 failures (0 unexpected) in 24.665 (25.072) seconds
+
+## 結果
+
+  全 581 件成功 / 失敗 0 件。AutoLayout の制約衝突ログは 0 件。
+  icon 枠のサイズ制約は表示中のみ required で有効化し、非表示時は無効化するため、
+  UIStackView が非表示の arranged subview に張る寸法 0 の required 制約と競合しない。

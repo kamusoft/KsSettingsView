@@ -1,0 +1,11 @@
+# Deviation: restore-pickercell-object-items
+
+- Requirement「PickerCell の選択項目の相互導出」(maui-cells): spec では「見つからない要素・`ItemsSource` 未設定は未選択へ揃える」→ 指示により `ItemsSource` 未設定時の `SelectedItem` / `SelectedItems` 設定は**未選択へ揃えず保留し、`ItemsSource` 到着時に逆引きして復元**する。理由: バインディング適用順 (XAML 属性順) で ViewModel の初期選択が黙って破棄される経路の解消 (review-001 Major-1、オーナー裁定 B)。原典 AiForms は選択を object のまま独立保持するためこの問題が構造的に無く、保留復元で原典同等の順序非依存性に戻す (2026-08-28)
+- Requirement「PickerCell の選択項目の相互導出」(maui-cells): 公開値の snapshot 実体への正規化は **Cell の公開プロパティまで**とし、TwoWay 先の ViewModel は値等価な別実体を持ち得ることを契約として受け入れる (review-002 Major、オーナー裁定 B)。理由: 原典 AiForms でも VM への実体書き戻しはピッカー操作時のみで同挙動 (裏どり済み)。null を挟む強制伝播は原典に無い副作用を持ち込むため不採用。Scenario テストで固定し、蒸留時に concepts (maui facade の公開契約) へ明記する (2026-08-28)
+- [上記 1 件目の実装範囲] 保留は「候補が 1 件も無い間は相互導出そのものを行わない」形で実装した。したがって `SelectedIndex` / `SelectedIndices` からの選択項目の導出も候補が届くまで走らず、`ItemsSource` を null / 空へ差し替えた場合も選択は消えずに保たれる (次に候補が届いた時点で引き直す)。候補到着時の起点は、選択項目が保留されていればそれ (逆引きして位置を作る)、無ければ従来どおり位置。候補が既にある状態からの差し替えは従来どおり位置を正とするため、値等価な新しい列への差し替えで公開値が新 snapshot の実体へ揃う挙動は変わらない (2026-08-28)
+
+- [付随修正] bridge の doc コメント: `ios/Sources/KsSettingsViewBridge/KsBridgePickerCell.swift` の doc コメントから、本 change で削除された `displayFormatter` を指す一文 (「Native の表示フォーマッタは使わない」) を除去。理由: 削除済み API への言及が残ると誤誘導になるため (2026-08-28)
+- [付随修正] bridge の doc コメント: `android/ks-settingsview-bridge/src/main/kotlin/jp/kamusoft/kssettingsview/bridge/KsBridgePickerCell.kt` から同じ一文を除去 (iOS と同趣旨、2026-08-28)
+- [付随修正] チェックマーク描画の寸法参照: `android/ks-settingsview-ui/src/main/kotlin/jp/kamusoft/kssettingsview/ui/KsSimpleCheckView.kt` の `onDraw` が `canvas.width/height` を参照していたため、View 階層をソフトウェア Canvas に一括描画する経路 (スクリーンショット取得等) でチェックマークがクリップされ消える。`width/height` (View 自身の寸法) 参照へ修正。選択面と同じ能力内・2行で閉じる既存不具合のため同梱 (lessons L-005) (2026-08-28)
+- [付随修正] MAUI の TwoWay 既定の検証表: `maui/KsSettingsView.Maui.Tests/CellShapeTests.cs` の `TwoWayProperties` に `PickerCell.SelectedItem` が入っておらず、TwoWay 既定が検証されないまま残っていた。本 change で追加する `SelectedItems` とあわせて表に加え、件数を 10 → 12 へ更新。同じ表・同じ Cell の 1 行追加で閉じるため同梱 (2026-08-28)
+- [付随修正] Android の既存 PickerCell 呼び出し (テスト・bridge) を、単一 / 複数で分かれた factory 形へ機械的に追随。`selectionMode` の明示指定は factory が担うため落とし、複数選択の呼び出しには `selectedIndices` を明示した。`displayFormatter` を検証していたテスト 2 件は、削除済み API に対応するものとして 1 件を削除・1 件を素の列挙検証へ縮退 (2026-08-28)

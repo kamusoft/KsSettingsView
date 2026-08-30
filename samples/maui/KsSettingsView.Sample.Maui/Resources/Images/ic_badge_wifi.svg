@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Section 装飾デモの Wi-Fi 行に置くバッジ型アイコン (29pt 四方、青地に白いシンボル)。
+  地色は画像へ焼き込み、角丸は SettingsView.CellIconRadius が担当する。
+  シンボルは Material Symbols Outlined 由来の wifi アイコン。
+  ライセンス: Apache License 2.0 (Google Material Symbols)。
+  https://fonts.google.com/icons?selected=Material+Symbols+Outlined:wifi
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="29" height="29" viewBox="0 0 29 29">
+  <rect width="29" height="29" fill="#007AFF" />
+  <g transform="translate(4.5 4.5) scale(0.8333333)">
+    <path fill="#FFFFFF" d="M1,9l2,2c4.97,-4.97 13.03,-4.97 18,0l2,-2C16.93,2.93 7.08,2.93 1,9zM9,17l3,3 3,-3c-1.65,-1.66 -4.34,-1.66 -6,0zM5,13l2,2c2.76,-2.76 7.24,-2.76 10,0l2,-2C15.14,9.14 8.87,9.14 5,13z" />
+  </g>
+</svg>

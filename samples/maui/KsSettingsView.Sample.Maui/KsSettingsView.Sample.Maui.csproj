@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    KsSettingsView を利用者と同じ経路で組み込む Sample アプリ。
+    参照は KsSettingsView.Maui への ProjectReference 1 本だけで、Binding 層は推移参照で入る。
+    デモ一覧ページを入口に各画面を実機／シミュレータで目視確認する。
+  -->
+  <PropertyGroup>
+    <TargetFrameworks>net10.0-ios;net10.0-android</TargetFrameworks>
+    <OutputType>Exe</OutputType>
+    <UseMaui>true</UseMaui>
+    <SingleProject>true</SingleProject>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>KsSettingsView.Sample.Maui</RootNamespace>
+    <AssemblyName>KsSettingsView.Sample.Maui</AssemblyName>
+    <ApplicationId>jp.kamusoft.kssettingsview.samples.maui</ApplicationId>
+    <ApplicationTitle>KsSettingsView Sample</ApplicationTitle>
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>0.1.0</ApplicationDisplayVersion>
+    <MauiVersion>10.0.70</MauiVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios' ">
+    <SupportedOSPlatformVersion>16.0</SupportedOSPlatformVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android' ">
+    <SupportedOSPlatformVersion>29</SupportedOSPlatformVersion>
+  </PropertyGroup>
+
+  <!-- MAUI アプリの必須参照。UseMaui は NuGet 参照を自動で含めない -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+  </ItemGroup>
+
+  <!-- デモページの Cell アイコン。SVG から platform の画像資産へ変換される -->
+  <ItemGroup>
+    <MauiImage Include="Resources\Images\*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../maui/KsSettingsView.Maui/KsSettingsView.Maui.csproj" />
+  </ItemGroup>
+
+</Project>

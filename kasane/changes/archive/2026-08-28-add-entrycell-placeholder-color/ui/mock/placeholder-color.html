@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>EntryCell placeholder 色 mock</title>
+<style>
+  /* 例示のためのモック。色値は利用者指定のイメージであり実装既定値ではない */
+  /* 両画面とも Theme.cellPlaceholderColor 未指定の構成 (サンプルの Entry デモと同一)。
+     Theme 一括指定の経路は画面内の全 EntryCell に掛かるため mock では表さず、自動テストで検証する */
+  body { margin: 0; font-family: -apple-system, "Hiragino Sans", sans-serif; background: #444; display: flex; gap: 32px; justify-content: center; padding: 32px; flex-wrap: wrap; }
+  .device { width: 340px; border-radius: 24px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,.35); }
+  .light { background: #f2f2f7; color: #000; }
+  .dark  { background: #1c1c1e; color: #fff; }
+  .bar { padding: 14px 16px 6px; font-size: 20px; font-weight: 700; }
+  .caption { padding: 0 16px 10px; font-size: 12px; opacity: .55; }
+  .group { margin: 8px 16px 20px; border-radius: 10px; overflow: hidden; }
+  .light .group { background: #fff; }
+  .dark  .group { background: #2c2c2e; }
+  .row { display: flex; align-items: center; padding: 12px 14px; gap: 12px; }
+  .row + .row { border-top: .5px solid rgba(128,128,128,.35); }
+  .title { font-size: 16px; width: 110px; flex-shrink: 0; }
+  .field { flex: 1; font-size: 16px; text-align: right; }
+  /* placeholder の見え方 */
+  .ph-default-light { color: rgba(60,60,67,.3); }   /* iOS システム既定相当 */
+  .ph-default-dark  { color: rgba(235,235,245,.3); }
+  .ph-cell   { color: #d6885a; }                    /* EntryCell.placeholderColor の例示値 */
+  .entered-light { color: #000; }
+  .entered-dark  { color: #fff; }
+  .legend { font-size: 11px; opacity: .6; padding: 0 16px 16px; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<div class="device light">
+  <div class="bar">設定 (ライト)</div>
+  <div class="caption">Entry デモ — placeholder 色 (Theme 未指定)</div>
+  <div class="group">
+    <div class="row"><span class="title">名前</span><span class="field ph-default-light">未指定 (OS 既定)</span></div>
+    <div class="row"><span class="title">ニックネーム</span><span class="field ph-cell">Cell 個別指定の色</span></div>
+    <div class="row"><span class="title">入力済み</span><span class="field entered-light">入力テキストは valueText 色</span></div>
+  </div>
+  <div class="legend">
+    優先順: Cell 個別 → CellStyle → Theme → OS 既定。<br>
+    入力済みテキストには placeholder 色を適用しない。
+  </div>
+</div>
+
+<div class="device dark">
+  <div class="bar">設定 (ダーク)</div>
+  <div class="caption">Entry デモ — placeholder 色 (Theme 未指定)</div>
+  <div class="group">
+    <div class="row"><span class="title">名前</span><span class="field ph-default-dark">未指定 (OS 既定)</span></div>
+    <div class="row"><span class="title">ニックネーム</span><span class="field ph-cell">Cell 個別指定の色</span></div>
+    <div class="row"><span class="title">入力済み</span><span class="field entered-dark">入力テキストは valueText 色</span></div>
+  </div>
+  <div class="legend">
+    未指定行のみ OS 既定としてダークモードへ自動追従。<br>
+    指定色は利用者の指定値のまま (自動変換しない)。
+  </div>
+</div>
+
+</body>
+</html>

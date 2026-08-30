@@ -1,0 +1,78 @@
+撮影環境の注記 (tasks.md 5.4 — 各面の TimePickerCell 選択面 視覚確認)
+
+Locale の測り方について
+- Android の実効 Locale は「システム構成」と「アプリ単位 Locale (Android 13+ の per-app language)」の
+  2 段で決まる。ライブラリ側は Context の resources.configuration.locales[0] を使うため、
+  アプリ単位 Locale が設定されていればそちらが勝つ。
+- 従って `getprop ro.product.locale` (製品既定) では実効 Locale を判定できない。
+  以下は `adb shell am get-config` (システム構成) と
+  `adb shell cmd locale get-app-locales <package>` (アプリ単位 Locale) の実測値で記録する。
+
+[Android native] android-input-cells-demo-*.png
+- 端末: Android Emulator (AVD: ksn_custcell_api35 / model sdk_gphone64_arm64)
+- OS: Android 15 (API 35)
+- システム構成 Locale: en-rUS (am get-config = mcc310-mnc260-en-rUS-...-2340x1080-v35)
+- アプリ単位 Locale: ja-JP
+  (cmd locale get-app-locales jp.kamusoft.kssettingsview.samples.android → [ja-JP])
+  → 画像の「キャンセル」「午前 / 午後」はこのアプリ単位 Locale 由来。システムは en-rUS のままである。
+- 端末の時刻表示設定: 24時間制 (settings get system time_12_24 = 24)
+- アプリ: samples/android (:app assembleDebug)
+
+[MAUI / Android ホスト] maui-android-input-cells-demo-bedtime-picker-12h.png
+- 端末・OS: 上記と同一のエミュレータ
+- システム構成 Locale: en-rUS
+- アプリ単位 Locale: 未設定
+  (cmd locale get-app-locales jp.kamusoft.kssettingsview.samples.maui → [])
+  → システム構成の en-rUS がそのまま効き、画像は "Cancel" "AM / PM" の英語表記になる。
+- 端末の時刻表示設定: 24時間制 (time_12_24 = 24)
+- アプリ: samples/maui/KsSettingsView.Sample.Maui (net10.0-android / Debug)
+- この面は maui/KsSettingsView.Maui/Platforms/Android/KsBridgeGateway.cs の
+  dto.Set24Hour(...) 経路 (本リポジトリ唯一の setter 直呼び) を実際に通した証跡である。
+
+[MAUI / iOS ホスト] maui-input-cells-demo-*.png
+- 端末: iOS Simulator (iPhone 17)
+- OS: iOS 26.0
+- Locale: ja_JP (AppleLanguages = ja-JP, en / AppleLocale = ja_JP)
+- 端末の時刻表示設定: AppleICUForce24HourTime 未設定 (ja_JP 既定 = 24時間制)
+- アプリ: samples/maui/KsSettingsView.Sample.Maui (net10.0-ios / iossimulator-arm64 / Debug)
+
+[iOS native] ios-input-cells-demo-*.png
+- 既存 (本作業では再撮影していない)
+
+確認結果
+- Android native「アラーム」(is24Hour 既定 true): 時・分の 2 系列。午前/午後の系列なし。7 / 30 を選択中。
+- Android native「就寝」(is24Hour = false): 午前/午後・時・分 の 3 系列 (ja-JP では AM/PM 系列が先頭)。
+  午後 / 10 / 15 を選択中。行の表示は "10:15 午後"。
+  ※ 系列順の locale 由来化 (deviation.md) 後に再撮影した結果。詳細は末尾の「再撮影の記録」を参照。
+- MAUI/Android「就寝」(Is24Hour = False): 時・分・AM/PM の 3 系列。10 / 15 / PM を選択中。
+  行の表示も "10:15 PM"。
+- MAUI/iOS「アラーム」(Is24Hour 既定 true): 時・分の 2 系列。午前/午後の系列なし。7 / 30 を選択中。
+- MAUI/iOS「就寝」(Is24Hour = False): 午前/午後・時・分 の 3 系列 (ja_JP では AM/PM 系列が先頭)。
+  午後 / 10 / 15 を選択中。
+
+時制が端末設定に依存しないことの裏付け
+- Android は端末が 24時間制設定 (time_12_24 = 24)、iOS Simulator も ja_JP 既定で 24時間制だが、
+  いずれの面でも「就寝」は 12時間制で提示された。時制は端末設定ではなく is24Hour / Is24Hour で決まる。
+
+AM/PM ラベルの言語・系列位置について
+- ラベルの言語と系列の並び順は端末 / アプリの Locale 由来であり (本変更の Non-Goal)、
+  上記のとおり面ごとに異なる。時制の決定 (系列数・選択中の値) は全面で一致している。
+
+個人情報の確認
+- いずれもエミュレータ / シミュレータ + デモデータ。端末名・アカウント名・連絡先・位置情報・
+  Wi-Fi 名の写り込みなし。保存後に各画像を開いて確認済み。
+
+再撮影の記録 (系列順の locale 由来化 後)
+- 経緯: Android の 12時間制選択面の系列順を、後置き固定から端末 Locale の時刻パターン由来へ変更した
+  (deviation.md 記載)。これにより初回撮影の android-input-cells-demo-bedtime-picker-12h.png が
+  変更前の並びのままになったため、同一のエミュレータ環境 (上記 [Android native] の記載どおり) で
+  再ビルド・再配備のうえ撮り直した。上書きしたのは同ファイル 1 枚のみ。
+- Android native「就寝」(再撮影後): 系列順は 午前/午後 (左) ・時 (中) ・分 (右) の 3 系列。
+  午後 / 10 / 15 を選択中。アプリ単位 Locale ja-JP による AM/PM 前置きの並びであり、
+  MAUI/iOS「就寝」(ja_JP) と同じ並びになった。
+- Android native「アラーム」(24時間制): 時 (左) ・分 (右) の 2 系列、7 / 30 を選択中。
+  再撮影時にも並び・系列数・選択値の変化がないことを確認した (画像の撮り直しは不要)。
+- MAUI/Android「就寝」(再ビルド・再配備のうえ確認): 時 (左) ・分 (中) ・AM/PM (右) の 3 系列、
+  10 / 15 / PM を選択中。アプリ単位 Locale 未設定 = システム構成 en-rUS 由来の後置きのままで、
+  崩れていないことを確認した (既存画像の撮り直しは不要)。
+- 再撮影分についても個人情報・端末個体情報の写り込みがないことを画像を開いて確認済み。

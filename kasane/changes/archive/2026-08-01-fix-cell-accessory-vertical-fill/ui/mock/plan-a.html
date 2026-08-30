@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plan A — valueText 行内 + アクセサリ列 (AiForms 準拠)</title>
+<style>
+  :root {
+    --bg: #efeee9;
+    --cell-bg: #ffffff;
+    --title: #1c1c1e;
+    --desc: #8e8e93;
+    --value: #8e8e93;
+    --accent: #d9a521;
+    --separator: #e5e5e0;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Hiragino Sans", sans-serif;
+    background: var(--bg);
+    display: flex; justify-content: center; padding: 24px 0;
+  }
+  .phone { width: 393px; background: var(--bg); }
+  .plan-label {
+    text-align: center; font-size: 13px; color: var(--desc);
+    padding: 8px 0 16px;
+  }
+  .section-header {
+    font-size: 13px; color: var(--accent);
+    padding: 18px 16px 6px;
+  }
+  .section { background: var(--cell-bg); }
+  /* ===== 行の骨格: [icon][stackV(title行 + description)][accessoryHolder] ===== */
+  .cell {
+    display: flex; align-items: center; /* ← アクセサリ列はセル全体に対し垂直センター */
+    gap: 16px;
+    padding: 6px 16px;
+    min-height: 48px;
+    border-bottom: 0.5px solid var(--separator);
+  }
+  .cell:last-child { border-bottom: none; }
+  .icon { flex: none; width: 24px; height: 24px; color: var(--accent); }
+  .stackv { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .content-row { display: flex; align-items: center; gap: 6px; }
+  .title { font-size: 17px; color: var(--title); white-space: nowrap; }
+  .value {
+    flex: 1 1 auto; text-align: right; font-size: 17px; color: var(--value);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .desc { font-size: 13px; color: var(--desc); line-height: 1.35; }
+  /* description は stackV 内 → accessoryHolder の左までしか広がらない (回り込まない) */
+  .accessory { flex: none; display: flex; align-items: center; }
+  .chevron { color: #c7c7cc; font-size: 17px; }
+  /* Switch */
+  .switch { width: 51px; height: 31px; border-radius: 16px; background: var(--accent); position: relative; }
+  .switch::after {
+    content: ""; position: absolute; top: 2px; right: 2px;
+    width: 27px; height: 27px; border-radius: 50%; background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,.25);
+  }
+  /* Checkbox */
+  .checkbox {
+    width: 22px; height: 22px; border-radius: 6px; background: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 14px; font-weight: 700;
+  }
+  .checkmark { color: var(--accent); font-size: 17px; font-weight: 600; }
+  /* EntryCell の入力フィールドは行内 (contentStack) のまま */
+  .entry-field {
+    flex: 1 1 auto; font-size: 17px; color: var(--title);
+    border: none; outline: none; background: #f7f7f4;
+    border-radius: 6px; padding: 6px 8px; text-align: right;
+  }
+  .note {
+    font-size: 12px; color: var(--desc); padding: 10px 16px 24px; line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="plan-label">Plan A — valueText は行内 / アクセサリ列は垂直センター (AiForms 準拠)</div>
+
+  <div class="section-header">SwitchCell</div>
+  <div class="section">
+    <div class="cell">
+      <div class="stackv">
+        <div class="content-row"><span class="title">Notification</span></div>
+        <div class="desc">This is description. you can write detail explanation of the item here. long text wrap automatically.</div>
+      </div>
+      <div class="accessory"><div class="switch"></div></div>
+    </div>
+  </div>
+
+  <div class="section-header">LabelCell</div>
+  <div class="section">
+    <div class="cell">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><ellipse cx="12" cy="7" rx="8" ry="3"/><path d="M4 7v10c0 1.7 3.6 3 8 3s8-1.3 8-3V7"/></svg>
+      <div class="stackv">
+        <div class="content-row"><span class="title">Storage</span><span class="value">256 GB</span></div>
+        <div class="desc">This is description. you can write detail explanation of the item here.</div>
+      </div>
+    </div>
+    <div class="cell">
+      <div class="stackv">
+        <div class="content-row"><span class="title">バージョン</span><span class="value">1.0.0</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-header">PickerCell</div>
+  <div class="section">
+    <div class="cell">
+      <div class="stackv">
+        <div class="content-row"><span class="title">Favorites</span><span class="value">C#, JavaScript, PHP</span></div>
+        <div class="desc">This is a multi select picker. you are free to select items until MaxSelectedNumber.</div>
+      </div>
+      <div class="accessory"><span class="chevron">›</span></div>
+    </div>
+  </div>
+
+  <div class="section-header">CheckboxCell</div>
+  <div class="section">
+    <div class="cell">
+      <div class="stackv">
+        <div class="content-row"><span class="title">Agree to Terms</span></div>
+      </div>
+      <div class="accessory"><div class="checkbox">✓</div></div>
+    </div>
+  </div>
+
+  <div class="section-header">RadioCell</div>
+  <div class="section">
+    <div class="cell">
+      <div class="stackv">
+        <div class="content-row"><span class="title">TypeA</span></div>
+      </div>
+      <div class="accessory"><span class="checkmark">✓</span></div>
+    </div>
+    <div class="cell">
+      <div class="stackv">
+        <div class="content-row"><span class="title">TypeB</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-header">EntryCell (変更なし)</div>
+  <div class="section">
+    <div class="cell">
+      <div class="stackv">
+        <div class="content-row"><span class="title">Name</span><input class="entry-field" value="Satoshi"></div>
+        <div class="desc">入力フィールドは従来どおり行内で残り幅いっぱい。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    ポイント: Switch / chevron / checkbox / checkmark はセル全体 (title + description) に対して垂直センター。
+    description はアクセサリ列の左までで折り返し、下に回り込まない。
+    valueText (256 GB / C#, JavaScript, PHP) は title と同じ行の右寄せ (AiForms オリジナルと同じ)。
+  </div>
+</div>
+</body>
+</html>

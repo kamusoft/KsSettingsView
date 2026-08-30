@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>view accessory × headerHeight の3状態 (align-view-accessory-header-height)</title>
+<style>
+  :root {
+    --bg: #f2f2f7;
+    --cell-bg: #ffffff;
+    --separator: #c6c6c8;
+    --text: #1c1c1e;
+    --secondary: #8e8e93;
+    --accent: #ff9f0a; /* Sample アプリ既存テーマ (amber 系) の近似。非規範 */
+    --header-view-bg: #e8f0fe;
+  }
+  body { font-family: -apple-system, "Helvetica Neue", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 24px; }
+  h1 { font-size: 18px; }
+  p.note { font-size: 13px; color: var(--secondary); max-width: 720px; }
+  .cases { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 16px; }
+  .case { width: 320px; }
+  .case h2 { font-size: 14px; margin: 8px 0; }
+  .case p { font-size: 12px; color: var(--secondary); min-height: 48px; }
+  .list { background: var(--cell-bg); border: 1px solid var(--separator); border-radius: 10px; overflow: hidden; }
+  .header-area { background: var(--header-view-bg); overflow: hidden; position: relative; }
+  .header-area.auto { /* 内容なりの高さ */ }
+  .header-area.fixed { height: 48px; }
+  .custom-view { padding: 10px 16px; }
+  .custom-view .title { font-weight: 600; font-size: 15px; }
+  .custom-view .sub { font-size: 12px; color: var(--secondary); margin-top: 2px; }
+  .custom-view .big { font-size: 12px; color: var(--secondary); margin-top: 6px; line-height: 1.5; }
+  .badge { display: inline-block; background: var(--accent); color: #fff; border-radius: 8px; font-size: 10px; padding: 1px 8px; margin-left: 6px; vertical-align: middle; }
+  .cell { padding: 12px 16px; font-size: 15px; border-top: 1px solid var(--separator); }
+  .cell .value { float: right; color: var(--secondary); }
+  .ruler { position: absolute; right: 4px; top: 0; bottom: 0; width: 14px; font-size: 9px; color: #d33; display: flex; align-items: center; justify-content: center; border-left: 1px dashed #d33; }
+</style>
+</head>
+<body>
+<h1>view accessory × headerHeight — 3状態の規範図解</h1>
+<p class="note">
+本 mock は挙動契約の図解であり、配色・寸法・フォントは非規範 (Sample テーマの近似)。規範は各状態の<strong>高さの決まり方と clip の有無</strong>のみ。
+Header 領域 (薄青) が view accessory、その下が通常の Cell 行。
+</p>
+<div class="cases">
+  <div class="case">
+    <h2>A. 自動高さ (headerHeight = -1)</h2>
+    <p>Header 領域は view の内容なりの高さになる。既定の体験。</p>
+    <div class="list">
+      <div class="header-area auto">
+        <div class="custom-view">
+          <span class="title">アカウント</span><span class="badge">PRO</span>
+          <div class="sub">カスタム View ヘッダー — 内容に応じた高さ</div>
+        </div>
+      </div>
+      <div class="cell">ユーザー名 <span class="value">kamu</span></div>
+      <div class="cell">メール <span class="value">設定済み</span></div>
+    </div>
+  </div>
+  <div class="case">
+    <h2>B. 固定高さ (headerHeight = 48)</h2>
+    <p>内容が収まる場合: Header 領域は指定高さちょうどになる (内容なりに縮伸しない)。</p>
+    <div class="list">
+      <div class="header-area fixed" style="display:flex;align-items:center;">
+        <div class="custom-view" style="padding-top:0;padding-bottom:0;">
+          <span class="title">アカウント</span><span class="badge">PRO</span>
+        </div>
+        <div class="ruler">48</div>
+      </div>
+      <div class="cell">ユーザー名 <span class="value">kamu</span></div>
+      <div class="cell">メール <span class="value">設定済み</span></div>
+    </div>
+  </div>
+  <div class="case">
+    <h2>C. 固定高さ + 内容がはみ出す (clip)</h2>
+    <p>内容が指定高さより大きい場合: はみ出し分は描画されない (clip)。Header 領域は指定高さを維持。</p>
+    <div class="list">
+      <div class="header-area fixed">
+        <div class="custom-view">
+          <span class="title">アカウント</span><span class="badge">PRO</span>
+          <div class="sub">固定 48dp の Header</div>
+          <div class="big">この行は 48dp に収まらないため表示されない。次の行も同様に clip される。<br>さらに続く内容もすべて境界外で描画されない。</div>
+        </div>
+        <div class="ruler">48</div>
+      </div>
+      <div class="cell">ユーザー名 <span class="value">kamu</span></div>
+      <div class="cell">メール <span class="value">設定済み</span></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

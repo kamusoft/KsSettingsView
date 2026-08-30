@@ -1,0 +1,25 @@
+# Pixel 6a (<android-device-serial>) 修正後 再確認 — dumpsys input_method の mServedView
+# .F フラグ = フォーカス保持。座標は 103,0-996,124 (EditText のフレーム、幅ゼロ化なし)
+
+== 名前欄タップ (末尾) ==
+  mServedView=android.widget.EditText{2377337 VFED..CL. .F...... 103,0-996,124 aid=1073741848}
+== ASCII 入力 'a' ==
+  mServedView=android.widget.EditText{2377337 VFED..CL. .F...... 103,0-996,124 aid=1073741848}
+== ASCII 入力 'b' ==
+  mServedView=android.widget.EditText{2377337 VFED..CL. .F...... 103,0-996,124 aid=1073741848}
+== ASCII 入力 'c' ==
+  mServedView=android.widget.EditText{2377337 VFED..CL. .F...... 103,0-996,124 aid=1073741848}
+== ASCII 入力 'd' ==
+  mServedView=android.widget.EditText{2377337 VFED..CL. .F...... 103,0-996,124 aid=1073741848}
+== ASCII 入力 'e' ==
+  mServedView=android.widget.EditText{2377337 VFED..CL. .F...... 103,0-996,124 aid=1073741848}
+== BackSpace (1 回目) ==
+  mServedView=android.widget.EditText{2377337 VFED..CL. .F...... 103,0-996,124 aid=1073741848}
+== BackSpace (2 回目) ==
+  mServedView=android.widget.EditText{2377337 VFED..CL. .F...... 103,0-996,124 aid=1073741848}
+== BackSpace (3 回目) ==
+  mServedView=android.widget.EditText{2377337 VFED..CL. .F...... 103,0-996,124 aid=1073741848}
+== BackSpace (4 回目) ==
+  mServedView=android.widget.EditText{2377337 VFED..CL. .F...... 103,0-996,124 aid=1073741848}
+== BackSpace (5 回目) ==
+  mServedView=android.widget.EditText{2377337 VFED..CL. .F...... 103,0-996,124 aid=1073741848}

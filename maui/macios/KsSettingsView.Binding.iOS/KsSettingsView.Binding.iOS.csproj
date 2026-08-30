@@ -1,0 +1,90 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    KsSettingsView の iOS Bridge (`KsSettingsViewBridge`) を .NET から呼び出すための binding。
+    ios/binding の Xcode project が SwiftPM の Core / UI / Bridge をひとつの静的 framework へ
+    まとめ、本プロジェクトがその xcframework を binding して輸送層 assembly を生成する。
+
+    この assembly は interop の輸送層であり、利用者向けの公開契約ではない (maui/ADR-0004)。
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-ios</TargetFramework>
+    <!-- Bridge が依存する KsSettingsViewUI は UIHostingConfiguration を使うため iOS 16 以上が必要 -->
+    <SupportedOSPlatformVersion>16.0</SupportedOSPlatformVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>true</ImplicitUsings>
+    <IsBindingProject>true</IsBindingProject>
+    <IsTrimmable>true</IsTrimmable>
+    <RootNamespace>KsSettingsView.Bridge</RootNamespace>
+    <AssemblyName>KsSettingsView.Binding.iOS</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ObjcBindingApiDefinition Include="ApiDefinition.cs" />
+    <ObjcBindingCoreSource Include="StructsAndEnums.cs" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <!-- Bridge の Xcode project と、その target が取り込む Swift ソースのルート -->
+    <KsBridgeXcodeDir>$(MSBuildThisFileDirectory)../../../ios/binding/</KsBridgeXcodeDir>
+    <KsBridgeSwiftRoot>$(MSBuildThisFileDirectory)../../../ios/</KsBridgeSwiftRoot>
+  </PropertyGroup>
+
+  <!--
+    Xcode プロジェクトの自動ビルド (xcframework 生成)。
+    CreateNativeReference=false は MSBuild 18 のメタデータ自己参照バグ (MSB4120) の回避で、
+    SDK 側の NativeReference 自動登録が壊れているため下のカスタムターゲットで登録する。
+    参考: https://github.com/CommunityToolkit/Maui.NativeLibraryInterop/issues/107
+  -->
+  <ItemGroup>
+    <XcodeProject Include="$(KsBridgeXcodeDir)KsSettingsViewBridge.xcodeproj">
+      <SchemeName>KsSettingsViewBridge</SchemeName>
+      <CreateNativeReference>false</CreateNativeReference>
+    </XcodeProject>
+  </ItemGroup>
+
+  <!--
+    _BuildXcodeProjects が生成した xcframework を、修飾メタデータ参照で NativeReference に登録する。
+    _CreateBindingResourcePackage より前に走らせるため _SanitizeNativeReferences を基準にする。
+  -->
+  <Target Name="_RegisterXcodeProjectNativeReference"
+      DependsOnTargets="_BuildXcodeProjects"
+      BeforeTargets="_SanitizeNativeReferences"
+      Condition=" '@(XcodeProject->Count())' != '0' ">
+    <ItemGroup>
+      <NativeReference
+          Include="%(XcodeProject.OutputPath)xcframeworks/%(XcodeProject.SchemeName)$(TargetPlatformIdentifier).xcframework"
+          Kind="Framework"
+          ForceLoad="False"
+          SmartLink="False"
+          LinkWithSwiftSystemLibraries="True"
+          Visible="False" />
+    </ItemGroup>
+  </Target>
+
+  <!--
+    xcframework の再ビルド判定に使う入力の補正。
+
+    SDK の既定は xcodeproj のあるディレクトリ配下しか走査しないが、Xcode target が取り込む
+    Swift の実体は ios/Sources にあるため、そのままでは Swift を直しても native が再ビルドされない。
+    追加するのは Xcode target が実際にビルドする 3 つだけで、target の依存 (同期グループと
+    package product) を増やしたらここも足す。
+    逆に、xcframework をスクリプトから単体生成したときの出力 (ios/binding/build 配下) が残って
+    いると、生成物が入力として拾われて無意味な再ビルドを招くので除外する。
+
+    SDK 側の item は正規化済みの絶対パスなので、Remove / Include とも
+    NormalizeDirectory で表記を揃える (`..` を含んだままでは Remove が一致しない)。
+  -->
+  <Target Name="_AdjustKsBridgeXcodeProjectInputs"
+      AfterTargets="_GetBuildXcodeProjectsInputs">
+    <ItemGroup>
+      <_XcbInputs Remove="$([MSBuild]::NormalizeDirectory('$(KsBridgeXcodeDir)build'))**/*" />
+      <_XcbInputs Remove="$([MSBuild]::NormalizeDirectory('$(KsBridgeXcodeDir)DerivedData'))**/*" />
+      <_XcbInputs Include="$([MSBuild]::NormalizeDirectory('$(KsBridgeSwiftRoot)Sources/KsSettingsViewBridge'))**/*.swift" />
+      <_XcbInputs Include="$([MSBuild]::NormalizeDirectory('$(KsBridgeSwiftRoot)Sources/KsSettingsViewCore'))**/*.swift" />
+      <_XcbInputs Include="$([MSBuild]::NormalizeDirectory('$(KsBridgeSwiftRoot)Sources/KsSettingsViewUI'))**/*.swift" />
+      <_XcbInputs Include="$([MSBuild]::NormalizePath('$(KsBridgeSwiftRoot)Package.swift'))" />
+    </ItemGroup>
+  </Target>
+
+</Project>

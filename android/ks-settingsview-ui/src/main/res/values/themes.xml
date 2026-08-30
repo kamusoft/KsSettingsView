@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!--
+    ライブラリ所有 UI（標準 Cell の行・chrome・選択面）の生成に使う内部テーマ。
+
+    ライブラリの View とシート／ダイアログは、ホストアプリの XML テーマに関わらず常に本テーマを
+    かぶせた Context から生成する（android/ADR-0020）。Material3 派生のフルテーマを親に取ることで、
+    Material ウィジェット（MaterialSwitch / MaterialCheckBox / BottomSheetDialog）が要求する属性を
+    列挙して保守することなく揃える。DayNight 派生なのは、属性値を明度の土台に使う箇所
+    （SwitchCell のオフ色導出）がライト／ダークの正しい側の値を得るため。
+
+    利用者アプリからの参照を意図しない実装詳細であり、名前・値ともに予告なく変わり得る。
+  -->
+  <style name="Theme.KsSettingsView.Internal" parent="Theme.Material3.DayNight.NoActionBar" />
+</resources>

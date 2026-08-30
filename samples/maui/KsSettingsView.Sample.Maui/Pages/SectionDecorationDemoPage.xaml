@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+  style（Classic / Modern）と Section 装飾 4 属性を実行時に切り替えて、
+  同じ設定内容が装飾だけ変わって描かれることを目視確認するデモ画面。
+
+  Modern で確認できること:
+    - Section の Cell 行だけを角丸の箱が覆い、Header / Footer は箱の外側に置かれる
+    - separator は箱の中間だけに引かれ、箱の上下端には出ない（単一 Cell の Section には出ない）
+    - プリセット切替で箱の余白・角丸・ボーダーが変わる
+
+  Classic では箱を描かないため、プリセットの差は Section 間の上下余白にだけ現れる。
+
+  装飾値は SettingsView 全体が持つため、ボーダーの有無は画面内の全 Section に一括で効く
+  （Section 単位の上書きは公開していない）。
+
+  操作部は SettingsView 自身の描画に影響を与えないよう、デモ本体の上に独立して置く。
+  iOS / Android の同デモ画面と文言・構成を揃えてある。
+  タイトルは SampleScreen の一元定義から与えられるため、ここでは設定しない。
+-->
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:ks="clr-namespace:KsSettingsView.Maui;assembly=KsSettingsView.Maui"
+             xmlns:local="clr-namespace:KsSettingsView.Sample.Maui"
+             xmlns:vm="clr-namespace:KsSettingsView.Sample.Maui.ViewModels"
+             x:Class="KsSettingsView.Sample.Maui.Pages.SectionDecorationDemoPage"
+             x:DataType="vm:SectionDecorationDemoViewModel">
+  <Grid RowDefinitions="Auto,*">
+
+    <!-- 操作部: style 選択と装飾プリセット選択 -->
+    <VerticalStackLayout Padding="16,8" Spacing="8">
+      <HorizontalStackLayout Spacing="24"
+                             RadioButtonGroup.GroupName="SectionDecorationStyle"
+                             RadioButtonGroup.SelectedValue="{Binding Style}">
+        <RadioButton Content="Classic" Value="{x:Static ks:SettingsViewStyle.Classic}" />
+        <RadioButton Content="Modern" Value="{x:Static ks:SettingsViewStyle.Modern}" />
+      </HorizontalStackLayout>
+
+      <!-- 選択中のプリセット名が省略されないよう、Picker に余った横幅をすべて渡す -->
+      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+        <Label Text="装飾プリセット" FontSize="14" VerticalOptions="Center" />
+        <Picker Grid.Column="1"
+                ItemsSource="{Binding Presets}"
+                SelectedItem="{Binding Preset}"
+                ItemDisplayBinding="{Binding Title, x:DataType=local:SectionDecorationPreset}" />
+      </Grid>
+    </VerticalStackLayout>
+
+    <ks:SettingsView x:Name="Settings"
+                     Grid.Row="1"
+                     ListStyle="{Binding Style}"
+                     SectionMargin="{Binding Preset.SectionMargin}"
+                     SectionCornerRadius="{Binding Preset.SectionCornerRadius}"
+                     SectionBorderWidth="{Binding Preset.SectionBorderWidth}"
+                     SectionBorderColor="{Binding Preset.SectionBorderColor}">
+
+      <!-- 1. Header / Footer なし・icon 付き Cell の Section -->
+      <ks:Section>
+        <ks:SwitchCell Title="機内モード"
+                       IconSource="ic_badge_airplane.png"
+                       On="{Binding AirplaneMode}" />
+        <ks:CommandCell Title="Wi-Fi"
+                        ValueText="demoAP-0a1b2c-5"
+                        IconSource="ic_badge_wifi.png" />
+        <ks:CommandCell Title="Bluetooth"
+                        ValueText="オン"
+                        IconSource="ic_badge_bluetooth.png" />
+        <ks:CommandCell Title="バッテリー"
+                        IconSource="ic_badge_battery.png" />
+      </ks:Section>
+
+      <!-- 2. Header / Footer 付きの Section（どちらも箱の外側に置かれる） -->
+      <ks:Section HeaderText="外観モード"
+                  FooterText="好みに応じて外観モードを選択できます。Header と Footer は箱の外側に配置されます。">
+        <ks:SwitchCell Title="自動" On="{Binding AutoAppearance}" />
+        <ks:CommandCell Title="テキストサイズを変更" />
+      </ks:Section>
+
+      <!-- 3. 単一 Cell の Section（separator は引かれない） -->
+      <ks:Section>
+        <ks:SwitchCell Title="True Tone" On="{Binding TrueTone}" />
+      </ks:Section>
+
+      <!-- 4. ボーダー指定の観察用 Section -->
+      <ks:Section HeaderText="ボーダー指定時の例"
+                  FooterText="既定はボーダーなし (width 0)。指定時のみ枠線が箱の輪郭に描かれます。">
+        <ks:LabelCell Title="sectionBorderWidth: 2" />
+        <ks:LabelCell Title="sectionBorderColor: gray" />
+      </ks:Section>
+
+    </ks:SettingsView>
+  </Grid>
+</ContentPage>

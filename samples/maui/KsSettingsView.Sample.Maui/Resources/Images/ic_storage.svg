@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Material Symbols Outlined 由来の storage アイコン (24dp、単色塗り)。
+  ライセンス: Apache License 2.0 (Google Material Symbols)。
+  https://fonts.google.com/icons?selected=Material+Symbols+Outlined:storage
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+  <path fill="#666666" d="M2,20h20v-4L2,16v4zM4,17h2v2L4,19v-2zM2,4v4h20L22,4L2,4zM6,7L4,7L4,5h2v2zM2,14h20v-4L2,10v4zM4,11h2v2L4,13v-2z" />
+</svg>

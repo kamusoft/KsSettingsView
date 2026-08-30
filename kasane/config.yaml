@@ -1,0 +1,98 @@
+version: "0.1"
+
+# プロジェクト共通の記述規約
+context: |
+  アーティファクトは日本語で記述する。技術用語および仕様構文キーワードは英語のまま使用する。
+  本プロジェクトは UI コントロールライブラリであり、公開 API の契約と利用コード例は製品知識として価値を持つため、concepts の記述対象とする。
+  内部実装フローや単なるファイル一覧は、コードから再導出できる情報として concepts へ記載しない。
+  skills/ は利用者向けドキュメント (Agent Skills、concepts からの派生物)。知識の正は concepts とコード・テストであり、
+  skills/ と README 群の継続的な追従更新は docs-refresh スキルの責務 (初期生成・構成の見直しは承認済み change の実装)。
+  エージェントは skills/ を知識参照先にしない。
+
+# ドメイン軸 (ADR-0015: 長命層を core + platform で分割)
+domains:
+  core: "全 platform が共有する契約 (core-model / cells / styling / 共通 architecture)"
+  ios: "iOS 系統 (ios/ ビルドルート — UIKit Native Host・SwiftUI Bridge)"
+  android: "Android 系統 (android/ ビルドルート — View Native Host・Compose Bridge)"
+  maui: ".NET MAUI 系統 (maui/ ビルドルート)"
+
+# 用途別スキルマッピング (全ドメイン共通。platform 固有スキルは domain-skills 側へ)
+skills:
+  impl: []
+  ui-impl: []
+  test: []
+  spec-review: []
+  code-review: []
+  domain: []
+
+# ドメイン別スキルオーバーレイ (用途キー解決時に共通 skills へ結合される)
+domain-skills:
+  ios:
+    impl: [swift-ui-impl-skill]
+    ui-impl: [swift-ui-impl-skill]
+  android:
+    impl: [kotlin-impl-skill, jetpack-compose-impl-skill]
+    ui-impl: [jetpack-compose-impl-skill]
+    code-review: [kotlin-impl-skill]
+    # test: Android 専用のテストスキルは存在しない。テスト規約は
+    #       concepts/cross/conventions/test-execution.md に従う (キーは定義しない)
+  maui:
+    impl: [csharp-impl-skill, maui-skill, maui-native-binding-skill]
+    ui-impl: [maui-skill]
+    test: [dotnet-test-skill]
+
+# クロスモデル・セカンドオピニオン (ksn-second-opinion / ksn-counterpart が参照)
+second-opinion:
+  code-review: [m, l]            # 実装レビューに相方レビューを並走させる級 (空リストで無効)
+  spec-review: [m, l]               # 提案レビューに相方レビューを実施する級 (空リストで無効)
+  counterpart: auto              # auto = ホストの逆 (Claude Code → codex / codex → claude)。名前の明示も可
+
+# ワーカーエージェントの起動先 (references/worker-dispatch.md が参照)
+# host = 自プラットフォームのサブエージェント / counterpart = 相方 CLI (ksn-counterpart 経由)
+# counterpart の実装系 (impl / ui-impl / extract / live) は書き込み+ネットワーク許可の sandbox で動く
+# — 外部への持ち出し経路になり得るため、そのリスクを受容できるプロジェクトのみ counterpart を選ぶ
+# 実装系を counterpart にできるのは相方が codex のときのみ (claude は未対応でエラー停止)
+workers:
+  impl: counterpart
+  ui-impl: host        # counterpart は非推奨 (視覚照合ループが相方の sandbox で成立しない)
+  review: host  # impl を counterpart にする場合、host に残すと単独レビューもクロスモデルになる
+                       # (counterpart にすると second-opinion 該当級で両レビューが相方モデルに揃い、ホスト視点が消える)
+  verify: counterpart
+  scout: counterpart
+  extract: counterpart
+  live: host           # UI 調整でも counterpart 可 (結果確認はユーザーの目で行うため)
+
+
+# 標準 lint / hook (scripts/local-path-lint.py / identity-lint.py / log-sanitize.py)
+lint:
+  exclude: []                         # 検査から外すリポジトリ相対パス (先頭セグメント一致または glob)
+  identity:
+    scope: [kasane, openspec, skills]   # 検査範囲 (ソースには正当な UUID 定数があるため含めない)
+    allow: ["@kamusoft.jp"]          # 正当な値 (名前空間 UUID 等)。@ドメインはそのドメインのメール (デモデータ) を許可
+    disable: []                       # 無効化する検出群: device / developer / network / personal / secret
+  internal-hosts: []                  # 未公開サーバのホスト名
+
+drift:
+  timestamp-threshold-days: 90
+  deep-rotation-count: 5
+
+orchestrator:
+  max-review-cycles: 3
+  parallel: false
+
+ui:
+  mock-variants: 2
+  screenshot: ""
+
+lessons:
+  promote-pain: 3                # pain (失敗) の昇格閾値 (独立した change 数)
+  promote-success: 5             # success (成功) の昇格閾値
+  max-rules-per-scope: 12        # scope ファイルあたりの昇格済みルール上限
+
+evolve:
+  # 所有するスキルリポジトリ (ハーネス自身も1エントリ)
+  skill-repos:
+    - ../Kasane    # ksn-* ハーネス本体
+    - ../KsSkills  # 汎用スキル群 (csharp-impl / dotnet-test 等)
+    - ../KsApp     # ksapi-ksdb-impl-skill の実体
+  promote-projects: 2            # スキル反映の閾値 (昇格済みプロジェクト数)

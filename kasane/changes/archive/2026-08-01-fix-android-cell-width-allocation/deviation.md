@@ -1,0 +1,11 @@
+# Deviations: fix-android-cell-width-allocation
+
+実装フェーズで発生した、デルタスペックとの合意済みの差分。
+
+- **共通行の主行幅配分 / title の折り返し挙動**: spec (settings-view-android-ui) は valueText 系について「title が主行の残り幅を占め、収まらない場合は末尾省略で切り詰める」とのみ規定し、Scenario「行内 trailing がない場合は title が全幅を使う」では折り返し可否に言及していない → 実装では title を常に `isSingleLine = true` + `ellipsize = END` とし、**行内 trailing を持たない Cell (CommandCell 等) の長い title も、従来の複数行折り返しから単一行 + 末尾省略に変更**した。理由: 原典 AiForms の `CellBaseView.axml` の `CellTitle` が `android:singleLine="true"` / `android:ellipsize="end"` であり、trailing の有無に関わらず単一行 = 原典同型 (本 change の主旨)。実装に trailing 有無の分岐を持ち込まずに済む。オーナー承認済み (2026-08-01)。なお description は従来どおり複数行折り返しを維持
+
+- **ButtonCell の `titleAlignment` が通常レイアウト (aux あり) で初めて実効化する**: spec は ButtonCell の titleAlignment に言及していない → `titleView` が `0dp + weight=1` になった副作用で、従来コンテンツ幅ぴったりの View 内 gravity として**視覚的に無効**だった `titleView.gravity = gravityFor(cell.titleAlignment)` が実際に効くようになった。`ButtonCell.titleAlignment` の既定値は `CENTER` のため、`ButtonCell(title = ..., valueText = ...)` のような aux 付きの既存利用コードで title が左寄せ → 中央寄せに変わる。理由: 原典 AiForms の `ButtonCellRenderer.cs:97` が `TitleLabel.Gravity = _ButtonCell.TitleAlignment.ToGravityFlags()` で同じ表現を採り、原典の `CellTitle` は `0dp + weight=1` なので実効している。iOS も `ButtonCellView.swift:61` で `titleLabel.textAlignment` に反映済み。よって新規の回帰ではなく、**weight 配分の不在という本 change が修正した構造的欠陥の副次的解消**であり、原典・iOS との同型化にあたる。オーナー承認済み (2026-08-01)。aux あり + `titleAlignment = CENTER` での title 位置を検証するテストを追加する
+
+- **title と行内 trailing の間に 6dp のクリアランスを追加**: spec / brief.md は spacing を非規範 (現行実装のトークン解決値を維持) としていた → `titleView` に `paddingEnd = 6dp` 相当を追加した。理由: 原典 `CellBaseView.axml` の `CellTitle` が `android:paddingRight="6dp"` を持ち、原典同型を徹底するため。実装当初は余白 0 で全行 `title.right == trailing.left` となっており、`textAlignment = START` の EntryCell や title が末尾省略された valueText 系で文字同士が 0px で接する状態だった。padding は View 幅に含まれるため「title 幅 + trailing 幅 = 主行幅」の等式は維持される。オーナー承認済み (2026-08-01)
+
+- **原典期待スクリーンショット (`ui/references/original-settingsview-maui.png`) の未取得**: ui/brief.md は原典 AiForms 版の実機スクリーンショットを期待挙動のリファレンスとして予定していた → 未取得のまま、承認済み mock (`ui/mock/approved.png`) を代替の正として確定した。理由: android/ADR-0002 が原典ソース (`CellBaseView.axml` / `EntryCellRenderer.cs` / `LabelCellRenderer.cs`) を直接照合済みで、mock はその写しであるため。tasks.md 4.1 が「不可なら承認済み mock を代替の正として brief.md に明記する」を許容している (2026-08-01)

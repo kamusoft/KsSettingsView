@@ -1,0 +1,48 @@
+name: Question
+description: Ask for help using KsSettingsView
+title: "[Question]: "
+labels:
+  - question
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for your question. You may write your answers in English or Japanese.
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Which version of KsSettingsView are you using?
+      placeholder: e.g. 0.1.0-beta.1
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      description: Which platform is your question about?
+      options:
+        - iOS
+        - Android
+        - .NET MAUI
+        - Multiple platforms
+    validations:
+      required: true
+
+  - type: textarea
+    id: attempts
+    attributes:
+      label: What have you tried?
+      description: Describe what you tried and what happened, including error messages when useful.
+    validations:
+      required: true
+
+  - type: textarea
+    id: references_consulted
+    attributes:
+      label: Skill or README sections consulted
+      description: List the Agent Skill pages or README sections you consulted, with links or headings when possible.
+    validations:
+      required: true

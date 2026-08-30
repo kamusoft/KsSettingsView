@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plan B — valueText もアクセサリ列 (縦センターでグループ)</title>
+<style>
+  :root {
+    --bg: #efeee9;
+    --cell-bg: #ffffff;
+    --title: #1c1c1e;
+    --desc: #8e8e93;
+    --value: #8e8e93;
+    --accent: #d9a521;
+    --separator: #e5e5e0;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Hiragino Sans", sans-serif;
+    background: var(--bg);
+    display: flex; justify-content: center; padding: 24px 0;
+  }
+  .phone { width: 393px; background: var(--bg); }
+  .plan-label {
+    text-align: center; font-size: 13px; color: var(--desc);
+    padding: 8px 0 16px;
+  }
+  .section-header {
+    font-size: 13px; color: var(--accent);
+    padding: 18px 16px 6px;
+  }
+  .section { background: var(--cell-bg); }
+  .cell {
+    display: flex; align-items: center;
+    gap: 16px;
+    padding: 6px 16px;
+    min-height: 48px;
+    border-bottom: 0.5px solid var(--separator);
+  }
+  .cell:last-child { border-bottom: none; }
+  .icon { flex: none; width: 24px; height: 24px; color: var(--accent); }
+  .stackv { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .content-row { display: flex; align-items: center; gap: 6px; }
+  .title { font-size: 17px; color: var(--title); white-space: nowrap; }
+  .desc { font-size: 13px; color: var(--desc); line-height: 1.35; }
+  /* Plan B: valueText はアクセサリ列側 (chevron 等と同グループで縦センター) */
+  .accessory { flex: none; display: flex; align-items: center; gap: 6px; }
+  .value {
+    font-size: 17px; color: var(--value);
+    max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .chevron { color: #c7c7cc; font-size: 17px; }
+  .switch { width: 51px; height: 31px; border-radius: 16px; background: var(--accent); position: relative; }
+  .switch::after {
+    content: ""; position: absolute; top: 2px; right: 2px;
+    width: 27px; height: 27px; border-radius: 50%; background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,.25);
+  }
+  .checkbox {
+    width: 22px; height: 22px; border-radius: 6px; background: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 14px; font-weight: 700;
+  }
+  .checkmark { color: var(--accent); font-size: 17px; font-weight: 600; }
+  .entry-field {
+    flex: 1 1 auto; font-size: 17px; color: var(--title);
+    border: none; outline: none; background: #f7f7f4;
+    border-radius: 6px; padding: 6px 8px; text-align: right;
+  }
+  .note {
+    font-size: 12px; color: var(--desc); padding: 10px 16px 24px; line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="plan-label">Plan B — valueText もアクセサリ列 (chevron と同グループで縦センター)</div>
+
+  <div class="section-header">SwitchCell</div>
+  <div class="section">
+    <div class="cell">
+      <div class="stackv">
+        <div class="content-row"><span class="title">Notification</span></div>
+        <div class="desc">This is description. you can write detail explanation of the item here. long text wrap automatically.</div>
+      </div>
+      <div class="accessory"><div class="switch"></div></div>
+    </div>
+  </div>
+
+  <div class="section-header">LabelCell</div>
+  <div class="section">
+    <div class="cell">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><ellipse cx="12" cy="7" rx="8" ry="3"/><path d="M4 7v10c0 1.7 3.6 3 8 3s8-1.3 8-3V7"/></svg>
+      <div class="stackv">
+        <div class="content-row"><span class="title">Storage</span></div>
+        <div class="desc">This is description. you can write detail explanation of the item here.</div>
+      </div>
+      <div class="accessory"><span class="value">256 GB</span></div>
+    </div>
+    <div class="cell">
+      <div class="stackv">
+        <div class="content-row"><span class="title">バージョン</span></div>
+      </div>
+      <div class="accessory"><span class="value">1.0.0</span></div>
+    </div>
+  </div>
+
+  <div class="section-header">PickerCell</div>
+  <div class="section">
+    <div class="cell">
+      <div class="stackv">
+        <div class="content-row"><span class="title">Favorites</span></div>
+        <div class="desc">This is a multi select picker. you are free to select items until MaxSelectedNumber.</div>
+      </div>
+      <div class="accessory"><span class="value">C#, JavaScript, PHP</span><span class="chevron">›</span></div>
+    </div>
+  </div>
+
+  <div class="section-header">CheckboxCell</div>
+  <div class="section">
+    <div class="cell">
+      <div class="stackv">
+        <div class="content-row"><span class="title">Agree to Terms</span></div>
+      </div>
+      <div class="accessory"><div class="checkbox">✓</div></div>
+    </div>
+  </div>
+
+  <div class="section-header">RadioCell</div>
+  <div class="section">
+    <div class="cell">
+      <div class="stackv">
+        <div class="content-row"><span class="title">TypeA</span></div>
+      </div>
+      <div class="accessory"><span class="checkmark">✓</span></div>
+    </div>
+    <div class="cell">
+      <div class="stackv">
+        <div class="content-row"><span class="title">TypeB</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-header">EntryCell (変更なし)</div>
+  <div class="section">
+    <div class="cell">
+      <div class="stackv">
+        <div class="content-row"><span class="title">Name</span><input class="entry-field" value="Satoshi"></div>
+        <div class="desc">入力フィールドは従来どおり行内で残り幅いっぱい。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    ポイント: Plan A との違いは valueText の位置。description があるセルでは valueText が
+    title 行ではなくセル縦センター (chevron の隣) に来る。AiForms オリジナルの構造からは離れる
+    (オリジナルは valueText を title 行に置く) 点に注意。
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,40 @@
+# KsSettingsView Android — バージョンカタログ
+#
+# ビルド関連バージョン（AGP / Kotlin / Compose Compiler プラグイン / Compose BOM /
+# ライブラリの Maven 座標のバージョン）の単一宣言元。
+# samples/android は settings.gradle.kts の versionCatalogs で本ファイルを共有する。
+
+[versions]
+# Android Gradle Plugin。要求する Gradle の最低版は 8.13
+# (https://developer.android.com/build/releases/agp-8-13-0-release-notes)。
+agp = "8.13.2"
+
+# Kotlin。Kotlin Android プラグインと Compose Compiler プラグインで共通の版を使う。
+# 2.4 系がサポートする Gradle は 7.6.3〜9.5.0、AGP は 8.5.2〜9.1.0
+# (https://kotlinlang.org/docs/gradle-configure-project.html)。
+kotlin = "2.4.10"
+
+# Jetpack Compose BOM。Compose 各ライブラリの版を整合させる。
+#
+# この版は MAUI binding 側の NuGet (`maui/android/KsSettingsView.Binding.Android/`) と対で決める。
+# ライブラリはこの BOM でコンパイルされ、MAUI アプリでは NuGet 側の版で実行されるため、
+# 両者がズレると Compose Material3 の DatePicker のように実行時 NoSuchMethodError になる。
+# 2025.11.01 = compose 1.11.4 / material3 1.4.0 で、NuGet 側の
+# Xamarin.AndroidX.Compose.* 1.11.4 / Xamarin.AndroidX.Compose.Material3 1.4.0.3 と一致する。
+# NuGet 側は下げられない (MAUI が要求する AndroidX Activity 1.13 が compose runtime-annotation 1.11
+# を必ず引き込むため、compose 1.8 以前を並べると dex の二重定義になる)。
+# 版を動かすときは binding csproj の Compose 参照も同時に動かすこと。
+compose-bom = "2025.11.01"
+
+# ライブラリの Maven 座標のバージョン。android/ の 4 モジュールが `version` に使い、
+# samples/android は composite build で置換される GAV の版としてこれを参照する。
+ks-settingsview = "0.1.0-SNAPSHOT"
+
+[plugins]
+android-library = { id = "com.android.library", version.ref = "agp" }
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+
+[libraries]
+compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "compose-bom" }

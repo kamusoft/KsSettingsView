@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/local-path-lint.py --hook",
+            "statusMessage": "ローカルパス検査"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/identity-lint.py --hook",
+            "statusMessage": "識別子検査"
+          }
+        ]
+      }
+    ]
+  }
+}

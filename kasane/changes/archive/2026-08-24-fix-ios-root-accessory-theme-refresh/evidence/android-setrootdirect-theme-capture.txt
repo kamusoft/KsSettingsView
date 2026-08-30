@@ -1,0 +1,33 @@
+Android: bind による Theme 差し替えが表示中の行へ届くかの A/B (Android Emulator Pixel_6 / API 31)
+
+対象: setRootDirect の Theme 反映欠落 (KsSettingsView.kt)。
+bind(store) は Store の初期 Theme を内部値へ直接書き込むため、その後に Store の
+theme StateFlow が同じ値を流しても theme setter の同値スキップに阻まれ、
+再 bind 通知が一切発行されない。
+
+撮影手順: samples/android の「Store 方式デモ」画面を撮影用に一時改変し、
+View 版 KsSettingsView を AndroidView で直接ホストして
+  - rootHeader = text 形式 "Root Header" / rootFooter = text 形式 "Root Footer"
+  - Store A (headerTextColor 灰 / footerTextColor 灰 / cellTitleColor 黒)
+  - Store B (headerTextColor 赤 / footerTextColor 緑 / cellTitleColor 青)
+を用意し、ボタン 1 つで view.bind(Store A / Store B) を切り替えた。
+Store A / Store B の設定ツリーは同一内容 (構造差分では再描画の引き金が立たない条件)。
+撮影後、StoreDemoScreen.kt の一時改変は元に戻してある。
+
+- android-store-bind-theme-before.png
+    Store A を bind した初期表示。Root Header / Section Header / Cell / Section Footer /
+    Root Footer がすべて Store A の Theme の配色。
+
+- android-store-bind-theme-after-unfixed.png
+    修正を入れていないビルドで、同じ座標のボタンを押して Store B へ bind した直後。
+    表示は Store A の配色のまま変化しない (内部の Theme 値だけが Store B になっている)。
+
+- android-store-bind-theme-after-fixed.png
+    修正を入れたビルドで、同じ座標のボタンを押した直後。
+    Root Header と Section Header が赤、Cell が青、Section Footer と Root Footer が緑へ追従する。
+
+A/B の条件: sample アプリのソースとタップ座標は両ビルドで同一で、差分は
+ks-settingsview-ui の KsSettingsView.kt のみ。同じ因果は Robolectric 側でも確認済みで、
+修正箇所を外すと RootAccessoryThemeRefreshTest の bind 系 3 件だけが落ちる。
+
+個人情報: エミュレータ + デモデータのみ。端末名・アカウント・通知の写り込みなし。

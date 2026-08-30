@@ -1,0 +1,26 @@
+date=2026-08-11 15:23:59 label=maui-sample-AFTER-fix serial=<android-device-serial> model=Pixel 6a android=16
+prefix=tanaka iterations=20 min_valid=15
+iter 1: OK   (...example.comabcde)
+iter 2: OK   (...le.comabcdeabcde)
+iter 3: OK   (...mabcdeabcdeabcde)
+iter 4: SKIP (bounds moved [189,651][1038,775] -> [189,689][1038,813], after=...eabcdeabcdeabcde)
+iter 5: OK   (...eabcdeabcdeabcde)
+iter 6: OK   (...eabcdeabcdeabcde)
+iter 7: OK   (...eabcdeabcdeabcde)
+iter 8: OK   (...eabcdeabcdeabcde)
+iter 9: OK   (...eabcdeabcdeabcde)
+iter 10: OK   (...eabcdeabcdeabcde)
+iter 11: OK   (...eabcdeabcdeabcde)
+iter 12: OK   (...eabcdeabcdeabcde)
+iter 13: OK   (...eabcdeabcdeabcde)
+iter 14: OK   (...eabcdeabcdeabcde)
+iter 15: OK   (...eabcdeabcdeabcde)
+iter 16: SKIP (bounds moved [189,689][1038,813] -> [189,726][1038,850], after=...eabcdeabcdeabcde)
+iter 17: OK   (...eabcdeabcdeabcde)
+iter 18: OK   (...eabcdeabcdeabcde)
+iter 19: OK   (...eabcdeabcdeabcde)
+iter 20: OK   (...eabcdeabcdeabcde)
+---
+pass=18 fail=0 skip=2 valid=18 / 20 (min_valid=15)
+判定: OK (有効試行 18・破損 0)
+result=0

@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>DatePicker 配色モック B — 選択日サイズ維持・ヘッダ拡張</title>
+<style>
+  :root {
+    /* SampleTheme.maui のトークン解決値 (モック上の仮当て。実装は Theme から解決する) */
+    --dialog-bg: #F2EFE6;          /* Theme.backgroundColor */
+    --accent: #FFBF00;             /* cellAccentColor 解決値 */
+    --on-accent: #1A1A1A;          /* accent 輝度が高い → 黒系 */
+    --text: #555555;               /* cellTitleColor 解決値 */
+    --text-dim: rgba(85, 85, 85, 0.38); /* 無効日 = 通常文字の減光 */
+    --divider: rgba(85, 85, 85, 0.18);  /* ヘッダ下罫線 (通常文字の低透過) */
+    --page-bg: #D9D4C6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--page-bg);
+    font-family: "Roboto", "Noto Sans JP", sans-serif;
+    display: flex; gap: 48px; justify-content: center; align-items: flex-start;
+    padding: 40px; min-height: 100vh;
+  }
+  .variant-label {
+    position: fixed; top: 8px; left: 12px; font-size: 13px; color: #555;
+    background: rgba(255,255,255,0.8); padding: 4px 10px; border-radius: 6px;
+  }
+  .column { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .caption { font-size: 13px; color: #444; }
+
+  .dialog {
+    background: var(--dialog-bg);
+    border-radius: 28px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.28);
+    width: 336px; overflow: hidden;
+  }
+
+  /* ===== ヘッダ (B案: 選択日サイズを維持し、ヘッダを縦に広げて再配分) ===== */
+  .header { padding: 20px 24px 14px; border-bottom: 1px solid var(--divider); position: relative; }
+  .header .title { font-size: 13px; letter-spacing: 0.4px; color: var(--text); }
+  .header .selection { font-size: 34px; font-weight: 500; color: var(--text); margin-top: 36px; }
+  .header .mode-toggle {
+    position: absolute; right: 16px; bottom: 12px;
+    width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+  }
+  .header .mode-toggle svg { fill: var(--text); }
+
+  /* ===== 月ナビゲーション ===== */
+  .month-nav { display: flex; align-items: center; padding: 12px 12px 4px 20px; }
+  .month-label { font-size: 14px; color: var(--text); display: flex; align-items: center; gap: 6px; }
+  .month-label .drop { border: 5px solid transparent; border-top-color: var(--text); margin-top: 5px; }
+  .nav-spacer { flex: 1; }
+  .chevron { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; color: var(--text); font-size: 18px; }
+
+  /* ===== カレンダーグリッド ===== */
+  .grid { display: grid; grid-template-columns: repeat(7, 1fr); padding: 4px 12px 8px; row-gap: 2px; }
+  .grid .wd { text-align: center; font-size: 13px; color: var(--text); padding: 8px 0; }
+  .day {
+    width: 40px; height: 40px; margin: 0 auto; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: var(--text);
+  }
+  .day.selected { background: var(--accent); color: var(--on-accent); }
+  .day.today { border: 1px solid var(--accent); }
+  .day.disabled { color: var(--text-dim); }
+
+  /* ===== テキスト入力モード ===== */
+  .input-area { padding: 8px 24px 4px; }
+  .tfield { position: relative; border: 1px solid var(--text-dim); border-radius: 6px; padding: 14px 14px 12px; }
+  .tfield.focused { border: 2px solid var(--accent); padding: 13px 13px 11px; }
+  .tfield .flabel {
+    position: absolute; top: -8px; left: 10px; padding: 0 4px;
+    background: var(--dialog-bg); font-size: 11px; color: var(--text);
+  }
+  .tfield .fvalue { font-size: 16px; color: var(--text); }
+  .caret { display: inline-block; width: 2px; height: 18px; background: var(--accent); vertical-align: text-bottom; margin-left: 1px; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .helper { font-size: 11px; color: var(--text); opacity: 0.7; margin: 4px 14px 0; }
+
+  /* ===== フッタ ===== */
+  .footer { display: flex; justify-content: flex-end; gap: 4px; padding: 8px 12px 12px; }
+  .btn { border: none; background: transparent; color: var(--accent); font-size: 14px; font-weight: 600; padding: 10px 12px; border-radius: 20px; cursor: default; }
+</style>
+</head>
+<body>
+  <div class="variant-label">B案: 選択日テキストのサイズを維持し、ヘッダを縦に広げて重なりを解消</div>
+
+  <!-- カレンダー表示モード -->
+  <div class="column">
+    <div class="dialog">
+      <div class="header">
+        <div class="title">予約日を選択</div>
+        <div class="selection">2026年6月1日</div>
+        <div class="mode-toggle">
+          <svg width="20" height="20" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+        </div>
+      </div>
+      <div class="month-nav">
+        <div class="month-label">2026年6月<span class="drop"></span></div>
+        <div class="nav-spacer"></div>
+        <div class="chevron">‹</div>
+        <div class="chevron">›</div>
+      </div>
+      <div class="grid">
+        <div class="wd">日</div><div class="wd">月</div><div class="wd">火</div><div class="wd">水</div><div class="wd">木</div><div class="wd">金</div><div class="wd">土</div>
+        <div class="day"></div><div class="day selected">1</div><div class="day">2</div><div class="day">3</div><div class="day">4</div><div class="day">5</div><div class="day">6</div>
+        <div class="day">7</div><div class="day">8</div><div class="day">9</div><div class="day">10</div><div class="day">11</div><div class="day">12</div><div class="day">13</div>
+        <div class="day">14</div><div class="day today">15</div><div class="day">16</div><div class="day">17</div><div class="day">18</div><div class="day">19</div><div class="day">20</div>
+        <div class="day">21</div><div class="day">22</div><div class="day">23</div><div class="day">24</div><div class="day">25</div><div class="day">26</div><div class="day">27</div>
+        <div class="day">28</div><div class="day">29</div><div class="day disabled">30</div><div class="day"></div><div class="day"></div><div class="day"></div><div class="day"></div>
+      </div>
+      <div class="footer">
+        <button class="btn">キャンセル</button>
+        <button class="btn">OK</button>
+      </div>
+    </div>
+    <p class="caption">カレンダー表示モード (選択日=1・今日=15・無効日=30 の例)</p>
+  </div>
+
+  <!-- テキスト入力モード -->
+  <div class="column">
+    <div class="dialog">
+      <div class="header">
+        <div class="title">予約日を選択</div>
+        <div class="selection">2026年6月1日</div>
+        <div class="mode-toggle">
+          <svg width="20" height="20" viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm0 16H5V9h14v10zM5 7V5h14v2H5z"/></svg>
+        </div>
+      </div>
+      <div class="input-area">
+        <div class="tfield focused">
+          <div class="flabel">日付</div>
+          <div class="fvalue">2026/06/01<span class="caret"></span></div>
+        </div>
+        <div class="helper">yyyy/mm/dd</div>
+      </div>
+      <div class="footer">
+        <button class="btn">キャンセル</button>
+        <button class="btn">OK</button>
+      </div>
+    </div>
+    <p class="caption">テキスト入力モード (入力欄フォーカス中)</p>
+  </div>
+</body>
+</html>

@@ -1,0 +1,35 @@
+iOS: Header / Footer accessory の Theme 追従 A/B (iOS Simulator iPhone 17 / iOS 26.0)
+
+撮影対象: samples/ios KsSettingsViewSample の「DSL 方式デモ」画面
+  - Root Header    = text 形式 (`.rootHeader("DSL 方式のデモ画面")`)
+  - Root Footer    = View 形式 (`.rootFooter { Text("© 2026 KsSettingsView Sample") }`)
+  - Section Header = text 形式 (「静的 Section」「動的 Section（繰り返し）」「Cell Modifier」)
+  - Section Footer = text 形式 (「Section H/F は modifier で指定」)
+
+撮影手順: 撮影用に DSLDemoView へ一時的な Theme 切替ボタンを足し、`.theme(...)` の
+headerTextColor / headerFontSize / footerTextColor だけを実行時に差し替えた
+(この Theme 切替は Store.applyTheme 経由で Controller の applyTheme(_:) に届く)。
+撮影後、DSLDemoView の一時変更は元に戻してある。
+
+--- 1回目: Root だけ追従させた段階 (Section の非追従が判明した証跡) ---
+
+- section-accessory-not-following-blue-13pt.png
+    Theme 変更前。Root Header・Section Header ともに青の 13pt。
+- section-accessory-not-following-red-22pt.png
+    Theme を赤 / 22pt へ切替えた直後。Root Header だけが赤 22pt へ追従し、
+    Section Header (「静的 Section」等) は青 13pt のまま追従しない。
+    この非対称の反転が deviation.md のスコープ拡張の根拠。
+
+--- 2回目: Section も追従させた最終状態 ---
+
+- all-accessory-theme-before-blue-13pt.png
+    Theme 変更前。Root Header・Section Header が青 13pt、Section Footer が灰。
+- all-accessory-theme-after-red-22pt.png
+    Theme 切替直後。Root Header と 3 つの Section Header がいずれも赤 22pt へ、
+    Section Footer が橙へ、画面を作り直すことなく in-place で追従している。
+    Root Footer (View 形式) は見た目が変わらない = factory を再実行していない。
+
+Header と Footer が別々の Theme 属性から解決されること (headerTextColor /
+footerTextColor) も、Section Header が赤・Section Footer が橙になった点で確認できる。
+
+個人情報: シミュレータ + デモデータのみ。端末名・アカウント・通知の写り込みなし。

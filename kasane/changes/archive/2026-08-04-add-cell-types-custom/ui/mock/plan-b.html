@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CustomCell デモ mock — Plan B (リッチ構成)</title>
+<style>
+  /* SampleTheme (MAUI 互換) 参照:
+     背景 #F2EFE6 / Cell 背景 #FFF / セパレータ #E6DAB9 / アクセント #FFBF00
+     ヘッダ文字 #CC9900 / タイトル #555 / 淡色文字 #999 */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #cfcabc; font-family: -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
+         display: flex; justify-content: center; padding: 24px; }
+  .phone { width: 390px; background: #F2EFE6; border-radius: 24px; overflow: hidden;
+           box-shadow: 0 8px 32px rgba(0,0,0,.25); }
+  .navbar { background: #F2EFE6; padding: 18px 16px 10px; text-align: center;
+            font-size: 17px; font-weight: 600; color: #555;
+            border-bottom: 1px solid #E6DAB9; }
+  .section-header { padding: 18px 16px 6px; font-size: 13px; color: #CC9900; }
+  .section-footer { padding: 6px 16px 2px; font-size: 12px; color: #999; }
+  .cells { background: #fff; border-top: 1px solid #E6DAB9; border-bottom: 1px solid #E6DAB9; }
+  .cell { display: flex; align-items: center; min-height: 48px; padding: 12px 16px;
+          border-bottom: 1px solid #E6DAB9; }
+  .cell:last-child { border-bottom: none; }
+  .chevron { color: #c9c2ad; font-size: 20px; font-weight: 600; margin-left: 10px; }
+  .grow { flex: 1; }
+  .title { font-size: 16px; color: #555; }
+  .sub { font-size: 12px; color: #999; margin-top: 2px; }
+
+  /* ① インライン: プロフィールカード */
+  .avatar { width: 44px; height: 44px; border-radius: 50%; background: #FFBF00; color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 17px; font-weight: 700; margin-right: 12px; }
+  .chips { display: flex; gap: 6px; margin-top: 6px; }
+  .chip { font-size: 11px; color: #CC9900; background: #FAF3D9; border: 1px solid #E6DAB9;
+          border-radius: 9px; padding: 2px 8px; }
+  .storage-bar { margin-top: 8px; height: 6px; background: #E6DAB9; border-radius: 3px; overflow: hidden; }
+  .storage-fill { height: 6px; width: 62%; background: linear-gradient(90deg, #FFBF00, #CC9900); }
+
+  /* ② SliderCell */
+  .slider-row { display: flex; align-items: center; gap: 10px; width: 100%; }
+  .sicon { font-size: 15px; color: #999; }
+  .track { flex: 1; height: 4px; background: #E6DAB9; border-radius: 2px; position: relative; }
+  .fill { position: absolute; left: 0; top: 0; height: 4px; background: #FFBF00; border-radius: 2px; }
+  .knob { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 22px; height: 22px;
+          border-radius: 50%; background: #fff; border: 1px solid #ddd;
+          box-shadow: 0 2px 5px rgba(0,0,0,.25); }
+  .slider-caption { font-size: 12px; color: #999; margin-top: 6px; }
+
+  /* ③ 動的高さ: FAQ */
+  .faq { width: 100%; }
+  .faq-head { display: flex; align-items: center; }
+  .q-mark { width: 22px; height: 22px; border-radius: 50%; background: #FAF3D9; color: #CC9900;
+            font-size: 13px; font-weight: 700; display: flex; align-items: center;
+            justify-content: center; margin-right: 10px; }
+  .faq-toggle { color: #FFBF00; font-size: 13px; margin-left: auto; }
+  .faq-body { margin-top: 8px; margin-left: 32px; font-size: 13px; color: #777; line-height: 1.6;
+              border-left: 3px solid #FFBF00; padding-left: 10px; }
+
+  /* ④ showArrow / onTap */
+  .notif-badge { min-width: 22px; height: 22px; border-radius: 11px; background: #FF2D55; color: #fff;
+                 font-size: 12px; font-weight: 700; display: flex; align-items: center;
+                 justify-content: center; padding: 0 6px; }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="navbar">CustomCell デモ — Plan B</div>
+
+  <div class="section-header">インライン CUSTOMCELL</div>
+  <div class="cells">
+    <div class="cell">
+      <div class="avatar">KS</div>
+      <div class="grow">
+        <div class="title">Kamusoft 太郎</div>
+        <div class="sub">taro@kamusoft.jp</div>
+        <div class="chips"><span class="chip">Pro プラン</span><span class="chip">2FA 有効</span></div>
+      </div>
+    </div>
+    <div class="cell">
+      <div class="grow">
+        <div class="title">ストレージ使用量</div>
+        <div class="storage-bar"><div class="storage-fill"></div></div>
+        <div class="sub">6.2 GB / 10 GB（静的 CustomCell）</div>
+      </div>
+    </div>
+  </div>
+  <div class="section-footer">プロフィールカード（content 駆動）とストレージ表示（静的糖衣）。</div>
+
+  <div class="section-header">再利用（SLIDERCELL ラップ関数）</div>
+  <div class="cells">
+    <div class="cell">
+      <div class="grow">
+        <div class="slider-row">
+          <span class="sicon">🔅</span>
+          <div class="track"><div class="fill" style="width:70%"></div><div class="knob" style="left:70%"></div></div>
+          <span class="sicon">🔆</span>
+        </div>
+        <div class="slider-caption">明るさ — 70%</div>
+      </div>
+    </div>
+    <div class="cell">
+      <div class="grow">
+        <div class="slider-row">
+          <span class="sicon">🔈</span>
+          <div class="track"><div class="fill" style="width:40%"></div><div class="knob" style="left:40%"></div></div>
+          <span class="sicon">🔊</span>
+        </div>
+        <div class="slider-caption">音量 — 40%</div>
+      </div>
+    </div>
+  </div>
+  <div class="section-footer">アイコン付きスライダー。SliderCell(icons:label:value:) の再利用例。</div>
+
+  <div class="section-header">動的高さ（FAQ）</div>
+  <div class="cells">
+    <div class="cell">
+      <div class="faq">
+        <div class="faq-head">
+          <div class="q-mark">Q</div>
+          <div class="title">バックアップは自動ですか？</div>
+          <div class="faq-toggle">▶</div>
+        </div>
+      </div>
+    </div>
+    <div class="cell">
+      <div class="faq">
+        <div class="faq-head">
+          <div class="q-mark">Q</div>
+          <div class="title">機種変更時の引き継ぎは？</div>
+          <div class="faq-toggle">▼</div>
+        </div>
+        <div class="faq-body">
+          設定画面の「引き継ぎコードを発行」から 8 桁のコードを発行し、新しい端末で入力してください。
+          コードの有効期限は 24 時間です。期限が切れた場合は再発行できます。
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="section-footer">回答の展開で行高さが追従する。</div>
+
+  <div class="section-header">SHOWARROW / ONTAP</div>
+  <div class="cells">
+    <div class="cell">
+      <div class="grow">
+        <div class="title">通知センター</div>
+        <div class="sub">showArrow: true / 未読バッジ付き</div>
+      </div>
+      <div class="notif-badge">12</div>
+      <div class="chevron">›</div>
+    </div>
+    <div class="cell">
+      <div class="grow">
+        <div class="title">キャッシュを削除</div>
+        <div class="sub">onTap のみ（矢印なし）— 128 MB</div>
+      </div>
+    </div>
+  </div>
+  <div class="section-footer">chevron は既存 CommandCell と同一素材・同一位置で表示される。</div>
+  <div style="height:24px"></div>
+</div>
+</body>
+</html>

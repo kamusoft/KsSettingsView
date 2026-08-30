@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>Variant B — 「今日」をホイール下の chip に配置</title>
+<style>
+  :root {
+    --accent: #C9A227;
+    --accent-band: rgba(201,162,39,0.14);
+    --sheet-bg: #FFFFFF;
+    --separator: #E4E0D8;
+    --text: #1C1B1F;
+    --text-secondary: #6B6860;
+    --scrim: rgba(0,0,0,0.38);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Hiragino Sans", "Noto Sans JP", Roboto, sans-serif;
+    background: #F3F1EC; padding: 24px; color: var(--text);
+  }
+  h1 { font-size: 16px; margin-bottom: 4px; }
+  p.note { font-size: 12px; color: var(--text-secondary); margin-bottom: 20px; }
+  .frames { display: flex; gap: 32px; flex-wrap: wrap; }
+  .frame-label { font-size: 12px; color: var(--text-secondary); text-align: center; margin-top: 8px; }
+  .phone {
+    width: 340px; height: 560px; border-radius: 24px; overflow: hidden;
+    background: #FDFBF6; border: 1px solid #D8D4CB; position: relative;
+    display: flex; flex-direction: column; justify-content: flex-end;
+  }
+  .scrim { position: absolute; inset: 0; background: var(--scrim); }
+  .behind { padding: 20px 16px; font-size: 13px; color: #8a8676; }
+  .behind .row { padding: 14px 0; border-bottom: 1px solid #E9E5DC; display: flex; justify-content: space-between; }
+  .sheet {
+    position: relative; z-index: 2;
+    background: var(--sheet-bg);
+    border-radius: 28px 28px 0 0;
+    box-shadow: 0 -4px 24px rgba(0,0,0,0.18);
+  }
+  .drag-handle {
+    width: 32px; height: 4px; border-radius: 2px; background: #C9C5BC;
+    margin: 10px auto 6px;
+  }
+  .sheet-header {
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+    padding: 6px 16px 12px;
+  }
+  .btn-cancel { justify-self: start; grid-column: 1; font-size: 15px; color: var(--accent); }
+  .sheet-title { font-size: 16px; font-weight: 700; grid-column: 2; }
+  .btn-ok {
+    justify-self: end; grid-column: 3;
+    font-size: 14px; font-weight: 700; color: #fff;
+    background: var(--accent); border-radius: 999px; padding: 6px 16px;
+  }
+  .wheels {
+    position: relative; height: 220px; overflow: hidden;
+    border-top: 1px solid var(--separator);
+    display: flex;
+  }
+  .wheel-band {
+    position: absolute; left: 16px; right: 16px; top: 88px; height: 44px;
+    background: var(--accent-band); border-radius: 12px;
+  }
+  .wheel-col { flex: 1; position: relative; z-index: 1; }
+  .wheel-row {
+    height: 44px; display: flex; align-items: center; justify-content: center;
+    font-size: 17px; color: var(--text);
+  }
+  .wheel-row.d2 { opacity: 0.25; font-size: 15px; }
+  .wheel-row.d1 { opacity: 0.5; font-size: 16px; }
+  .wheel-row.center { color: var(--accent); font-weight: 700; font-size: 19px; }
+  .wheel-fade-top, .wheel-fade-bottom {
+    position: absolute; left: 0; right: 0; height: 60px; pointer-events: none; z-index: 2;
+  }
+  .wheel-fade-top { top: 0; background: linear-gradient(to bottom, var(--sheet-bg), transparent); }
+  .wheel-fade-bottom { bottom: 0; background: linear-gradient(to top, var(--sheet-bg), transparent); }
+  .today-bar { display: flex; justify-content: center; padding: 10px 0 4px; border-top: 1px solid var(--separator); }
+  .btn-today-chip {
+    font-size: 14px; font-weight: 600; color: var(--accent);
+    border: 1px solid var(--accent); border-radius: 999px; padding: 6px 20px;
+  }
+  .sheet-bottom-pad { height: 14px; }
+</style>
+</head>
+<body>
+<h1>Variant B — 「今日」をホイール下の chip に配置</h1>
+<p class="note">ヘッダーは numberpicker 承認モックと完全に同一 (3要素) のまま、ホイール下に outline chip の「今日」を置く形。ホイール意匠は Variant A と同じ (plan-a 踏襲の3連)。左: todayText = "今日" / 右: todayText 未指定 (chip 行ごと非表示)。</p>
+<div class="frames">
+  <div>
+    <div class="phone">
+      <div class="behind">
+        <div class="row"><span>ニックネーム</span><span>callback 経路で更新</span></div>
+        <div class="row"><span>テーマ</span><span>ダーク &gt;</span></div>
+        <div class="row"><span>誕生日</span><span>2026/08/02 &gt;</span></div>
+      </div>
+      <div class="scrim"></div>
+      <div class="sheet">
+        <div class="drag-handle"></div>
+        <div class="sheet-header">
+          <div class="btn-cancel">キャンセル</div>
+          <div class="sheet-title">日付を選択</div>
+          <div class="btn-ok">OK</div>
+        </div>
+        <div class="wheels">
+          <div class="wheel-band"></div>
+          <div class="wheel-col">
+            <div class="wheel-row d2">2024年</div>
+            <div class="wheel-row d1">2025年</div>
+            <div class="wheel-row center">2026年</div>
+            <div class="wheel-row d1">2027年</div>
+            <div class="wheel-row d2">2028年</div>
+          </div>
+          <div class="wheel-col">
+            <div class="wheel-row d2">6月</div>
+            <div class="wheel-row d1">7月</div>
+            <div class="wheel-row center">8月</div>
+            <div class="wheel-row d1">9月</div>
+            <div class="wheel-row d2">10月</div>
+          </div>
+          <div class="wheel-col">
+            <div class="wheel-row d2">&nbsp;</div>
+            <div class="wheel-row d1">1日</div>
+            <div class="wheel-row center">2日</div>
+            <div class="wheel-row d1">3日</div>
+            <div class="wheel-row d2">4日</div>
+          </div>
+          <div class="wheel-fade-top"></div>
+          <div class="wheel-fade-bottom"></div>
+        </div>
+        <div class="today-bar">
+          <div class="btn-today-chip">今日</div>
+        </div>
+        <div class="sheet-bottom-pad"></div>
+      </div>
+    </div>
+    <div class="frame-label">todayText = "今日" (ホイール下・outline chip)</div>
+  </div>
+  <div>
+    <div class="phone">
+      <div class="behind">
+        <div class="row"><span>ニックネーム</span><span>callback 経路で更新</span></div>
+        <div class="row"><span>テーマ</span><span>ダーク &gt;</span></div>
+        <div class="row"><span>誕生日</span><span>2026/08/02 &gt;</span></div>
+      </div>
+      <div class="scrim"></div>
+      <div class="sheet">
+        <div class="drag-handle"></div>
+        <div class="sheet-header">
+          <div class="btn-cancel">キャンセル</div>
+          <div class="sheet-title">日付を選択</div>
+          <div class="btn-ok">OK</div>
+        </div>
+        <div class="wheels">
+          <div class="wheel-band"></div>
+          <div class="wheel-col">
+            <div class="wheel-row d2">2024年</div>
+            <div class="wheel-row d1">2025年</div>
+            <div class="wheel-row center">2026年</div>
+            <div class="wheel-row d1">2027年</div>
+            <div class="wheel-row d2">2028年</div>
+          </div>
+          <div class="wheel-col">
+            <div class="wheel-row d2">6月</div>
+            <div class="wheel-row d1">7月</div>
+            <div class="wheel-row center">8月</div>
+            <div class="wheel-row d1">9月</div>
+            <div class="wheel-row d2">10月</div>
+          </div>
+          <div class="wheel-col">
+            <div class="wheel-row d2">&nbsp;</div>
+            <div class="wheel-row d1">1日</div>
+            <div class="wheel-row center">2日</div>
+            <div class="wheel-row d1">3日</div>
+            <div class="wheel-row d2">4日</div>
+          </div>
+          <div class="wheel-fade-top"></div>
+          <div class="wheel-fade-bottom"></div>
+        </div>
+        <div class="sheet-bottom-pad"></div>
+      </div>
+    </div>
+    <div class="frame-label">todayText 未指定 (chip 行ごと非表示)</div>
+  </div>
+</div>
+</body>
+</html>

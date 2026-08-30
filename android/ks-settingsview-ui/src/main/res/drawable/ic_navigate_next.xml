@@ -1,0 +1,20 @@
+<!--
+  ナビゲーションインジケータ（右矢印 chevron）。
+
+  AiForms.Maui.SettingsView の
+  Platforms/Android/Resources/drawable/ic_navigate_next.xml に対応するアイコン。
+  18x26dp / #FFCACACA の chevron（CommandCell の Disclosure Indicator 用）。
+
+  原典からの意図的な差: 原典のパス（縦範囲 y=6..18）は viewport 中心 (13) に対し
+  1 単位（≒1dp）上寄りで、縦中央配置の accessoryHolder 内で chevron が浮いて見えるため、
+  絶対 y 座標を +1 してパスを viewport 縦中央（y=7..19、中心 13）へ補正している。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="18dp"
+    android:height="26dp"
+    android:viewportWidth="18"
+    android:viewportHeight="26">
+  <path
+      android:fillColor="#FFCACACA"
+      android:pathData="M10,7L8.59,8.41 13.17,13l-4.58,4.59L10,19l6,-6z"/>
+</vector>

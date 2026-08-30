@@ -1,0 +1,16 @@
+# 時刻選択面の表示中に回転したときの logcat 抜粋
+
+対象: samples/android (ComponentActivity ホスト / 非 Material3 テーマ) の入力 Cell デモ。
+手順: TimePickerCell「アラーム」の行をタップして選択面を表示 → logcat をクリア → 縦から横へ回転。
+
+## 回転による Activity 再生成が起きていること
+
+08-27 19:52:36.607 V WindowManager: Sent Transition (#NNNN) ... displayChange = DisplayChange { displayId = 0, startRotation = 0, endRotation = 1, ... }
+08-27 19:52:36.604 I WindowManager: finishDrawing of relaunch: Window{... jp.kamusoft.kssettingsview.samples.android/.MainActivity} 155ms
+
+## window leak が出ていないこと
+
+`adb logcat -d | grep -icE "WindowLeaked|leaked window"` → 0 (回転をまたぐ全 1042 行の走査結果)
+
+選択面は再提示されず (横画面のスクリーンショット timesheet-rotation-02-after-rotate-closed.png)、
+画面上部の「最後のイベント」も (none) のままで、確定 callback は発火していない。

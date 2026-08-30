@@ -1,0 +1,6 @@
+# Deviation: android-picker-selection-sheet
+
+- PickerCell 選択面の提示: spec では初期スクロール位置の要求なし → オーナー指示により、選択中の項目 (単一選択は `selectedIndex`、複数選択は選択中の最小 index) が見える位置まで初期スクロールした状態で開く。理由: ksn-scout の調査でオリジナル AiForms (Xamarin.Forms 版) が Android/iOS とも選択項目へスクロールして開くことを確認 (Android `PickerAdapter.RestoreSelect` の `SetSelection` / iOS `PickerTableViewController.InitializeScroll` の `ScrollToRow(Middle)`)。旧 AlertDialog 実装も同挙動であり、原典の UX を踏襲する。KsSettingsView iOS の追随は別変更候補 (2026-08-02)
+- 確定ボタンの文字色: mock (plan-b.html / approved.png) は白固定の表現 → オーナー指示により「強調色の上に載せる文字色は `Theme.backgroundColor` で描画する」を契約とする (輝度導出の白/黒は廃止)。理由: 選択面の配色は AiForms PickerPage 同型のセルスタイル継承で統一し、非トークンの導出色を残さない。参考実測: ライブラリ既定 Theme でのコントラストは 4.02:1 (2026-08-02)
+- ヘッダーの文字サイズ: mock は固定値の表現 (タイトル 16px / キャンセル 15px / OK 14px) → オーナー指示により Theme 連動へ変更。候補行と同じ実効タイトルサイズ (cellTitleFontSize 系の解決値) を基準に、タイトル = +1sp、キャンセル / OK = −1sp で導出する。理由: 固定 sp はテーマのフォントサイズ指定に追従できず何かと問題 (2026-08-02)
+- 全展開のトリガー: spec/brief は「上方向ドラッグで全展開」とのみ定義 → オーナー裁定により、全展開 (リスト高制約の解除) はシートの直接ドラッグ (ハンドル/ヘッダー起点) のみとし、候補リストの nested scroll では展開しない (リストは常に内部スクロール)。帰結としてリスト面からの下スワイプ dismiss は失われる (ハンドル/ヘッダーからの下スワイプ・キャンセル・外側タップ・Back は維持)。理由: リストを普通にスクロールしただけでシートが全画面化する誤発火を防ぎ、「内部スクロール」と「ドラッグで全展開」を別操作として保つ (review-003 の Major 指摘への裁定、2026-08-02)

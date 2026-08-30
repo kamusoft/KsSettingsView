@@ -1,0 +1,34 @@
+name: Feature request
+description: Propose a problem for KsSettingsView to solve
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for sharing your idea. You may write your answers in English or Japanese.
+
+  - type: textarea
+    id: problem_to_solve
+    attributes:
+      label: Problem to solve
+      description: Describe the concrete problem or unmet need. This becomes the problem and motivation for exploration.
+    validations:
+      required: true
+
+  - type: textarea
+    id: current_impact
+    attributes:
+      label: Current impact
+      description: Explain who is affected, how often, and what is difficult with the current behavior or workflow.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives_considered
+    attributes:
+      label: Alternatives considered
+      description: List the approaches or workarounds you considered and their trade-offs. This becomes the alternatives considered during exploration.
+    validations:
+      required: true
