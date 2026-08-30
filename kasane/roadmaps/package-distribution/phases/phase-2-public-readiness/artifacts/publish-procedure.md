@@ -32,20 +32,20 @@ phase-2 の決定事項 (agenda.md) を実行順に並べたチェックリス�
 
 ## 3. GitHub: 新 repo の作成と公開
 
-- [ ] 旧 repo を `kamusoft/KsSettingsView-private-archive` へ rename (`gh repo rename`)。**手順 1 の push 完了後に行う**
-- [ ] 新 repo `kamusoft/KsSettingsView` を **private で**作成し、手順 2 のツリーを push (`develop`)
-- [ ] GitHub 上で中身を目視 (README・ツリー・ファイル数・容量) → visibility を **public** に切り替え
-- [ ] 設定 (gh api): Issues ON / Wiki OFF / **Discussions OFF** (質問窓口は Issue Form で置くと決定済み — 決定「Issue の質問窓口」) / Projects OFF、Actions 有効 (既定)、**Secret scanning + Push protection ON**、Dependabot alerts ON、`develop` の branch protection = force-push 禁止 + 削除禁止 (PR 必須・必須 status check は phase-3 の CI 後)
-- [ ] Issue のラベル `bug` / `enhancement` / `question` が存在することを確認する (いずれも GitHub の既定ラベル。Issue Forms の `labels:` は存在しないラベルを自動生成しないため、欠けていたら作成する)
-- [ ] **Pull requests を collaborators only にする** (Settings > Features)。外部からの PR を受け付けないため (cross/ADR-0024)。完全無効化を採らないのはオーナー自身の PR も作れなくなり phase-3 の PR トリガー CI が成立しないため
-- [ ] 旧 repo を GitHub Archive (読み取り専用) にする
-- [ ] 旧 repo の Issue 1 件・PR 11 件は引き継がない (cross/ADR-0021)。必要な Issue があれば手で転記
+- [x] 旧 repo を `kamusoft/KsSettingsView-private-archive` へ rename (`gh repo rename`)。**手順 1 の push 完了後に行う**
+- [x] 新 repo `kamusoft/KsSettingsView` を **private で**作成し、手順 2 のツリーを push (`develop`)
+- [x] GitHub 上で中身を目視 (README・ツリー・ファイル数・容量) → visibility を **public** に切り替え
+- [x] 設定 (gh api): Issues ON / Wiki OFF / **Discussions OFF** (質問窓口は Issue Form で置くと決定済み — 決定「Issue の質問窓口」) / Projects OFF、Actions 有効 (既定)、**Secret scanning + Push protection ON**、Dependabot alerts ON、`develop` の branch protection = force-push 禁止 + 削除禁止 (PR 必須・必須 status check は phase-3 の CI 後)
+- [x] Issue のラベル `bug` / `enhancement` / `question` が存在することを確認する (いずれも GitHub の既定ラベル。Issue Forms の `labels:` は存在しないラベルを自動生成しないため、欠けていたら作成する)
+- [x] **Pull requests を collaborators only にする** (Settings > Features)。外部からの PR を受け付けないため (cross/ADR-0024)。完全無効化を採らないのはオーナー自身の PR も作れなくなり phase-3 の PR トリガー CI が成立しないため
+- [x] 旧 repo を GitHub Archive (読み取り専用) にする
+- [x] 旧 repo の Issue 1 件・PR 11 件は引き継がない (cross/ADR-0021)。必要な Issue があれば手で転記
 
 ## 4. ローカルの切り替え
 
-- [ ] ローカルの既存クローンを `../KsSettingsView-private-archive` へ改名し、その remote URL を rename 後の URL へ更新 (安全網として保持)
-- [ ] 新 repo を元のクローン先パス (`../KsSettingsView`) へ clone (手順 2 のディレクトリを移動して remote を設定してもよい)
-- [ ] 未追跡の開発ファイル (`android/local.properties` `samples/android/local.properties` `.claude/settings.local.json` 等) を旧ディレクトリから複製。`DerivedData` / `build` / `.gradle` は再生成
+- [x] ローカルの既存クローンを `../KsSettingsView-private-archive` へ改名し、その remote URL を rename 後の URL へ更新 (安全網として保持)
+- [x] 新 repo を元のクローン先パス (`../KsSettingsView`) へ clone (手順 2 のディレクトリを移動して remote を設定してもよい)
+- [x] 未追跡の開発ファイル (`android/local.properties` `samples/android/local.properties` `.claude/settings.local.json` 等) を旧ディレクトリから複製。`DerivedData` / `build` / `.gradle` は再生成
 - [ ] 3 platform のビルドが通ることを確認 (iOS: `swift build` / Android: `./gradlew assemble` / MAUI: `dotnet build`)
 - [ ] Claude Code のメモリ・セッションが同じパスで引き継がれていることを確認
 
@@ -110,3 +110,26 @@ phase-2 の決定事項 (agenda.md) を実行順に並べたチェックリス�
 - 単一 commit `Initial public snapshot` を作成 (author は noreply)。作業ツリー 19.2 MB / `.git` 16 MB
 - 公開ツリー上でも検査 3 種を再実行し、すべて 0 件
 - **既知の帰結**: archive 媒体を外したことで画像リンクが 5 ファイル・10 件だけ壊れる (`2026-08-02-ios-picker-selection-parity/ui/brief.md`、`2026-08-11-fix-entrycell-writeback-caret-race/evidence.md` 他)。いずれも過去の change の証跡内で、決定「公開対象の範囲 — evidence 媒体」の想定内
+
+### 2026-08-30: public 化の実施 (3〜4 節)
+
+**3 節 — 新 repo の作成と公開 (完了)**
+
+- 旧 repo を `kamusoft/KsSettingsView-private-archive` へ rename。**その直後にローカルの remote を rename 後の実 URL へ固定した** — 手順書では 4 節の作業だが、同名の新 repo を作るとリダイレクトが解除されて既存クローンの `origin` が新 repo を指すため、誤 push で全履歴が公開側へ入る経路をこの時点で塞いだ
+- 新 repo `kamusoft/KsSettingsView` を private で作成 → 公開ツリーを push → オーナー目視 → public へ切替
+- 説明文は README の Overview 1 文目を短縮した英文、topics は 10 個 (ios / android / dotnet-maui / swift / swiftui / kotlin / jetpack-compose / settings-screen / ui-library / cross-platform)。website は配布先が未確定のため空のまま (phase-8 で判断)
+- 設定: Issues ON / Wiki OFF / Discussions OFF / Projects OFF (Projects は作成時の既定が ON だったため public 切替の前に OFF にした)、Secret scanning + Push protection ON、Dependabot alerts ON (204 で確認)、`develop` は force-push 禁止 + 削除禁止 (PR 必須・必須 status check は phase-3 の CI 後)
+- **PR の collaborators only は `pull_request_creation_policy` フィールドで実現した** (値 `collaborators_only`)。PR 機能自体 (`has_pull_requests`) は有効なままなので、phase-3 の PR トリガー CI は成立する
+- ラベル `bug` / `enhancement` / `question` は既定で存在したため作成不要だった
+- **Issue の転記は不要と確定**: 唯一の Issue #12 (iOS の死経路整理) は NOT_PLANNED でクローズ済みで、指摘対象 (`supplementaryModes` / `makeListConfig` / `layoutModesDiffer`) は現在のコードに 1 件も残っていない。PR 11 件はすべて merged
+- 旧 repo を GitHub Archive (読み取り専用) にした
+- 実行制約: `gh repo rename` はエージェントの実行分類器にブロックされたためオーナーが手で実行した。以降の `gh repo create` / visibility 変更 / `gh repo archive` / `gh api` はエージェントから実行できた
+
+**4 節 — ローカルの切り替え (完了)**
+
+- ローカルクローンを入れ替え: 旧クローン → `../KsSettingsView-private-archive`、公開ツリー → 元のクローン先パス。`../<リポジトリ名>/` 規約と Claude Code のパス紐づけを保つため、新作業コピーが元のパスを引き継ぐ形にした
+- 引き継いだ未追跡ファイル: `.claude/settings.local.json`、`android/local.properties`、`samples/android/local.properties`、`.claude/plans/` 9 件。JVM クラッシュログ・IDE 設定・空ファイルは引き継がず、`DerivedData` / `build` / `.gradle` は再生成に任せた
+- 旧クローンの worktree 1 件 (detached HEAD) は未 commit の変更がなく、旧側に残置した
+- **3 platform のビルドはすべて成功**: iOS `swift build` 12.0 秒 / Android `./gradlew assemble` 19 秒・214 タスク / MAUI `dotnet build maui/KsSettingsView.slnx` 1 分 44 秒・20 警告 0 エラー (警告は binding の既存 BG8605 / BG8606 / BG8A00)
+- Claude Code のメモリ 14 件が同じパスで引き継がれていること、`local-path-lint.py` と `identity-lint.py` が新クローンで exit 0 になることを確認した
+- 記録の残し方: 1〜2 節の実施記録までが公開スナップショットに入り、3〜4 節のこの記録は公開後の通常 commit として新 repo に入る

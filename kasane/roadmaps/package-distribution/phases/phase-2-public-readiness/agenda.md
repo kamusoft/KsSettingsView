@@ -112,11 +112,11 @@ Issue Forms を **バグ報告 / 提案 / 質問の 3 本**にし、質問用フ
 ## TODO
 
 - [x] 論点の解消 (2026-08-21、決定 9 件)
-- [ ] [実施手順書](artifacts/publish-procedure.md) に沿って public 化を実施 (下ごしらえ → 公開ツリー → 新 repo 作成・公開 → ローカル切り替え)。hook / lint は S 級 change として ksn-orchestrator で — **1〜2 節は 2026-08-30 完了** (公開ツリーは `../KsSettingsView-public-tree` に単一 commit で作成済み、検査 3 種 0 件)。残るは 3 節 (新 repo 作成・public 切替・旧 repo Archive) と 4 節 (ローカル切り替え)
+- [x] **[実施手順書](artifacts/publish-procedure.md) に沿って public 化を実施 (2026-08-30 完了)** — 1 節: 下ごしらえ (開発チーム識別子・push・検査 3 種 0 件) → 2 節: 公開ツリー 2265 件 / 19.2 MB を単一 commit → 3 節: 新 repo を public 化し旧 repo を Archive → 4 節: ローカル切り替えと 3 platform ビルド確認。hook / lint は S 級 change として実施済み
 - [ ] 後続フロー (手順書 5 節): Kasane へ依頼プロンプト / cross/ADR-0021 のオーナー確認 (ksn-roadmap 改訂は 2026-08-21 実施済み)
 - [x] **着手条件** (2026-08-30 充足): phase-10〜12 (`docs/` 廃止・`skills/` 生成) と phase-9 (README 英語 + `README_ja`) の完了を待ってから手順書 2 節以降 (公開ツリーの作成) に進む。1 節の下ごしらえは先行可
 - [ ] **phase-3 への申し送り**: 識別子 lint の検査範囲 (`kasane/config.yaml` の `lint.identity.scope`) に `samples` を追加する (決定「iOS Sample の開発チーム識別子」の再発防止。ソース中の正当な UUID 定数の誤検出確認を伴うため CI 整備時に実施)
-- [ ] 調査結果のまとめ (手順書の「実施記録」節に実施結果を記入)
+- [x] 調査結果のまとめ (2026-08-30、手順書の「実施記録」節に 1〜2 節と 3〜4 節の結果を記入済み)
 - [ ] ksn-roadmap で research 完了をマーク
 - [x] **phase-9 からの申し送り 1** (2026-08-30、cross/ADR-0024): 実施手順書 3 節へ「GitHub の Pull requests 設定を collaborators only にする」を追加 (2026-08-30 反映済み)。判断の余地がないため論点にしていない。`.github/` 一式 (Issue Forms 2 本 + `config.yml` + CONTRIBUTING 英日) は phase-9 で設置済み
 - [x] **phase-9 からの申し送り 2〜4** (2026-08-30 決着): 論点⑦ (質問窓口)・⑧ (スクショの言語)・⑨ (`maui/spike/` の存廃) をすべて決定事項へ移動
