@@ -1,8 +1,11 @@
 ---
-type: policy
+kind: rule
+applies-when:
+  always: false
+  paths: ["maui/**"]
+  tasks: [binding / facade の end-to-end 疎通確認]
 title: MAUI 検証ホストの実行規約
 description: IntegrationHost と MauiHost を起動して binding 層と facade 層の end-to-end 疎通を確認する手順
-tags: [maui, verification, integration-host, binding]
 timestamp: 2026-08-29
 ---
 
@@ -10,7 +13,7 @@ timestamp: 2026-08-29
 
 この文書は、MAUI の検証ホストを iOS Simulator / Android Emulator で起動し、C# から Native 表示までの疎通を確認する手順を定める。読むと、IntegrationHost と MauiHost の役割、起動コマンド、成功時に確認する表示が分かる。
 
-検証対象に出てくる Builder / Host の生成と解放 / root 設定 / Theme といった interop の語は [Native Bridge の interop 境界](../api/native-bridge.md) が定義する。環境の準備 (Xcode の選択・Simulator と Emulator の起動) は [ローカル開発環境と Sample の実行](../../cross/conventions/local-development-setup.md) を参照する。
+検証対象に出てくる Builder / Host の生成と解放 / root 設定 / Theme といった interop の語は [Native Bridge の interop 境界](../../concepts/maui/api/native-bridge.md) が定義する。環境の準備 (Xcode の選択・Simulator と Emulator の起動) は [ローカル開発環境と Sample の実行](../cross/local-development-setup.md) を参照する。
 
 ## 検証対象
 
@@ -19,7 +22,7 @@ timestamp: 2026-08-29
 | `KsSettingsView.IntegrationHost.iOS` / `.Android` | binding 層 | Builder、Host 生成・解放、root 設定、更新 API、Theme が C# から Native へ届くこと |
 | `KsSettingsView.MauiHost` | facade 層 | XAML の Section / Cell、内容更新、ページ再訪問後の復元が両 OS で成立すること |
 
-検証ホストは回帰確認用の資産であり、使い捨てのサンプルではない。binding の生成構成は [MAUI binding の Native artifact 統合](../architecture/binding-build-integration.md)、facade の公開契約は [MAUI facade の公開契約](../api/maui-facade.md) を参照する。
+検証ホストは回帰確認用の資産であり、使い捨てのサンプルではない。binding の生成構成は [MAUI binding の Native artifact 統合](../../concepts/maui/architecture/binding-build-integration.md)、facade の公開契約は [MAUI facade の公開契約](../../concepts/maui/api/maui-facade.md) を参照する。
 
 ## Xcode の選択
 
@@ -67,7 +70,7 @@ dotnet build maui/tests/KsSettingsView.IntegrationHost.Android/KsSettingsView.In
 
 Section header は Theme で指定した緑色になる。両 OS で表の内容が一致することを確認する。
 
-画面上の「解放 → 再生成」を操作すると、Host の解放中に別の固定更新シナリオを適用してから、新しい Host を **Store (Bridge 側が保持する設定ツリーの状態。詳細は [Native Bridge の interop 境界](../api/native-bridge.md)) の現在状態**で作り直す。再生成後の表示は次のとおり。
+画面上の「解放 → 再生成」を操作すると、Host の解放中に別の固定更新シナリオを適用してから、新しい Host を **Store (Bridge 側が保持する設定ツリーの状態。詳細は [Native Bridge の interop 境界](../../concepts/maui/api/native-bridge.md)) の現在状態**で作り直す。再生成後の表示は次のとおり。
 
 | 位置 | 再生成後の内容 |
 |---|---|
@@ -122,7 +125,7 @@ dotnet build maui/tests/KsSettingsView.MauiHost/KsSettingsView.MauiHost.csproj \
 
 ## 関連
 
-- [MAUI binding の Native artifact 統合](../architecture/binding-build-integration.md)
-- [MAUI facade の公開契約](../api/maui-facade.md)
-- [Native Bridge の interop 境界](../api/native-bridge.md)
-- [ローカル開発環境と Sample の実行](../../cross/conventions/local-development-setup.md) — Xcode の選択・Simulator / Emulator の起動
+- [MAUI binding の Native artifact 統合](../../concepts/maui/architecture/binding-build-integration.md)
+- [MAUI facade の公開契約](../../concepts/maui/api/maui-facade.md)
+- [Native Bridge の interop 境界](../../concepts/maui/api/native-bridge.md)
+- [ローカル開発環境と Sample の実行](../cross/local-development-setup.md) — Xcode の選択・Simulator / Emulator の起動

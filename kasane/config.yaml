@@ -35,7 +35,7 @@ domain-skills:
     ui-impl: [jetpack-compose-impl-skill]
     code-review: [kotlin-impl-skill]
     # test: Android 専用のテストスキルは存在しない。テスト規約は
-    #       concepts/cross/conventions/test-execution.md に従う (キーは定義しない)
+    #       kasane/handbook/cross/test-execution.md に従う (キーは定義しない)
   maui:
     impl: [csharp-impl-skill, maui-skill, maui-native-binding-skill]
     ui-impl: [maui-skill]

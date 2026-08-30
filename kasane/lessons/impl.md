@@ -5,7 +5,7 @@ timestamp: 2026-08-28
 
 # lessons: impl
 
-ソースコメント規約 (`concepts/cross/conventions/comment-policy.md`) は実装ワーカーの読み込み対象に入っておらず、規約の存在自体が届いていなかった。L-001 は書き込み前 hook (`.claude/hooks/comment-policy-check.py`) と重複するが、hook は書いた後に止めるだけで書き直しの往復が発生するため、最初から正しく書くための導線として残す。L-002 は機械判定できない類型を受け持つ。L-003 はコメント規約とは別軸で、横断修正の対象を数え切ったと判断してよい条件を扱う。L-004 は記録文書 (deviation・証跡・完了報告) に書く原因分析の裏取り条件を扱う。L-005 はレビュー指摘への応じ方 — 指摘の正しさと推奨修正コードの正しさを分けて扱う条件を扱う。
+ソースコメント規約 (`kasane/handbook/cross/comment-policy.md`) は実装ワーカーの読み込み対象に入っておらず、規約の存在自体が届いていなかった。L-001 は書き込み前 hook (`.claude/hooks/comment-policy-check.py`) と重複するが、hook は書いた後に止めるだけで書き直しの往復が発生するため、最初から正しく書くための導線として残す。L-002 は機械判定できない類型を受け持つ。L-003 はコメント規約とは別軸で、横断修正の対象を数え切ったと判断してよい条件を扱う。L-004 は記録文書 (deviation・証跡・完了報告) に書く原因分析の裏取り条件を扱う。L-005 はレビュー指摘への応じ方 — 指摘の正しさと推奨修正コードの正しさを分けて扱う条件を扱う。
 
 - [L-001] ソースコメントに、変更提案・レビュー文書への参照 (`kasane/changes/…` `openspec/…` `spec.md` `design.md` `review-001`)、議論の通番 (`Decision 5` `Phase 18` `Major-1` `論点 3`)、デルタスペックの語 (`MUST` `SHOULD` `Requirement` `Scenario`) を書かない。対応する ADR があれば `<domain>/ADR-NNNN` を参照し、無ければそのコメントだけで意味が通る日本語の説明に書き直す (書き換えのために新規 ADR は起票しない)。実装を終えた時点で、触ったファイルに対する `python3 scripts/comment-policy-lint.py <path>` の禁止件数が 0 になっている。(昇格: 2026-08-03、出典: fix-cell-accessory-vertical-fill / ios-picker-selection-parity / timepickercell-color-adjust / add-cell-types-custom)
 - [L-002] コメントに時間軸を持ち込まない。「〜で新規追加」「全面刷新」「旧実装は〜」「〜から移植」のような経緯・過去仕様の説明は書かず、現在の仕様を現在形で書く (経緯は git 履歴の責務)。移植元 AiForms との互換仕様だけは、現在形の仕様説明として書いてよい。(昇格: 2026-08-03、出典: fix-cell-accessory-vertical-fill / ios-picker-selection-parity / timepickercell-color-adjust / add-cell-types-custom)

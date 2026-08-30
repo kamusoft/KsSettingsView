@@ -11,7 +11,7 @@ kamusoft のアプリ開発は .NET MAUI を利用してきたが、今後 KMP �
 
 ## Decision
 
-AiForms.Maui.SettingsView を Native ベースへ移植・リファインし、KsSettingsView として再構築する。Native (iOS / Android) を主、MAUI を副 (Native への binding) と位置付け、Native / KMP / MAUI のどのアプリ形態からも使える形で継続する。移植元との互換 shim は提供しない (独立ブランド。仕様と実装パターンのみ継承する)。移植完了までの移植元参照ルールは [concepts/cross/conventions/aiforms-origin-reference.md](../../concepts/cross/conventions/aiforms-origin-reference.md) に定める。
+AiForms.Maui.SettingsView を Native ベースへ移植・リファインし、KsSettingsView として再構築する。Native (iOS / Android) を主、MAUI を副 (Native への binding) と位置付け、Native / KMP / MAUI のどのアプリ形態からも使える形で継続する。移植元との互換 shim は提供しない (独立ブランド。仕様と実装パターンのみ継承する)。移植完了までの移植元参照ルールは [kasane/handbook/cross/aiforms-origin-reference.md](../../handbook/cross/aiforms-origin-reference.md) に定める。
 
 ## Alternatives Considered
 
@@ -24,5 +24,5 @@ AiForms.Maui.SettingsView を Native ベースへ移植・リファインし、K
 - 負: 移植が完了するまで機能は移植元に劣り、移植元仕様と新実装の二重の知識を参照し続けるコストが掛かる。
 - 負: iOS / Android / MAUI の3系統を自前で維持する保守コストが、MAUI 単一版より増える。
 
-出典: 2026-07-31 ksn-concept 対話 (オーナー回答) / kasane/concepts/cross/conventions/aiforms-spec-summary.md (独立ブランド方針)
+出典: 2026-07-31 ksn-concept 対話 (オーナー回答) / kasane/concepts/cross/reference/aiforms-spec-summary.md (独立ブランド方針)
 現行照合: 2026-07-31 確認。ios/ と android/ のネイティブ実装が主として進行中、maui/ は将来の binding 用に予約された空の入口 (concepts/cross/architecture/repository-boundaries.md と整合)。判定: 維持。

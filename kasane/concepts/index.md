@@ -2,6 +2,8 @@
 
 concepts はドメイン別に分割して管理する ([cross/ADR-0015](../decisions/cross/0015-domain-axis-core-plus-platforms.md))。カテゴリ定義・配置基準・ドメイン導出規則は [rules.md](rules.md) を参照。
 
+ここに置くのは「今どうなっているか」の記述に限る。規約・手順 (コードがそれに従う側になる規範) は [handbook](../handbook/index.md) にある。
+
 | ドメイン | 内容 |
 |---|---|
 | [core](core/index.md) | 全 platform が共有する契約 (architecture / core-model / cells / styling) |

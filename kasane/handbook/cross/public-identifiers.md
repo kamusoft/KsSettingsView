@@ -1,8 +1,11 @@
 ---
-type: policy
+kind: rule
+applies-when:
+  always: false
+  paths: ["**/build.gradle.kts", "ios/Package.swift", "**/*.csproj"]
+  tasks: [公開識別子・配布座標の決定]
 title: 公開識別子と配布座標
 description: 所有主体・製品・成果物の役割を ecosystem ごとの識別子へ写像する規約
-tags: [conventions, identifiers, publishing]
 timestamp: 2026-08-29
 ---
 
@@ -27,11 +30,11 @@ iOS / Android の Sample application は `jp.kamusoft.kssettingsview.samples.ios
 
 ## Maven 座標の現在地
 
-accepted [ADR-0002](../../../decisions/cross/0002-public-identifier-namespace.md) は Maven Central の `groupId` を `jp.kamusoft` と定め、`jp.kamusoft:ks-settingsview-core` のように組織と成果物を分ける。
+accepted [ADR-0002](../../decisions/cross/0002-public-identifier-namespace.md) は Maven Central の `groupId` を `jp.kamusoft` と定め、`jp.kamusoft:ks-settingsview-core` のように組織と成果物を分ける。
 
 この ADR を明示的に置き換える変更が accepted になるまでは、将来の公開 Maven `groupId` の規範は `jp.kamusoft` である。現行 Gradle `group` は未追従の実装 drift であり、それ自体で公開規範を変更しない。
 
-一方、現行 Android 4 module (bridge を含む) の Gradle `group` は `jp.kamusoft.kssettingsview` であり、Android Sample は次の開発用 GAV を composite build で本体 project へ置換する。version の値は `android/gradle/libs.versions.toml` の `ks-settingsview` キーが単一の宣言元で、各 module の `version` と Sample の GAV 参照がそれを読む ([Android ビルドツールチェーンの契約](../../android/architecture/build-toolchain.md))。
+一方、現行 Android 4 module (bridge を含む) の Gradle `group` は `jp.kamusoft.kssettingsview` であり、Android Sample は次の開発用 GAV を composite build で本体 project へ置換する。version の値は `android/gradle/libs.versions.toml` の `ks-settingsview` キーが単一の宣言元で、各 module の `version` と Sample の GAV 参照がそれを読む ([Android ビルドツールチェーンの契約](../../concepts/android/architecture/build-toolchain.md))。
 
 ```text
 jp.kamusoft.kssettingsview:ks-settingsview-core:0.1.0-SNAPSHOT
@@ -56,5 +59,5 @@ GAV は Maven 系の `groupId:artifactId:version` 形式の座標を指す。And
 
 ## 関連
 
-- [リポジトリとビルドの責務境界](../architecture/repository-boundaries.md)
-- [ADR-0002: 公開識別子の名前空間](../../../decisions/cross/0002-public-identifier-namespace.md)
+- [リポジトリとビルドの責務境界](../../concepts/cross/architecture/repository-boundaries.md)
+- [ADR-0002: 公開識別子の名前空間](../../decisions/cross/0002-public-identifier-namespace.md)

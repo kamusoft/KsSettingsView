@@ -11,6 +11,6 @@
 
 ## 既存規約との関係
 
-`cross/conventions/runtime-behavior-verification.md` は「ユニット再現不能な不具合」を完了 3 条件の対象とするが、本パターンはその適用範囲外 (ユニット再現可能) の外観・実行時変更でも視覚証跡を要求する — 規約の隙間がまさに再発点だった (6 件中 2 件が同型の判断で省略)。
+`kasane/handbook/cross/runtime-behavior-verification.md` は「ユニット再現不能な不具合」を完了 3 条件の対象とするが、本パターンはその適用範囲外 (ユニット再現可能) の外観・実行時変更でも視覚証跡を要求する — 規約の隙間がまさに再発点だった (6 件中 2 件が同型の判断で省略)。
 
 関連 (統合対象外): success 側の `inbox/pixel-measurement-before-ui-alignment-fix.md` (実装前の画素測定で仮説を裏取りする成功パターン) は別ルールとして inbox に残置。

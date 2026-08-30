@@ -1,4 +1,4 @@
-"""ソースコメント規約 (kasane/concepts/cross/conventions/comment-policy.md) の検出ロジック。
+"""ソースコメント規約 (kasane/handbook/cross/comment-policy.md) の検出ロジック。
 
 リポジトリ全体スキャン (scripts/comment-policy-lint.py) と
 書き込み前の PreToolUse hook (.claude/hooks/comment-policy-check.py) の両方から使う。

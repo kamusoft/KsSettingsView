@@ -35,7 +35,7 @@ Sample は library 本体の配布物ではなく、利用者 application と同
 
 Android の composite build は source 参照を接続するが、Sample と included library の build root を一つへ統合しない。両 build root は Android SDK と toolchain の場所をそれぞれの開発環境から解決できる必要がある。local source reference から toolchain 設定の継承まで推論しない。ただしビルド関連バージョン (AGP / Kotlin / Compose BOM / ライブラリの version) の宣言だけは `android/gradle/libs.versions.toml` を両 build root が共有する — Sample 側は settings の `versionCatalogs` で同じファイルを読み、二重に宣言しない (詳細は [Android ビルドツールチェーンの契約](../../android/architecture/build-toolchain.md))。
 
-Sample は公開 API の組み合わせ、app host の前提、統合状態、視覚、操作結果を実行・目視確認する。挙動契約の唯一の正（SSoT）と自動回帰検証は library code と test が担う。Sample の画面数、navigation、表示文字列、デモデータ、比較用の色値は製品契約にしない。ただし製品契約にしないことと platform 間で揃えることは別軸であり、Sample の文言・画面構成は platform 間で一致させる（[Sample のプラットフォーム間一致](../conventions/sample-parity.md)）。
+Sample は公開 API の組み合わせ、app host の前提、統合状態、視覚、操作結果を実行・目視確認する。挙動契約の唯一の正（SSoT）と自動回帰検証は library code と test が担う。Sample の画面数、navigation、表示文字列、デモデータ、比較用の色値は製品契約にしない。ただし製品契約にしないことと platform 間で揃えることは別軸であり、Sample の文言・画面構成は platform 間で一致させる（[Sample のプラットフォーム間一致](../../../handbook/cross/sample-parity.md)）。
 
 ## 保証すること
 
@@ -56,8 +56,8 @@ Sample は公開 API の組み合わせ、app host の前提、統合状態、�
 
 ## 関連
 
-- [公開識別子と配布座標](../conventions/public-identifiers.md)
-- [Sample のプラットフォーム間一致](../conventions/sample-parity.md)
+- [公開識別子と配布座標](../../../handbook/cross/public-identifiers.md)
+- [Sample のプラットフォーム間一致](../../../handbook/cross/sample-parity.md)
 - [iOS Native Host](../../ios/api/ios-native-host.md)
 - [iOS SwiftUI Bridge](../../ios/api/ios-swiftui.md)
 - [Android Native Host](../../android/api/android-native-host.md)

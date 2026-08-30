@@ -4,7 +4,7 @@ harden-compose-settingsroot-dsl の蒸留時 (2026-08-24) に受け皿として�
 
 ## 課題 / 動機
 
-`android/ks-settingsview-ui` のテスト 2 箇所の待機ヘルパ `pump()` が、`kasane/concepts/cross/conventions/test-execution.md` の待機規約 (実時間 deadline で区切る・ループ内で `Thread.sleep(1)` により実行機会を譲る・超過時は実測値付きで `fail()`) に反した形で残っている:
+`android/ks-settingsview-ui` のテスト 2 箇所の待機ヘルパ `pump()` が、`kasane/handbook/cross/test-execution.md` の待機規約 (実時間 deadline で区切る・ループ内で `Thread.sleep(1)` により実行機会を譲る・超過時は実測値付きで `fail()`) に反した形で残っている:
 
 - `android/ks-settingsview-ui/src/test/kotlin/jp/kamusoft/kssettingsview/ui/CustomCellRecycleTest.kt:389` — 反復回数で区切るループ内で `Thread.yield()`
 - `android/ks-settingsview-ui/src/test/kotlin/jp/kamusoft/kssettingsview/ui/CustomCellBuilderReleaseTest.kt:162` — 同上

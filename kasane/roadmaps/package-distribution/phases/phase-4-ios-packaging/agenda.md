@@ -22,4 +22,4 @@ SwiftPM 専用の配信リポジトリを作り、`ios/` (Package.swift / Source
 
 - [ ] 論点の解消
 - [ ] ksn-propose で変更提案を起こす
-- [ ] **phase-9 からの申し送り** (2026-08-30): 配信リポジトリ `KsSettingsView-SPM` を作成し、`kasane/concepts/cross/conventions/public-identifiers.md` へ配信リポジトリ名を追記する。ルート README (`README.md` / `README_ja.md`) と `skills/{en,ja}/kssettingsview-ios/SKILL.md` は既にこの名前を暫定値として書いている (cross/ADR-0018)
+- [ ] **phase-9 からの申し送り** (2026-08-30): 配信リポジトリ `KsSettingsView-SPM` を作成し、`kasane/handbook/cross/public-identifiers.md` へ配信リポジトリ名を追記する。ルート README (`README.md` / `README_ja.md`) と `skills/{en,ja}/kssettingsview-ios/SKILL.md` は既にこの名前を暫定値として書いている (cross/ADR-0018)

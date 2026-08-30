@@ -53,7 +53,7 @@ timestamp: 2026-08-28
 
 更新で同時に変えるもの: toml の `[versions]` と wrapper 2 か所。wrapper は手で編集せず、各 build root で `./gradlew wrapper --gradle-version <版>` を実行して `gradle-wrapper.properties` / `gradlew` / jar を再生成し、`distributionSha256Sum` を公式チェックサムで設定する。
 
-完了条件: `android/` の `./gradlew test` が全件実行で失敗 0 ([テスト実行規約](../../cross/conventions/test-execution.md) の件数確認を含む)、`samples/android` の `:app:assembleDebug`、MAUI binding の `dotnet build`、Android Studio の sync がすべて通ること。Gradle JVM の JDK 版を変える更新では、新しい JDK と従来の JDK の両方でこれを確認する (後方互換を壊さないため)。
+完了条件: `android/` の `./gradlew test` が全件実行で失敗 0 ([テスト実行規約](../../../handbook/cross/test-execution.md) の件数確認を含む)、`samples/android` の `:app:assembleDebug`、MAUI binding の `dotnet build`、Android Studio の sync がすべて通ること。Gradle JVM の JDK 版を変える更新では、新しい JDK と従来の JDK の両方でこれを確認する (後方互換を壊さないため)。
 
 既知の制約 (2026-08-21 時点):
 
@@ -75,7 +75,7 @@ Compose 版の整合 (2026-08-28 時点):
 ## 関連
 
 - [リポジトリとビルドの責務境界](../../cross/architecture/repository-boundaries.md) — build root の独立と Sample の consumer 境界
-- [テスト実行規約](../../cross/conventions/test-execution.md) — Android テストの全件実行と件数確認
-- [公開識別子と配布座標](../../cross/conventions/public-identifiers.md) — GAV と `group` の現在地
+- [テスト実行規約](../../../handbook/cross/test-execution.md) — Android テストの全件実行と件数確認
+- [公開識別子と配布座標](../../../handbook/cross/public-identifiers.md) — GAV と `group` の現在地
 - [Native Bridge の interop 境界](../../maui/api/native-bridge.md) — binding 構成の要点
 - [maui/ADR-0006](../../../decisions/maui/0006-android-binding-gradlew-exec.md) — gradlew 直接実行方式の採用理由

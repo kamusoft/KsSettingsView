@@ -63,7 +63,7 @@ Android のライト / ダークは、同梱テーマが DayNight 派生であ�
 
 ## Sample の AiForms 互換色
 
-ライブラリの Theme 既定値は、Sample が比較用に持つ AiForms 互換色へ変更しない。AiForms の見た目を再現する application は、利用側の `Theme` として互換色を明示する。Sample はその値を各 platform の `SampleTheme` に置くが、比較用の色値は製品契約ではなく実ソースが正である ([Sample のプラットフォーム間一致](../../cross/conventions/sample-parity.md))。
+ライブラリの Theme 既定値は、Sample が比較用に持つ AiForms 互換色へ変更しない。AiForms の見た目を再現する application は、利用側の `Theme` として互換色を明示する。Sample はその値を各 platform の `SampleTheme` に置くが、比較用の色値は製品契約ではなく実ソースが正である ([Sample のプラットフォーム間一致](../../../handbook/cross/sample-parity.md))。
 
 この境界により、ライブラリ既定値は platform default を含む通常の解決順を維持し、特定の移植元 application の配色をすべての利用者へ暗黙適用しない。
 

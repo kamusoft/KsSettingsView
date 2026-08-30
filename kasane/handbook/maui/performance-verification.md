@@ -1,8 +1,10 @@
 ---
-type: policy
+kind: rule
+applies-when:
+  always: false
+  tasks: [描画性能の評価・計測, カクつき報告の裏取り]
 title: MAUI の描画性能を測るビルド構成
 description: MAUI Android の Debug は Mono インタープリタ実行のため描画性能が実力より大幅に低く見える。性能の評価・調査・カクつき報告の裏取りは必ず Release ビルドで行う (iOS 側は本件では未計測)
-tags: [maui, android, performance, build, verification]
 timestamp: 2026-08-29
 ---
 
@@ -33,7 +35,7 @@ Release は native サンプルと同等以上であり、**Release で測った
 
 ## 計測手順
 
-[ローカル開発環境と Sample の実行](../../cross/conventions/local-development-setup.md) の MAUI 実行手順は機能確認用の `-c Debug` であり、**そのままでは性能評価に使えない** (性能を測るときは `-c Release` に置き換える)。この落とし穴が本件の発端である。
+[ローカル開発環境と Sample の実行](../cross/local-development-setup.md) の MAUI 実行手順は機能確認用の `-c Debug` であり、**そのままでは性能評価に使えない** (性能を測るときは `-c Release` に置き換える)。この落とし穴が本件の発端である。
 
 実際に使った手順:
 
@@ -49,12 +51,12 @@ adb shell dumpsys gfxinfo <pkg>
 
 ## iOS との非対称
 
-iOS 側は本件では**未計測**である。「iOS では問題が出ない」という観察は [ローカル開発環境と Sample の実行](../../cross/conventions/local-development-setup.md) にある Simulator 経路 (`iossimulator`、JIT 実行かつ Mac の描画性能) のもので、Android 実機の観察と同じ土俵にない。実機の iOS Debug は既定 (`MtouchInterpreter` 未指定 = インタープリタ無効) で AOT 主体のため乖離は小さいと**推定**されるが、裏取りはしていない。
+iOS 側は本件では**未計測**である。「iOS では問題が出ない」という観察は [ローカル開発環境と Sample の実行](../cross/local-development-setup.md) にある Simulator 経路 (`iossimulator`、JIT 実行かつ Mac の描画性能) のもので、Android 実機の観察と同じ土俵にない。実機の iOS Debug は既定 (`MtouchInterpreter` 未指定 = インタープリタ無効) で AOT 主体のため乖離は小さいと**推定**されるが、裏取りはしていない。
 
 いずれにせよ **「Android だけ遅い」という報告が来たときの第一容疑者はビルド構成**であり、platform 実装の差を疑う前にどちらの構成で観察したかを確認する。
 
 ## 関連
 
-- [Android ビルドツールチェーンの契約](../../android/architecture/build-toolchain.md) — Android 側のビルド構成の前提
-- [テスト実行規約](../../cross/conventions/test-execution.md) — 機能検証側の「黙って検証にならない範囲」
-- [実行時挙動の検証規約](../../cross/conventions/runtime-behavior-verification.md) — 実行時挙動の裏取りと証跡の規約。本文書はそれに「どのビルド構成で測るか」を足す関係
+- [Android ビルドツールチェーンの契約](../../concepts/android/architecture/build-toolchain.md) — Android 側のビルド構成の前提
+- [テスト実行規約](../cross/test-execution.md) — 機能検証側の「黙って検証にならない範囲」
+- [実行時挙動の検証規約](../cross/runtime-behavior-verification.md) — 実行時挙動の裏取りと証跡の規約。本文書はそれに「どのビルド構成で測るか」を足す関係

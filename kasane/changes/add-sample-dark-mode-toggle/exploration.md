@@ -26,7 +26,7 @@
 
 - **未探索 (簡易起票)**
 - 切り替えの形: ライブラリ Theme (色値) の light/dark プリセット切替か、端末夜間モードへの追随デモか、その両方か
-- **platform parity**: サンプル間 (iOS / Android / MAUI) の構成一致規約 (cross/conventions/sample-parity.md) に従い、片側先行にしない (relax-android-host-prerequisites での教訓 — lessons/inbox/single-platform-exposure-added-without-sibling-parity-check.md)
+- **platform parity**: サンプル間 (iOS / Android / MAUI) の構成一致規約 (kasane/handbook/cross/sample-parity.md) に従い、片側先行にしない (relax-android-host-prerequisites での教訓 — lessons/inbox/single-platform-exposure-added-without-sibling-parity-check.md)
 - 範囲つきカレンダーデモ (min/max) の常設を同梱するか
 - 12時間制 TimePicker デモの parity 追随 (align-timepicker-hour-cycle-across-platforms の決着に依存) との関係整理
 

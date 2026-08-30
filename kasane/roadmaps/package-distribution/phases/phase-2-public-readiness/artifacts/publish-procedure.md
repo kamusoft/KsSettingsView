@@ -10,7 +10,7 @@ phase-2 の決定事項 (agenda.md) を実行順に並べたチェックリス�
 - [x] `.gitignore` に追加 (実施 2026-08-23): `*.jks` `*.keystore` `*.p12` `*.pfx` `*.pem` `*.mobileprovision` `google-services.json` `keystore.properties` `secrets.*` `.env.*` `hs_err_pid*.log`
 - [x] ローカル絶対パスの除去 (論点③ / ④): 実施 2026-08-23
   - [x] 自己参照: `/Volumes/.../KsSettingsView/` の接頭辞を一括除去してリポジトリ相対に (約 864 行、`kasane/changes/**` 中心)
-  - [x] 他リポジトリ参照: `/Volumes/.../<Repo>/...` → `../<Repo>/...` (長命層 12 行: cross/ADR-0018・0019・maui/ADR-0025 の出典行、concepts/cross/conventions/aiforms-origin-reference.md の表はローカルパス列を残し `../<リポジトリ名>` 表記へ (2026-08-23 改訂。NativeCollectionView はリモート無しのため列を落とすと参照先が消えるため)、roadmaps/maui-support の 6 行、package-distribution/exploration.md の 1 行。changes 内 7 行)
+  - [x] 他リポジトリ参照: `/Volumes/.../<Repo>/...` → `../<Repo>/...` (長命層 12 行: cross/ADR-0018・0019・maui/ADR-0025 の出典行、kasane/handbook/cross/aiforms-origin-reference.md の表はローカルパス列を残し `../<リポジトリ名>` 表記へ (2026-08-23 改訂。NativeCollectionView はリモート無しのため列を落とすと参照先が消えるため)、roadmaps/maui-support の 6 行、package-distribution/exploration.md の 1 行。changes 内 7 行)
   - [x] `KSN_COUNTERPART_META` 行を含む `second-opinion-*.md` 14 ファイル: 当該行を削除 (session_id ごと)
   - [x] `~/Library` 2 行・`~/.agents` 1 行・`/Users/.../CCManagerRepos` (worktree パス) を手で修正
   - [x] `openspec/` 109 行: 同じ機械置換を**凍結の例外として 1 回だけ**適用 (意味不変。CLAUDE.md の編集禁止はこの 1 回のみ例外、history.md に記録済み)

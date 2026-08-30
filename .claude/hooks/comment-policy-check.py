@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """ソースコメント規約の禁止参照を、書き込み前に検査してブロックする PreToolUse hook。
 
-規約は kasane/concepts/cross/conventions/comment-policy.md。
+規約は kasane/handbook/cross/comment-policy.md。
 検出ロジックは scripts/comment_policy_rules.py にあり、リポジトリ全体 lint
 (scripts/comment-policy-lint.py) と共有する。
 
@@ -103,7 +103,7 @@ def main() -> int:
         "  - 設計理由と一体なら、対応する ADR があれば `<domain>/ADR-NNNN` へ置換する\n"
         "  - 対応 ADR が無ければ、コメント内で自己完結する説明に書き直す (新規 ADR は起票しない)\n"
         "  - MUST / SHOULD 等は自然な日本語 (「〜する」「〜してはいけない」) に直す\n"
-        "規約全文: kasane/concepts/cross/conventions/comment-policy.md\n"
+        "規約全文: kasane/handbook/cross/comment-policy.md\n"
         f"誤検知の場合のみ、その行に {ALLOW_MARKER} を書き添えれば除外されます。",
         file=sys.stderr,
     )

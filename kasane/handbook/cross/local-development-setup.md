@@ -1,8 +1,10 @@
 ---
-type: policy
+kind: guide
+applies-when:
+  always: false
+  tasks: [環境構築, Sample の起動, 本体のビルド・lint, 本体 source へのステップイン]
 title: ローカル開発環境と Sample の実行
 description: iOS・Android・MAUI のローカル環境設定、Sample の起動、本体モジュールのビルド / lint コマンド、本体 source へのステップイン手順
-tags: [development, setup, sample, ios, android, maui]
 timestamp: 2026-08-29
 ---
 
@@ -10,7 +12,7 @@ timestamp: 2026-08-29
 
 この文書は、リポジトリを clone した開発者が iOS・Android・MAUI の Sample を開いて実行し、本体モジュールをビルド / lint し、本体 source へデバッガでステップインするまでの手順をまとめる。読むと、Android SDK を二つの Gradle build root から解決する理由と、複数の Xcode を使う環境で選択を固定する方法も分かる。
 
-[リポジトリとビルドの責務境界](../architecture/repository-boundaries.md) を先に読むと、platform ごとに独立した build root を持つ理由が分かりやすい。
+[リポジトリとビルドの責務境界](../../concepts/cross/architecture/repository-boundaries.md) を先に読むと、platform ごとに独立した build root を持つ理由が分かりやすい。
 
 ## 必要環境
 
@@ -192,7 +194,7 @@ dotnet sln KsSettingsView.slnx list                            # ソリューシ
 dotnet build KsSettingsView.Maui/KsSettingsView.Maui.csproj    # facade 層をビルド
 ```
 
-binding のビルドは Native 側のビルドを自動で呼ぶ。その経路と既知の制約は [MAUI binding の Native artifact 統合](../../maui/architecture/binding-build-integration.md) を参照する。
+binding のビルドは Native 側のビルドを自動で呼ぶ。その経路と既知の制約は [MAUI binding の Native artifact 統合](../../concepts/maui/architecture/binding-build-integration.md) を参照する。
 
 ## 本体 source へステップインする
 
@@ -224,7 +226,7 @@ platform 間で揃える範囲と例外は [Sample のプラットフォーム�
 
 ## 関連
 
-- [リポジトリとビルドの責務境界](../architecture/repository-boundaries.md)
+- [リポジトリとビルドの責務境界](../../concepts/cross/architecture/repository-boundaries.md)
 - [テスト実行規約](test-execution.md)
 - [Sample のプラットフォーム間一致](sample-parity.md)
 - [実行時挙動の検証規約](runtime-behavior-verification.md)

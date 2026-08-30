@@ -1,8 +1,9 @@
 ---
-type: policy
+kind: rule
+applies-when:
+  always: true
 title: ソースコメント規約
 description: 全言語共通のソースコメントの許容参照と禁止する記述類型・書き換え時の判断基準
-tags: [comments, documentation]
 timestamp: 2026-08-24
 ---
 

@@ -11,7 +11,7 @@ KsSettingsView はプラットフォーム間で仕様・動作を統一する�
 
 ## Decision
 
-Sample を「プラットフォーム間パリティの検証装置」と位置づけ、全 platform で一字一句同じ文言・同じ画面構成で実装する。platform ごとに idiomatic な独自サンプルにすることよりも、厳密な一致を優先する。一致は**収束状態**への要求であり、実装順序による一時的な片側先行は追随の追跡を条件に許容する。規約の本文 (一致させる項目・許容される差異・片側先行の条件・platform 固有の技術検証画面の例外枠) は [concepts/cross/conventions/sample-parity.md](../../concepts/cross/conventions/sample-parity.md) に定める。
+Sample を「プラットフォーム間パリティの検証装置」と位置づけ、全 platform で一字一句同じ文言・同じ画面構成で実装する。platform ごとに idiomatic な独自サンプルにすることよりも、厳密な一致を優先する。一致は**収束状態**への要求であり、実装順序による一時的な片側先行は追随の追跡を条件に許容する。規約の本文 (一致させる項目・許容される差異・片側先行の条件・platform 固有の技術検証画面の例外枠) は [kasane/handbook/cross/sample-parity.md](../../handbook/cross/sample-parity.md) に定める。
 
 ## Alternatives Considered
 

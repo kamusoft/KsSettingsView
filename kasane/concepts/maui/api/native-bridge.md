@@ -99,5 +99,5 @@ Native → C# のユーザー操作通知は、**設定画面 1 つ (= Bridge �
 - [Android Native Host](../../android/api/android-native-host.md)
 - [MauiView の native 実体化機構](../architecture/view-materialization.md) — 輸送する platform view を作る側の機構と、native への埋め込みの継ぎ目
 - [MAUI binding の Native artifact 統合](../architecture/binding-build-integration.md) — binding の生成経路・既知の制約・SDK 更新時の再検証箇所
-- [MAUI 検証ホストの実行規約](../conventions/integration-host-verification.md) — binding / facade の end-to-end 疎通手順
+- [MAUI 検証ホストの実行規約](../../../handbook/maui/integration-host-verification.md) — binding / facade の end-to-end 疎通手順
 - 決定の経緯: [maui ドメインの ADR 一覧](../../../decisions/maui/index.md) (基盤は maui/ADR-0001〜0007、輸送と操作通知は maui/ADR-0011〜0012・0015、view の輸送は maui/ADR-0017・0020、style と Section 装飾の輸送は maui/ADR-0023・0024)。Host の view load / attach 時の復元契約は core/ADR-0019

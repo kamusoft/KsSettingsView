@@ -25,7 +25,7 @@ cross/ADR-0022 は**利用者向け**ドキュメント (`skills/`) の提供形
 - 廃止する README の中身は分類ごとに次のとおり扱う。
   - **他所に既にあるもの** (モジュール構成・利用アプリ側の前提・基本のビルド / テストコマンド・ディレクトリ構成・`SDK location not found` の対処) は捨てる。
   - **契約で README にしかないもの** (MAUI binding が SDK 内部ターゲットへ割り込む一覧・`XcodeProject` 採否の実験的経緯・`BG8605` / `BG8A00` 警告の意味・共有 scheme を消すと壊れる理由・`KsBridgeFont` の platform 差) は `kasane/concepts/maui/` へ移す。
-  - **手順で README にしかないもの** (`ANDROID_HOME` と 2 つの `local.properties`・`DEVELOPER_DIR` 指定・検証ホストの起動コマンドと期待表示・サンプルの実行手順とデモ画面一覧・本体へのステップイン手順・実機目視確認チェックリスト) は `kasane/concepts/` へ移す — 環境セットアップと目視確認は `cross/conventions/` (既存の `test-execution.md`・`runtime-behavior-verification.md` と同じ扱い)、検証ホストの起動と期待表示は `maui/` 配下。
+  - **手順で README にしかないもの** (`ANDROID_HOME` と 2 つの `local.properties`・`DEVELOPER_DIR` 指定・検証ホストの起動コマンドと期待表示・サンプルの実行手順とデモ画面一覧・本体へのステップイン手順・実機目視確認チェックリスト) は `kasane/concepts/` へ移す — 環境セットアップと目視確認は `kasane/handbook/cross/` (既存の `test-execution.md`・`runtime-behavior-verification.md` と同じ扱い)、検証ホストの起動と期待表示は `maui/` 配下。
   - **サンプルのサードパーティ通知** (Material Symbols / Apache 2.0) はルート README へ移す。サンプルアプリで使用しているアイコン由来である旨を明記し、ライブラリ本体の依存と読まれないようにする。
 - docs-refresh の追随対象は `skills/README.md`・`skills/README_ja.md`・ルート 2 枚の計 4 枚とし、デモ画面一覧と `SampleScreen` 定義の照合検査は対象消滅により廃止する。この対象定義の変更は ADR-0022 に従い変更フローの承認を通す (docs-refresh 自身には委ねない)。
 - ルート README 2 枚は**翻訳ロックステップ**で扱う (片方だけを更新してコミットしない。docs-refresh は 2 枚を 1 回で更新する。執筆順序は問わない)。cross/ADR-0022 が `skills/` の en/ja に課した規律と同一にし、docs-refresh に 2 つのモードを持たせない。
@@ -44,8 +44,8 @@ cross/ADR-0022 は**利用者向け**ドキュメント (`skills/`) の提供形
 - 正: docs-refresh の追随対象が 8 枚 → 4 枚になり、英語二本立てのコストが上限 4 枚に収まる。デモ画面一覧の照合検査も不要になる。
 - 負: public 化後の contributor が platform 別のビルド手順を探す入口が、ルート README 一本になる。
 - 負: contributor が開発手順に辿り着くには `AGENTS.md` → concepts の 2 段になる (ルート README には載らない)。
-- 負: concepts は契約を書く場所であって手順書ではないという性格が薄まる。`cross/conventions/` に既にある開発規約 (`test-execution.md`・`runtime-behavior-verification.md`) と同じ扱いに揃えることで整合を取る。
-- 負 (実装で判明): 「他所に既にあるもの」として破棄すると定めた項目のうち、**ビルド / lint コマンドは破棄できなかった**。破棄の根拠が「ルート README に既出」であり、その記述を本 ADR 自身の適用 (ルート README の利用者向けへの純化) が削除するという循環になっていた。実装時に git 履歴から復元し `cross/conventions/local-development-setup.md` へ移した。廃止する文書の記述を「他所に既出」で破棄するときは、**その「他所」が同じ変更で消えないか**を確認する必要がある。
+- 負: concepts は契約を書く場所であって手順書ではないという性格が薄まる。`kasane/handbook/cross/` に既にある開発規約 (`test-execution.md`・`runtime-behavior-verification.md`) と同じ扱いに揃えることで整合を取る。
+- 負 (実装で判明): 「他所に既にあるもの」として破棄すると定めた項目のうち、**ビルド / lint コマンドは破棄できなかった**。破棄の根拠が「ルート README に既出」であり、その記述を本 ADR 自身の適用 (ルート README の利用者向けへの純化) が削除するという循環になっていた。実装時に git 履歴から復元し `kasane/handbook/cross/local-development-setup.md` へ移した。廃止する文書の記述を「他所に既出」で破棄するときは、**その「他所」が同じ変更で消えないか**を確認する必要がある。
 - 負 (実装で判明): `maui/ADR-0006` が `maui/README.md` の「SDK 更新時に再検証する箇所」の表を「再検証の入口」として指しており、README の削除で参照が切れた。移送先 (`maui/architecture/binding-build-integration.md`) から ADR への逆リンクを張って表 → ADR は辿れるようにしたが、accepted な ADR の本文は不変のため **ADR → 表の向きは切れたまま**である。ADR-0006 の決定内容 (Android binding は `gradlew` を Exec で呼ぶ) は変わっていないため supersede はしない。文書を廃止する決定は、その文書を名指しする accepted な ADR の有無を確認する必要がある。
 
 ---

@@ -1,8 +1,10 @@
 ---
-type: policy
+kind: rule
+applies-when:
+  always: false
+  tasks: [テスト実行, テスト結果の報告]
 title: テスト実行規約
 description: iOS / Android / MAUI のテストの正しい実行コマンドと、黙って検証にならない範囲 (macOS 上の swift test で失われるテスト・Robolectric の描画検証限界と非同期反映の待機・MAUI facade テストが触らない platform TFM)
-tags: [test, ios, android, maui, verification]
 timestamp: 2026-08-29
 ---
 
@@ -59,7 +61,7 @@ xcodebuild test -scheme KsSettingsView-Package -destination 'platform=iOS Simula
 
 ### `swift test` を案内している文書は無い
 
-リポジトリ内のどの文書も `swift test` をテスト手順として案内していない。ルート README は利用者の入口に純化されており開発者向けのビルド / テスト手順を持たず ([cross/ADR-0023](../../../decisions/cross/0023-readme-root-only-and-developer-knowledge-in-concepts.md))、利用者向けドキュメント (`skills/` の Agent Skills) もテスト実行手順を案内していない。**完了判定に使うのは上の Simulator 実行だけ**であり、他所で見かけた `swift test` を代替に使わない。
+リポジトリ内のどの文書も `swift test` をテスト手順として案内していない。ルート README は利用者の入口に純化されており開発者向けのビルド / テスト手順を持たず ([cross/ADR-0023](../../decisions/cross/0023-readme-root-only-and-developer-knowledge-in-concepts.md))、利用者向けドキュメント (`skills/` の Agent Skills) もテスト実行手順を案内していない。**完了判定に使うのは上の Simulator 実行だけ**であり、他所で見かけた `swift test` を代替に使わない。
 
 ## Android
 
@@ -74,7 +76,7 @@ cd android
 - Gradle は up-to-date なテストタスクをスキップするため、**差分なしの再実行は「テスト 0 件で BUILD SUCCESSFUL」になり得る**。全件を確実に回し直して件数を確認するときは `--rerun-tasks` を付ける
 - 実行件数はコンソールに出ない。各モジュールの `build/test-results/testDebugUnitTest/TEST-*.xml` (release は `testReleaseUnitTest/`) の `tests` / `failures` 属性の合計、または `build/reports/tests/testDebugUnitTest/index.html` で確認する。**ディレクトリ名は variant 名 (`debug` / `release`) ではなくタスク名**であり、`debugUnitTest` 等と読み替えると集計対象が 0 件になる
 - 反復中に絞り込むときは `./gradlew :ks-settingsview-ui:testDebugUnitTest --tests '<クラス名のパターン>'` を使えるが、**完了判定には絞り込みなしの全件実行を使う** (iOS と同じ規律)
-- Gradle を動かす JDK は `JAVA_HOME` で選ぶ (JDK 17 / 21 / 25 で実測済み)。成果物のターゲットが Java 17 のため、どの JDK で動かす場合も JDK 17 がローカルにインストールされている必要がある ([Android ビルドツールチェーンの契約](../../android/architecture/build-toolchain.md))
+- Gradle を動かす JDK は `JAVA_HOME` で選ぶ (JDK 17 / 21 / 25 で実測済み)。成果物のターゲットが Java 17 のため、どの JDK で動かす場合も JDK 17 がローカルにインストールされている必要がある ([Android ビルドツールチェーンの契約](../../concepts/android/architecture/build-toolchain.md))
 
 ### Robolectric で「検証したつもり」になる描画系アサーション
 
@@ -105,12 +107,12 @@ dotnet test maui/KsSettingsView.Maui.Tests/KsSettingsView.Maui.Tests.csproj
 
 - facade (`KsSettingsView.Maui`) の純ロジックを素の `net10.0` で検証する。Simulator / Emulator は不要 (2026-08-29 実測: 516 件 / 0 失敗、約 0.3 秒)
 - 実行件数はコンソール末尾の `失敗: N、合格: M、スキップ: K、合計: T` (英語ロケールでは `Failed: N, Passed: M, Skipped: K, Total: T`) で確認する
-- Binding assembly は platform TFM でしか参照できないため、facade は Bridge 呼び出しを internal な gateway 抽象越しに行い、gateway の実体だけを platform TFM が持つ ([maui/ADR-0009](../../../decisions/maui/0009-net10-tfm-and-gateway-seam.md))
+- Binding assembly は platform TFM でしか参照できないため、facade は Bridge 呼び出しを internal な gateway 抽象越しに行い、gateway の実体だけを platform TFM が持つ ([maui/ADR-0009](../../decisions/maui/0009-net10-tfm-and-gateway-seam.md))
 
 ### 黙って検証にならない範囲
 
-**このコマンドは platform TFM (`net10.0-ios` / `net10.0-android`) のコードを 1 行も実行しない**。gateway の実体・binding 経由の native 呼び出し・実際の描画は対象外であり、facade のテストが全件通っても native まで届いているかは分からない。C# から native 表示までの end-to-end 疎通は検証ホストアプリで確認する ([MAUI 検証ホストの実行規約](../../maui/conventions/integration-host-verification.md))。
+**このコマンドは platform TFM (`net10.0-ios` / `net10.0-android`) のコードを 1 行も実行しない**。gateway の実体・binding 経由の native 呼び出し・実際の描画は対象外であり、facade のテストが全件通っても native まで届いているかは分からない。C# から native 表示までの end-to-end 疎通は検証ホストアプリで確認する ([MAUI 検証ホストの実行規約](../maui/integration-host-verification.md))。
 
 ## 関連
 
-- [リポジトリと platform build の責務分担](../architecture/repository-boundaries.md) — `ios/` / `android/` が独立したビルドルートである理由
+- [リポジトリと platform build の責務分担](../../concepts/cross/architecture/repository-boundaries.md) — `ios/` / `android/` が独立したビルドルートである理由

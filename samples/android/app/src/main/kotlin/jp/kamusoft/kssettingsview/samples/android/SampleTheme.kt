@@ -58,7 +58,7 @@ object SampleTheme {
     // =============================================================================
     //
     // 共通フィールド統合デモが Cell に明示指定する色は、プラットフォーム間で同一の RGBA に
-    // しなければ規約 (cross/conventions/sample-parity.md「各 Cell に渡すパラメータを一致させる」)
+    // しなければ規約 (kasane/handbook/cross/sample-parity.md「各 Cell に渡すパラメータを一致させる」)
     // を満たせない。値は「iOS を正とする」原則に従い iOS の `UIColor.systemXxx` を
     // light appearance で解決した実測値 (iOS 26.5 シミュレータ) を採用する。
     // 対応する iOS 側定義: samples/ios/KsSettingsViewSample/SampleTheme.swift
@@ -113,7 +113,7 @@ object SampleTheme {
     //
     // CustomCell デモの content（利用者が書く任意 Composable）が使う色。
     // Cell の内装は利用者責務のため Theme には載らないが、iOS / Android で同一 RGBA を
-    // 渡す必要がある（cross/conventions/sample-parity.md）ので SampleTheme に一元化する。
+    // 渡す必要がある（kasane/handbook/cross/sample-parity.md）ので SampleTheme に一元化する。
 
     /** ピル（行タップカウンタ / ダミー行の連番）の背景（#FAF3D9）。 */
     val demoPillBackground: Color = Color(0xFFFAF3D9)

@@ -23,4 +23,4 @@ core / ui / compose を単一 module `android/kssettingsview` に統合し、`jp
 
 - [ ] 論点の解消
 - [ ] ksn-propose で変更提案を起こす
-- [ ] **phase-9 からの申し送り** (2026-08-30): `kasane/concepts/cross/conventions/public-identifiers.md` の artifactId 規則を単一 artifact (`jp.kamusoft:kssettingsview`) へ改訂し (android/ADR-0016)、cross/ADR-0018 の配布先の表も追随させる。ルート README と `skills/` は既にこの座標を暫定値として書いている
+- [ ] **phase-9 からの申し送り** (2026-08-30): `kasane/handbook/cross/public-identifiers.md` の artifactId 規則を単一 artifact (`jp.kamusoft:kssettingsview`) へ改訂し (android/ADR-0016)、cross/ADR-0018 の配布先の表も追随させる。ルート README と `skills/` は既にこの座標を暫定値として書いている

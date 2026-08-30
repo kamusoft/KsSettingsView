@@ -15,5 +15,5 @@ evidence:
 
 ## 経緯
 
-- 2026-08-28 customcell-android-maui-perf: MAUI Android の Debug ビルドが遅い件の手当てとして samples/maui/README.md に Release 検証手順の節を追加したが、オーナーが読者違いを指摘。README への追記を取り消し、kasane/concepts/maui/conventions/performance-verification.md として記録し直した。
+- 2026-08-28 customcell-android-maui-perf: MAUI Android の Debug ビルドが遅い件の手当てとして samples/maui/README.md に Release 検証手順の節を追加したが、オーナーが読者違いを指摘。README への追記を取り消し、kasane/handbook/maui/performance-verification.md として記録し直した。
 - 関連 (逆方向の混同): [readme-convention-scope-misapplied-to-sample-artifacts](readme-convention-scope-misapplied-to-sample-artifacts.md) は「README 規約を新設サンプル付属 README に過剰適用」の話で、こちらは「開発者向け知識を利用者向け README に書いた」話。

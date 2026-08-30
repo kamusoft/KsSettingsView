@@ -8,7 +8,7 @@
 
 - fix-ios-root-accessory-theme-refresh (スタブ起票の前提「Cell / Section Header は Theme 変更で追従し Root accessory だけ非対称」を review-003 の記述の写しのまま探索の判断根拠にした。実装フェーズの視覚証跡撮影で Section Header も追従しないことが実測で発覚し、オーナー判断でスコープ拡張。探索時は該当コードを読んでいたのに、前提側の「追従する」は実測・コード確認のどちらでも裏取りしていなかった — 不在の断定だけでなく存在の断定も対象。同一 change 内で再発 1 件: 調査ワーカーの読み取り所見「Android の View 形式は Theme を適用しない = 意図的な不適用 (iOS と対称)」を前提化したが、実測では Theme 通知が View 形式の factory を再実行し内部状態を失わせていた — 「適用しない」と「影響しない」の混同。コード読解のみの所見を対称性の判断根拠にする前に、副作用の有無まで実測で確認する)
 
-- add-question-form-and-english-screenshots (UI ワーカーが Android Sample のビルドで `SDK location not found` に遭遇し `ANDROID_HOME` を環境変数で渡して回避したうえで、「worktree での Android ビルド手順がどこにも書かれていない」とスコープ外の発見として起票を推奨した。実際には `concepts/cross/conventions/local-development-setup.md` の「Android SDK ロケーション」節に手順が完備され、ワーカーが取った回避策そのものが第一推奨として書かれていた。`local.properties` は `.gitignore` 対象で、worktree 固有の事象ですらない。ksn-ui / ksn-implement は作業前に conventions の index 行を全件確認する規律を持つが、`local-development-setup` の 1 行説明を担当作業に当てはまる規約と判定できなかった。起票直前にオーケストレーターが grep で裏取りし、空振りの change 起票を回避した — 不在の断定の対象がコードやテストではなく既存ドキュメントでも同じ型が起きる)
+- add-question-form-and-english-screenshots (UI ワーカーが Android Sample のビルドで `SDK location not found` に遭遇し `ANDROID_HOME` を環境変数で渡して回避したうえで、「worktree での Android ビルド手順がどこにも書かれていない」とスコープ外の発見として起票を推奨した。実際には `kasane/handbook/cross/local-development-setup.md` の「Android SDK ロケーション」節に手順が完備され、ワーカーが取った回避策そのものが第一推奨として書かれていた。`local.properties` は `.gitignore` 対象で、worktree 固有の事象ですらない。ksn-ui / ksn-implement は作業前に conventions の index 行を全件確認する規律を持つが、`local-development-setup` の 1 行説明を担当作業に当てはまる規約と判定できなかった。起票直前にオーケストレーターが grep で裏取りし、空振りの change 起票を回避した — 不在の断定の対象がコードやテストではなく既存ドキュメントでも同じ型が起きる)
 
 ## 昇格時のルール文と経緯
 
@@ -21,4 +21,4 @@
 
 - 2026-08-22 fix-maui-icon-lease-disposal-ordering: 起票内容 (破棄順序の 3 箇所が未修正) をコードで裏取りした結果、3 箇所とも遅延破棄へ移行済みと判明。スコープを「回帰テストの追加」へ組み替えた。
 - 同日、その回帰テストも既に 4 本存在していたと実装フェーズで判明。探索時に `IconSourceTests` の中盤 (230-300 行) だけを読み、末尾 (331-421 行) を読まずに不在を断定していたことが原因。ミューテーション実測で既存テストの検出力 (3 経路を即時破棄へ戻すと当該 4 本だけが落ちる) まで確認し、change は「対応不要」で確定した。
-- 2026-08-30 add-question-form-and-english-screenshots: 実装ワーカーが「worktree での Android ビルド手順がどこにも書かれていない」と報告し簡易起票を推奨したが、`concepts/cross/conventions/local-development-setup.md` に手順が完備されていた。ワーカー自身が回避に使った `ANDROID_HOME` が、その文書の第一推奨と同一だった。起票を実行する前の grep で空振りが判明し、change の新規作成には至らなかった。
+- 2026-08-30 add-question-form-and-english-screenshots: 実装ワーカーが「worktree での Android ビルド手順がどこにも書かれていない」と報告し簡易起票を推奨したが、`kasane/handbook/cross/local-development-setup.md` に手順が完備されていた。ワーカー自身が回避に使った `ANDROID_HOME` が、その文書の第一推奨と同一だった。起票を実行する前の grep で空振りが判明し、change の新規作成には至らなかった。

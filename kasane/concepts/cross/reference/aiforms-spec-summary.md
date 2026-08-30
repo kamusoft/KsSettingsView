@@ -10,7 +10,7 @@ timestamp: 2026-08-26
 
 移植元ライブラリ **AiForms.Maui.SettingsView** / **AiForms.Maui.NativeCollectionView** の公開 API・構造・実装パターンの要約である。KsSettingsView の未移植機能の実装や、移植時の退行と仕様の判別で「移植前の正」を素早く見渡すために読む。
 
-> **凍結された歴史資料**: 本文書は移植初期に作成された要約であり、以後は更新しない。移植元は upstream で修正が続いているため記述は古くなり得る。**最終的な正は移植元コードにしかない** — 実装・調査の判断は必ず移植元の該当ソースを読んで確定する。参照先の在り処と参照ルールは [aiforms-origin-reference.md](aiforms-origin-reference.md) を参照。
+> **凍結された歴史資料**: 本文書は移植初期に作成された要約であり、以後は更新しない。移植元は upstream で修正が続いているため記述は古くなり得る。**最終的な正は移植元コードにしかない** — 実装・調査の判断は必ず移植元の該当ソースを読んで確定する。参照先の在り処と参照ルールは [aiforms-origin-reference.md](../../../handbook/cross/aiforms-origin-reference.md) を参照。
 
 ## 0. リポジトリの位置
 
@@ -424,5 +424,5 @@ KsSettingsView の MAUI Sample（`samples/maui/`）は本 Sample をベースに
 
 ## 関連
 
-- [aiforms-origin-reference.md](aiforms-origin-reference.md) — 移植元リポジトリの在り処と参照ルール（移植完了までの時限規約）
+- [aiforms-origin-reference.md](../../../handbook/cross/aiforms-origin-reference.md) — 移植元リポジトリの在り処と参照ルール（移植完了までの時限規約）
 - [cross/ADR-0017](../../../decisions/cross/0017-port-aiforms-to-native.md) — Native ベースへ移植・リファインする決定

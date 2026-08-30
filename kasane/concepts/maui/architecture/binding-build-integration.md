@@ -85,7 +85,7 @@ Native artifact から C# 型を起こす段は、上の 2 経路 (xcframework /
 
 ### 生成型の namespace
 
-生成される .NET の型は、iOS / Android のどちらの binding でも `KsSettingsView.Bridge` namespace に入る。Android は Java パッケージ名からの既定変換 (`Jp.Kamusoft.Kssettingsview.Bridge`) を `Transforms/Metadata.xml` の `managedName` 属性で上書きしてこれに揃えている。この上書きを外すと生成型の namespace が Java パッケージ由来へ戻り、[公開識別子の規約](../../cross/conventions/public-identifiers.md) の .NET namespace 規則と iOS binding との対称性が同時に壊れる。
+生成される .NET の型は、iOS / Android のどちらの binding でも `KsSettingsView.Bridge` namespace に入る。Android は Java パッケージ名からの既定変換 (`Jp.Kamusoft.Kssettingsview.Bridge`) を `Transforms/Metadata.xml` の `managedName` 属性で上書きしてこれに揃えている。この上書きを外すと生成型の namespace が Java パッケージ由来へ戻り、[公開識別子の規約](../../../handbook/cross/public-identifiers.md) の .NET namespace 規則と iOS binding との対称性が同時に壊れる。
 
 ## SDK 更新時に再検証する箇所
 
@@ -109,7 +109,7 @@ Swift の増分判定は、上のコマンドで得た `_XcbInputs` の一覧に
 ## 関連
 
 - [Native Bridge の interop 境界](../api/native-bridge.md)
-- [検証ホストによる binding / facade の確認](../conventions/integration-host-verification.md)
+- [検証ホストによる binding / facade の確認](../../../handbook/maui/integration-host-verification.md)
 - [Android ビルドツールチェーンの契約](../../android/architecture/build-toolchain.md)
-- [公開識別子の規約](../../cross/conventions/public-identifiers.md) — 生成型の namespace 規則
+- [公開識別子の規約](../../../handbook/cross/public-identifiers.md) — 生成型の namespace 規則
 - 決定の経緯: [maui/ADR-0006](../../../decisions/maui/0006-android-binding-gradlew-exec.md) (Android binding は `gradlew` を Exec で呼ぶ)。上の「SDK 更新時に再検証する箇所」が同 ADR の言う再検証の入口にあたる — ADR 本文が挙げる所在は現行のものではないので、表はここを見る

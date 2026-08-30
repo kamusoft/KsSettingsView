@@ -42,7 +42,7 @@ public 化の前に (phase-10〜12 (Skills 化) の完了後)、README を英語
 |---|---|---|
 | A. 他所に既にある | モジュール構成、利用アプリ側の前提 (Material3 Theme 必須・`FragmentActivity` 必須)、基本のビルド / テストコマンド、ディレクトリ構成、`SDK location not found` の対処 | **捨てる** (concepts・`skills/`・ルート README に既出) |
 | B. 契約だが README にしかない | MAUI binding が SDK 内部ターゲットへ割り込む一覧、`XcodeProject` 採否の実験的経緯、`BG8605` / `BG8A00` 警告の意味、共有 scheme を消すと壊れる理由、`KsBridgeFont` の platform 差 | `kasane/concepts/maui/` (`api/native-bridge.md` とその周辺)。同文書の「正は `maui/README.md`」参照 2 箇所を同時に解消する |
-| C. 手順で README にしかない | `ANDROID_HOME` と 2 つの `local.properties`、`DEVELOPER_DIR` 指定、検証ホストの起動コマンドと期待表示、サンプルの実行手順・デモ画面一覧・本体へのステップイン手順、実機目視確認チェックリスト | `kasane/concepts/` — 環境セットアップと目視確認は `cross/conventions/` (既存の `test-execution.md`・`runtime-behavior-verification.md` と同じ扱い)、検証ホストの起動と期待表示は `maui/` 配下 |
+| C. 手順で README にしかない | `ANDROID_HOME` と 2 つの `local.properties`、`DEVELOPER_DIR` 指定、検証ホストの起動コマンドと期待表示、サンプルの実行手順・デモ画面一覧・本体へのステップイン手順、実機目視確認チェックリスト | `kasane/concepts/` — 環境セットアップと目視確認は `kasane/handbook/cross/` (既存の `test-execution.md`・`runtime-behavior-verification.md` と同じ扱い)、検証ホストの起動と期待表示は `maui/` 配下 |
 | D. 法的表記 | Material Symbols (Apache 2.0) の通知 | **ルート README** (サンプルアプリで使用しているアイコン由来である旨を明記し、ライブラリ本体の依存と読まれないようにする) |
 
 ルート README は「概要・特徴・対応 platform・インストール・最小コード例・`skills/` への導線・ライセンス・サードパーティ通知」に純化し、開発者向けの手順は載せない (節構成の詳細は論点として継続)。
@@ -71,7 +71,7 @@ README に書く 3 platform の識別子は次のとおり (いずれも ADR の
 | Maven | `jp.kamusoft:kssettingsview` (単一 artifact) | android/ADR-0016 |
 | NuGet | `KsSettingsView.Maui` | maui/ADR-0025 |
 
-**未解消の drift**: concepts の `cross/conventions/public-identifiers.md` は旧規則 `jp.kamusoft:ks-settingsview-*` (module 別 artifact) のままで、cross/ADR-0018 の配布先の表も同じ旧値を載せている。android/ADR-0016 が単一 artifact へ変えた際の追随が未実施 (ADR-0016 の Consequences に改訂が宣言済み)。README は ADR の確定値で書き、concepts の改訂は phase-5 で行う。
+**未解消の drift**: concepts の `kasane/handbook/cross/public-identifiers.md` は旧規則 `jp.kamusoft:ks-settingsview-*` (module 別 artifact) のままで、cross/ADR-0018 の配布先の表も同じ旧値を載せている。android/ADR-0016 が単一 artifact へ変えた際の追随が未実施 (ADR-0016 の Consequences に改訂が宣言済み)。README は ADR の確定値で書き、concepts の改訂は phase-5 で行う。
 
 ### ルート README の節構成 (2026-08-29)
 
@@ -157,11 +157,11 @@ cross/ADR-0022 が `skills/` の en/ja に課した規律と同一にする。�
 ## TODO
 
 - [x] 論点の解消 (2026-08-29 完了 — 起案時の 6 論点と議論中に立てた 5 論点をすべて決定事項へ移動)
-- [x] 移送の実施 (2026-08-30 完了) (B: MAUI binding 知識 → `concepts/maui/` / C: 環境セットアップ・目視確認 → `concepts/cross/conventions/`、検証ホスト → `concepts/maui/` / D: サードパーティ通知 → ルート README)
+- [x] 移送の実施 (2026-08-30 完了) (B: MAUI binding 知識 → `concepts/maui/` / C: 環境セットアップ・目視確認 → `kasane/handbook/cross/`、検証ホスト → `concepts/maui/` / D: サードパーティ通知 → ルート README)
 - [x] `kasane/concepts/maui/api/native-bridge.md` の「正は `maui/README.md`」参照を解消する (2026-08-30 完了 — 2 箇所とも `maui/architecture/binding-build-integration.md` への参照へ)
 - [x] docs-refresh の対象定義変更 (2026-08-30 完了 — manifest の `readmes` を 4 枚へ、機械チェックを①②廃止・③のみへ、SKILL.md の 6 箇所から platform / Sample README への言及とモジュール表確認の指示を除去)
 - [x] docs-refresh 依頼時に含める (phase-1 からの申し送り、2026-08-21): ツールチェーン記述の現行値追従 → 2026-08-29 に追従済みを確認 (`docs/overview.md` は対象消滅、`android/README.md` は廃止対象)
-- [x] phase-5 への申し送り (2026-08-30 に phase-5 agenda へ転記済み): concepts `cross/conventions/public-identifiers.md` の artifactId 規則を単一 artifact (`jp.kamusoft:kssettingsview`) へ改訂し、cross/ADR-0018 の配布先の表も追随させる
+- [x] phase-5 への申し送り (2026-08-30 に phase-5 agenda へ転記済み): concepts `kasane/handbook/cross/public-identifiers.md` の artifactId 規則を単一 artifact (`jp.kamusoft:kssettingsview`) へ改訂し、cross/ADR-0018 の配布先の表も追随させる
 - [x] phase-4 への申し送り (2026-08-30 に phase-4 agenda へ転記済み): 配信リポジトリ `KsSettingsView-SPM` を作成し、`public-identifiers.md` へ配信リポジトリ名を追記する
 - [x] `skills/{en,ja}/kssettingsview-ios/SKILL.md` の iOS 配布座標を仮名 `KsSettingsView-Swift` から確定値 `KsSettingsView-SPM` へ更新する (2026-08-30 完了 — 各 3 箇所、残存 0) (各 3 箇所: 本文の URL・`.package(url:)`・`.product(package:)`)。phase-12 deviation.md が docs-refresh の責務と記録した追従
 - [x] phase-7 への申し送り (2026-08-30 に phase-7 agenda へ転記済み): `verification/` の消費者プロジェクトに README / Skills と同じ最小コード例を入れ、CI でビルドさせる (出典ではなく裏取り)
@@ -180,7 +180,7 @@ change: [changes/archive/2026-08-30-consolidate-readmes-and-contribution](../../
 ### 決定と実装がずれた点 (deviation.md に 12 項目)
 
 - **移送対応表の粒度**: design.md の対応表を「出典ファイル×節名」で立てたため、同一内容クラスの節が別 README にも現れる分 (9 件) を網羅できず実装が停止した。「対応表は内容クラスで読む」包括解釈を確定して再開。教訓として捕捉 (`transfer-table-enumerated-by-source-not-content-class`)
-- **「他所に既出」を根拠にした破棄の循環**: `android/README.md`「ビルド・テスト」を A (破棄) と決めた根拠が「ルート README に既出」であり、そのルート README を本フェーズ自身が置換して消していた。`./gradlew build` / `lint` / 個別モジュール assemble / `swift build` / facade の `dotnet build` を git から復元し `cross/conventions/local-development-setup.md` へ移送。cross/ADR-0023 の Consequences に負の帰結として追記
+- **「他所に既出」を根拠にした破棄の循環**: `android/README.md`「ビルド・テスト」を A (破棄) と決めた根拠が「ルート README に既出」であり、そのルート README を本フェーズ自身が置換して消していた。`./gradlew build` / `lint` / 個別モジュール assemble / `swift build` / facade の `dotnet build` を git から復元し `kasane/handbook/cross/local-development-setup.md` へ移送。cross/ADR-0023 の Consequences に負の帰結として追記
 - **MAUI のステップイン手順**: 移送元 (`samples/maui/README.md`) に節が無く、`ProjectReference` 構成を根拠に新規記述した
 - **MAUI のテスト手順**: `test-execution.md` が「MAUI は実際に実行して確かめた時点で追記する」としていたため、`dotnet test` を実行して 516 件 / 0 失敗を確認したうえで MAUI 節を新設
 - **`maui/ADR-0006` の参照切れ**: 同 ADR が `maui/README.md` の「SDK 更新時に再検証する箇所」の表を再検証の入口として指しており、README 削除で切れた。移送先 concept から ADR への逆リンクを張り、決定内容は変わっていないため **supersede はしない**と判断 (cross/ADR-0023 の Consequences に記録)
@@ -198,9 +198,9 @@ change: [changes/archive/2026-08-30-consolidate-readmes-and-contribution](../../
 | 英語 README のスクリーンショットが日本語 UI | [phase-2](../phase-2-public-readiness/agenda.md) TODO 申し送り 3 |
 | `maui/spike/` を公開リポジトリに載せるか | [phase-2](../phase-2-public-readiness/agenda.md) TODO 申し送り 4 |
 | 「配信準備中」バナーの解除 | [phase-8](../phase-8-release-workflow/agenda.md) TODO |
-| `cross/conventions/user-skill-api-listing.md` が docs-refresh Step 3c の `UNCOVERED` に残る (先行 change 由来) | **解消済み** (2026-08-30、オーナー判断で `skills/.manifest.json` の `excluded` へ追加)。Step 3c は `concepts coverage OK` |
+| `kasane/handbook/cross/user-skill-api-listing.md` が docs-refresh Step 3c の `UNCOVERED` に残る (先行 change 由来) | **解消済み** (2026-08-30、オーナー判断で `skills/.manifest.json` の `excluded` へ追加)。Step 3c は `concepts coverage OK` |
 
 ### 見送った改善
 
 - 英語 README のキャプションに「screenshots from the Japanese-locale sample app」を添える案 (本変更内で 2 行) — 断り書きが残ると解決済みに見えるため採らず、Sample の英語化で解く方向を phase-2 へ送った
-- `cross/conventions/local-development-setup.md` の分割 (「Sample を動かす人」と「本体をビルド / デバッグする人」で読者が異なるという初見可読性レビューの指摘) — 節構成は割れており分割は必須でないとレビュー自身が述べたため見送り
+- `kasane/handbook/cross/local-development-setup.md` の分割 (「Sample を動かす人」と「本体をビルド / デバッグする人」で読者が異なるという初見可読性レビューの指摘) — 節構成は割れており分割は必須でないとレビュー自身が述べたため見送り

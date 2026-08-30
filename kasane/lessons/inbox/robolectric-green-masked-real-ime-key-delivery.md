@@ -18,4 +18,4 @@ evidence:
 ## 経緯
 
 - 2026-08-11 fix-entrycell-writeback-caret-race: 高速連続入力のレース (書き戻し往復と打鍵の競合) は Robolectric の決定論的テストでは stale bind を明示的に挟んで初めて表現でき、自然発生の再現は実機のみ。exploration 段階から実機バースト注入 (`repro-burst-loop.sh`) で高再現率の再現を確立し、修正後も同一手順の A/B で解消を証明した。
-- 2026-08-01 fix-entrycell-enter-focus-crash: `TextView.onKeyUp` の `OnEditorActionListener` 呼び出しは DOWN 時消費の印 (`enterDown`) を前提とするため、IME 表示中の UP 単独配達では呼ばれない。この配達パターンは Robolectric では再現せず (down/up 対送出のテストは全 green)、実機 A/B (IME 表示中の keyevent 66) で初めて露呈した。`View.OnKeyListener` (dispatchKeyEvent で先行呼び出し・ゲートなし) への転換で解消。`cross/conventions/runtime-behavior-verification.md` の完了 3 条件を適用していたことが捕捉の決め手 (規約が機能した成功例)。
+- 2026-08-01 fix-entrycell-enter-focus-crash: `TextView.onKeyUp` の `OnEditorActionListener` 呼び出しは DOWN 時消費の印 (`enterDown`) を前提とするため、IME 表示中の UP 単独配達では呼ばれない。この配達パターンは Robolectric では再現せず (down/up 対送出のテストは全 green)、実機 A/B (IME 表示中の keyevent 66) で初めて露呈した。`View.OnKeyListener` (dispatchKeyEvent で先行呼び出し・ゲートなし) への転換で解消。`kasane/handbook/cross/runtime-behavior-verification.md` の完了 3 条件を適用していたことが捕捉の決め手 (規約が機能した成功例)。

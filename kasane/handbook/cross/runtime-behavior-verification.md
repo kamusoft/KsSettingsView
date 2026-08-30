@@ -1,8 +1,10 @@
 ---
-type: policy
+kind: rule
+applies-when:
+  always: false
+  tasks: [実行時挙動の不具合調査, 不具合修正の完了判定]
 title: 実行時挙動の検証規約
 description: 実行時挙動 (IME・フォーカス・アニメーション・タイミング) が絡む不具合修正を「完了」と判定する条件 — 実環境での再現確立と修正後の同一手順による解消確認、および iOS 基本 Cell Sample の目視確認項目
-tags: [verification, bugfix, runtime]
 timestamp: 2026-08-29
 ---
 

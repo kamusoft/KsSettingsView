@@ -693,7 +693,7 @@ fi
 
 #### 6-⑧ 配信識別子の表記ゆれ grep
 
-公開識別子の正は [cross/conventions/public-identifiers.md](../../../kasane/concepts/cross/conventions/public-identifiers.md)。ecosystem ごとの表記規則 (SwiftPM は PascalCase、Android namespace は lowercase reverse-DNS、artifactId は kebab-case) を崩した表記を検出する:
+公開識別子の正は [kasane/handbook/cross/public-identifiers.md](../../../kasane/handbook/cross/public-identifiers.md)。ecosystem ごとの表記規則 (SwiftPM は PascalCase、Android namespace は lowercase reverse-DNS、artifactId は kebab-case) を崩した表記を検出する:
 
 ```bash
 TARGETS=($(cat /tmp/docs-refresh-targets.txt))

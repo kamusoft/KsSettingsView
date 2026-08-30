@@ -14,7 +14,7 @@ KsSettingsView (iOS Swift / Android Kotlin / .NET MAUI) を AiForms.Maui.Setting
 
 既存の決定・積み残しで配信に直結するもの:
 
-- cross/ADR-0002: Maven groupId は `jp.kamusoft`。現行 Gradle `group` は未追従の drift (`concepts/cross/conventions/public-identifiers.md` が「Maven 公開を導入する変更で先に解消する」と明記)
+- cross/ADR-0002: Maven groupId は `jp.kamusoft`。現行 Gradle `group` は未追従の drift (`kasane/handbook/cross/public-identifiers.md` が「Maven 公開を導入する変更で先に解消する」と明記)
 - roadmaps/maui-support/roadmap.md: 「配布は NuGet 前提、パッケージングは配布要件が固まった時点で別途」(非ゴール)
 - NuGet 化時に回収する TODO: AndroidX Lifecycle 競合 (NU1608 / NU1107) の nuspec 経由解消の実証 (phase-2 / phase-3 agenda)、旧 AiForms からの移行ガイド (phase-4 agenda、docs-refresh 経由)
 

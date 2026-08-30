@@ -2,7 +2,7 @@
 type: policy
 title: concepts 配置ルール
 description: ドメイン導出規則と、この concepts/ のカテゴリ定義・配置基準
-timestamp: 2026-07-31
+timestamp: 2026-08-30
 ---
 
 ## ドメイン導出規則
@@ -14,6 +14,12 @@ timestamp: 2026-07-31
 - リポジトリ構成・命名規約・docs 運用・ハーネス運用などリポジトリ横断のメタ事項 → `cross`
 - 新しい platform・パッケージ系統が増えた場合: 既存系統に属するなら該当ドメインへ。属さないならユーザー合意の上で `config.yaml` の `domains` に追加する
 - 変更 (proposal) が複数ドメインに触る場合の `domain:` 欄は `cross`。蒸留時の ADR / concepts の行き先は内容ごとに本規則で判定する
+
+## 規範は handbook へ
+
+規約・手順 (コードがそれに従うべきもの) は concepts ではなく `kasane/handbook/<domain>/` に置く。判定は「この文書とコードが食い違ったとき、直すのはどちらか」— コードを直すなら handbook、文書を直す余地があるなら concepts。
+
+移植元・外部システムの仕様要約のように、外部の実物と照合して真偽が決まる文書は concepts (`cross/reference/`) に置く。その外部資産を「どう参照するか」を定めた文書は handbook に置く。
 
 ## カテゴリ定義
 
@@ -32,14 +38,13 @@ timestamp: 2026-07-31
 |---|---|---|
 | api/ | platform 固有の公開 API・利用例・Bridge 境界 | concept, reference |
 | architecture/ | platform 内部の共有基盤・機構の契約、platform のビルドツールチェーンの契約 (2026-08-12 オーナー合意で新設。maui / android で使用) | concept |
-| conventions/ | platform 固有の開発規約 (計測・検証などの決まり事) (2026-08-28 オーナー合意で新設。maui で使用) | policy |
 
 ### cross/
 
 | カテゴリ | 対象 | 主な type |
 |---|---|---|
 | architecture/ | リポジトリ・ビルド構成の責務境界 | concept |
-| conventions/ | 命名・API 対称性・横断的な開発規約 | policy |
+| reference/ | 外部資産 (移植元リポジトリ等) の仕様要約。真偽は外部の実物との照合で決まる | reference |
 
 ## 配置判断
 

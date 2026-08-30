@@ -44,7 +44,7 @@ Root / Section の Header・Footer に任意 MauiView を設定できるよう�
   - 案B (原典踏襲 = view は常に自動高さ) は「明示指定が無言で無視される」罠と iOS の公開挙動変更 (既存 iOS 利用者の見た目が変わる) のため却下
 - **⑥ サンプルは AccessoryViewsDemoPage 1ページを「MAUI のみの画面」として追加** (2026-08-11)
   - 内容 7 項目: (1) RootHeaderView / RootFooterView (2) Section HeaderView / FooterView (ViewModel バインド付き = BindingContext 伝播の実証) (3) text/view 競合と View null 戻しのフォールバック (4) 新インスタンス差し替え (5) サイズが変わる内容変化 (iOS 行高さ再計算 TODO の実地確認を兼ねる) (6) headerHeight 固定 + view の clip (7) ページ離脱 → 再訪問の復元
-  - sample-parity 上の位置づけ: [sample-parity.md](../../../concepts/cross/conventions/sample-parity.md) の例外「デモ対象の公開 API が存在しない platform」の逆方向 (MAUI にしか対応概念がないデモ — ItemsSource デモと同じ枠)。主対象は VisualElement 埋め込み・text/view 併存プロパティ・Handler lifecycle 復元という MAUI 固有の公開 API と意味論であり、native の KsAnyView (factory closure) とは API も目的も別物。**native への追随義務なし** (片側先行の追跡対象に数えない)。将来 native に KsAnyView デモを作る場合も対応画面とはみなさない
+  - sample-parity 上の位置づけ: [sample-parity.md](../../../../handbook/cross/sample-parity.md) の例外「デモ対象の公開 API が存在しない platform」の逆方向 (MAUI にしか対応概念がないデモ — ItemsSource デモと同じ枠)。主対象は VisualElement 埋め込み・text/view 併存プロパティ・Handler lifecycle 復元という MAUI 固有の公開 API と意味論であり、native の KsAnyView (factory closure) とは API も目的も別物。**native への追随義務なし** (片側先行の追跡対象に数えない)。将来 native に KsAnyView デモを作る場合も対応画面とはみなさない
   - メニュー配置: iOS の ContentView (「デモ」「検証」の Section 区切り) と同様に、MAUI の一覧ページに **「MAUI 固有」の Section を区切って配置**し、パリティ対象のデモ群と視覚的に区別する (Section 名の最終文言は propose で確定)
 
 ## 素材

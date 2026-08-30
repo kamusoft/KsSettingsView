@@ -1,12 +1,17 @@
 ---
-type: policy
+kind: rule
+applies-when:
+  always: false
+  paths: ["skills/**"]
+  tasks: [docs-refresh の API 名網羅検査の仕分け]
 title: 利用者向け Skill の API 掲載基準
 description: skills/ (利用者向け Agent Skills) に公開 API をどこまで載せるか — 「簡潔でも網羅」の方針と意図的な掲載除外の基準・現行除外リスト
-tags: [conventions, docs, skills, api-coverage]
 timestamp: 2026-08-29
 ---
 
-この文書は、利用者向け Agent Skills (`skills/{en,ja}/`) に公開 API をどこまで掲載するかの基準を説明する。読むと、docs-refresh スキルの Step 3e (API 名網羅検査。以下 3e) が報告した「未掲載の API 名」を、追加すべき漏れと意図的な除外に仕分けられる。skills の生成・更新手順そのものは docs-refresh スキルが定め、公開契約の正本は concepts (この文書もその一部) とコード・テストである。
+# 利用者向け Skill の API 掲載基準
+
+この文書は、利用者向け Agent Skills (`skills/{en,ja}/`) に公開 API をどこまで掲載するかの基準を説明する。読むと、docs-refresh スキルの Step 3e (API 名網羅検査。以下 3e) が報告した「未掲載の API 名」を、追加すべき漏れと意図的な除外に仕分けられる。skills の生成・更新手順そのものは docs-refresh スキルが定め、公開契約の正本は concepts とコード・テストである。本規約はそこから skills へ何を載せるかだけを定める。
 
 ## 方針: 簡潔でも網羅
 
@@ -48,5 +53,5 @@ timestamp: 2026-08-29
 ## 関連
 
 - docs-refresh スキル (`.agents/skills/docs-refresh/SKILL.md`) — 3e API 名網羅検査と Step 4 の承認フロー
-- [cross/ADR-0022](../../../decisions/cross/0022-user-docs-as-agent-skills.md) — 利用者向けドキュメントを Agent Skills として提供する決定
+- [cross/ADR-0022](../../decisions/cross/0022-user-docs-as-agent-skills.md) — 利用者向けドキュメントを Agent Skills として提供する決定
 - 経緯: `kasane/changes/archive/2026-08-29-skills-api-coverage/exploration.md`

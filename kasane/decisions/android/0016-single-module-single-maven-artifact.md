@@ -9,7 +9,7 @@ date: 2026-08-21
 
 Android の公開単位は `ks-settingsview-core` / `-ui` / `-compose` の 3 module (+ MAUI 専用の `-bridge`) で、Gradle `group` は `jp.kamusoft.kssettingsview`、module 間依存はすべて `implementation` だった。Maven Central へ配布する (cross/ADR-0018) にあたり、利用者が書く座標・artifact の粒度・groupId を決める必要がある。
 
-accepted の cross/ADR-0002 は Maven groupId を `jp.kamusoft` と定めており、現行 Gradle `group` はそれに未追従の drift だった (concepts/cross/conventions/public-identifiers.md が「Maven 公開を導入する変更で先に解消する」と明記)。
+accepted の cross/ADR-0002 は Maven groupId を `jp.kamusoft` と定めており、現行 Gradle `group` はそれに未追従の drift だった (kasane/handbook/cross/public-identifiers.md が「Maven 公開を導入する変更で先に解消する」と明記)。
 
 module の依存を実測すると、`ui` は CustomCell の Compose ホスティングのため既に compose runtime / ui / foundation / material3 に依存しており、`compose` module (約 2,500 行) の外部依存は `ui` の部分集合、`core` は約 450 行で compose runtime にのみ依存する。姉妹ライブラリ KsDialogs が Compose API を別 module に分離した理由 (本体を Compose 非依存に保ち、MAUI binding 経由で compose-ui が推移しないようにする。KsDialogs android/ADR-0001) は、KsSettingsView では最初から成立していない。
 
@@ -42,6 +42,6 @@ module の依存を実測すると、`ui` は CustomCell の Compose ホステ�
 - 負: Android 側で module 境界による層の compile 時強制を失う (iOS の target 分割は残るので、core 契約をまたぐ誤った依存は iOS 側で検出される)。
 - 負: core (JUnit 5) と ui / compose (JUnit 4 + Robolectric) のテスト基盤を 1 module に同居させる必要がある。
 - 負: ディレクトリ改名・統合に伴い `android/settings.gradle.kts`、Sample の composite build 置換、MAUI binding csproj の aar パス、concepts / README の表記を追随させる。
-- 負: concepts/cross/conventions/public-identifiers.md の artifactId 規則 (`ks-settingsview-*`) を改訂する。
+- 負: kasane/handbook/cross/public-identifiers.md の artifactId 規則 (`ks-settingsview-*`) を改訂する。
 
-出典: kasane/roadmaps/package-distribution/exploration.md (D) / kasane/decisions/cross/0002-public-identifier-namespace.md / kasane/concepts/cross/conventions/public-identifiers.md (Maven 座標の現在地)
+出典: kasane/roadmaps/package-distribution/exploration.md (D) / kasane/decisions/cross/0002-public-identifier-namespace.md / kasane/handbook/cross/public-identifiers.md (Maven 座標の現在地)

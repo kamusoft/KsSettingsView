@@ -8,7 +8,7 @@
     python3 scripts/comment-policy-lint.py ios/Sources  # パスを絞って検査
     python3 scripts/comment-policy-lint.py --selftest  # 検出ロジックと hook の疎通確認
 
-規約は kasane/concepts/cross/conventions/comment-policy.md。
+規約は kasane/handbook/cross/comment-policy.md。
 検出ロジックは scripts/comment_policy_rules.py に同居し、書き込み前の hook と共有する。
 違反が 1 件でもあれば終了コード 1 を返す。
 """
