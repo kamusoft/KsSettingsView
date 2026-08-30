@@ -32,7 +32,7 @@ monorepo のルート Package.swift ではなく、SwiftPM 専用の配信リポ
 
 ### 今後の evidence 媒体の運用 (2026-08-21)
 
-進行中の変更では媒体を全部追跡する (worktree へ仕様を渡すため)。容量対策は ksn-distill の archive 時に媒体を削除 (trash) する手順を Kasane 本体に追加し、config で opt-in する。個人情報対策は archive 時では遅い (履歴に残る) ため、撮影・保存時の規律として Kasane 本体の規約 (ui-artifacts.md / ksn-ui 等) に置く。どちらも全プロジェクト共通なので Kasane 側で行い、本フェーズの成果物は [依頼プロンプト](artifacts/kasane-request-evidence-media.md)。ADR 化しない (ルールの正は Kasane 側、プロジェクト側は config の設定のみ)
+進行中の変更では媒体を全部追跡する (worktree へ仕様を渡すため)。容量対策は ksn-distill の archive 時に媒体を削除 (trash) する手順を Kasane 本体に追加し、config で opt-in する。個人情報対策は archive 時では遅い (履歴に残る) ため、撮影・保存時の規律として Kasane 本体の規約 (ui-artifacts.md / ksn-ui 等) に置く。どちらも全プロジェクト共通なので Kasane 側で行い、本フェーズの成果物は [依頼プロンプト](artifacts/kasane-request-evidence-media.md)。ADR 化しない (ルールの正は Kasane 側)。**2026-08-30 反映**: Kasane 側は `distill.archive-media` を新設して既定を `delete` としたため、当初想定した「プロジェクト側で config に opt-in を書く」作業は不要になった (無効化したいときだけ `keep` を書く)
 
 ### ローカル絶対パスの扱い (2026-08-21)
 
@@ -113,7 +113,7 @@ Issue Forms を **バグ報告 / 提案 / 質問の 3 本**にし、質問用フ
 
 - [x] 論点の解消 (2026-08-21、決定 9 件)
 - [x] **[実施手順書](artifacts/publish-procedure.md) に沿って public 化を実施 (2026-08-30 完了)** — 1 節: 下ごしらえ (開発チーム識別子・push・検査 3 種 0 件) → 2 節: 公開ツリー 2265 件 / 19.2 MB を単一 commit → 3 節: 新 repo を public 化し旧 repo を Archive → 4 節: ローカル切り替えと 3 platform ビルド確認。hook / lint は S 級 change として実施済み
-- [ ] 後続フロー (手順書 5 節): Kasane へ依頼プロンプト / cross/ADR-0021 のオーナー確認 (ksn-roadmap 改訂は 2026-08-21 実施済み)
+- [ ] 後続フロー (手順書 5 節): **cross/ADR-0021 のオーナー確認のみ残り** (proposed → accepted は蒸留時)。Kasane への依頼は 2026-08-30 反映済み、ksn-roadmap 改訂は 2026-08-21 実施済み
 - [x] **着手条件** (2026-08-30 充足): phase-10〜12 (`docs/` 廃止・`skills/` 生成) と phase-9 (README 英語 + `README_ja`) の完了を待ってから手順書 2 節以降 (公開ツリーの作成) に進む。1 節の下ごしらえは先行可
 - [ ] **phase-3 への申し送り**: 識別子 lint の検査範囲 (`kasane/config.yaml` の `lint.identity.scope`) に `samples` を追加する (決定「iOS Sample の開発チーム識別子」の再発防止。ソース中の正当な UUID 定数の誤検出確認を伴うため CI 整備時に実施)
 - [x] 調査結果のまとめ (2026-08-30、手順書の「実施記録」節に 1〜2 節と 3〜4 節の結果を記入済み)

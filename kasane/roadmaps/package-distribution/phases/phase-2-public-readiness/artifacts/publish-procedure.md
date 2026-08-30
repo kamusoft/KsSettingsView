@@ -51,7 +51,7 @@ phase-2 の決定事項 (agenda.md) を実行順に並べたチェックリス�
 
 ## 5. 後続 (この手順書の外、別フローで)
 
-- [ ] Kasane リポジトリへ [依頼プロンプト](kasane-request-evidence-media.md) を渡す → 反映後に `kasane/config.yaml` で archive 時の媒体削除を有効化
+- [x] Kasane リポジトリへ [依頼プロンプト](kasane-request-evidence-media.md) を渡す (2026-08-30 反映済み)。**プロジェクト側の設定追加は不要だった** — Kasane 側は `distill.archive-media` を新設して既定を `delete` にしたため (当初の想定は「config で opt-in」)。ksn-distill が archive 時に媒体を trash し、撮影・保存時の個人情報規律は ksn-core `references/ui-artifacts.md`、生ログの sanitize と個体・個人・秘密の値の検査は同 `references/evidence.md` に入った
 - [x] ksn-roadmap (改訂): SwiftPM 配信リポジトリ方式を反映、README 二本立ては phase-9 へ、docs 基盤の再編 (Skills 化) は phase-10〜12 として追加 (2026-08-21)
 - [ ] cross/ADR-0021 のオーナー確認 (proposed → accepted は蒸留時)
 
