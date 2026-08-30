@@ -143,3 +143,12 @@
 - 採用 **A** — 2 行で消せて、実在しないチームが指定されているより空の方が clone した人の署名解決がすんなり通る。B は書き戻りを構造で断てる代わりに、Sample を実機で動かす人 (オーナー自身を含む) 全員に設定ファイルの用意を課す。C は消すコストが極小なのに残す理由が薄い
 - 再混入 (Xcode が実機ビルド時に値を書き戻す) は書き込み hook では止められない (Xcode が直接書くため)。公開ツリーは手順書 2 節で一度組んで終わりなので公開の瞬間の担保で足り、以後は phase-3 の CI lint で捕まえる。lint の検査範囲に `samples` を追加する作業は phase-3 の CI 整備時 (ソース中の正当な UUID 定数の誤検出確認を伴うため)
 - ADR: 該当せず (`samples/` に閉じた可逆な判断。選別3基準のいずれも通らない。論点⑧と同じ整理)
+
+## 2026-08-30: public 化の実施と research 完了
+
+- 手順書 1〜4 節をこのセッションで実施した。1 節 (開発チーム識別子・push・検査 3 種) → 2 節 (公開ツリー 2265 件 / 19.2 MB を単一 commit) → 3 節 (新 repo を public 化・設定・旧 repo を Archive) → 4 節 (ローカル切り替え・3 platform ビルド確認)。各段の結果は [実施手順書](artifacts/publish-procedure.md) の実施記録に記録した
+- 3 節は不可逆な操作を含むため、public 切替の直前でオーナーの目視確認を挟んだ。`gh repo rename` はエージェントの実行分類器にブロックされたためオーナーが手で実行し、以降の GitHub 操作はエージェントから実行できた
+- 途中で 1 つ設計判断が要った: 旧 repo の rename 直後にローカル remote を実 URL へ固定する順序変更 (手順書では 4 節の作業)。同名の新 repo を作るとリダイレクトが解除され、既存クローンの `origin` が新 repo を指すため、誤 push で全履歴が公開側へ入る経路をこの時点で塞いだ
+- Kasane 側の反映 (オーナー実施) を確認した。`distill.archive-media` が既定 `delete` で新設されたため、当初想定した「プロジェクト側で config に opt-in を書く」作業は不要になった
+- **ADR**: 「開発ハーネスの記録を公開リポジトリに含める」判断を cross/ADR-0021 へ最小改訂で追記した (Decision に公開範囲、Consequences に「今後の change 記録もすべて公開される」制約と lint / hook がその担保である旨。status は proposed のまま)。選択肢は A) ADR-0021 に最小改訂 / B) 新規 ADR / C) ADR 化しない で、採用 **A** — ADR-0021 が既にこれを前提にしており (Consequences の「経緯は kasane/changes/archive・kasane/decisions に残る」)、決定として明示されていなかっただけのため
+- **research 完了**: roadmap.md の phase-2 を completed にし、後続 (phase-3) へ 2 論点を申し送った

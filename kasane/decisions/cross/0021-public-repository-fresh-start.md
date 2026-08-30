@@ -23,6 +23,7 @@ date: 2026-08-21
 - initial commit は noreply のメールアドレスで作る (それ以降のコミットも同様)
 - 新リポジトリは既存の名前 (`kamusoft/KsSettingsView`) を引き継ぎ、既存 private リポジトリは別名へ rename した上で GitHub の Archive で読み取り専用にする
 - 既存 private リポジトリの履歴は書き換えず、移転後は push しない
+- **公開ツリーには開発ハーネスの記録 (`kasane/` `openspec/` `.claude/` `.codex/`) を含める。外すのは、容量と画面内の個人情報リスクが大きい `kasane/changes/archive/**` の媒体 (画像・動画) と、本番が採らなかった方式を実装していて追従の仕組みがない `maui/spike/` だけ** (2026-08-30 追記)
 - 新リポジトリは配布・Issue 窓口・CI の唯一の場であり、旧リポジトリとの同期は行わない (cross/ADR-0018 が却下した「配布用ミラー」とは異なる: ミラーは 2 つのリポジトリを並走させるが、本決定は本籍を移すだけで並走しない)
 
 ## Alternatives Considered
@@ -36,6 +37,7 @@ date: 2026-08-21
 - 正: 公開リポジトリの初期状態を意図的に選べる (公開ツリーに含めるものの取捨選択が initial commit の時点でできる)。
 - 負: 公開リポジトリからは初回リリースまでの開発履歴 (blame・コミット単位の経緯) が辿れない。経緯は旧 private リポジトリと `kasane/changes/archive/`・`kasane/decisions/` のドキュメントに残る。
 - 負: 既存の Issue / PR は引き継がれない。
+- 負: 今後の change 記録・議論の経緯もすべて公開される。書く時点で公開を前提とした規律 (ローカル絶対パスを書かない、個体・個人・秘密を特定する値を残さない) が必要になり、その担保として lint (`scripts/local-path-lint.py` / `scripts/identity-lint.py`) と 書き込み hook を置いた (2026-08-30 追記)
 - 負: ローカルクローン・リモート設定・GitHub 上の名前 (旧リポジトリの rename) の切り替え作業が発生する。同名のリポジトリを作り直すと旧名へのリダイレクトが新リポジトリを指すため、旧リポジトリを参照するクローンは remote を明示的に付け替える必要がある。
 
-出典: kasane/roadmaps/package-distribution/phases/phase-2-public-readiness/history.md (2026-08-21: 履歴の扱い) / kasane/roadmaps/package-distribution/phases/phase-2-public-readiness/artifacts/scan-2026-08-21.md
+出典: kasane/roadmaps/package-distribution/phases/phase-2-public-readiness/history.md (2026-08-21: 履歴の扱い) / kasane/roadmaps/package-distribution/phases/phase-2-public-readiness/artifacts/scan-2026-08-21.md / (2026-08-30 追記分) 同 agenda.md の決定「体裁と公開対象の範囲」「公開対象の範囲 — evidence 媒体」「`maui/spike/` は公開リポジトリに載せない」および artifacts/publish-procedure.md の実施記録

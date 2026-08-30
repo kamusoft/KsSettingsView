@@ -88,7 +88,7 @@ phase-10 → 11 → 12 (Skills 化) → phase-9 (README) → phase-2 の実施 (
 | phase-11-docs-refresh-retarget | completed | change | [agenda](phases/phase-11-docs-refresh-retarget/agenda.md) | [changes/archive/2026-08-26-retarget-docs-refresh-to-skills](../../changes/archive/2026-08-26-retarget-docs-refresh-to-skills/proposal.md) |
 | phase-12-skills-rollout | completed | change | [agenda](phases/phase-12-skills-rollout/agenda.md) | [changes/archive/2026-08-28-rollout-user-skills](../../changes/archive/2026-08-28-rollout-user-skills/proposal.md) |
 | phase-9-docs | completed | change | [agenda](phases/phase-9-docs/agenda.md) | [changes/archive/2026-08-30-consolidate-readmes-and-contribution](../../changes/archive/2026-08-30-consolidate-readmes-and-contribution/proposal.md) |
-| phase-2-public-readiness | in-progress | research | [agenda](phases/phase-2-public-readiness/agenda.md) | [changes/archive/2026-08-30-add-question-form-and-english-screenshots](../../changes/archive/2026-08-30-add-question-form-and-english-screenshots/proposal.md) |
+| phase-2-public-readiness | completed | research | [agenda](phases/phase-2-public-readiness/agenda.md) | [changes/archive/2026-08-30-add-question-form-and-english-screenshots](../../changes/archive/2026-08-30-add-question-form-and-english-screenshots/proposal.md) |
 | phase-3-verification-ci | pending | change | [agenda](phases/phase-3-verification-ci/agenda.md) | — |
 | phase-4-ios-packaging | pending | change | [agenda](phases/phase-4-ios-packaging/agenda.md) | — |
 | phase-5-android-packaging | pending | change | [agenda](phases/phase-5-android-packaging/agenda.md) | — |

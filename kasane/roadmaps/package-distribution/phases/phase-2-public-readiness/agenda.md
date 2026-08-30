@@ -109,15 +109,28 @@ Issue Forms を **バグ報告 / 提案 / 質問の 3 本**にし、質問用フ
 - **`maui/spike/**` の公開ツリーからの除外**: → [実施手順書](artifacts/publish-procedure.md) 2 節の除外リストに反映済み
 - **英語 README のスクリーンショットは Sample のどの状態にも対応しない**: Sample を実際に動かすと日本語で表示される。決定時に「Sample を英語化しない選択の対価」として受け入れ済みで、追加の受け皿は設けない (見送り)
 
+## 調査結果 (2026-08-30 完了)
+
+public 化を完了した。公開リポジトリは [kamusoft/KsSettingsView](https://github.com/kamusoft/KsSettingsView)、旧 private は `KsSettingsView-private-archive` として GitHub Archive 済み。
+
+- **履歴を引き継がず新規リポジトリで公開した** (cross/ADR-0021)。点検 (grep + gitleaks) で秘密情報は 0 件だったが、個人メールとローカル絶対パスが全履歴に残るため、現ツリーを単一 initial commit として本籍を移した
+- **公開ツリーは 2265 件 / 19.2 MB** — 追跡 2933 件から archive 媒体 623 件 (180.1 MB) と `maui/spike/` 45 件を除外した。開発ハーネスの記録 (`kasane/` `openspec/` `.claude/` `.codex/`) は含めている
+- **公開前提の規律を仕組みに落とした**: ローカルパス lint・識別子 lint・書き込み hook を新設し、撮影・保存時の個人情報規律と archive 時の媒体削除は Kasane 本体へ移した (2026-08-30 反映済み、`distill.archive-media` は既定 `delete`)
+- 実施の全過程と検査結果は [実施手順書](artifacts/publish-procedure.md) の「実施記録」節に残っている
+
+### 後続フェーズへの影響
+
+**phase-3 (検証 CI)** へ 2 つの論点として申し送った ([agenda](../phase-3-verification-ci/agenda.md) に反映済み) — 公開前提の検査 (gitleaks / 2 つの lint、識別子 lint の検査範囲拡張) の CI 化と、`develop` への必須 status check の追加。public リポジトリになったため GitHub Actions の標準ランナー (macOS 含む) が無料で使える点も phase-3 の前提として効く。
+
 ## TODO
 
 - [x] 論点の解消 (2026-08-21、決定 9 件)
 - [x] **[実施手順書](artifacts/publish-procedure.md) に沿って public 化を実施 (2026-08-30 完了)** — 1 節: 下ごしらえ (開発チーム識別子・push・検査 3 種 0 件) → 2 節: 公開ツリー 2265 件 / 19.2 MB を単一 commit → 3 節: 新 repo を public 化し旧 repo を Archive → 4 節: ローカル切り替えと 3 platform ビルド確認。hook / lint は S 級 change として実施済み
 - [ ] 後続フロー (手順書 5 節): **cross/ADR-0021 のオーナー確認のみ残り** (proposed → accepted は蒸留時)。Kasane への依頼は 2026-08-30 反映済み、ksn-roadmap 改訂は 2026-08-21 実施済み
 - [x] **着手条件** (2026-08-30 充足): phase-10〜12 (`docs/` 廃止・`skills/` 生成) と phase-9 (README 英語 + `README_ja`) の完了を待ってから手順書 2 節以降 (公開ツリーの作成) に進む。1 節の下ごしらえは先行可
-- [ ] **phase-3 への申し送り**: 識別子 lint の検査範囲 (`kasane/config.yaml` の `lint.identity.scope`) に `samples` を追加する (決定「iOS Sample の開発チーム識別子」の再発防止。ソース中の正当な UUID 定数の誤検出確認を伴うため CI 整備時に実施)
+- [x] **phase-3 への申し送り** (2026-08-30、[phase-3 の agenda](../phase-3-verification-ci/agenda.md) へ論点として反映済み): 識別子 lint の検査範囲に `samples` を追加 / gitleaks と 2 つの lint の CI 化 / 必須 status check の追加
 - [x] 調査結果のまとめ (2026-08-30、手順書の「実施記録」節に 1〜2 節と 3〜4 節の結果を記入済み)
-- [ ] ksn-roadmap で research 完了をマーク
+- [x] ksn-roadmap で research 完了をマーク (2026-08-30)
 - [x] **phase-9 からの申し送り 1** (2026-08-30、cross/ADR-0024): 実施手順書 3 節へ「GitHub の Pull requests 設定を collaborators only にする」を追加 (2026-08-30 反映済み)。判断の余地がないため論点にしていない。`.github/` 一式 (Issue Forms 2 本 + `config.yml` + CONTRIBUTING 英日) は phase-9 で設置済み
 - [x] **phase-9 からの申し送り 2〜4** (2026-08-30 決着): 論点⑦ (質問窓口)・⑧ (スクショの言語)・⑨ (`maui/spike/` の存廃) をすべて決定事項へ移動
 - [x] 上記 3 件を 1 本の change にまとめて実装 (2026-08-30 完了、[changes/archive/2026-08-30-add-question-form-and-english-screenshots](../../../../changes/archive/2026-08-30-add-question-form-and-english-screenshots/proposal.md))。公開ツリーの作成 (手順書 2 節) より前に実施

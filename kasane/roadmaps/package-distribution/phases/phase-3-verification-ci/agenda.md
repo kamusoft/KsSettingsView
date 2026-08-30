@@ -13,6 +13,8 @@ PR / push で iOS・Android・MAUI のビルドとテストを回す検証 CI (G
 - comment-policy-lint (scripts/) を CI に載せるか
 - Android テストのキャッシュと実行件数の担保 (fix-compose-dsl-double-update-flaky-test からの申し送り、2026-08-22): Gradle は up-to-date な test タスクをスキップするため、キャッシュを効かせた構成では**テストが 1 件も走らないまま BUILD SUCCESSFUL** になり得る (`concepts/cross/conventions/test-execution.md`)。test タスクをキャッシュ対象から外すか `--rerun-tasks` 相当を強制するかを決め、実行件数 (`*/build/test-results/*/TEST-*.xml` の `tests` 属性合計) を job の成否判定に含めるかも併せて決める。なおフレッシュランナーは常に全件実行になるため、待機不備由来の flaky はローカルより CI で顕在化しやすい
 - Android ランナーの JDK (phase-1 からの申し送り、2026-08-21): Gradle JVM は JDK 17〜25 のいずれでもよいが、各 module の `jvmToolchain(17)` は toolchain resolver plugin 無しでローカル JDK 17 を要求する — ランナーに JDK 17 を同梱する (`setup-java` 複数版) か resolver を追加するか。MAUI job の binding ビルドも `android/gradlew` を dotnet の JavaSdkDirectory で呼ぶ (concepts `android/architecture/build-toolchain.md`)
+- **phase-2 からの申し送り (2026-08-30)**: 公開前提の検査を CI に載せる — `gitleaks` を PR ごとの secret scan として、`scripts/local-path-lint.py` と `scripts/identity-lint.py` を lint として実行する (phase-2 の決定「履歴スキャンの手段と対象」「ローカルパスの再発防止」)。あわせて識別子 lint の検査範囲 (`kasane/config.yaml` の `lint.identity.scope`、現在は kasane / openspec / skills) に `samples` を追加するかを決める — iOS Sample の開発チーム識別子は現在この範囲外で、Xcode が実機ビルド時に値を書き戻しても書き込み hook では止められず CI でしか捕まえられない (決定「iOS Sample の開発チーム識別子」)。範囲を広げるとソース中の正当な UUID 定数の誤検出が起こり得るため、その確認を伴う
+- **phase-2 からの申し送り (2026-08-30)**: `develop` の branch protection に必須 status check を追加する。public 化の時点では force-push 禁止 + 削除禁止のみ設定済みで、必須チェックと PR 必須化は CI の job が決まってからとした。なお public リポジトリになったため GitHub Actions の標準ランナー (macOS 含む) が無料で使える
 
 ## 決定事項
 
