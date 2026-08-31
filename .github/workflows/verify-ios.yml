@@ -23,7 +23,7 @@ jobs:
     name: verify
     runs-on: macos-26
     # 既定の 360 分は長すぎる。Simulator の起動待ちや xcodebuild のハングで
-    # 高コストな macOS ランナーを占有し続けないよう、実測 5 分に対する上限を置く。
+    # 高コストな macOS ランナーを占有し続けないよう、実測 7 分台に対する上限を置く。
     timeout-minutes: 20
 
     steps:

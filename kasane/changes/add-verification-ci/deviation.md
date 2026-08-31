@@ -18,7 +18,7 @@ spec と実装の差分。実装フェーズ中に発生順で追記する (spec
 - 本 change で新設した lint job が GitHub Actions (ubuntu) 上で 3 件を検出して失敗した。いずれも `.claude/settings.local.json` (Claude Code の設定ファイル名) を mDNS の `.local` ホスト名と誤認した false positive で、`kasane/roadmaps/package-distribution/phases/phase-2-public-readiness/artifacts/` 配下の既存記述にあったもの
 - 原因は `scripts/identity-lint.py` の 2 点。オーナー裁定 (2026-08-31、選択肢「検出パターンを直す」) に基づき修正した:
   - `HOST_LOCAL` が `.local` の直後に拡張子が続くファイル名を除外していなかった → 否定先読みを追加し、ホスト名として使われている `.local` だけを検出する
-  - `GREP_PATTERN` (候補行を絞る `git grep -E` 用、POSIX ERE) が GNU 拡張の `\b` に依存していた → 除去。`\b` は Linux の git では効き macOS では効かないため、**手元の lint と書き込み hook が CI より検査範囲が狭い**状態になっていた
+  - `GREP_PATTERN` (候補行を絞る `git grep -E` 用、POSIX ERE) が GNU 拡張の `\b` に依存していた → 除去。`\b` は Linux の git では効き macOS では効かないため、**手元の lint が CI より検査範囲が狭い**状態になっていた (書き込み hook は `GREP_PATTERN` を経由せず入力全行を判定するため影響を受けない)
 - 同梱の判断: 本 change の Requirement「lint の検証」を CI 上で満たすには解消が必須であり、修正は `scripts/identity-lint.py` 1 ファイルに閉じる。公開 API・データスキーマ・既存 ADR には触れない
 - 確認: 修正後の全体実行は検出 0 件 (`exit=0`)。候補行は 3717 → 3726 行に増えたが最終判定を通過するものはなし。正ケース (`<host>.local:8080` 形式の mDNS ホスト名 → 検出) と負ケース (`settings.local.json` / `android/local.properties` / `ro.product.locale` → 不検出) を一時ファイルで確認済み
 

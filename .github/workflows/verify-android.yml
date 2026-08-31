@@ -91,8 +91,9 @@ jobs:
 
           # 導出結果の妥当性を実体と突き合わせる。`android/` 直下で build.gradle.kts を
           # 持つディレクトリは Gradle module であり、期待集合に現れないなら導出が
-          # 縮んでいる。module が増えたときは実体側にも現れるため、この検査は
-          # 追加を誤って失敗にはしない。
+          # 縮んでいる。走査は `android/` 直下の build.gradle.kts に限るため、settings に
+          # 含めない build ファイルをそこへ置くと失敗する (composite build の
+          # includeBuild 先など)。その場合は除外条件を足す。
           module_dirs = sorted(
               name
               for name in os.listdir(ANDROID_ROOT)

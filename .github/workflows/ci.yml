@@ -21,7 +21,7 @@ permissions:
 # develop への push で起動した実行は打ち切らない — マージ結果に対する検証は
 # 後続の push に追い越されても完走させる必要がある。
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:

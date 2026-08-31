@@ -20,10 +20,10 @@
 
 ## 4. 検証 (Scenario の実機確認)
 
-- [ ] 4.1 draft PR (base: develop) を作成し、4 job がすべて起動・成功することを確認する。各 job の所要時間を記録する。main を base とするトリガー設定は workflow 定義の branches 指定で確認する (→ Scenario: PR で全 job が起動する / main への PR でも起動する)
-- [ ] 4.2 iOS job のログで Simulator 実行と実行件数 (`Executed N tests`) を確認する (→ Scenario: Simulator 全件実行)
-- [ ] 4.3 android job の summary に合計件数が表示されることを確認する。負ケースとして、期待 8 組のうち 1 組の結果ディレクトリ全体が欠けた状態と `tests` 合計 0 の状態の両方で fail することをステップ単体で確認する (→ Scenario: 全件実行と件数表示 / 0 件実行の検出)
-- [ ] 4.4 maui job の summary に実行件数が表示され、0 件で fail することをステップ単体で確認する (→ Scenario: facade テストと配線のコンパイル検証)
+- [x] 4.1 draft PR (base: develop) を作成し、4 job がすべて起動・成功することを確認する。各 job の所要時間を記録する。main を base とするトリガー設定は workflow 定義の branches 指定で確認する (→ Scenario: PR で全 job が起動する / main への PR でも起動する)
+- [x] 4.2 iOS job のログで Simulator 実行と実行件数 (`Executed N tests`) を確認する (→ Scenario: Simulator 全件実行)
+- [x] 4.3 android job の summary に合計件数が表示されることを確認する。負ケースとして、期待 8 組のうち 1 組の結果ディレクトリ全体が欠けた状態と `tests` 合計 0 の状態の両方で fail することをステップ単体で確認する (→ Scenario: 全件実行と件数表示 / 0 件実行の検出)
+- [x] 4.4 maui job の summary に実行件数が表示され、0 件で fail することをステップ単体で確認する (→ Scenario: facade テストと配線のコンパイル検証)
 - [x] 4.5 lint の負ケースを 4 検査それぞれで確認する — gitleaks は実在しない検証用ダミー文字列 (実秘密は commit しない)、local-path-lint はローカル絶対パス、identity-lint は samples 配下の識別子、comment-policy-lint は規約違反コメント。それぞれ fail し違反箇所が出力されること (→ Scenario: 違反の検出 / samples 配下の識別子検出)
 - [ ] 4.6 マージ後の push トリガーで develop 上の実行が走ることを確認する (→ Scenario: develop へのマージ後にも検証される)
 
