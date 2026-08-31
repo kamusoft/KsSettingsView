@@ -85,7 +85,9 @@ SIGNING = re.compile(
     r"([^()\n]+?) \(([A-Z0-9]{10})\)"
 )
 TEAM_ID = re.compile(r"\b(DEVELOPMENT_TEAM|TeamIdentifier|Team ID|teamID|teamId)\s*[=:]\s*\"?([A-Z0-9]{10})\b")
-HOST_LOCAL = re.compile(r"\b([A-Za-z0-9][A-Za-z0-9-]{1,62})\.local\b")
+# mDNS ホスト名 (`mymac.local`)。`.local` の直後にドット + 英数が続くものは
+# ファイル名の一部 (`settings.local.json` 等) なのでホスト名として扱わない
+HOST_LOCAL = re.compile(r"\b([A-Za-z0-9][A-Za-z0-9-]{1,62})\.local\b(?!\.[A-Za-z0-9])")
 HOST_KEYED = re.compile(r"\b(Host Name|hostname|HostName|ComputerName|LocalHostName)\s*[=:]\s*\"?([^\s\"',;]+)", re.IGNORECASE)
 DEVICE_NAME_KEYED = re.compile(r"\b(Device Name|DeviceName|deviceName|device_name)\s*[=:]\s*\"?([^\"\n,;/|]+)")
 DEVICE_NAME_POSSESSIVE = re.compile(
@@ -122,9 +124,12 @@ PUSH_TOKEN = re.compile(
 
 PLACEHOLDER_VALUE = re.compile(r"^[<$\"'`{]|^\.\.\.$|^-+$|^x{4,}$", re.IGNORECASE)
 
+# 候補行を粗く絞るためのパターン (最終判定は find_identities が行う)。`git grep -E` に渡すため
+# POSIX ERE の構文だけで書く — `\b` (単語境界) は GNU 拡張であり、Linux では効いて macOS では
+# 効かないため、使うとプラットフォームによって候補行の集合がずれる
 GREP_PATTERN = (
     r"[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-|serial|udid|adb .*-s |adb *[:：]|Apple (Development|Distribution)|iPhone (Developer|Distribution)"
-    r"|DEVELOPMENT_TEAM|TeamIdentifier|Team ID|\.local\b|Host ?Name|hostname|ComputerName|Device ?Name|'s (iPhone|iPad|Mac)|の ?(iPhone|iPad|Mac)"
+    r"|DEVELOPMENT_TEAM|TeamIdentifier|Team ID|\.local|Host ?Name|hostname|ComputerName|Device ?Name|'s (iPhone|iPad|Mac)|の ?(iPhone|iPad|Mac)"
     r"|([0-9A-Fa-f]{2}:){5}|SSID|[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+|@[A-Za-z0-9.-]+\.[A-Za-z]{2,}|lat|lon|tel:|[Pp]hone"
     r"|eyJ|Authorization|[Tt]oken"
 )

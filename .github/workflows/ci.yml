@@ -17,6 +17,13 @@ on:
 permissions:
   contents: read
 
+# PR への連続 push では古い実行を打ち切る (macOS ランナーを二重に積み上げないため)。
+# develop への push で起動した実行は打ち切らない — マージ結果に対する検証は
+# 後続の push に追い越されても完走させる必要がある。
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   # 再利用可能 workflow を呼ぶ job の status check 名は
   # 「呼び出し側の job 名 / 呼ばれた側の job 名」になる。branch protection に登録する名前を
@@ -35,7 +42,11 @@ jobs:
 
   lint:
     name: lint
-    runs-on: ubuntu-latest
+    # ランナーイメージは版指定にする。`ubuntu-latest` は指す実体が予告なく次の LTS へ
+    # 移り、python3 やプリインストールツールの版が diff なしに入れ替わる。
+    runs-on: ubuntu-24.04
+    # 既定の 360 分は長すぎる。実測 9 秒に対する上限として置く。
+    timeout-minutes: 10
 
     env:
       # secret scan に使う gitleaks の版と、配布物の SHA-256。
@@ -60,6 +71,10 @@ jobs:
 
       - name: Secret scan (gitleaks)
         run: |
+          # 既定シェルは `bash -e` で pipefail が入らない。パイプ前段 (git archive) の
+          # 失敗が握り潰されると、空ディレクトリに対する gitleaks が検出 0 件 = exit 0 を
+          # 返し、secret scan が無検査のまま緑になる。
+          set -euo pipefail
           gitleaks version
           # 追跡中の内容だけを取り出して走査する。作業ツリーをそのまま走査すると
           # ビルド出力 (obj/ bin/ 配下の生成物) まで対象に入り、検査が生成物由来の
@@ -67,6 +82,16 @@ jobs:
           scan_dir="${RUNNER_TEMP}/gitleaks-scan"
           mkdir -p "$scan_dir"
           git archive --format=tar HEAD | tar -x -C "$scan_dir"
+          # 走査対象が実際に存在することを確かめてから走らせる。追跡ファイル数と
+          # 展開後のファイル数を突き合わせ、取りこぼしがあれば検査対象不足として落とす。
+          tracked=$(git ls-files | wc -l | tr -d ' ')
+          # 追跡内容には symlink も含まれるため、-type f だけで数えると取りこぼす。
+          extracted=$(find "$scan_dir" \( -type f -o -type l \) | wc -l | tr -d ' ')
+          echo "走査対象: ${extracted} ファイル (追跡: ${tracked} ファイル)"
+          if [ "$extracted" -lt "$tracked" ]; then
+            echo "::error::走査対象の展開に失敗している (追跡 ${tracked} に対し展開 ${extracted})"
+            exit 1
+          fi
           gitleaks dir "$scan_dir" --no-banner --redact --verbose
 
       - name: Local absolute path lint

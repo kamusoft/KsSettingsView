@@ -13,7 +13,11 @@ permissions:
 jobs:
   verify:
     name: verify
-    runs-on: ubuntu-latest
+    # ランナーイメージは版指定にする。`ubuntu-latest` は指す実体が予告なく次の LTS へ
+    # 移り、JDK 既定版・Android SDK 同梱内容が diff なしに入れ替わる。
+    runs-on: ubuntu-24.04
+    # 既定の 360 分は長すぎる。実測 6 分に対する上限として置く。
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -69,15 +73,41 @@ jobs:
           with open(settings_path, encoding="utf-8") as f:
               settings = f.read()
 
+          # コメントを除去してから全文を走査する。行頭一致で拾う形にすると、複数行に
+          # 分けて書かれた include や Groovy 記法が期待集合から静かに落ち、検査が
+          # 緑のまま素通りする。行末コメント内の module 名を拾わないためでもある。
+          body = re.sub(r"/\*.*?\*/", " ", settings, flags=re.DOTALL)
+          body = re.sub(r"//[^\n]*", " ", body)
+
           modules = []
-          for line in settings.splitlines():
-              stripped = line.strip()
-              if not stripped.startswith("include("):
-                  continue
-              modules.extend(re.findall(r'"(:[^"]+)"', stripped))
+          # `include(":a", ":b")` の括弧形式と、Groovy の `include ":a"` の両方を拾う。
+          for matched in re.finditer(r'\binclude\s*(?:\(([^)]*)\)|((?:\s*"[^"]*"\s*,?)+))', body):
+              arguments = matched.group(1) or matched.group(2) or ""
+              modules.extend(re.findall(r'"(:[^"]+)"', arguments))
+          modules = sorted(set(modules))
 
           if not modules:
               sys.exit(f"{settings_path} から module を 1 つも導出できなかった")
+
+          # 導出結果の妥当性を実体と突き合わせる。`android/` 直下で build.gradle.kts を
+          # 持つディレクトリは Gradle module であり、期待集合に現れないなら導出が
+          # 縮んでいる。module が増えたときは実体側にも現れるため、この検査は
+          # 追加を誤って失敗にはしない。
+          module_dirs = sorted(
+              name
+              for name in os.listdir(ANDROID_ROOT)
+              if name != "buildSrc"
+              and os.path.isfile(os.path.join(ANDROID_ROOT, name, "build.gradle.kts"))
+          )
+          derived_roots = {module.lstrip(":").split(":")[0] for module in modules}
+          undetected = [name for name in module_dirs if name not in derived_roots]
+          if undetected:
+              sys.exit(
+                  f"{settings_path} からの module 導出が実体と一致しない。"
+                  f" build.gradle.kts を持つが導出できなかったディレクトリ: {', '.join(undetected)}"
+              )
+
+          print(f"::notice::導出した module: {', '.join(modules)}")
 
           rows = []
           failures = []

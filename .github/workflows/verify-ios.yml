@@ -3,6 +3,8 @@
 # iOS Simulator 上でパッケージ全体のテストを実行する。macOS ホスト上の `swift test` は
 # `#if canImport(UIKit)` ガード内のテストがコンパイル対象から外れて実行されないため、
 # 成否判定には使わない。
+# テストが 1 件も実行されなくてもコマンドは成功で終わるため、実行件数の検査までを
+# job の成否判定に含める (android / maui の検証と同じ規律)。
 name: verify ios
 
 on:
@@ -20,6 +22,9 @@ jobs:
   verify:
     name: verify
     runs-on: macos-26
+    # 既定の 360 分は長すぎる。Simulator の起動待ちや xcodebuild のハングで
+    # 高コストな macOS ランナーを占有し続けないよう、実測 5 分に対する上限を置く。
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -87,18 +92,43 @@ jobs:
             -destination "platform=iOS Simulator,id=${KS_SIMULATOR_UDID}" \
             | tee "${RUNNER_TEMP}/xcodebuild.log"
 
-      - name: Report executed test count
+      - name: Verify executed test count
+        # テストが失敗した場合も件数を残すため、常に実行する。
         if: always()
         run: |
+          set -uo pipefail
           log="${RUNNER_TEMP}/xcodebuild.log"
           if [ ! -f "$log" ]; then
-            echo "テストログが無いため実行件数を報告できない" >> "$GITHUB_STEP_SUMMARY"
-            exit 0
+            echo "## iOS テスト実行件数" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "テストログが無いため実行件数を確認できない" >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::テストログが無いため実行件数を確認できない"
+            exit 1
+          fi
+          # パイプラインの終了コードは常に末尾コマンドのものになるため、`grep ... || echo`
+          # ではフォールバックが発火しない。一度変数に取ってから空を判定する。
+          executed=$(grep -E '^[[:space:]]*Executed [0-9]+ tests?' "$log" | tail -n 20)
+          reason=""
+          if [ -z "$executed" ]; then
+            executed="(Executed 行が見つからない)"
+            reason="ログから実行件数を抽出できなかった (出力形式が変わった可能性がある)"
+          elif ! grep -Eq '^[[:space:]]*Executed [1-9][0-9]* tests?' "$log"; then
+            reason="テストが 1 件も実行されていない"
           fi
           {
             echo "## iOS テスト実行件数"
             echo ""
             echo '```'
-            grep -E '^[[:space:]]*Executed [0-9]+ tests?' "$log" | tail -n 20 || echo "(Executed 行が見つからない)"
+            echo "$executed"
             echo '```'
+            if [ -n "$reason" ]; then
+              echo ""
+              echo "### 件数検査の失敗"
+              echo ""
+              echo "- ${reason}"
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$reason" ]; then
+            echo "::error::${reason}"
+            exit 1
+          fi

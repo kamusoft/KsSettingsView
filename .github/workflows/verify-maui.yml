@@ -23,6 +23,9 @@ jobs:
   verify:
     name: verify
     runs-on: macos-26
+    # 既定の 360 分は長すぎる。ビルドのハングで高コストな macOS ランナーを
+    # 占有し続けないよう、実測 6 分に対する上限を置く。
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
