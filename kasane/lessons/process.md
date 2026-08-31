@@ -1,6 +1,6 @@
 ---
 scope: process
-timestamp: 2026-08-30
+timestamp: 2026-08-31
 ---
 
 # lessons: process
@@ -11,3 +11,4 @@ timestamp: 2026-08-30
 - [L-004] 外部ライブラリの内部実装など机上調査だけで確定した前提に依存する実装では、tasks の冒頭に実機/実環境スパイクタスクを置き、「前提が覆ったら実装を進めずエスカレーションする」条件タスクまで明記してから本実装に入る。ソース読解による机上確定も実行環境の駆動条件 (Choreographer・RecyclerView の同期 measure・IME 等) との相互作用は網羅できず、spike を欠くと露呈が実装後へずれて手戻りになる。経緯は [details/spike-first-tasks-for-desk-determined-assumptions.md](details/spike-first-tasks-for-desk-determined-assumptions.md)。(昇格: 2026-08-16、出典: add-maui-custom-cell / timepickercell-color-adjust / datepickercell-color-adjust / datepickercell-today-shortcut / perf-android-customcell-composition-reuse (反例))
 - [L-005] レビュー指摘や自分の所見を「スコープ外」「別 change 相当」としてオーナー判断へ上げる前に、その修正が数行で閉じるかを先に見積もる。本 change で触れたファイル内、または本 change の変更が直接原因で要修正になったファイル内にあり数行で閉じるなら、上げずにそのサイクル内で直す (proposal の Non-Goal に名指しされていても、deviation を記録して直す — Non-Goal は「その領域を改修しない」宣言であって、本 change が自分で開けた穴を塞ぐことまでは禁じていない)。オーナー判断へ回してよいのは、修正が本 change と無関係のファイルへ広がる場合に限る。数行で閉じる不備を「簡易起票の提案」として報告に載せるのも同じ差し戻しを招く。経緯は [details/reachable-fix-deferred-to-another-change.md](details/reachable-fix-deferred-to-another-change.md)。(昇格: 2026-08-22、出典: fix-cell-accessory-vertical-fill / upgrade-android-build-toolchain / harden-compose-settingsroot-dsl / fix-ios-entrycell-writeback-race)
 - [L-006] 「〜が無い」「〜されていない」という不在の断定は、対象ファイルを末尾まで読むか、対象を特定できる検索を通してから行う。対象はコードとテストに限らず、conventions などの既存ドキュメントも同じ — 「手順が書かれていない」と報告する前にリポジトリ全体を対象語で検索する。スタブ起票 (exploration.md だけの change) を出発点に探索を始めるときも同じで、起票時点のレビュー指摘の写しを現状と見なさず、対象コードとテストの現状を実物で確認してから議論を組み立てる (指摘は同じ change の中で解消されていることがある)。裏取りのない断定はそのままスコープの決定根拠になり、後続フェーズで覆って手戻りになる。経緯は [details/absence-asserted-without-verification.md](details/absence-asserted-without-verification.md)。(昇格: 2026-08-30、出典: fix-maui-icon-lease-disposal-ordering / fix-ios-root-accessory-theme-refresh / add-question-form-and-english-screenshots)
+- [L-007] レビュー・セカンドオピニオンを起動する前に、渡す成果物が実態を反映しているかを確認する。確認済みで反映すべきものは 2 つ — (1) 既知の切り出し済み先送り問題 (関連 change のスタブ一覧と 1 行サマリ)、(2) 実施済みだが成果物に未反映の作業 (tasks.md のチェック・証跡ファイルの追加)。レビュアー、特にプロジェクト文脈を持たない相方は成果物だけを見るため、実態とのずれはそのまま blocking Major になり、判定の突き合わせとオーナー確認の往復が変更のたびに再発する。経緯は [details/known-deferred-issues-not-passed-to-reviewers.md](details/known-deferred-issues-not-passed-to-reviewers.md)。(昇格: 2026-08-31、出典: timepickercell-color-adjust / datepickercell-today-shortcut / add-verification-ci)

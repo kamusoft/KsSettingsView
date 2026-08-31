@@ -15,6 +15,8 @@
 | [0022](0022-user-docs-as-agent-skills.md) | 利用者向けドキュメントは Agent Skills (skills/、en/ja 2 版) として提供 | accepted (supersedes 0014) | docs/ を廃止し platform 別 + 移行の 4 Skill × 2 言語をコピー利用で提供。知識の正は concepts、manifest の逆引きと網羅検査で追従。Skill は単体コピーの閉世界で自己完結させる。初期生成・構成変更は変更フロー、docs-refresh は追従専用。 |
 | [0023](0023-readme-root-only-and-developer-knowledge-in-concepts.md) | README はルート 2 枚 (英語 + `README_ja`) に集約し、開発者向け知識は concepts に一本化 | accepted | ルート以外の README 5 枚を廃止し、開発者向けの正は concepts へ一本化。MAUI binding 知識・サードパーティ通知・サンプル実行手順は移送。docs-refresh の追随は 4 枚、デモ画面一覧の照合検査は廃止。maui/spike/ は公開リポジトリに載せない。 |
 | [0024](0024-contributions-via-issues-no-external-pull-requests.md) | 貢献は Issue で受け、外部からの Pull Request は受け付けない | accepted | PR は collaborators only、貢献は Issue で受けオーナーが kasane change に起こす。Issue Forms 3 本 (バグ / 提案 / 質問) で証拠を必須化し exploration.md 前半へ写す。Discussions は開かない。表明先は README の節 + .github/CONTRIBUTING.md。 |
+| [0025](0025-verification-ci-reusable-platform-workflows.md) | 検証 CI は platform 別の再利用可能 workflow と、それを呼ぶ入口で構成する | accepted | platform 別 workflow 3 本を `workflow_call` で定義し入口 1 本が呼ぶ。リリース用 workflow は検証を再定義せず同じ workflow を再利用する。変更パスによる絞り込みは行わず常に全 platform を検証し、status check 名は呼び出し側と呼ばれる側の双方で固定する。 |
+| [0026](0026-ci-guarantee-logic-and-wiring-not-e2e.md) | CI が保証するのはロジックの全件通過と native への配線のコンパイルまでとし、実機・実行ホストでの検証は手元の手順に残す | accepted | 自動で成否が決まるテストは全件実行し (iOS は Simulator 対象)、実行 0 件はテストが緑でも失敗とする。実行ホストを人が見る検証は CI に載せない。利用者可視の変更への実機確認は CI とは独立に完了条件として残る。 |
 
 欠番: 0012 (product-qualified-public-namespace) は移行トリアージで却下 (出典: kasane/changes/archive/2026-07-18-migrate-openspec/candidates/rejected-0012-product-qualified-public-namespace.md)。
 

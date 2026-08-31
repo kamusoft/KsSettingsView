@@ -1,14 +1,6 @@
----
-scope: process
-kind: pain
-severity: normal
-count: 2
-first-seen: 2026-08-02
-last-seen: 2026-08-03
-evidence:
-  - timepickercell-color-adjust (second-opinion-002 指摘#2: 相方 codex がダイアログ再生成の既存構造問題を Major 評価 → オーナー決定で fix-picker-dialog-recreation へ切り出し)
-  - datepickercell-today-shortcut (second-opinion-002 Major 1: 同じ再生成問題の今日ボタン版を相方 codex が再び Major 評価し CHANGES_REQUESTED → オーナー確認で再び先送り維持。ホスト側レビュアーは既知先送りを認識して Minor 申し送り扱いにできていた)
----
+# 独立レビューへ渡す入力が実態を反映していない
+
+`lessons/process.md` L-007 の経緯。
 
 ## ルール文 (候補)
 

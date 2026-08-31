@@ -22,3 +22,18 @@ PR / push で iOS・Android・MAUI のビルドとテストを回す検証 CI (G
 
 - [x] 論点の解消 (2026-08-31: 全 9 論点を決定事項へ昇格)
 - [ ] ksn-propose で変更提案を起こす
+
+## 実装結果 (2026-08-31 反映)
+
+変更: [changes/archive/2026-08-31-add-verification-ci](../../../../changes/archive/2026-08-31-add-verification-ci/proposal.md)。決定事項どおりに実装し、GitHub Actions 上で 4 job すべての成功を確認した (`develop` への push 実行を含む)。
+
+- 所要時間の実測: lint 10 秒 / android 5 分台 / ios 6〜7 分台 / maui 5〜8 分台。「許容できない長さなら別 change で最適化」の判断は不要と結論した
+- 実行件数: iOS 642 件 / Android 2700 件 (4 module × debug・release の 8 組) / MAUI 516 件
+- ADR 化: 決定事項のうち、後続の設計を制約する 2 つを ADR に昇格した — [cross/ADR-0025](../../../../decisions/cross/0025-verification-ci-reusable-platform-workflows.md) (再利用可能 workflow の構成)、[cross/ADR-0026](../../../../decisions/cross/0026-ci-guarantee-logic-and-wiring-not-e2e.md) (CI の保証範囲)。残る決定はいずれも workflow を書き換えれば済む可逆で局所的な判断のため ADR にしていない
+- 決定事項からの差分は 4 件を [deviation.md](../../../../changes/archive/2026-08-31-add-verification-ci/deviation.md) に記録した
+
+### 申し送り
+
+- **`main` の branch protection**: 決定事項「必須チェック化と通知」は `develop`・`main` 両方への設定を定めたが、`main` ブランチが存在しないため `develop` のみに設定した。`main` を作成するフェーズが、作成と同時に同じ保護 (4 job 必須 status check + PR 必須、force-push 禁止・削除禁止、admin バイパス許容) を設定する → [phase-8-release-workflow](../phase-8-release-workflow/agenda.md) の TODO へ追記済み
+- **iOS テストの flaky**: 検証 CI を必須 status check にしたことで、固定時間待機に依存する iOS テストが不定期に PR をブロックする状態になった。修正は [changes/fix-ios-test-pump-condition-wait](../../../../changes/fix-ios-test-pump-condition-wait/exploration.md) として起票済み (本ロードマップの外で扱う)
+- **`handbook/cross/test-execution.md` の構造 lint 違反 5 件**: 待機規約の platform 共通化で同ファイルを触ったが、違反はいずれも Android 節の既存記述にあり本フェーズの変更が原因ではない (件数は 5 → 5 で増減なし)。解消は本フェーズでは見送る (見送り判断)

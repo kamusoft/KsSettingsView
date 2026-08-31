@@ -4,8 +4,8 @@ applies-when:
   always: false
   tasks: [テスト実行, テスト結果の報告]
 title: テスト実行規約
-description: iOS / Android / MAUI のテストの正しい実行コマンドと、黙って検証にならない範囲 (macOS 上の swift test で失われるテスト・Robolectric の描画検証限界と非同期反映の待機・MAUI facade テストが触らない platform TFM)
-timestamp: 2026-08-29
+description: iOS / Android / MAUI のテストの正しい実行コマンドと、黙って検証にならない範囲 (macOS 上の swift test で失われるテスト・Robolectric の描画検証限界・MAUI facade テストが触らない platform TFM)。収束を待つアサーションの書き方は platform 共通
+timestamp: 2026-08-31
 ---
 
 # テスト実行規約
@@ -15,6 +15,20 @@ timestamp: 2026-08-29
 テストが 1 件も実行されなくてもコマンド自体は成功で終わるため、終了コードだけでは検証したことにならない。**実行件数を確認するところまでが検証**であり、テスト結果を報告するときは platform を問わず実行件数 (`N tests / M failures`) を併記する。件数の得方は各 platform の節に示す。
 
 iOS / Android / MAUI の 3 platform を記載する。いずれも実際に実行して確かめた手順である (未検証の手順は書かない)。
+
+## 収束を待つアサーション (platform 共通)
+
+非同期に反映される状態を検証するテストは、待ちたい**完了条件そのもの**を観測する条件ベース待機で書く。固定時間の待機を繰り返して「静止した」ことにしない。通常時は無駄に待ち、実行機が混んでいるときは待ち足りずに落ちる。
+
+待機は次の 3 つをすべて満たす形で書く。いずれを欠いても「待ったつもり」になる:
+
+- 上限は**実時間の deadline** で区切る。反復回数で区切ると、対象がバックグラウンドにある間にループが燃え尽きる
+- ループ内で待機対象へ実行機会を譲る (`Thread.sleep(1)` 等)。`Thread.yield()` は OS へのヒントに留まり、CPU が飽和した状況では譲れる保証がない
+- deadline 超過時は黙って戻らず、その時点の実測値をメッセージに載せて `fail()` で落とす。黙って戻る待機は収束前の状態を検証したことにされ、「実装が壊れた」と「待機が足りない」も区別できなくなる
+
+この誤りは CPU が競合したときだけ落ちるため、手元では常に緑で、並列実行や CI の混雑時に間欠的に落ちる flaky として表面化する。**手元で通ることは、この形で書けている根拠にならない。** 各 platform で何が非同期に反映されるかは以下の節に示す。
+
+この節は、同じ誤りが 3 つの変更で platform をまたいで再発したことを受けて platform 共通へ引き上げた (出典: clarify-host-attach-order-contract / fix-compose-dsl-double-update-flaky-test / add-verification-ci)。当初は Android の `AsyncListDiffer` を入口に書かれており、iOS のテストを書くときに読まれなかった。
 
 ## iOS
 
@@ -59,6 +73,14 @@ xcodebuild test -scheme KsSettingsView-Package -destination 'platform=iOS Simula
 
 こうすればガードの穴を作らずに実行範囲だけを狭められる。ただし**完了判定には絞り込みなしの全件実行を使う**。
 
+### 収束を待つときに何が起きているか
+
+`UICollectionView` の行の生成・再利用と、レイアウトに伴う内容の反映は、`setNeedsLayout()` / `layoutIfNeeded()` を呼んだ時点では完了しない。`contentOffset` を書き換えて画面外へ送った行が実際に再利用されるまでには RunLoop が数回まわる。
+
+このため RunLoop を固定秒数まわす待機 (`RunLoop.current.run(until:)` を秒数指定で呼ぶ形) は、「収束を待つアサーション」の 1 つ目と 3 つ目の条件を満たさない。指定時間が経てば収束していなくても戻り、戻ったことと収束したことが区別できない。実行機が混んでいると収束前に assert へ進んで落ちる。
+
+適用実例: `KsBridgeTestHost.pump(_:seconds:)` を使う待機は条件ベースへ作り替える対象である (change `fix-ios-test-pump-condition-wait`)。
+
 ### `swift test` を案内している文書は無い
 
 リポジトリ内のどの文書も `swift test` をテスト手順として案内していない。ルート README は利用者の入口に純化されており開発者向けのビルド / テスト手順を持たず ([cross/ADR-0023](../../decisions/cross/0023-readme-root-only-and-developer-knowledge-in-concepts.md))、利用者向けドキュメント (`skills/` の Agent Skills) もテスト実行手順を案内していない。**完了判定に使うのは上の Simulator 実行だけ**であり、他所で見かけた `swift test` を代替に使わない。
@@ -89,13 +111,7 @@ Robolectric の既定 (legacy graphics モード) では一部の描画処理が
 
 `RecyclerView` の `ListAdapter` (`AsyncListDiffer`) は差分計算を**バックグラウンドスレッド**で行い、結果を main looper へ post して `currentList` / `itemCount` を更新する。post 前は main looper のキューが空であり、`shadowOf(Looper.getMainLooper()).idle()` も Compose の `waitForIdle()` も**即座に戻る**。idle 系の呼び出しを何度重ねても差分計算の完了は待てない。
 
-したがって反映待ちは次の形で書く。いずれを欠いても「待ったつもり」になる:
-
-- 上限は**実時間の deadline** で区切る。反復回数で区切ると、対象がバックグラウンドにある間にループが燃え尽きる
-- ループ内でバックグラウンドスレッドへ実行機会を譲る (`Thread.sleep(1)` 等)。`Thread.yield()` は OS へのヒントに留まり、CPU が飽和した状況では譲れる保証がない
-- deadline 超過時は黙って戻らず、その時点の実測値をメッセージに載せて `fail()` で落とす。黙って戻る待機は収束前の状態を検証したことにされ、「実装が壊れた」と「待機が足りない」も区別できなくなる
-
-この失敗は CPU が競合したときだけ起きるため、単体では常に緑で、全モジュール並列実行 (`android/gradle.properties` の `org.gradle.parallel=true`) で間欠的に落ちる flaky として表面化する。適用実例: `ks-settingsview-compose` の `KsSettingsViewComposeTest.waitForAdapterItemCount` / `DSLAccessoryVisibilityRenderingTest.awaitRows`、`ks-settingsview-ui` の `KsSettingsViewTestSupport.awaitConvergence`。
+待機は「収束を待つアサーション」の 3 条件で書く。全モジュール並列実行 (`android/gradle.properties` の `org.gradle.parallel=true`) で CPU が競合したときだけ落ちるため、単体実行では気づけない。適用実例: `ks-settingsview-compose` の `KsSettingsViewComposeTest.waitForAdapterItemCount` / `DSLAccessoryVisibilityRenderingTest.awaitRows`、`ks-settingsview-ui` の `KsSettingsViewTestSupport.awaitConvergence`。
 
 ## MAUI
 
