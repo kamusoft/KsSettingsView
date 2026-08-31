@@ -1,0 +1,187 @@
+# branch protection の設定と検査 (develop) — 2026-08-31
+
+対象: kamusoft/KsSettingsView の develop ブランチ (tasks 5.1 / 5.2 / 5.3)
+main は未作成のため対象外 (deviation.md に記録、phase-8 へ申し送り)
+
+## 5.1 実行したコマンド
+
+```
+# 設定前の状態を取得
+gh api repos/kamusoft/KsSettingsView/branches/develop/protection
+
+# 保護設定を適用 (PUT は全体置換のため、既存の保護を含む完全な payload を送る)
+gh api -X PUT repos/kamusoft/KsSettingsView/branches/develop/protection --input protection-payload.json
+```
+
+送信した payload:
+
+```json
+{
+  "required_status_checks": {
+    "strict": false,
+    "contexts": ["ios / verify", "android / verify", "maui / verify", "lint"]
+  },
+  "enforce_admins": false,
+  "required_pull_request_reviews": {
+    "dismiss_stale_reviews": false,
+    "require_code_owner_reviews": false,
+    "required_approving_review_count": 0
+  },
+  "restrictions": null,
+  "required_linear_history": false,
+  "allow_force_pushes": false,
+  "allow_deletions": false,
+  "block_creations": false,
+  "required_conversation_resolution": false,
+  "lock_branch": false,
+  "allow_fork_syncing": false
+}
+```
+
+## 設定前の状態
+
+```json
+{
+    "url": "https://api.github.com/repos/kamusoft/KsSettingsView/branches/develop/protection",
+    "required_signatures": {
+        "url": "https://api.github.com/repos/kamusoft/KsSettingsView/branches/develop/protection/required_signatures",
+        "enabled": false
+    },
+    "enforce_admins": {
+        "url": "https://api.github.com/repos/kamusoft/KsSettingsView/branches/develop/protection/enforce_admins",
+        "enabled": false
+    },
+    "required_linear_history": {
+        "enabled": false
+    },
+    "allow_force_pushes": {
+        "enabled": false
+    },
+    "allow_deletions": {
+        "enabled": false
+    },
+    "block_creations": {
+        "enabled": false
+    },
+    "required_conversation_resolution": {
+        "enabled": false
+    },
+    "lock_branch": {
+        "enabled": false
+    },
+    "allow_fork_syncing": {
+        "enabled": false
+    }
+}
+```
+
+必須 status check と PR 必須は未設定。force-push 禁止・削除禁止・admin バイパス可は既存。
+
+## 5.2 設定後の再取得と検査
+
+```
+gh api repos/kamusoft/KsSettingsView/branches/develop/protection
+```
+
+```json
+{
+    "url": "https://api.github.com/repos/kamusoft/KsSettingsView/branches/develop/protection",
+    "required_status_checks": {
+        "url": "https://api.github.com/repos/kamusoft/KsSettingsView/branches/develop/protection/required_status_checks",
+        "strict": false,
+        "contexts": [
+            "ios / verify",
+            "android / verify",
+            "maui / verify",
+            "lint"
+        ],
+        "contexts_url": "https://api.github.com/repos/kamusoft/KsSettingsView/branches/develop/protection/required_status_checks/contexts",
+        "checks": [
+            {
+                "context": "ios / verify",
+                "app_id": 15368
+            },
+            {
+                "context": "android / verify",
+                "app_id": 15368
+            },
+            {
+                "context": "maui / verify",
+                "app_id": 15368
+            },
+            {
+                "context": "lint",
+                "app_id": 15368
+            }
+        ]
+    },
+    "required_pull_request_reviews": {
+        "url": "https://api.github.com/repos/kamusoft/KsSettingsView/branches/develop/protection/required_pull_request_reviews",
+        "dismiss_stale_reviews": false,
+        "require_code_owner_reviews": false,
+        "require_last_push_approval": false,
+        "required_approving_review_count": 0
+    },
+    "required_signatures": {
+        "url": "https://api.github.com/repos/kamusoft/KsSettingsView/branches/develop/protection/required_signatures",
+        "enabled": false
+    },
+    "enforce_admins": {
+        "url": "https://api.github.com/repos/kamusoft/KsSettingsView/branches/develop/protection/enforce_admins",
+        "enabled": false
+    },
+    "required_linear_history": {
+        "enabled": false
+    },
+    "allow_force_pushes": {
+        "enabled": false
+    },
+    "allow_deletions": {
+        "enabled": false
+    },
+    "block_creations": {
+        "enabled": false
+    },
+    "required_conversation_resolution": {
+        "enabled": false
+    },
+    "lock_branch": {
+        "enabled": false
+    },
+    "allow_fork_syncing": {
+        "enabled": false
+    }
+}
+```
+
+検査結果 (全項目 PASS):
+
+| 項目 | 結果 | 根拠 |
+|---|---|---|
+| 必須 status check 4 つ | PASS | required_status_checks.contexts = ios / verify, android / verify, maui / verify, lint |
+| PR 必須 | PASS | required_pull_request_reviews が存在する |
+| force-push 禁止 | PASS | allow_force_pushes.enabled = false (既存を維持) |
+| 削除禁止 | PASS | allow_deletions.enabled = false (既存を維持) |
+| admin バイパス許容 | PASS | enforce_admins.enabled = false |
+
+## 5.3 Scenario の同等確認
+
+tasks 5.3 の代替経路「保護設定の検査で同等確認」を採用した。admin バイパスを許容する
+設定であるため、admin アカウントで直 push や未通過マージを実試行しても拒否されず、
+Scenario の確認にならないため。
+
+実際の PR に保護が効いていることの確認:
+
+```
+gh pr view 1 --json mergeStateStatus,mergeable,statusCheckRollup
+```
+
+```json
+{"checks":[{"conclusion":"SUCCESS","name":"ios / verify"},{"conclusion":"SUCCESS","name":"android / verify"},{"conclusion":"SUCCESS","name":"maui / verify"},{"conclusion":"SUCCESS","name":"lint"}],"isDraft":true,"mergeStateStatus":"CLEAN","mergeable":"MERGEABLE"}
+```
+
+- Scenario「検査未通過のマージ拒否」: 4 job が required_status_checks に登録され、
+  PR のマージ判定に反映されている。4 job すべて SUCCESS のため mergeStateStatus は CLEAN。
+  いずれかが失敗していれば BLOCKED となりマージがブロックされる
+- Scenario「直 push の拒否」: required_pull_request_reviews の設定により pull_request 経由が
+  必須となる (admin バイパスを除く)

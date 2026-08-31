@@ -29,9 +29,9 @@
 
 ## 5. branch protection (GitHub 設定操作)
 
-- [ ] 5.1 `develop` / `main` の branch protection に、3.1 で固定した 4 つの status check context を必須として追加し、PR 必須化を設定する (admin バイパス許容、force-push 禁止・削除禁止は維持)。設定は `gh api` で行い、実行したコマンドを evidence に記録する (→ Requirement: マージ保護)
-- [ ] 5.2 設定後に両ブランチの保護設定を `gh api` で再取得し、必須 check 4 つ・PR 必須・force-push 禁止・削除禁止が入っていることを検査する (→ Requirement: マージ保護)
-- [ ] 5.3 検査未通過 PR のマージがブロックされることと、直 push が拒否されること (または保護設定の検査で同等確認) を確認する (→ Scenario: 検査未通過のマージ拒否 / 直 push の拒否)
+- [x] 5.1 `develop` / `main` の branch protection に、3.1 で固定した 4 つの status check context を必須として追加し、PR 必須化を設定する (admin バイパス許容、force-push 禁止・削除禁止は維持)。設定は `gh api` で行い、実行したコマンドを evidence に記録する (→ Requirement: マージ保護)
+- [x] 5.2 設定後に両ブランチの保護設定を `gh api` で再取得し、必須 check 4 つ・PR 必須・force-push 禁止・削除禁止が入っていることを検査する (→ Requirement: マージ保護)
+- [x] 5.3 検査未通過 PR のマージがブロックされることと、直 push が拒否されること (または保護設定の検査で同等確認) を確認する (→ Scenario: 検査未通過のマージ拒否 / 直 push の拒否)
 
 ## 備考
 
