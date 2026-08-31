@@ -14,6 +14,7 @@ MAC アドレス・メールアドレス・IP・JWT 等 — がアーティフ�
   python3 scripts/identity-lint.py            # lint: 範囲内のファイルを検査 (untracked 含む。違反があれば exit 1)
   python3 scripts/identity-lint.py --hook     # hook: PreToolUse の stdin JSON を検査し deny を返す
   python3 scripts/identity-lint.py --paths a b  # 指定ファイルだけ lint
+  python3 scripts/identity-lint.py --selftest   # 検出ロジック・git grep 候補拾い・hook の疎通確認
 
 検出群 (kasane/config.yaml の `lint.identity.disable` で群ごとに無効化できる):
   device     UUID (Simulator UDID / session id / incident id)、serial= / udid= / adb -s / adb: の実値
@@ -133,6 +134,15 @@ GREP_PATTERN = (
     r"|([0-9A-Fa-f]{2}:){5}|SSID|[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+|@[A-Za-z0-9.-]+\.[A-Za-z]{2,}|lat|lon|tel:|[Pp]hone"
     r"|eyJ|Authorization|[Tt]oken"
 )
+
+
+# lint スクリプト自身は検査しない: ソースには自己テストの違反例 (検出対象の見本) がリテラルで
+# 載るため。同名判定の意図は local-path-lint.py の is_self_file と同じ
+SELF_BASENAME = os.path.basename(os.path.abspath(__file__))
+
+
+def _is_self_file(path: str) -> bool:
+    return bool(path) and os.path.basename(path) == SELF_BASENAME
 
 
 def _is_placeholder(value: str) -> bool:
@@ -300,7 +310,7 @@ def lint(root: str, paths: list[str] | None) -> int:
             continue
         rel, lineno, text = parts
         rel = LP.normalize_rel(rel, root)
-        if not settings.in_scope(rel):
+        if _is_self_file(rel) or not settings.in_scope(rel):
             continue
         found = find_identities(text, settings, is_changes_scope(rel))
         if found:
@@ -312,6 +322,98 @@ def lint(root: str, paths: list[str] | None) -> int:
     for h in hits:
         print("  " + h)
     return 1
+
+
+# ---------- 自己テスト ----------
+
+# (説明, 行, 期待する kind のリスト)。検出ロジック単体と、一時リポジトリでの lint 疎通の両方で使う。
+# lint 疎通は実際の `git grep` に GREP_PATTERN を通すので、「候補拾いがこのプラットフォームで
+# 無音になっていないか」(POSIX ERE 非対応構文の混入等) をここで検出できる
+SELFTEST_CASES: list[tuple[str, str, list[str]]] = [
+    ("uuid", "session 12345678-1234-1234-1234-1234567890AB を取得", ["uuid"]),
+    ("ios-udid (keyed 40hex)", "udid=0123456789abcdef0123456789abcdef01234567", ["ios-udid"]),
+    ("android-serial (keyed)", "serial=R58M12ABCDE", ["android-serial"]),
+    ("signing-identity", "sign: Apple Development: Taro Yamada (ABCDE12345)", ["signing-identity"]),
+    ("team-id", "DEVELOPMENT_TEAM = ABCDE12345", ["team-id"]),
+    ("host (.local)", "ホスト mymac-book.local から接続", ["host"]),
+    ("settings.local.json は許容", "設定は .claude/settings.local.json にある", []),
+    ("mac", "MAC: aa:bb:cc:dd:ee:01", ["mac"]),
+    ("ip (private)", "server=192.168.10.21", ["ip"]),
+    ("ip (public はバージョン表記とみなし許容)", "version 2.11.0.1 をリリース", []),
+    ("email", "author: taro@kamusoft-demo.co.jp", ["email"]),
+    ("email (example ドメインは許容)", "demo@example.com に送る", []),
+    ("jwt", "token eyJabcdefghijk.eyJabcdefghijk.abcdefghijklmn", ["jwt"]),
+    ("phone (keyed)", "phone: 090-1234-5678", ["phone"]),
+    ("device-name (日本語)", "太郎のiPhone 15 Pro から送信", ["device-name"]),
+    ("device-name (一人称は許容)", "私のiPhoneでは再現しない", []),
+]
+
+
+def selftest() -> int:
+    import contextlib
+    import io
+    import subprocess
+    import tempfile
+
+    failures = 0
+
+    def check(ok: bool, name: str, detail: str = "") -> None:
+        nonlocal failures
+        failures += 0 if ok else 1
+        print(f"  {'OK  ' if ok else 'NG  '} {name}{f' ({detail})' if detail else ''}")
+
+    print("[検出ロジック]")
+    for name, line, expected in SELFTEST_CASES:
+        actual = [k for k, _, _, _ in find_identities(line)]
+        check(actual == expected, name, f"期待 {expected or 'なし'} / 実際 {actual or 'なし'}")
+    check(find_identities("server=192.168.10.21", changes_scope=False) == [],
+          "changes/ 限定 kind は範囲外で抑制", "ip")
+
+    print("[lint 疎通 (git grep 候補拾い)]")
+    with tempfile.TemporaryDirectory() as tmp:
+        subprocess.run(["git", "init", "-q"], cwd=tmp, check=True, capture_output=True)
+        changes_dir = os.path.join(tmp, "kasane", "changes", "selftest")
+        os.makedirs(changes_dir)
+        with open(os.path.join(changes_dir, "log.md"), "w", encoding="utf-8") as f:
+            f.write("\n".join(l for _, l, _ in SELFTEST_CASES) + "\n")
+        concepts_dir = os.path.join(tmp, "kasane", "concepts")
+        os.makedirs(concepts_dir)
+        with open(os.path.join(concepts_dir, "note.md"), "w", encoding="utf-8") as f:
+            f.write("server=192.168.10.21\n")
+        with open(os.path.join(changes_dir, SELF_BASENAME), "w", encoding="utf-8") as f:
+            f.write("MAC: aa:bb:cc:dd:ee:01\n")
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            code = lint(tmp, None)
+        out = buf.getvalue()
+        reported: dict[int, str] = {}
+        for h in out.splitlines():
+            m = re.match(r"\s*kasane/changes/selftest/log\.md:(\d+): (.+)", h)
+            if m:
+                reported[int(m.group(1))] = m.group(2)
+        for i, (name, _line, expected) in enumerate(SELFTEST_CASES, 1):
+            actual = [p.split(":", 1)[0] for p in reported.get(i, "").split(", ") if p]
+            check(actual == expected, name, f"期待 {expected or 'なし'} / 実際 {actual or 'なし'}")
+        check(code == 1, "違反ありで exit 1")
+        check("concepts/note.md" not in out, "changes/ 限定 kind は concepts/ で報告しない")
+        check(SELF_BASENAME not in out, "自分自身 (同名ファイル) は検査しない")
+
+        print("[hook 疎通]")
+        for name, fname, content, expect_deny in [
+            ("違反の書き込みは deny", "new.md", "MAC: aa:bb:cc:dd:ee:01", True),
+            ("プレースホルダは通す", "new.md", "MAC: <mac>", False),
+            ("自分自身 (同名ファイル) への書き込みは検査しない", SELF_BASENAME, "MAC: aa:bb:cc:dd:ee:01", False),
+        ]:
+            payload = {"tool_name": "Write", "cwd": tmp,
+                       "tool_input": {"file_path": os.path.join(tmp, "kasane", "changes", "selftest", fname), "content": content}}
+            proc = subprocess.run([sys.executable, os.path.abspath(__file__), "--hook"],
+                                  input=json.dumps(payload), capture_output=True, text=True)
+            denied = '"deny"' in proc.stdout
+            check(proc.returncode == 0 and denied == expect_deny, name,
+                  f"期待 deny={expect_deny} / 実際 deny={denied}")
+
+    print(f"\n自己テスト: {'全件 OK' if not failures else f'{failures} 件 NG'}")
+    return 1 if failures else 0
 
 
 # ---------- hook モード ----------
@@ -326,6 +428,8 @@ def hook() -> int:
     settings = Settings(root)
     hits: list[str] = []
     for path, text in LP.texts_from_hook_input(data):
+        if _is_self_file(path):
+            continue
         rel = LP.normalize_rel(path, root) if path else ""
         if rel and not settings.in_scope(rel):
             continue
@@ -354,6 +458,8 @@ def hook() -> int:
 def main(argv: list[str]) -> int:
     if "--hook" in argv:
         return hook()
+    if "--selftest" in argv:
+        return selftest()
     paths: list[str] | None = None
     if "--paths" in argv:
         paths = argv[argv.index("--paths") + 1:]
