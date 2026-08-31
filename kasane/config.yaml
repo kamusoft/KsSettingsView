@@ -53,13 +53,13 @@ second-opinion:
 # — 外部への持ち出し経路になり得るため、そのリスクを受容できるプロジェクトのみ counterpart を選ぶ
 # 実装系を counterpart にできるのは相方が codex のときのみ (claude は未対応でエラー停止)
 workers:
-  impl: counterpart
+  impl: host
   ui-impl: host        # counterpart は非推奨 (視覚照合ループが相方の sandbox で成立しない)
   review: host  # impl を counterpart にする場合、host に残すと単独レビューもクロスモデルになる
                        # (counterpart にすると second-opinion 該当級で両レビューが相方モデルに揃い、ホスト視点が消える)
-  verify: counterpart
+  verify: host
   scout: counterpart
-  extract: counterpart
+  extract: host
   live: host           # UI 調整でも counterpart 可 (結果確認はユーザーの目で行うため)
 
 
@@ -67,7 +67,10 @@ workers:
 lint:
   exclude: []                         # 検査から外すリポジトリ相対パス (先頭セグメント一致または glob)
   identity:
-    scope: [kasane, openspec, skills]   # 検査範囲 (ソースには正当な UUID 定数があるため含めない)
+    # 検査範囲。本体ソースは含めない (正当な UUID 定数があり誤検出になるため)。
+    # samples は例外として含める — Xcode の実機ビルドが DEVELOPMENT_TEAM 等の
+    # 開発者識別子を samples 配下のプロジェクトファイルへ書き戻すため、その捕捉が目的。
+    scope: [kasane, openspec, skills, samples]
     allow: ["@kamusoft.jp"]          # 正当な値 (名前空間 UUID 等)。@ドメインはそのドメインのメール (デモデータ) を許可
     disable: []                       # 無効化する検出群: device / developer / network / personal / secret
   internal-hosts: []                  # 未公開サーバのホスト名

@@ -1,0 +1,136 @@
+# .NET MAUI の検証 (再利用可能 workflow)
+#
+# facade の純ロジックをユニットテストで全件検証し、あわせて facade の platform TFM と
+# binding 2 本がビルドできること (native への配線がコンパイルできること) を確かめる。
+# 検証ホストアプリの実行 (end-to-end 疎通) はこの workflow の対象に含めない。
+name: verify maui
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+env:
+  # iOS binding が Xcode を必要とするため、ios の検証と同じ版を選ぶ。
+  KS_XCODE_VERSION: "26.5"
+  KS_FACADE: maui/KsSettingsView.Maui/KsSettingsView.Maui.csproj
+  KS_FACADE_TESTS: maui/KsSettingsView.Maui.Tests/KsSettingsView.Maui.Tests.csproj
+  KS_BINDING_IOS: maui/macios/KsSettingsView.Binding.iOS/KsSettingsView.Binding.iOS.csproj
+  KS_BINDING_ANDROID: maui/android/KsSettingsView.Binding.Android/KsSettingsView.Binding.Android.csproj
+
+jobs:
+  verify:
+    name: verify
+    runs-on: macos-26
+    # 既定の 360 分は長すぎる。ビルドのハングで高コストな macOS ランナーを
+    # 占有し続けないよう、実測 7 分台に対する上限を置く。
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Select Xcode
+        run: |
+          # メジャー.マイナーが一致する Xcode のうち、パッチが最も新しいものを選ぶ。
+          app=$(ls -d "/Applications/Xcode_${KS_XCODE_VERSION}"*.app 2>/dev/null | sort -V | tail -n 1)
+          if [ -z "$app" ]; then
+            echo "::error::Xcode ${KS_XCODE_VERSION} がランナーイメージに存在しない"
+            ls -d /Applications/Xcode_*.app || true
+            exit 1
+          fi
+          echo "DEVELOPER_DIR=${app}/Contents/Developer" >> "$GITHUB_ENV"
+
+      - name: Setup JDK
+        # Android binding のビルドが呼ぶ `android/gradlew` の実行 JVM になる。
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('global.json', 'maui/**/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Show toolchain
+        run: |
+          echo "DEVELOPER_DIR=${DEVELOPER_DIR}"
+          xcodebuild -version
+          dotnet --info
+          java -version
+
+      - name: Install MAUI workload
+        # workload set の版は global.json の workloadVersion で固定されている。
+        run: dotnet workload install maui
+
+      - name: Run facade unit tests
+        run: |
+          dotnet test "${KS_FACADE_TESTS}" \
+            -c Release \
+            --logger "trx;LogFileName=maui-facade.trx" \
+            --results-directory "${RUNNER_TEMP}/test-results"
+
+      - name: Verify executed test count
+        # テストが失敗した場合も件数を残すため、常に実行する。
+        if: always()
+        run: |
+          python3 - "${RUNNER_TEMP}/test-results" <<'PY'
+          import glob
+          import os
+          import sys
+          import xml.etree.ElementTree as ET
+
+          results_dir = sys.argv[1]
+          trx_files = sorted(glob.glob(os.path.join(results_dir, "*.trx")))
+
+          total = 0
+          passed = 0
+          failed = 0
+          for trx in trx_files:
+              for element in ET.parse(trx).getroot().iter():
+                  if element.tag.rsplit("}", 1)[-1] != "Counters":
+                      continue
+                  total += int(element.get("total", "0"))
+                  passed += int(element.get("passed", "0"))
+                  failed += int(element.get("failed", "0"))
+
+          lines = [
+              "## MAUI facade テスト実行件数",
+              "",
+              f"- 合計: **{total} 件** (成功 {passed} / 失敗 {failed})",
+          ]
+          if not trx_files:
+              lines.append(f"- テスト結果 (TRX) が {results_dir} に無い")
+
+          summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+          if summary_path:
+              with open(summary_path, "a", encoding="utf-8") as f:
+                  f.write("\n".join(lines) + "\n")
+          print("\n".join(lines))
+
+          if total == 0:
+              print("::error::facade のユニットテストが 1 件も実行されていない")
+              sys.exit(1)
+          PY
+
+      - name: Build iOS binding
+        run: dotnet build "${KS_BINDING_IOS}" -c Release
+
+      - name: Build Android binding
+        run: dotnet build "${KS_BINDING_ANDROID}" -c Release -p:JavaSdkDirectory="${JAVA_HOME}"
+
+      - name: Build facade for iOS
+        run: dotnet build "${KS_FACADE}" -f net10.0-ios -c Release
+
+      - name: Build facade for Android
+        run: dotnet build "${KS_FACADE}" -f net10.0-android -c Release -p:JavaSdkDirectory="${JAVA_HOME}"

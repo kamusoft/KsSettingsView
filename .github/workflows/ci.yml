@@ -1,0 +1,104 @@
+# 検証 CI の入口
+#
+# develop / main を対象とする pull_request と develop への push で、3 platform の検証と
+# lint を起動する。paths による絞り込みは行わず、変更内容に関わらず常に全 job を実行する
+# (必須 status check として素通りする経路を作らないため)。
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+  push:
+    branches:
+      - develop
+
+permissions:
+  contents: read
+
+# PR への連続 push では古い実行を打ち切る (macOS ランナーを二重に積み上げないため)。
+# develop への push で起動した実行は打ち切らない — マージ結果に対する検証は
+# 後続の push に追い越されても完走させる必要がある。
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # 再利用可能 workflow を呼ぶ job の status check 名は
+  # 「呼び出し側の job 名 / 呼ばれた側の job 名」になる。branch protection に登録する名前を
+  # 固定するため、両側の job 名を明示する (ここでは ios / verify、android / verify、maui / verify)。
+  ios:
+    name: ios
+    uses: ./.github/workflows/verify-ios.yml
+
+  android:
+    name: android
+    uses: ./.github/workflows/verify-android.yml
+
+  maui:
+    name: maui
+    uses: ./.github/workflows/verify-maui.yml
+
+  lint:
+    name: lint
+    # ランナーイメージは版指定にする。`ubuntu-latest` は指す実体が予告なく次の LTS へ
+    # 移り、python3 やプリインストールツールの版が diff なしに入れ替わる。
+    runs-on: ubuntu-24.04
+    # 既定の 360 分は長すぎる。実測 9 秒に対する上限として置く。
+    timeout-minutes: 10
+
+    env:
+      # secret scan に使う gitleaks の版と、配布物の SHA-256。
+      # 版を上げるときは checksum も同時に更新する。
+      KS_GITLEAKS_VERSION: "8.30.1"
+      KS_GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install gitleaks
+        run: |
+          archive="${RUNNER_TEMP}/gitleaks.tar.gz"
+          curl --fail --silent --show-error --location \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${KS_GITLEAKS_VERSION}/gitleaks_${KS_GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            --output "$archive"
+          echo "${KS_GITLEAKS_SHA256}  ${archive}" | sha256sum --check --strict
+          mkdir -p "${RUNNER_TEMP}/gitleaks"
+          tar -xzf "$archive" -C "${RUNNER_TEMP}/gitleaks" gitleaks
+          echo "${RUNNER_TEMP}/gitleaks" >> "$GITHUB_PATH"
+
+      - name: Secret scan (gitleaks)
+        run: |
+          # 既定シェルは `bash -e` で pipefail が入らない。パイプ前段 (git archive) の
+          # 失敗が握り潰されると、空ディレクトリに対する gitleaks が検出 0 件 = exit 0 を
+          # 返し、secret scan が無検査のまま緑になる。
+          set -euo pipefail
+          gitleaks version
+          # 追跡中の内容だけを取り出して走査する。作業ツリーをそのまま走査すると
+          # ビルド出力 (obj/ bin/ 配下の生成物) まで対象に入り、検査が生成物由来の
+          # 誤検出で埋まる。
+          scan_dir="${RUNNER_TEMP}/gitleaks-scan"
+          mkdir -p "$scan_dir"
+          git archive --format=tar HEAD | tar -x -C "$scan_dir"
+          # 走査対象が実際に存在することを確かめてから走らせる。追跡ファイル数と
+          # 展開後のファイル数を突き合わせ、取りこぼしがあれば検査対象不足として落とす。
+          tracked=$(git ls-files | wc -l | tr -d ' ')
+          # 追跡内容には symlink も含まれるため、-type f だけで数えると取りこぼす。
+          extracted=$(find "$scan_dir" \( -type f -o -type l \) | wc -l | tr -d ' ')
+          echo "走査対象: ${extracted} ファイル (追跡: ${tracked} ファイル)"
+          if [ "$extracted" -lt "$tracked" ]; then
+            echo "::error::走査対象の展開に失敗している (追跡 ${tracked} に対し展開 ${extracted})"
+            exit 1
+          fi
+          gitleaks dir "$scan_dir" --no-banner --redact --verbose
+
+      - name: Local absolute path lint
+        run: python3 scripts/local-path-lint.py
+
+      - name: Identity lint
+        run: python3 scripts/identity-lint.py
+
+      - name: Comment policy lint
+        run: python3 scripts/comment-policy-lint.py
