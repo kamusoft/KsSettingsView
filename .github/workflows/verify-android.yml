@@ -1,0 +1,131 @@
+# Android Native の検証 (再利用可能 workflow)
+#
+# 全モジュールの JVM 単体テストを debug / release 両 variant で実行し、実行件数を検査する。
+# テストが 1 件も実行されなくても Gradle は成功で終わるため、件数の検査までを job の成否判定に含める。
+name: verify android
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: verify
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup JDK
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Cache Gradle dependencies
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          # 依存の解決結果と wrapper ディストリビューションだけをキャッシュする。
+          # ビルド出力とテスト結果 (`build/`) はキャッシュしない。復元された結果を
+          # 実行済みとみなす経路を作らないため。
+          path: |
+            ~/.gradle/caches/modules-2
+            ~/.gradle/wrapper
+          key: gradle-deps-${{ runner.os }}-${{ hashFiles('android/gradle/libs.versions.toml', 'android/gradle/wrapper/gradle-wrapper.properties', 'android/**/build.gradle.kts', 'android/settings.gradle.kts') }}
+          restore-keys: |
+            gradle-deps-${{ runner.os }}-
+
+      - name: Show toolchain
+        run: |
+          java -version
+          echo "JAVA_HOME=${JAVA_HOME}"
+          echo "ANDROID_HOME=${ANDROID_HOME}"
+
+      - name: Run unit tests
+        working-directory: android
+        run: ./gradlew --no-daemon --console=plain test
+
+      - name: Verify executed test count
+        # テストが失敗した場合も件数の内訳を残すため、常に実行する。
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import glob
+          import os
+          import re
+          import sys
+          import xml.etree.ElementTree as ET
+
+          ANDROID_ROOT = "android"
+          # 結果ディレクトリ名は variant 名ではなく Gradle のタスク名になる。
+          VARIANT_TASKS = {"debug": "testDebugUnitTest", "release": "testReleaseUnitTest"}
+
+          # 期待する module の集合はビルド構成 (settings.gradle.kts の include) から導出する。
+          # 存在する XML を数えるだけでは、タスクごと実行されなかった組を見逃す。
+          settings_path = os.path.join(ANDROID_ROOT, "settings.gradle.kts")
+          with open(settings_path, encoding="utf-8") as f:
+              settings = f.read()
+
+          modules = []
+          for line in settings.splitlines():
+              stripped = line.strip()
+              if not stripped.startswith("include("):
+                  continue
+              modules.extend(re.findall(r'"(:[^"]+)"', stripped))
+
+          if not modules:
+              sys.exit(f"{settings_path} から module を 1 つも導出できなかった")
+
+          rows = []
+          failures = []
+          total = 0
+
+          for module in modules:
+              module_dir = os.path.join(ANDROID_ROOT, *module.lstrip(":").split(":"))
+              for variant, task in VARIANT_TASKS.items():
+                  result_dir = os.path.join(module_dir, "build", "test-results", task)
+                  xml_files = sorted(glob.glob(os.path.join(result_dir, "TEST-*.xml")))
+                  if not xml_files:
+                      rows.append((module, variant, "結果 XML なし", "-"))
+                      failures.append(f"{module} ({variant}): {result_dir} にテスト結果 XML が無い")
+                      continue
+
+                  tests = 0
+                  failed = 0
+                  for xml_file in xml_files:
+                      root = ET.parse(xml_file).getroot()
+                      tests += int(root.get("tests", "0"))
+                      failed += int(root.get("failures", "0")) + int(root.get("errors", "0"))
+
+                  rows.append((module, variant, str(tests), str(failed)))
+                  total += tests
+                  if tests == 0:
+                      failures.append(f"{module} ({variant}): テストが 1 件も実行されていない")
+
+          lines = [
+              "## Android テスト実行件数",
+              "",
+              "| module | variant | tests | failures |",
+              "|---|---|---:|---:|",
+          ]
+          lines += [f"| {m} | {v} | {t} | {f} |" for m, v, t, f in rows]
+          lines += ["", f"**合計: {total} 件** (期待 {len(modules) * len(VARIANT_TASKS)} 組)"]
+
+          if failures:
+              lines += ["", "### 件数検査の失敗", ""]
+              lines += [f"- {message}" for message in failures]
+
+          summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+          if summary_path:
+              with open(summary_path, "a", encoding="utf-8") as f:
+                  f.write("\n".join(lines) + "\n")
+          print("\n".join(lines))
+
+          if failures:
+              for message in failures:
+                  print(f"::error::{message}")
+              sys.exit(1)
+          PY

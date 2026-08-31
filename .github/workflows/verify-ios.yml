@@ -1,0 +1,104 @@
+# iOS Native の検証 (再利用可能 workflow)
+#
+# iOS Simulator 上でパッケージ全体のテストを実行する。macOS ホスト上の `swift test` は
+# `#if canImport(UIKit)` ガード内のテストがコンパイル対象から外れて実行されないため、
+# 成否判定には使わない。
+name: verify ios
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+env:
+  # Xcode はメジャー.マイナーで固定し、パッチはランナーイメージ同梱の版に任せる。
+  # 版を上げるときはこの値を変える PR として意図的に行う。
+  KS_XCODE_VERSION: "26.5"
+
+jobs:
+  verify:
+    name: verify
+    runs-on: macos-26
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Select Xcode
+        run: |
+          # メジャー.マイナーが一致する Xcode のうち、パッチが最も新しいものを選ぶ。
+          app=$(ls -d "/Applications/Xcode_${KS_XCODE_VERSION}"*.app 2>/dev/null | sort -V | tail -n 1)
+          if [ -z "$app" ]; then
+            echo "::error::Xcode ${KS_XCODE_VERSION} がランナーイメージに存在しない"
+            ls -d /Applications/Xcode_*.app || true
+            exit 1
+          fi
+          echo "DEVELOPER_DIR=${app}/Contents/Developer" >> "$GITHUB_ENV"
+
+      - name: Show toolchain
+        run: |
+          echo "DEVELOPER_DIR=${DEVELOPER_DIR}"
+          xcodebuild -version
+          swift --version
+
+      - name: Resolve iOS Simulator destination
+        run: |
+          # 利用可能な iOS Simulator のうち、ランタイムが最も新しい iPhone を選ぶ。
+          # 機種名はランナーイメージの更新で変わるため、名前ではなく実在する UDID で指定する。
+          xcrun simctl list devices available --json > "${RUNNER_TEMP}/simulators.json"
+          udid=$(python3 - "${RUNNER_TEMP}/simulators.json" <<'PY'
+          import json
+          import re
+          import sys
+
+          with open(sys.argv[1], encoding="utf-8") as f:
+              catalog = json.load(f)
+
+          best = None
+          for runtime, devices in catalog.get("devices", {}).items():
+              matched = re.search(r"iOS-(\d+)-(\d+)", runtime)
+              if not matched:
+                  continue
+              version = (int(matched.group(1)), int(matched.group(2)))
+              for device in devices:
+                  if not device.get("isAvailable"):
+                      continue
+                  if not device.get("name", "").startswith("iPhone"):
+                      continue
+                  if best is None or version > best[0]:
+                      best = (version, device["udid"], device["name"], runtime)
+
+          if best is None:
+              sys.exit("利用可能な iPhone Simulator が見つからない")
+
+          print(best[1])
+          print(f"selected: {best[2]} ({best[3]})", file=sys.stderr)
+          PY
+          )
+          echo "KS_SIMULATOR_UDID=${udid}" >> "$GITHUB_ENV"
+
+      - name: Run tests on iOS Simulator
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -scheme KsSettingsView-Package \
+            -destination "platform=iOS Simulator,id=${KS_SIMULATOR_UDID}" \
+            | tee "${RUNNER_TEMP}/xcodebuild.log"
+
+      - name: Report executed test count
+        if: always()
+        run: |
+          log="${RUNNER_TEMP}/xcodebuild.log"
+          if [ ! -f "$log" ]; then
+            echo "テストログが無いため実行件数を報告できない" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          {
+            echo "## iOS テスト実行件数"
+            echo ""
+            echo '```'
+            grep -E '^[[:space:]]*Executed [0-9]+ tests?' "$log" | tail -n 20 || echo "(Executed 行が見つからない)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

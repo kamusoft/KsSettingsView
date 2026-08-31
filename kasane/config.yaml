@@ -67,7 +67,7 @@ workers:
 lint:
   exclude: []                         # 検査から外すリポジトリ相対パス (先頭セグメント一致または glob)
   identity:
-    scope: [kasane, openspec, skills]   # 検査範囲 (ソースには正当な UUID 定数があるため含めない)
+    scope: [kasane, openspec, skills, samples]   # 検査範囲 (ソースには正当な UUID 定数があるため含めない)
     allow: ["@kamusoft.jp"]          # 正当な値 (名前空間 UUID 等)。@ドメインはそのドメインのメール (デモデータ) を許可
     disable: []                       # 無効化する検出群: device / developer / network / personal / secret
   internal-hosts: []                  # 未公開サーバのホスト名
