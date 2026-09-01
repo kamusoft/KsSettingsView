@@ -16,3 +16,4 @@ spec / design に「原理 + それを適用した具体列挙」を併記する
 ## 経緯
 
 - 2026-09-01 add-android-maven-distribution: Maven 発行メタデータの依存スコープ設計 (design Decision 6) で、`api` 対象の列挙が公開 ABI 走査を経ずに確定され、androidx.recyclerview が漏れた。実装ワーカーが `.ui` の public 宣言全走査で検出し停止・報告。オーナーが `api` 追加を承認し deviation で記録。列挙どおりの実装でも spec の Scenario は VALID になるため、verify では検出できない種類の漏れだった。
+- 2026-09-01 同 change (カウント外・同一 change 内の再発): 修正後もなお同型の漏れが 1 件残っていた — 公開 `Theme.sectionMargin` が露出する `PaddingValues` の宣言元 `androidx.compose.foundation:foundation-layout`。独立レビュー (review-001) が発行 aar の javap 全走査で検出し Major 指摘、`api` 追加で解消。個別発見の逐次追加では収束せず、原理の適用対象 (公開宣言全体) の機械走査を 1 回で完了させることが必要だったという裏付け。恒久策として Explicit API mode の別 change (adopt-android-explicit-api-mode) が簡易起票済み。

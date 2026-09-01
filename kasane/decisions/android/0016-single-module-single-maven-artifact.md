@@ -1,7 +1,7 @@
 ---
 id: 0016
 title: Android は core / ui / compose を単一 module に統合し `jp.kamusoft:kssettingsview` 1 artifact で配布する
-status: proposed
+status: accepted
 date: 2026-08-21
 ---
 
@@ -43,5 +43,8 @@ module の依存を実測すると、`ui` は CustomCell の Compose ホステ�
 - 負: core (JUnit 5) と ui / compose (JUnit 4 + Robolectric) のテスト基盤を 1 module に同居させる必要がある。
 - 負: ディレクトリ改名・統合に伴い `android/settings.gradle.kts`、Sample の composite build 置換、MAUI binding csproj の aar パス、concepts / README の表記を追随させる。
 - 負: kasane/handbook/cross/public-identifiers.md の artifactId 規則 (`ks-settingsview-*`) を改訂する。
+- 負 (2026-09-01 実装結果): 「依存 1 行で完結」の成立には、公開 ABI に露出する外部型の依存を `api` スコープにする仕分けが必要 (実装では androidx.recyclerview / compose foundation-layout の列挙漏れが 2 度検出され、公開宣言の全走査で確定した)。module 統合により公開/内部の境界がコンパイラで強制されない問題は Explicit API mode の別変更 (changes/adopt-android-explicit-api-mode) で扱う。
+- 中立 (2026-09-01 実装結果): テスト基盤の同居は JUnit Platform + junit-vintage-engine で既存テスト無改変のまま成立した (統合前後で 2700 件一致・全 green)。
 
 出典: kasane/roadmaps/package-distribution/exploration.md (D) / kasane/decisions/cross/0002-public-identifier-namespace.md / kasane/handbook/cross/public-identifiers.md (Maven 座標の現在地)
+出典 (2026-09-01 実装結果の追記と accepted 昇格): kasane/changes/archive/2026-09-01-add-android-maven-distribution/deviation.md / 同 review-001.md / 同 verify-001.md

@@ -3,7 +3,7 @@ type: concept
 title: MAUI Native Bridge の interop 境界
 description: C# から Native SettingsView を操作する Bridge 層の公開契約 — 内部所有 Store・ID 採番・操作通知・lifecycle・binding 構成
 tags: [maui, bridge, interop, binding]
-timestamp: 2026-08-29
+timestamp: 2026-09-01
 ---
 
 # MAUI Native Bridge の interop 境界
@@ -26,7 +26,7 @@ C# (Binding assembly) → Bridge → 内部所有 SettingsRootStore → Native H
 |---|---|---|
 | Binding | `maui/macios/KsSettingsView.Binding.iOS` / `maui/android/KsSettingsView.Binding.Android` (net10.0-ios / net10.0-android) | Bridge API を C# へ運ぶ層。**アプリ利用者向けの公開契約ではない** — MAUI 慣例型 (`Microsoft.Maui.Graphics.Color` 等) への変換は上位の facade 層の責務 (maui/ADR-0004) |
 | gateway | facade 内部の `KsBridgeGateway` (per-TFM) | facade と Binding の間に立つ薄い C# 変換層。facade と同寿命で、facade 型 ⇔ DTO の変換と delegate / listener 実装の保持を担う (facade 内部実装であり公開契約ではない) |
-| Bridge | iOS `ios/Sources/KsSettingsViewBridge/` / Android `android/ks-settingsview-bridge/` | `@objc` / JVM 互換の公開 API、Store 公開操作への変換、Store と Host の所有 (maui/ADR-0005) |
+| Bridge | iOS `ios/Sources/KsSettingsViewBridge/` / Android `android/kssettingsview-bridge/` | `@objc` / JVM 互換の公開 API、Store 公開操作への変換、Store と Host の所有 (maui/ADR-0005) |
 | Store / Host | 既存の `SettingsRootStore` / `KsSettingsViewController` / `KsSettingsView` | 既存契約のまま。Bridge 専用の特別な挙動はない |
 
 ## 公開 API の形
@@ -69,7 +69,7 @@ C# (Binding assembly) → Bridge → 内部所有 SettingsRootStore → Native H
 
 - Binding assembly の型をアプリ利用者向け API として公開・文書化しない — これを破ると facade 層 (MAUI 慣例型) との二重契約になり、interop 表現の変更が破壊的変更になる
 - DTO が公開する ID を「生きている ID」と見なさない — 有効なのは API が返した ID だけ。破ると以後の操作が無言 no-op になる
-- 既存 UI モジュール (`KsSettingsViewUI` / `ks-settingsview-ui`) へ interop 都合の型を持ち込まない — Bridge が別モジュールなのはこのため
+- 既存 UI 層 (iOS `KsSettingsViewUI` module / Android `jp.kamusoft.kssettingsview.ui` パッケージ) へ interop 都合の型を持ち込まない — Bridge が別モジュールなのはこのため
 
 ## ユーザー操作通知 (interaction delegate / listener)
 

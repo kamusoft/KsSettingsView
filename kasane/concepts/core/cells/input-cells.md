@@ -3,7 +3,7 @@ type: reference
 title: 入力 Cell
 description: 文字列・候補・数値・時刻・日付を編集する入力5種の公開契約
 tags: [cells, input, public-api]
-timestamp: 2026-08-28
+timestamp: 2026-09-01
 ---
 
 この文書は、`EntryCell`、`PickerCell`、`NumberPickerCell`、`TimePickerCell`、`DatePickerCell` の公開契約を説明する。読むと、各入力 Cell の状態型、TwoWay 経路、表示値の生成、iOS / Android 固有 API の差が分かる。
@@ -44,7 +44,7 @@ timestamp: 2026-08-28
 
 候補のモデルは `PickerItem` 値型 (text + subText) の列で、object の世界は API の縁で受ける ([core/ADR-0029](../../../decisions/core/0029-pickercell-item-model-with-generic-edge-projection.md)):
 
-- **ジェネリック縁**: iOS は convenience init、Android は factory 関数 (callback 経路は `ks-settingsview-ui`、`MutableState` 経路は `ks-settingsview-compose`) が `List<T>` + 射影 (`displayText` / `subText`) を受け、構築時に1回だけ `PickerItem` 列へ射影する。iOS の縁は `T: Sendable`、object TwoWay (`selectedItem`) はさらに `T: Equatable` を要求する (Kotlin に対応する制約はない)
+- **ジェネリック縁**: iOS は convenience init、Android は factory 関数 (callback 経路は `.ui` 層、`MutableState` 経路は `.compose` 層) が `List<T>` + 射影 (`displayText` / `subText`) を受け、構築時に1回だけ `PickerItem` 列へ射影する。iOS の縁は `T: Sendable`、object TwoWay (`selectedItem`) はさらに `T: Equatable` を要求する (Kotlin に対応する制約はない)
 - **文字列ケースは String 特殊化** (射影省略時は恒等)。従来の文字列列の呼び出し形はそのまま書ける — 互換保証ではなく設計としての簡易形
 - **書き戻し**: 選択の正は index のまま。確定操作で index の書き戻しが先、object callback (`onItemSelected` / 複数選択は index 昇順の `onItemsSelected`) が後に1回ずつ。`selectedItem` TwoWay の object → index 逆引きは値等価の**最初に一致した index** に解決する。候補に無い要素は未選択
 - **複数選択の object TwoWay は提供しない** — TwoWay は `selectedIndices` (`Set<Int>`) のみで、object 列は確定 callback で受け取る

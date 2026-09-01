@@ -51,6 +51,21 @@ phase-1 申し送りの解消。本当の制約は「利用者の Kotlin コン�
 ## TODO
 
 - [x] 論点の解消 (2026-09-01 全 10 論点を決定事項へ)
-- [ ] **人の作業 (オーナー)**: Central Portal アカウントで `jp.kamusoft` 名前空間を登録し DNS TXT 検証を通す (phase-7 / phase-8 の発行検証までに。KsDialogs と共用)
-- [ ] ksn-propose で変更提案を起こす
-- [ ] **phase-9 からの申し送り** (2026-08-30): `kasane/handbook/cross/public-identifiers.md` の artifactId 規則を単一 artifact (`jp.kamusoft:kssettingsview`) へ改訂し (android/ADR-0016)、cross/ADR-0018 の配布先の表も追随させる。ルート README と `skills/` は既にこの座標を暫定値として書いている
+- [x] **人の作業 (オーナー)**: Central Portal アカウントで `jp.kamusoft` 名前空間を登録し DNS TXT 検証を通す → 未実施のまま phase-7 の TODO へ移送 (2026-09-01 蒸留)
+- [x] ksn-propose で変更提案を起こす (2026-09-01 [changes/archive/2026-09-01-add-android-maven-distribution](../../../../changes/archive/2026-09-01-add-android-maven-distribution/proposal.md))
+- [x] **phase-9 からの申し送り** (2026-08-30): `kasane/handbook/cross/public-identifiers.md` の artifactId 規則を単一 artifact (`jp.kamusoft:kssettingsview`) へ改訂し (android/ADR-0016)、cross/ADR-0018 の配布先の表も追随させる → 実装 change に同梱して完了 (2026-09-01)
+
+## 実装結果 (2026-09-01 反映)
+
+change [changes/archive/2026-09-01-add-android-maven-distribution](../../../../changes/archive/2026-09-01-add-android-maven-distribution/proposal.md) で実装完了 (verify VALID / review 2 サイクル APPROVED)。決定事項からの乖離は deviation.md に 2 件 + 付随修正:
+
+- `api` スコープの列挙拡張 2 件: 公開 ABI に露出する外部型の原理適用で `androidx.recyclerview` (オーナー承認) と `androidx.compose.foundation:foundation-layout` (レビュー Major) を追加。原理と列挙の併記時は公開面の機械走査で検算する教訓を lessons/inbox に捕捉済み
+- 追加の安全策: version が `-SNAPSHOT` の間は Central 向け発行タスクをガードで失敗させる実装を追加 (スペック外・レビュー合意)
+
+申し送り (受け皿確定済み):
+
+- Central Portal `jp.kamusoft` 名前空間登録 (人の作業) → phase-7 agenda TODO へ移送
+- Explicit API mode の導入 (公開/内部境界のコンパイラ強制。レビュー起点) → [changes/adopt-android-explicit-api-mode](../../../../changes/adopt-android-explicit-api-mode/exploration.md) として簡易起票済み。phase-7 の消費者検証と併せる推奨を phase-7 agenda TODO に記載
+- docs-refresh の明示依頼 (skills/ とルート README の追随、互換情報 Kotlin 2.3+ / minSdk 29 / compileSdk 35 の明記) → phase-7 agenda TODO へ記載
+- Maven Central への実発行・署名付き成果物の検証 → phase-7 (dry-run) / phase-8 (release workflow) の既定スコープ (proposal Non-Goals のとおり)
+- KsDialogs への同型展開 → 見送り (本ロードマップの非ゴール。KsDialogs 側フェーズの責務)

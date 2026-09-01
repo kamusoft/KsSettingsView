@@ -3,10 +3,10 @@ type: reference
 title: SettingsRoot・Section・Cell の設定ツリー
 description: Core が公開する設定ツリー、Cell 抽象、Header・Footer 用 Accessory の責務と利用方法
 tags: [core, model, public-api]
-timestamp: 2026-08-19
+timestamp: 2026-09-01
 ---
 
-この文書は、`KsSettingsViewCore`（iOS）と `ks-settingsview-core`（Android）が公開する設定画面モデルを説明する。読むと、`SettingsRoot → Section → Cell` の責務、Accessory の使い分け、両プラットフォームの型差が分かる。
+この文書は、`KsSettingsViewCore`（iOS）と `.core` 層（Android、パッケージ `jp.kamusoft.kssettingsview.core`）が公開する設定画面モデルを説明する。読むと、`SettingsRoot → Section → Cell` の責務、Accessory の使い分け、両プラットフォームの型差が分かる。
 
 最初に本書を読み、次に利用する Cell の種類に応じて [基本 Cell](../cells/basic-cells.md) または [入力 Cell](../cells/input-cells.md) を読む。部分更新を発行する場合は [SettingsRootDiff による構造変更](structural-changes.md)、icon を扱う場合は [KsImage](../cells/ks-image.md) を参照する。
 

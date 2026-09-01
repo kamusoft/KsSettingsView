@@ -18,7 +18,7 @@ Android 系統 (android/ ビルドルート) 固有の決定。採番はこの�
 - [ADR-0013](0013-resource-reference-via-declaring-library-r-class.md) — リソース参照は宣言元ライブラリの R クラス経由で行う (accepted)
 - [ADR-0014](0014-entrycell-focused-editor-owns-text.md) — フォーカス中の EntryCell 入力欄は値の SSoT で、内容更新の text 反映はフォーカス喪失まで遅延する (accepted)
 - [ADR-0015](0015-customcell-pool-aware-composition-disposal.md) — CustomCell の宣言 UI ホスティングは ReusableContent の deactivate+reuse でリサイクルする (accepted)
-- [ADR-0016](0016-single-module-single-maven-artifact.md) — Android は core / ui / compose を単一 module に統合し `jp.kamusoft:kssettingsview` 1 artifact で配布する (proposed)
+- [ADR-0016](0016-single-module-single-maven-artifact.md) — Android は core / ui / compose を単一 module に統合し `jp.kamusoft:kssettingsview` 1 artifact で配布する (accepted)
 - [ADR-0017](0017-switchcell-state-colors-derived-from-accent.md) — SwitchCell の状態色はテーマ attr 直参照ではなく accent から導出する (accepted)
 - [ADR-0018](0018-timepickercell-bottom-sheet-wheel-unification.md) — TimePickerCell の選択 UI は全ホストでボトムシート + 時分ホイールに統一する (accepted, supersedes 0006)
 - [ADR-0019](0019-datepickercell-calendar-compose-datepicker.md) — DatePickerCell のカレンダー型 UI は Compose Material3 DatePicker のダイアログ表示に統一する (accepted, supersedes 0008/0010/0011)

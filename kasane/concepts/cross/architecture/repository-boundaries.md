@@ -15,10 +15,10 @@ timestamp: 2026-09-01
 | build root | 現在の公開単位 | 主な依存方向 | 役割 |
 |---|---|---|---|
 | iOS `ios/Package.swift` | umbrella product `KsSettingsView` 1 本 (module は `KsSettingsViewCore` / `KsSettingsViewUI` / `KsSettingsViewSwiftUI`) | SwiftUI wrapper → UI Host → Core | iOS library と test の入口 |
-| Android `android/settings.gradle.kts` | `ks-settingsview-core` / `ks-settingsview-ui` / `ks-settingsview-compose` | Compose wrapper → UI Host → Core | Android library と test の入口 |
+| Android `android/settings.gradle.kts` | 単一 artifact `jp.kamusoft:kssettingsview` (単一 module。層は Kotlin パッケージ `.core` / `.ui` / `.compose` で表す) | Compose wrapper → UI Host → Core | Android library と test の入口 |
 | MAUI `maui/KsSettingsView.slnx` | `KsSettingsView.Maui` (facade。公開レジストリへは未配信) | facade → binding (iOS / Android) → native の xcframework / aar | MAUI library・binding・test・検証ホストの入口 |
 
-公開単位のほかに、iOS の `KsSettingsViewBridge` target と Android の `ks-settingsview-bridge` module が interop 境界として存在する。product / artifact としては公開せず、MAUI binding が束縛する入口である ([Native Bridge の interop 境界](../../maui/api/native-bridge.md))。MAUI の build root は binding の中から native 2 系統の build root を呼ぶ (Android は `gradlew` の Exec、iOS は Xcode project) 取り込む側であり、native が MAUI に依存する逆方向はない。
+公開単位のほかに、iOS の `KsSettingsViewBridge` target と Android の `kssettingsview-bridge` module が interop 境界として存在する。product / artifact としては公開せず、MAUI binding が束縛する入口である ([Native Bridge の interop 境界](../../maui/api/native-bridge.md))。MAUI の build root は binding の中から native 2 系統の build root を呼ぶ (Android は `gradlew` の Exec、iOS は Xcode project) 取り込む側であり、native が MAUI に依存する逆方向はない。
 
 各 build root は自身の module 構成、依存解決、toolchain、test 入口を所有する。一つの platform の build 成立は、別 platform の toolchain や build 成立を保証しない。
 

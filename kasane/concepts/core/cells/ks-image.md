@@ -3,14 +3,14 @@ type: reference
 title: KsImage
 description: Cell の icon を表す UI 層の公開型とプラットフォーム別 fallback 契約
 tags: [cells, image, public-api]
-timestamp: 2026-07-19
+timestamp: 2026-09-01
 ---
 
 この文書は、Cell の `icon` に渡す `KsImage` の case、同一性、解決不能時の挙動を説明する。読むと、iOS / Android で安全に icon を指定する方法と、両者を同一視できない境界が分かる。
 
 ## 目的と責務境界
 
-`KsImage` は Cell の icon を UI 層へ渡す判別可能な値である。iOS では `KsSettingsViewUI`、Android では `ks-settingsview-ui` に属し、Core の `KsCell` / `Cell` 抽象は画像を要求しない。
+`KsImage` は Cell の icon を UI 層へ渡す判別可能な値である。iOS では `KsSettingsViewUI`、Android では `.ui` 層 (パッケージ `jp.kamusoft.kssettingsview.ui`) に属し、Core の `KsCell` / `Cell` 抽象は画像を要求しない。
 
 ## 公開 API
 

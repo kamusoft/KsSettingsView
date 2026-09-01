@@ -1,9 +1,9 @@
 ---
 type: concept
 title: Android ビルドツールチェーンの契約
-description: android/ と samples/android/ の Gradle ビルドにおける JDK の役割分担 (Gradle を動かす JDK と成果物ターゲット Java 17)・ビルド関連バージョンの宣言の単一元 (libs.versions.toml)・MAUI binding など消費側が依存する前提と、ツールチェーン更新時に揃えるもの
-tags: [android, build, gradle, toolchain, version-catalog, jdk]
-timestamp: 2026-08-28
+description: android/ と samples/android/ の Gradle ビルドにおける JDK の役割分担 (Gradle を動かす JDK と成果物ターゲット Java 17)・ビルド関連バージョンと GAV の宣言の単一元 (libs.versions.toml とルート build.gradle.kts)・Maven 発行の入口 (vanniktech maven publish)・MAUI binding など消費側が依存する前提と、ツールチェーン更新時に揃えるもの
+tags: [android, build, gradle, toolchain, version-catalog, jdk, maven-publish]
+timestamp: 2026-09-01
 ---
 
 # Android ビルドツールチェーンの契約
@@ -14,7 +14,9 @@ timestamp: 2026-08-28
 
 ## 責務境界
 
-- `android/` (ライブラリ 4 module: `ks-settingsview-core` / `-ui` / `-compose` / `-bridge`) と `samples/android/` (Sample app) は独立した Gradle build で、それぞれ Gradle wrapper (`<build root>/gradle/wrapper/gradle-wrapper.properties` と `gradlew`) を持つ。2 つの wrapper は同じ Gradle 版と `distributionSha256Sum` を指す
+- `android/` と `samples/android/` (Sample app) は独立した Gradle build で、それぞれ Gradle wrapper (`gradle/wrapper/` と `gradlew`) を持つ。2 つの wrapper は同じ Gradle 版と `distributionSha256Sum` を指す
+- module は公開本体 `kssettingsview` と非公開 interop の `kssettingsview-bridge` の 2 つ ([ADR-0016](../../../decisions/android/0016-single-module-single-maven-artifact.md))
+- 層 (core / ui / compose) は module 境界ではなく Kotlin パッケージ `.core` / `.ui` / `.compose` で表す
 - **Gradle plugin の版 (AGP / Kotlin / Compose Compiler)・Compose BOM・ライブラリ自身の version** の宣言の単一元は `android/gradle/libs.versions.toml` (バージョンカタログ)。`samples/android/settings.gradle.kts` は `versionCatalogs { create("libs") { from(files("../../android/gradle/libs.versions.toml")) } }` で同じファイルを読む。composite build (`includeBuild`) はソース参照を接続するだけで plugin 版を継承しないため、共有は catalog で明示する。これ以外のライブラリ依存 (AndroidX 各種・coroutines・テスト依存) は各 module の `build.gradle.kts` に直書きしてよい
 - Android SDK の場所は各 build root の `local.properties` (`sdk.dir`、git 管理外) で解決する。`compileSdk` / `minSdk` は catalog ではなく各 module の `build.gradle.kts` の `android { }` ブロックで宣言する (配布物の互換性を決める値であり、ツールチェーン更新の対象ではない)
 - toml の `[versions]` の現行値はこの文書に転記しない (正は toml と、組み合わせの根拠 URL を記したそのコメント)。ただし互換上の既知制約 (「ツールチェーンを更新するとき」の節) は版を伴って記し、timestamp で鮮度を管理する
@@ -37,13 +39,22 @@ timestamp: 2026-08-28
 | `[versions]` | `agp` | `com.android.library` / `com.android.application` の版 |
 | | `kotlin` | Kotlin Android プラグインと Compose Compiler プラグインの共通版 (2 つは同じ版でなければならない) |
 | | `compose-bom` | Jetpack Compose BOM |
-| | `ks-settingsview` | ライブラリ自身の GAV の version。4 module の `version = libs.versions.ks.settingsview.get()` と、Sample が `includeBuild` の dependency substitution で本体 project へ置換する GAV (`jp.kamusoft.kssettingsview:ks-settingsview-*:<version>`) が同じキーを読む |
-| `[plugins]` | `android-library` / `android-application` / `kotlin-android` / `kotlin-compose` | 各 `build.gradle.kts` の `plugins { alias(libs.plugins.…) }` |
+| | `kssettingsview` | ライブラリ自身の GAV の version の単一宣言元。ルート `android/build.gradle.kts` の subprojects 一括設定 (`group = "jp.kamusoft"` と version) がこのキーを読み、Sample が `includeBuild` の dependency substitution で本体 project へ置換する GAV (`jp.kamusoft:kssettingsview:<version>`) も同じキーを読む |
+| | `maven-publish` | vanniktech maven publish plugin の版 |
+| `[plugins]` | `android-library` / `android-application` / `kotlin-android` / `kotlin-compose` / `maven-publish` | 各 `build.gradle.kts` の `plugins { alias(libs.plugins.…) }`。`maven-publish` を適用するのは本体 module のみ |
 | `[libraries]` | `compose-bom` | `implementation(platform(libs.compose.bom))` |
+
+## Maven 発行の入口
+
+発行は本体 module (`android/kssettingsview/build.gradle.kts`) の `com.vanniktech.maven.publish` plugin が担う。release 単一 variant + sources jar + 空 javadoc jar で、IDE の KDoc 表示は sources jar が担い、利用者向けドキュメントは skills/ と README の責務。bridge に発行タスクは存在しない。
+
+依存スコープは「公開 ABI に露出する外部型の依存は `api`、内部利用は `implementation`、テスト専用はユニットテスト用 configuration」で仕分ける。利用者が依存 1 行で公開 API をコンパイルできることの成立条件であり (android/ADR-0016)、公開宣言に外部型を足す変更では発行メタデータ (POM / `.module`) のスコープ追随を確認する。
+
+version が `-SNAPSHOT` の間は Central 向け発行タスクが build.gradle.kts 内のガードで失敗する (ローカル検証は `publishToMavenLocal`)。Central Portal の認証・署名は環境変数渡しで release CI が注入する (cross/ADR-0020 系)。実発行の検証は消費者検証・release workflow のフェーズが担う。
 
 ## 消費側が依存する前提
 
-- **MAUI binding** (`maui/android/KsSettingsView.Binding.Android/KsSettingsView.Binding.Android.csproj`) は `android/gradlew … assembleRelease` を Exec で直接呼んで aar を作る ([maui/ADR-0006](../../../decisions/maui/0006-android-binding-gradlew-exec.md))。対象は core / ui / bridge の 3 module で、compose は束縛しない (MAUI は Bridge 経由で Android View の Host を使い、Compose ラッパを参照しないため)。Exec の `JAVA_HOME` は .NET Android SDK が解決する `JavaSdkDirectory` (現状 JDK 21) で、その JDK が Gradle JVM の要件を満たし、かつ前節のとおり JDK 17 の実体も別途ある必要がある
+- **MAUI binding** (`maui/android/KsSettingsView.Binding.Android/KsSettingsView.Binding.Android.csproj`) は `android/gradlew … assembleRelease` を Exec で直接呼んで aar を作る ([maui/ADR-0006](../../../decisions/maui/0006-android-binding-gradlew-exec.md))。対象は aar 2 本 — `kssettingsview-bridge` を束縛 (Bind=true) し、本体 `kssettingsview` は同梱のみ (Bind=false)。統合により `.compose` 層のクラスも本体 aar に同梱されるが、MAUI は Bridge 経由で Android View の Host を使うため実行時依存は増えない。Exec の `JAVA_HOME` は .NET Android SDK が解決する `JavaSdkDirectory` (現状 JDK 21) で、その JDK が Gradle JVM の要件を満たし、かつ前節のとおり JDK 17 の実体も別途ある必要がある
 - binding csproj 内の MSBuild Target `_BuildKsSettingsViewAars` は Item `KsAndroidModuleSource` を Inputs として aar を作り直すかを判定する。Inputs には module ソースと `build.gradle.kts` のほか `android/gradle/libs.versions.toml`・`android/gradle/wrapper/gradle-wrapper.properties`・`android/gradle.properties` が入っている。catalog だけを変える更新でも aar が作り直されるのはこのため
 - **Android Studio** は `samples/android` を開く (composite build で `android/` の 4 module も同じ sync に含まれる)。Gradle JDK は Studio 同梱 JBR のままでよく、別の JDK へ手動固定する必要はない。`android/gradle.properties` と `samples/android/gradle.properties` の `org.gradle.tooling.parallel=true` は IDE sync のモデル取得を並列化する設定で、CLI ビルドには影響しない
 
