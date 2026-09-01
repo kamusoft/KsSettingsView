@@ -32,7 +32,15 @@ SwiftPM 専用の配信リポジトリを作り、`ios/` (Package.swift / Source
 ## TODO
 
 - [x] 論点の解消 (2026-09-01 全 7 決定)
-- [ ] ksn-propose で変更提案を起こす
-- [ ] https 実リモート解決確認: 一時消費者プロジェクトから `https://github.com/kamusoft/KsSettingsView-SPM` を tag 指定で解決する。確認用 tag は prerelease 表記 (`X.Y.Z-alpha.N` 等) — 正式 tag は publish 全成功後にのみ生まれる (cross/ADR-0020) ため
-- [ ] 蒸留時の concepts 追随: repository-boundaries.md (配信リポジトリの位置づけ、ルートに Package.swift を置かないこと)、public-identifiers.md の SwiftPM product 行 (3 本 → umbrella 1 本) と Package URL・配信リポジトリ名
-- [ ] **phase-9 からの申し送り** (2026-08-30): 配信リポジトリ `KsSettingsView-SPM` を作成し、`kasane/handbook/cross/public-identifiers.md` へ配信リポジトリ名を追記する。ルート README (`README.md` / `README_ja.md`) と `skills/{en,ja}/kssettingsview-ios/SKILL.md` は既にこの名前を暫定値として書いている (cross/ADR-0018)
+- [x] ksn-propose で変更提案を起こす (add-spm-distribution、2026-09-01)
+- [x] https 実リモート解決確認 (2026-09-01 完了、tag `0.1.0-alpha.1` で確認後削除): 一時消費者プロジェクトから `https://github.com/kamusoft/KsSettingsView-SPM` を tag 指定で解決する。確認用 tag は prerelease 表記 (`X.Y.Z-alpha.N` 等) — 正式 tag は publish 全成功後にのみ生まれる (cross/ADR-0020) ため
+- [x] 蒸留時の concepts 追随 (2026-09-01 完了): repository-boundaries.md (配信リポジトリの位置づけ、ルートに Package.swift を置かないこと)、public-identifiers.md の SwiftPM product 行 (3 本 → umbrella 1 本) と Package URL・配信リポジトリ名
+- [x] **phase-9 からの申し送り** (2026-08-30、2026-09-01 完了): 配信リポジトリ `KsSettingsView-SPM` を作成し、`kasane/handbook/cross/public-identifiers.md` へ配信リポジトリ名を追記する。ルート README (`README.md` / `README_ja.md`) と `skills/{en,ja}/kssettingsview-ios/SKILL.md` は既にこの名前を暫定値として書いている (cross/ADR-0018)
+
+## 実装結果 (2026-09-01 反映)
+
+- change: [changes/archive/2026-09-01-add-spm-distribution](../../../../changes/archive/2026-09-01-add-spm-distribution/proposal.md)。verify VALID / review APPROVED。https 実リモート解決 (`0.1.0-alpha.1` の exact 指定・3 module の公開型参照ビルド成功) まで確認し、検証用 tag は削除済み。配信リポジトリは「commit はあるが tag がない」意図した状態で、初回 tag は phase-8 が打つ
+- 見込みとの差: binding の staticlib archive では umbrella 経由の `KsSettingsViewSwiftUI` オブジェクトが dead-strip されず xcframework に混入する (シンボル 642 件)。**見送り判断**: オーナー合意で受容し、除外が必要になったら将来の change で検討する ([deviation.md](../../../../changes/archive/2026-09-01-add-spm-distribution/deviation.md))
+- 付随: product 一本化で Xcode 生成 scheme が `KsSettingsView` 1 本になり、`verify-ios.yml`・handbook (test-execution / swift6-language-mode-check) の scheme 名を同 change 内で追随済み。同期スクリプトの安全弁テストは CI lint job に常設
+- 申し送り → phase-8: deploy key の作成・secrets 登録・release workflow への同期スクリプト組み込み・初回 tag ([phase-8 agenda の TODO](../phase-8-release-workflow/agenda.md) に追記済み)
+- 申し送り → KsDialogs: 同型展開 (`KsDialogs-SPM`) は KsDialogs 側 phase-11 の責務 (本ロードマップの非ゴールどおり、追加の受け皿なし)

@@ -8,7 +8,7 @@
 | [0015](0015-domain-axis-core-plus-platforms.md) | ドメイン軸を core + platform で導入 | accepted | domains (core/ios/android/maui) と domain-skills を定義し、長命層とスキル解決をドメイン分割する。 |
 | [0016](0016-sample-cross-platform-parity.md) | Sample をプラットフォーム間パリティ検証装置と位置づける | accepted | Sample は全 platform で同一文言・同一画面構成とし、idiomatic な独自サンプルより厳密一致を優先する。 |
 | [0017](0017-port-aiforms-to-native.md) | AiForms.Maui.SettingsView を Native ベースへ移植・リファインする | accepted | Native を主・MAUI を副とし、Native / KMP / MAUI のどのアプリ形態からも使える形で再構築する。互換 shim は提供しない。 |
-| [0018](0018-distribution-public-channels-root-swiftpm-manifest.md) | 配布は公開レジストリの標準チャネルのみとし、SwiftPM は配信リポジトリで配る | proposed | SwiftPM / Maven Central / NuGet.org のみ、private 経路なし。SwiftPM は release CI が `ios/` のスナップショットを配信リポジトリへ commit + tag する (monorepo にルート Package.swift は置かない)。 |
+| [0018](0018-distribution-public-channels-root-swiftpm-manifest.md) | 配布は公開レジストリの標準チャネルのみとし、SwiftPM は配信リポジトリで配る | accepted | SwiftPM / Maven Central / NuGet.org のみ、private 経路なし。SwiftPM は release CI が `ios/` のスナップショットを配信リポジトリへ commit + tag する (monorepo にルート Package.swift は置かない)。 |
 | [0019](0019-lockstep-single-version.md) | 全 platform を lockstep の単一バージョンでリリースする | proposed | 全 artifact に同一 semver を付け git tag と一致させる。互換マトリクスは作らない。 |
 | [0020](0020-release-dispatch-tag-last-version-injection.md) | リリースは version 入力の手動起動で行い、全 platform の publish 成功後に tag を打ち、version は CI が注入する | proposed | tag 先行で lockstep が壊れるのを防ぐ。version の SSoT は dispatch 入力 (= tag)、ファイルは開発用既定値。 |
 | [0021](0021-public-repository-fresh-start.md) | public リポジトリは新規に作り、既存の private リポジトリの履歴は引き継がない | accepted | 現ツリーを単一 initial commit で公開し開発の本籍を移す。旧 private は履歴保管で凍結、ミラー同期はしない。公開ツリーには開発ハーネスの記録を含め、archive 媒体と `maui/spike/` だけ外す。 |

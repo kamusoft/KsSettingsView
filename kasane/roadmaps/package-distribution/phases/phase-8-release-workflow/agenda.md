@@ -25,5 +25,6 @@
 
 - [ ] 論点の解消
 - [ ] ksn-propose で変更提案を起こす
+- [ ] **phase-4 からの申し送り** (2026-09-01): 配信リポジトリ `KsSettingsView-SPM` は作成済み (初回スナップショット push 済み・tag なし)。release workflow は `scripts/spm-snapshot/sync-snapshot.sh <作業コピー>` でファイル配置し、commit / tag / push は workflow 側で行う (スクリプトは git 非操作・4 段の事前検証つき)。書き込み用 deploy key の作成と monorepo のリポジトリ単位 secrets (例: `SPM_DEPLOY_KEY`) への登録もここで実施する ([phase-4 の実装結果](../phase-4-ios-packaging/agenda.md))
 - [ ] **phase-9 からの申し送り** (2026-08-30): ルート README 2 枚の冒頭にある「配信準備中」バナー 1 行を初回リリース時に削除する。cross/ADR-0023 の決定により未配信を示す記述はこの 1 箇所だけに集約してあり、インストール節は公開レジストリに存在する前提で書かれている (解除は 2 ファイル 1 行ずつ)
 - [ ] **phase-3 からの申し送り** (2026-08-31): `main` ブランチを作成するとき、作成と同時に branch protection を設定する。内容は `develop` と同じ — 検証 CI の 4 job (`ios / verify` / `android / verify` / `maui / verify` / `lint`) を必須 status check とし、pull_request 経由を必須にする (承認数 0)。force-push 禁止・削除禁止を付け、admin バイパスは緊急時の逃げ道として許容する。phase-3 の決定事項「必須チェック化と通知」は `develop`・`main` 両方を対象としていたが、`main` が存在しないため `develop` のみで実施した ([phase-3 の実装結果](../phase-3-verification-ci/agenda.md))。設定は `gh api -X PUT` が保護設定を全体置換する点に注意し、既存設定を含む完全な payload を送る (実例: [branch-protection-develop.txt](../../../../changes/archive/2026-08-31-add-verification-ci/evidence/branch-protection-develop.txt))
