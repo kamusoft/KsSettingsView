@@ -91,7 +91,7 @@ phase-10 → 11 → 12 (Skills 化) → phase-9 (README) → phase-2 の実施 (
 | phase-2-public-readiness | completed | research | [agenda](phases/phase-2-public-readiness/agenda.md) | [changes/archive/2026-08-30-add-question-form-and-english-screenshots](../../changes/archive/2026-08-30-add-question-form-and-english-screenshots/proposal.md) |
 | phase-3-verification-ci | completed | change | [agenda](phases/phase-3-verification-ci/agenda.md) | [changes/archive/2026-08-31-add-verification-ci](../../changes/archive/2026-08-31-add-verification-ci/proposal.md) |
 | phase-4-ios-packaging | completed | change | [agenda](phases/phase-4-ios-packaging/agenda.md) | [changes/archive/2026-09-01-add-spm-distribution](../../changes/archive/2026-09-01-add-spm-distribution/proposal.md) |
-| phase-5-android-packaging | pending | change | [agenda](phases/phase-5-android-packaging/agenda.md) | — |
+| phase-5-android-packaging | in-progress | change | [agenda](phases/phase-5-android-packaging/agenda.md) | [changes/add-android-maven-distribution](../../changes/add-android-maven-distribution/proposal.md) |
 | phase-6-maui-packaging | pending | change | [agenda](phases/phase-6-maui-packaging/agenda.md) | — |
 | phase-7-consumer-verification | pending | change | [agenda](phases/phase-7-consumer-verification/agenda.md) | — |
 | phase-8-release-workflow | pending | change | [agenda](phases/phase-8-release-workflow/agenda.md) | — |
