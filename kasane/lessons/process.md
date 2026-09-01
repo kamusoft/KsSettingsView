@@ -1,6 +1,6 @@
 ---
 scope: process
-timestamp: 2026-08-31
+timestamp: 2026-09-01
 ---
 
 # lessons: process
@@ -12,3 +12,4 @@ timestamp: 2026-08-31
 - [L-005] レビュー指摘や自分の所見を「スコープ外」「別 change 相当」としてオーナー判断へ上げる前に、その修正が数行で閉じるかを先に見積もる。本 change で触れたファイル内、または本 change の変更が直接原因で要修正になったファイル内にあり数行で閉じるなら、上げずにそのサイクル内で直す (proposal の Non-Goal に名指しされていても、deviation を記録して直す — Non-Goal は「その領域を改修しない」宣言であって、本 change が自分で開けた穴を塞ぐことまでは禁じていない)。オーナー判断へ回してよいのは、修正が本 change と無関係のファイルへ広がる場合に限る。数行で閉じる不備を「簡易起票の提案」として報告に載せるのも同じ差し戻しを招く。経緯は [details/reachable-fix-deferred-to-another-change.md](details/reachable-fix-deferred-to-another-change.md)。(昇格: 2026-08-22、出典: fix-cell-accessory-vertical-fill / upgrade-android-build-toolchain / harden-compose-settingsroot-dsl / fix-ios-entrycell-writeback-race)
 - [L-006] 「〜が無い」「〜されていない」という不在の断定は、対象ファイルを末尾まで読むか、対象を特定できる検索を通してから行う。対象はコードとテストに限らず、conventions などの既存ドキュメントも同じ — 「手順が書かれていない」と報告する前にリポジトリ全体を対象語で検索する。スタブ起票 (exploration.md だけの change) を出発点に探索を始めるときも同じで、起票時点のレビュー指摘の写しを現状と見なさず、対象コードとテストの現状を実物で確認してから議論を組み立てる (指摘は同じ change の中で解消されていることがある)。裏取りのない断定はそのままスコープの決定根拠になり、後続フェーズで覆って手戻りになる。経緯は [details/absence-asserted-without-verification.md](details/absence-asserted-without-verification.md)。(昇格: 2026-08-30、出典: fix-maui-icon-lease-disposal-ordering / fix-ios-root-accessory-theme-refresh / add-question-form-and-english-screenshots)
 - [L-007] レビュー・セカンドオピニオンを起動する前に、渡す成果物が実態を反映しているかを確認する。確認済みで反映すべきものは 2 つ — (1) 既知の切り出し済み先送り問題 (関連 change のスタブ一覧と 1 行サマリ)、(2) 実施済みだが成果物に未反映の作業 (tasks.md のチェック・証跡ファイルの追加)。レビュアー、特にプロジェクト文脈を持たない相方は成果物だけを見るため、実態とのずれはそのまま blocking Major になり、判定の突き合わせとオーナー確認の往復が変更のたびに再発する。経緯は [details/known-deferred-issues-not-passed-to-reviewers.md](details/known-deferred-issues-not-passed-to-reviewers.md)。(昇格: 2026-08-31、出典: timepickercell-color-adjust / datepickercell-today-shortcut / add-verification-ci)
+- [L-008] `workers.*: counterpart` のプロジェクトで委譲パッケージを書くときは、counterpart の sandbox が届かない範囲を先に確認する。作業の一部だけが届かない (外部ボリューム上での `trash` 削除・dot ディレクトリ配下の既存ファイル編集) なら、その部分を指揮側 (ホスト) の担当に切り分けて同じ委譲に混ぜない。作業の完了条件が届かない (Simulator / Emulator での実行を完了条件とするタスク — codex sandbox は CoreSimulator へ接続できない) なら、切り分けでは解決しないため、その change ではワーカーの backend を host に切り替える。委譲前にゲートとなるコマンドをホストで 1 回通しておくと backend の選択を誤らない。経緯は [details/counterpart-sandbox-blocks-file-operations.md](details/counterpart-sandbox-blocks-file-operations.md)。(昇格: 2026-09-01、出典: consolidate-readmes-and-contribution (2 件) / fix-ios-test-pump-condition-wait)

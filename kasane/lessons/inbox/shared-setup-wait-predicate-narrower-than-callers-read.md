@@ -2,11 +2,12 @@
 scope: test
 kind: pain
 severity: normal
-count: 1
+count: 2
 first-seen: 2026-09-01
 last-seen: 2026-09-01
 evidence:
   - fix-ios-test-pump-condition-wait (固定時間待機 206 箇所を条件ベース待機へ置換する変更で、複数テストが共有する setup ヘルパの待機述語が「Section 数 + 行を持つ先頭 Section の item 0 の Cell」しか待っておらず、呼び出し側 5 経路が直後に supplementary・2 番目以降の Section・item 0 以外の行を読んでいた。未実体化の Cell を空文字に落とす経路と `XCTUnwrap` が nil で落ちる経路があり、**この change が潰しにいった flaky の型そのものを再生産**していた。しかも広い述語版が同じ change 内に既にあり 3 ファイルで使われていた = 適用漏れ。独立レビューが Major として検出し、相方レビューは APPROVED で見逃した)
+  - fix-ios-tapnotifyingrenderer-actor-isolation (並行して develop 側で追加した `KsCellViewSupportTests` に、共有ヘルパを使わない private の待機ヘルパ 2 つを新設した。`waitForFirstCell` の述語は「先頭 Section の item 0 の Cell」のみで、共有ヘルパ `awaitInitialRender` の広い述語を持たない同型。develop マージ時に発見され、後続 change share-wait-helpers-in-ios-cellviewsupport-tests が共有ヘルパへの置き換えで解消した)
 ---
 
 ## ルール文 (候補)
@@ -30,3 +31,4 @@ evidence:
 
 - 2026-09-01 fix-ios-test-pump-condition-wait: 呼び出し 206 箇所の置換自体は述語の質が高く (更新前から真の不変条件を述語にしない、という規則が守られていた)、レビューも「個々の置換の述語の質は高い」と評価した。欠陥は setup ヘルパ 1 つに集中しており、そこだけが全利用者に波及する構造だった。修正では述語を「全 Section の行数一致 + 表示領域にかかる全行の Cell 実体化 + 全 Section の header / footer supplementary の実体化 (領域が可視のときのみ)」まで広げ、共有ターゲットに単一定義として置いて狭い版を削除した。なお、この修正の実効性は**手元の Simulator では pass/fail に現れない** (述語を常に真にしても全件通る — 初期反映が同期完了するため) ことが mutation 実験で判明しており、効くのは実行機が混雑した CI 上である。**手元で通ることは、待機が正しく書けている根拠にならない**という規約 (`kasane/handbook/cross/test-execution.md`) がヘルパ自身の検証にも当てはまる。
 - 2026-09-01 (同 change の修正サイクル 2 周目): 1 周目の修正で述語を広げた際、section の header / footer は網羅したが **Root accessory の kind が漏れた**。さらに可視 Section 0 件の構成では guard が早期 return して RunLoop を 1 度も回さず、**置換前の固定待機 0.05 秒より待ちが短くなる**箇所が生まれていた (同じ change 内に Root 用の述語が別途あったにもかかわらず)。同じ型が 2 周連続で Major になったことが、この教訓を「個別の指摘への対応」ではなく「網羅の工程」として書くべき根拠になっている。なお、どちらの周も**全件テストは緑のまま**であり、手元の pass/fail はこの欠陥をまったく検出しない。
+- 2026-09-01 fix-ios-tapnotifyingrenderer-actor-isolation: fix-ios-test-pump-condition-wait と並行して進んだ本 change が、押下ハイライトのテスト追加時に `KsCellViewSupportTests` へ private の待機ヘルパ 2 つ (`waitForFirstCell` / `waitForBackgroundColor`) を新設した。待機の作り (deadline・実行機会を譲る・実測値付き fail) は規約準拠だが、述語は先頭 Cell だけの狭い形で、共有ターゲットへの単一定義集約にも反していた。並行作業では「広い版に一本化し狭い版は削除する」を守っても、**もう一方のブランチが新しい狭い版を生む** — マージ時に同型ヘルパの新設有無を確認する工程が要る。解消は share-wait-helpers-in-ios-cellviewsupport-tests (既存共有ヘルパ `awaitInitialRender` / `awaitCondition` への置き換えのみで完了、新規 API 不要)。
