@@ -15,6 +15,7 @@
 #if canImport(UIKit)
 import XCTest
 import UIKit
+import KsSettingsViewTestSupport
 @testable import KsSettingsViewUI
 @testable import KsSettingsViewCore
 
@@ -36,58 +37,30 @@ final class KsCellViewSupportTests: XCTestCase {
         controller.view.layoutIfNeeded()
         let collectionView = controller.internalCollectionView
         collectionView.frame = CGRect(origin: .zero, size: Self.viewSize)
-        collectionView.setNeedsLayout()
-        collectionView.layoutIfNeeded()
+        awaitInitialRender(controller)
         return (controller, collectionView, window)
     }
 
-    private func waitForFirstCell(
-        in collectionView: UICollectionView,
-        timeout: TimeInterval = 1.0,
-        file: StaticString = #filePath,
-        line: UInt = #line
-    ) -> UICollectionViewCell? {
-        let deadline = Date.now.addingTimeInterval(timeout)
-        while Date.now < deadline {
-            collectionView.setNeedsLayout()
-            collectionView.layoutIfNeeded()
-            if let cell = collectionView.cellForItem(at: IndexPath(item: 0, section: 0)) {
-                return cell
-            }
-            _ = RunLoop.current.run(mode: .default, before: Date.now.addingTimeInterval(0.001))
-        }
-        XCTFail(
-            "期限までに先頭 Cell が生成されなかった。表示中 Cell 数: \(collectionView.visibleCells.count)",
-            file: file,
-            line: line
-        )
-        return nil
-    }
-
-    @discardableResult
-    private func waitForBackgroundColor(
-        _ expectedColor: UIColor,
+    /// 指定 Cell の背景色が期待値へ収束するまで待つ。
+    ///
+    /// UIColor の一致は色空間の差を吸収する `isEqual` で判定するため、Equatable 前提の
+    /// `awaitEqual` ではなく `awaitCondition` に述語を渡す。
+    private func awaitBackgroundColor(
+        _ description: String,
+        expected: UIColor,
         of cell: UICollectionViewCell,
         in collectionView: UICollectionView,
-        timeout: TimeInterval = 1.0,
         file: StaticString = #filePath,
         line: UInt = #line
-    ) -> Bool {
-        let deadline = Date.now.addingTimeInterval(timeout)
-        while Date.now < deadline {
-            collectionView.setNeedsLayout()
-            collectionView.layoutIfNeeded()
-            if cell.backgroundConfiguration?.backgroundColor?.isEqual(expectedColor) == true {
-                return true
-            }
-            _ = RunLoop.current.run(mode: .default, before: Date.now.addingTimeInterval(0.001))
-        }
-        XCTFail(
-            "背景色が期限までに収束しなかった。期待値: \(expectedColor)、実測値: \(String(describing: cell.backgroundConfiguration?.backgroundColor))",
+    ) {
+        awaitCondition(
+            "\(description) (期待値: \(expected))",
+            in: collectionView,
+            actual: { "背景色 \(String(describing: cell.backgroundConfiguration?.backgroundColor))" },
             file: file,
-            line: line
+            line: line,
+            until: { cell.backgroundConfiguration?.backgroundColor?.isEqual(expected) ?? false }
         )
-        return false
     }
 
     func test_押下中は選択色になり解除後は平常時の実効背景色へ戻る() {
@@ -102,13 +75,15 @@ final class KsCellViewSupportTests: XCTestCase {
             theme: Theme(selectedColor: selectedColor)
         )
         defer { window.isHidden = true }
-        guard let cell = waitForFirstCell(in: collectionView) else { return }
+        guard let cell = collectionView.cellForItem(at: IndexPath(item: 0, section: 0)) else {
+            return XCTFail("先頭 Cell を取得できない")
+        }
 
         cell.isHighlighted = true
-        guard waitForBackgroundColor(selectedColor, of: cell, in: collectionView) else { return }
+        awaitBackgroundColor("押下中の背景が選択色になる", expected: selectedColor, of: cell, in: collectionView)
 
         cell.isHighlighted = false
-        waitForBackgroundColor(normalColor, of: cell, in: collectionView)
+        awaitBackgroundColor("解除後の背景が平常時の実効背景色へ戻る", expected: normalColor, of: cell, in: collectionView)
     }
 
     func test_無効Cellは押下しても選択色を塗らない() {
@@ -124,14 +99,16 @@ final class KsCellViewSupportTests: XCTestCase {
             theme: Theme(selectedColor: selectedColor)
         )
         defer { window.isHidden = true }
-        guard let cell = waitForFirstCell(in: collectionView) else { return }
+        guard let cell = collectionView.cellForItem(at: IndexPath(item: 0, section: 0)) else {
+            return XCTFail("先頭 Cell を取得できない")
+        }
 
         var sentinelBackground = cell.backgroundConfiguration ?? UIBackgroundConfiguration.clear()
         sentinelBackground.backgroundColor = .cyan
         cell.backgroundConfiguration = sentinelBackground
         cell.isHighlighted = true
 
-        waitForBackgroundColor(normalColor, of: cell, in: collectionView)
+        awaitBackgroundColor("無効 Cell の背景が平常時の実効背景色のまま再適用される", expected: normalColor, of: cell, in: collectionView)
     }
 
     /// `applyEffectiveHeight` を呼ぶと `lastHeight` / `lastIsFixedHeight` が記録され、
