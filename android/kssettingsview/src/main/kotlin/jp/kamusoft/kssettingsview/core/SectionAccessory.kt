@@ -9,7 +9,7 @@ package jp.kamusoft.kssettingsview.core
  * ヘッダ／フッタは表示専用の装飾領域であり、Cell（タップ・選択・編集する行）の概念は
  * 持ち込まない。任意の見た目が要る場合は [Text] ではなく [View] に [KsAnyView] を包んで渡す。
  */
-sealed interface SectionAccessory {
+public sealed interface SectionAccessory {
 
     /**
      * 文字列ヘッダ／フッタ。
@@ -17,7 +17,7 @@ sealed interface SectionAccessory {
      *
      * `data class` の自動 `equals` / `hashCode` により、文字列内容の等価性で判定される。
      */
-    data class Text(val value: String) : SectionAccessory
+    public data class Text(public val value: String) : SectionAccessory
 
     /**
      * 任意 View ヘッダ／フッタ（[KsAnyView] ラップ）。
@@ -27,7 +27,7 @@ sealed interface SectionAccessory {
      *
      * @property view 描画する任意 View（`KsAnyView`）
      */
-    class View(val view: KsAnyView) : SectionAccessory {
+    public class View(public val view: KsAnyView) : SectionAccessory {
 
         /** クラス一致のみで等価判定（[view] の中身は無視）。 */
         override fun equals(other: Any?): Boolean {

@@ -9,14 +9,14 @@ package jp.kamusoft.kssettingsview.core
  * Root と Section で装飾の責務が異なるため（core/ADR-0005）、[SectionAccessory] とは別型とし、
  * Root 固有の挙動分岐（ピン留め・テーマ継承ルール等）を独立に持てるようにする。
  */
-sealed interface RootAccessory {
+public sealed interface RootAccessory {
 
     /**
      * 文字列ヘッダ／フッタ。
      *
      * `data class` の自動 `equals` / `hashCode` により、文字列内容の等価性で判定される。
      */
-    data class Text(val value: String) : RootAccessory
+    public data class Text(public val value: String) : RootAccessory
 
     /**
      * 任意 View ヘッダ／フッタ（[KsAnyView] ラップ）。
@@ -27,7 +27,7 @@ sealed interface RootAccessory {
      *
      * @property view 描画する任意 View（`KsAnyView`）
      */
-    class View(val view: KsAnyView) : RootAccessory {
+    public class View(public val view: KsAnyView) : RootAccessory {
 
         /** クラス一致のみで等価判定（[view] の中身は無視）。 */
         override fun equals(other: Any?): Boolean {

@@ -15,7 +15,7 @@ import jp.kamusoft.kssettingsview.ui.KsImage
  * Compose 側の API を提供する。
  */
 @SettingsRootDsl
-class SectionHandle internal constructor(
+public class SectionHandle internal constructor(
     internal val scope: DSLSettingsRootScope,
     internal val index: Int,
 )
@@ -27,7 +27,7 @@ class SectionHandle internal constructor(
  * Compose 側の API を提供する。
  */
 @SettingsRootDsl
-class CellHandle internal constructor(
+public class CellHandle internal constructor(
     internal val sectionScope: DSLSectionScope,
     internal val index: Int,
 )
@@ -37,31 +37,31 @@ class CellHandle internal constructor(
 // =============================================================================
 
 /** Section に文字列ヘッダを上書き設定する。 */
-fun SectionHandle.sectionHeader(text: String): SectionHandle {
+public fun SectionHandle.sectionHeader(text: String): SectionHandle {
     scope.updateSectionHeader(index, SectionAccessory.Text(text))
     return this
 }
 
 /** Section に任意 Composable ヘッダを上書き設定する。 */
-fun SectionHandle.sectionHeader(content: @Composable () -> Unit): SectionHandle {
+public fun SectionHandle.sectionHeader(content: @Composable () -> Unit): SectionHandle {
     scope.updateSectionHeader(index, SectionAccessory.View(KsAnyView.Compose { content() }))
     return this
 }
 
 /** Section に文字列フッタを上書き設定する。 */
-fun SectionHandle.sectionFooter(text: String): SectionHandle {
+public fun SectionHandle.sectionFooter(text: String): SectionHandle {
     scope.updateSectionFooter(index, SectionAccessory.Text(text))
     return this
 }
 
 /** Section に任意 Composable フッタを上書き設定する。 */
-fun SectionHandle.sectionFooter(content: @Composable () -> Unit): SectionHandle {
+public fun SectionHandle.sectionFooter(content: @Composable () -> Unit): SectionHandle {
     scope.updateSectionFooter(index, SectionAccessory.View(KsAnyView.Compose { content() }))
     return this
 }
 
 /** Section に明示 ID（同一性ヒント）を設定する。 */
-fun SectionHandle.sectionID(id: Any): SectionHandle {
+public fun SectionHandle.sectionID(id: Any): SectionHandle {
     scope.overrideSectionIdAt(index, DSLIdentityHint.Explicit(id))
     return this
 }
@@ -71,25 +71,25 @@ fun SectionHandle.sectionID(id: Any): SectionHandle {
 // =============================================================================
 
 /** Cell のタイトル / ヒントテキスト用フォントを上書きする。 */
-fun CellHandle.font(font: TextStyle): CellHandle {
+public fun CellHandle.font(font: TextStyle): CellHandle {
     sectionScope.mutateCellStyleAt(index) { it.copy(titleFont = font) }
     return this
 }
 
 /** Cell 高さ（dp）を上書きする。 */
-fun CellHandle.cellHeight(height: Dp): CellHandle {
+public fun CellHandle.cellHeight(height: Dp): CellHandle {
     sectionScope.mutateCellStyleAt(index) { it.copy(cellHeight = height) }
     return this
 }
 
 /** Cell タイトル色を上書きする。 */
-fun CellHandle.titleColor(color: Color): CellHandle {
+public fun CellHandle.titleColor(color: Color): CellHandle {
     sectionScope.mutateCellStyleAt(index) { it.copy(titleColor = color) }
     return this
 }
 
 /** Cell 背景色を上書きする。 */
-fun CellHandle.backgroundColor(color: Color): CellHandle {
+public fun CellHandle.backgroundColor(color: Color): CellHandle {
     sectionScope.mutateCellStyleAt(index) { it.copy(backgroundColor = color) }
     return this
 }
@@ -102,16 +102,16 @@ fun CellHandle.backgroundColor(color: Color): CellHandle {
  * 構築する。
  */
 @Suppress("UNUSED_PARAMETER")
-fun CellHandle.disabled(flag: Boolean): CellHandle = this
+public fun CellHandle.disabled(flag: Boolean): CellHandle = this
 
 /** Cell のアイコンを上書きする。 */
-fun CellHandle.icon(icon: KsImage?): CellHandle {
+public fun CellHandle.icon(icon: KsImage?): CellHandle {
     sectionScope.mutateCellIconAt(index, icon)
     return this
 }
 
 /** Cell の明示 ID（同一性ヒント）を設定する。 */
-fun CellHandle.cellID(id: Any): CellHandle {
+public fun CellHandle.cellID(id: Any): CellHandle {
     sectionScope.overrideCellIdAt(index, DSLIdentityHint.Explicit(id))
     return this
 }

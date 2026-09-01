@@ -29,7 +29,7 @@ import jp.kamusoft.kssettingsview.ui.TimePickerCell as UiTimePickerCell
 // =============================================================================
 
 /** `Section { EntryCell(title = "...", text = state) }` 用の TwoWay binding 拡張関数。 */
-fun DSLSectionScope.EntryCell(
+public fun DSLSectionScope.EntryCell(
     title: String,
     text: MutableState<String>,
     description: String? = null,
@@ -67,7 +67,7 @@ fun DSLSectionScope.EntryCell(
 )
 
 /** `Section { EntryCell(title = "...", text = "current", onTextChanged = { ... }) }` 用の callback 拡張関数。 */
-fun DSLSectionScope.EntryCell(
+public fun DSLSectionScope.EntryCell(
     title: String,
     text: String,
     description: String? = null,
@@ -110,7 +110,7 @@ fun DSLSectionScope.EntryCell(
 // =============================================================================
 
 /** `Section { PickerCell(title = "...", items = list, selectedIndex = state) }` 単一選択 overload。 */
-fun DSLSectionScope.PickerCell(
+public fun DSLSectionScope.PickerCell(
     title: String,
     items: List<String>,
     selectedIndex: MutableState<Int?>,
@@ -148,7 +148,7 @@ fun DSLSectionScope.PickerCell(
  *
  * 要素列は構築時にコピーして捕捉され、[onItemSelected] にはその捕捉列の要素が届く。
  */
-fun <T> DSLSectionScope.PickerCell(
+public fun <T> DSLSectionScope.PickerCell(
     title: String,
     items: List<T>,
     displayText: (T) -> String,
@@ -190,7 +190,7 @@ fun <T> DSLSectionScope.PickerCell(
 // =============================================================================
 
 /** `Section { PickerCell(title = "...", items = list, selectedItem = state) }` 文字列の TwoWay overload。 */
-fun DSLSectionScope.PickerCell(
+public fun DSLSectionScope.PickerCell(
     title: String,
     items: List<String>,
     selectedItem: MutableState<String?>,
@@ -228,7 +228,7 @@ fun DSLSectionScope.PickerCell(
  * 複数あるときは最初の位置に、候補列に無い要素は未選択に解決する。確定時は対応する元要素へ
  * 書き戻す（有効な候補が無い index では `null` になる）。
  */
-fun <T> DSLSectionScope.PickerCell(
+public fun <T> DSLSectionScope.PickerCell(
     title: String,
     items: List<T>,
     displayText: (T) -> String,
@@ -273,7 +273,7 @@ fun <T> DSLSectionScope.PickerCell(
 // =============================================================================
 
 /** `Section { PickerCell(title = "...", items = list, selectedIndices = state) }` 複数選択 overload。 */
-fun DSLSectionScope.PickerCell(
+public fun DSLSectionScope.PickerCell(
     title: String,
     items: List<String>,
     selectedIndices: MutableState<Set<Int>>,
@@ -313,7 +313,7 @@ fun DSLSectionScope.PickerCell(
  *
  * [onItemsSelected] には選択中の元要素が index 昇順で届く（範囲外 index の要素は含まれない）。
  */
-fun <T> DSLSectionScope.PickerCell(
+public fun <T> DSLSectionScope.PickerCell(
     title: String,
     items: List<T>,
     displayText: (T) -> String,
@@ -357,7 +357,7 @@ fun <T> DSLSectionScope.PickerCell(
 // =============================================================================
 
 /** `Section { NumberPickerCell(title = "...", value = state) }` 用の TwoWay binding 拡張関数。 */
-fun DSLSectionScope.NumberPickerCell(
+public fun DSLSectionScope.NumberPickerCell(
     title: String,
     value: MutableState<Int>,
     description: String? = null,
@@ -399,7 +399,7 @@ fun DSLSectionScope.NumberPickerCell(
 // =============================================================================
 
 /** `Section { TimePickerCell(title = "...", time = state) }` 用の TwoWay binding 拡張関数。 */
-fun DSLSectionScope.TimePickerCell(
+public fun DSLSectionScope.TimePickerCell(
     title: String,
     time: MutableState<LocalTime>,
     description: String? = null,
@@ -437,7 +437,7 @@ fun DSLSectionScope.TimePickerCell(
 // =============================================================================
 
 /** `Section { DatePickerCell(title = "...", date = state) }` 用の TwoWay binding 拡張関数。 */
-fun DSLSectionScope.DatePickerCell(
+public fun DSLSectionScope.DatePickerCell(
     title: String,
     date: MutableState<LocalDate>,
     description: String? = null,

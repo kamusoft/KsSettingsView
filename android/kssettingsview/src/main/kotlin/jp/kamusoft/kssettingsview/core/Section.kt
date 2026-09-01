@@ -41,7 +41,7 @@ package jp.kamusoft.kssettingsview.core
  *   [isFooterVisible] および Cell の表示とは独立している。
  * @property isFooterVisible セクションフッタの表示トグル（core/ADR-0023）。意味論は [isHeaderVisible] と対称。
  */
-data class Section(
+public data class Section(
     val id: String,
     val header: SectionAccessory? = null,
     val footer: SectionAccessory? = null,

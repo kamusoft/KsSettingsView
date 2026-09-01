@@ -25,7 +25,7 @@ import androidx.annotation.DrawableRes
  *
  * Android の `Drawable` / リソース ID を直接扱うため、Core ではなく UI 層に属する（core/ADR-0009）。
  */
-sealed interface KsImage {
+public sealed interface KsImage {
 
     /**
      * Android リソース ID（`@DrawableRes`）を保持する派生（主軸）。
@@ -35,7 +35,7 @@ sealed interface KsImage {
      *
      * @property resId `@DrawableRes` 注釈付きのリソース ID
      */
-    data class Resource(@DrawableRes val resId: Int) : KsImage
+    public data class Resource(@DrawableRes public val resId: Int) : KsImage
 
     /**
      * 任意の [android.graphics.drawable.Drawable] を保持する派生。
@@ -50,7 +50,7 @@ sealed interface KsImage {
      *
      * @property drawable 任意の Drawable インスタンス
      */
-    class Drawable(val drawable: android.graphics.drawable.Drawable) : KsImage {
+    public class Drawable(public val drawable: android.graphics.drawable.Drawable) : KsImage {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (other !is Drawable) return false
@@ -71,5 +71,5 @@ sealed interface KsImage {
      *
      * @property name SF Symbols 名（Android では未解決）
      */
-    data class SystemName(val name: String) : KsImage
+    public data class SystemName(public val name: String) : KsImage
 }

@@ -7,7 +7,7 @@ package jp.kamusoft.kssettingsview.core
  * `START` / `CENTER` / `END` の 3 ケースを提供する。UI 層側で `Gravity.START` / `Gravity.END` 等に
  * 変換する（RTL 環境では Android プラットフォームの差し替えに委ねる）。
  */
-enum class CellTitleAlignment {
+public enum class CellTitleAlignment {
     /** 先頭寄せ（LTR では左寄せ、RTL では右寄せ） */
     START,
 

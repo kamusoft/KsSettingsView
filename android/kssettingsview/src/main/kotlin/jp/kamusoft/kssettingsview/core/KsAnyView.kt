@@ -17,7 +17,7 @@ import androidx.compose.runtime.Composable
  * 差分検出（`SettingsRoot` / `Section` の `equals` / `hashCode` 計算）には参加させない。
  * 中身の更新は描画レイヤ（`ComposeView.setContent` の再呼び出し等）に委ねる。
  */
-sealed interface KsAnyView {
+public sealed interface KsAnyView {
 
     /**
      * Jetpack Compose の `@Composable` ラムダを保持する `KsAnyView` サブタイプ。
@@ -26,7 +26,7 @@ sealed interface KsAnyView {
      *
      * @property content 描画する Composable コンテンツ
      */
-    class Compose(val content: @Composable () -> Unit) : KsAnyView
+    public class Compose(public val content: @Composable () -> Unit) : KsAnyView
 
     /**
      * Android プラットフォーム標準の `(Context) -> View` ファクトリを保持する `KsAnyView` サブタイプ。
@@ -35,5 +35,5 @@ sealed interface KsAnyView {
      *
      * @property factory `View` を生成するファクトリ関数
      */
-    class AndroidView(val factory: (Context) -> View) : KsAnyView
+    public class AndroidView(public val factory: (Context) -> View) : KsAnyView
 }

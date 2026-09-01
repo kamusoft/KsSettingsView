@@ -9,7 +9,7 @@ package jp.kamusoft.kssettingsview.ui
  * 描画基盤（RecyclerView / ListAdapter）は共通で、`ItemDecoration` のみが切り替わる
  * （[ClassicSectionDecoration] / [ModernSectionDecoration]）。
  */
-enum class KsSettingsViewStyle {
+public enum class KsSettingsViewStyle {
     Classic,
     Modern,
 }

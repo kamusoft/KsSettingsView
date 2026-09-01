@@ -20,7 +20,7 @@ import android.content.Context
  *   基本 Cell / 入力 Cell の登録 API とシグネチャを揃えるために受け取る。
  */
 @Suppress("UNUSED_PARAMETER")
-fun KsCellRegistry.registerCustomCell(context: Context) {
+public fun KsCellRegistry.registerCustomCell(context: Context) {
     register(
         cellClass = CustomCell::class,
         viewType = VIEW_TYPE_CUSTOM_CELL,

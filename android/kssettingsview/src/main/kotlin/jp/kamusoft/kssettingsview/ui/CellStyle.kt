@@ -32,7 +32,7 @@ import androidx.compose.ui.unit.Dp
  * @property accentColor Cell 個別 accent 色（`null` のとき `Theme.cellAccentColor`）
  * @property placeholderColor `EntryCell` の placeholder 文字色（`null` のとき `Theme.cellPlaceholderColor`）
  */
-data class CellStyle(
+public data class CellStyle(
     val titleColor: Color? = null,
     val titleFont: TextStyle? = null,
     val descriptionColor: Color? = null,

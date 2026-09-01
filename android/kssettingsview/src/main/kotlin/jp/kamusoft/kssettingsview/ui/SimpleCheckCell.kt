@@ -17,7 +17,7 @@ import jp.kamusoft.kssettingsview.core.DSLReidentifiableCell
  * 共通フィールドとして `description` / `valueText` / `icon` / `hintText` / `accentColor` を持つ。
  * `style` は UI 層所属の [CellStyle] を参照する（core/ADR-0009）。
  */
-data class SimpleCheckCell(
+public data class SimpleCheckCell(
     override val id: String = "simple-check-${java.util.UUID.randomUUID()}",
     override val style: CellStyle = CellStyle(),
     val title: String,

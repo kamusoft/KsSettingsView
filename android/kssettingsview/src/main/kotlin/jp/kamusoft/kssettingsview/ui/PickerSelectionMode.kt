@@ -11,7 +11,7 @@ package jp.kamusoft.kssettingsview.ui
  * - [Single]: 1 件のみ選択可能。`PickerCell.selectedIndex: Int?` と組み合わせる
  * - [Multiple]: 複数件選択可能。`PickerCell.selectedIndices: Set<Int>` と組み合わせる
  */
-enum class PickerSelectionMode {
+public enum class PickerSelectionMode {
     /** 単一選択モード（既定）。 */
     Single,
 

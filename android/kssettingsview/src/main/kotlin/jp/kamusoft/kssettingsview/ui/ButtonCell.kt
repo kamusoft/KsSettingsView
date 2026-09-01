@@ -24,7 +24,7 @@ import jp.kamusoft.kssettingsview.core.DSLReidentifiableCell
  *
  * `titleColor` は Compose の `Color?` を直接受け取る（core/ADR-0009）。
  */
-data class ButtonCell(
+public data class ButtonCell(
     override val id: String = "button-${java.util.UUID.randomUUID()}",
     override val style: CellStyle = CellStyle(),
     val title: String,

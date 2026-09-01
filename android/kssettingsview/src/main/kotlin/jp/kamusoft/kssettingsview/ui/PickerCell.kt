@@ -25,7 +25,7 @@ import jp.kamusoft.kssettingsview.core.DSLReidentifiableCell
  * @property onSelectionChanged 単一選択モードでの選択変更 callback
  * @property onMultiSelectionChanged 複数選択モードでの選択変更 callback
  */
-data class PickerCell(
+public data class PickerCell(
     override val id: String = "picker-cell-${java.util.UUID.randomUUID()}",
     override val style: CellStyle = CellStyle(),
     val title: String,

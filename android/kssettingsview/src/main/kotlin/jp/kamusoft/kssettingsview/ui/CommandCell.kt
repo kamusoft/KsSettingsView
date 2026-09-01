@@ -18,7 +18,7 @@ import jp.kamusoft.kssettingsview.core.DSLReidentifiableCell
  *
  * `style` / `icon` は UI 層所属の [CellStyle] / [KsImage] を参照する（core/ADR-0009）。
  */
-data class CommandCell(
+public data class CommandCell(
     override val id: String = "command-${java.util.UUID.randomUUID()}",
     override val style: CellStyle = CellStyle(),
     val title: String,

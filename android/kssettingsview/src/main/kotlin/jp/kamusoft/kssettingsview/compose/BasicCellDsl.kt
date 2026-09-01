@@ -212,7 +212,7 @@ private fun buildSimpleCheckCell(
 // =============================================================================
 
 /** `Section { LabelCell(title = "...") }` のように Cell を直置きするための拡張関数。 */
-fun DSLSectionScope.LabelCell(
+public fun DSLSectionScope.LabelCell(
     title: String,
     description: String? = null,
     valueText: String? = null,
@@ -235,7 +235,7 @@ fun DSLSectionScope.LabelCell(
 )
 
 /** `Section { CommandCell(title = "...", onTap = { ... }) }` 用の拡張関数。 */
-fun DSLSectionScope.CommandCell(
+public fun DSLSectionScope.CommandCell(
     title: String,
     description: String? = null,
     valueText: String? = null,
@@ -262,7 +262,7 @@ fun DSLSectionScope.CommandCell(
 )
 
 /** `Section { ButtonCell(title = "...", onTap = { ... }) }` 用の拡張関数。 */
-fun DSLSectionScope.ButtonCell(
+public fun DSLSectionScope.ButtonCell(
     title: String,
     valueText: String? = null,
     icon: KsImage? = null,
@@ -293,7 +293,7 @@ fun DSLSectionScope.ButtonCell(
  *
  * 引数 `isOn` は `MutableState<Boolean>` を受け取り、内部で値の読み取り / 書き込みを行う。
  */
-fun DSLSectionScope.SwitchCell(
+public fun DSLSectionScope.SwitchCell(
     title: String,
     isOn: MutableState<Boolean>,
     description: String? = null,
@@ -321,7 +321,7 @@ fun DSLSectionScope.SwitchCell(
 )
 
 /** `Section { SwitchCell(title = "...", isOn = true, onValueChanged = { ... }) }` 用の拡張関数。 */
-fun DSLSectionScope.SwitchCell(
+public fun DSLSectionScope.SwitchCell(
     title: String,
     isOn: Boolean,
     description: String? = null,
@@ -350,7 +350,7 @@ fun DSLSectionScope.SwitchCell(
 )
 
 /** `Section { CheckboxCell(title = "...", isChecked = state, onValueChanged = { ... }) }` 用。 */
-fun DSLSectionScope.CheckboxCell(
+public fun DSLSectionScope.CheckboxCell(
     title: String,
     isChecked: Boolean,
     description: String? = null,
@@ -379,7 +379,7 @@ fun DSLSectionScope.CheckboxCell(
 )
 
 /** `Section { RadioCell(title = "...", groupId = "g", value = "a", selectedValue = sel) }` 用。 */
-fun DSLSectionScope.RadioCell(
+public fun DSLSectionScope.RadioCell(
     title: String,
     groupId: String,
     value: String,
@@ -412,7 +412,7 @@ fun DSLSectionScope.RadioCell(
 )
 
 /** `Section { SimpleCheckCell(title = "...", isChecked = state, onValueChanged = { ... }) }` 用。 */
-fun DSLSectionScope.SimpleCheckCell(
+public fun DSLSectionScope.SimpleCheckCell(
     title: String,
     isChecked: Boolean,
     description: String? = null,

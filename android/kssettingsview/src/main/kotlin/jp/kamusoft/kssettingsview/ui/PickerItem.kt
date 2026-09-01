@@ -9,11 +9,11 @@ package jp.kamusoft.kssettingsview.ui
  * @property text 主表示テキスト
  * @property subText 副表示テキスト（`null` は副表示なし）
  */
-class PickerItem(
-    val text: String,
+public class PickerItem(
+    public val text: String,
     subText: String? = null,
 ) {
-    val subText: String? = subText?.takeIf { it.isNotEmpty() }
+    public val subText: String? = subText?.takeIf { it.isNotEmpty() }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

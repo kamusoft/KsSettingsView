@@ -16,10 +16,10 @@ import jp.kamusoft.kssettingsview.core.Cell
  * `icon: KsImage?` を持つ Cell が準拠する。アイコン領域を持たない `CustomCell` は準拠せず、
  * その場合 `CellHandle.icon(_:)` modifier は no-op として扱う。
  */
-interface DSLIconModifiableCell : Cell {
+public interface DSLIconModifiableCell : Cell {
     /**
      * 自身を copy し、新しい `icon` を持つ Cell を返す。
      * @param newIcon 新しい `KsImage`（`null` でアイコンクリア）
      */
-    fun withDSLIcon(newIcon: KsImage?): Cell
+    public fun withDSLIcon(newIcon: KsImage?): Cell
 }

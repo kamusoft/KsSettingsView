@@ -16,7 +16,7 @@ import jp.kamusoft.kssettingsview.core.DSLReidentifiableCell
  * 共通フィールドとして `description` / `valueText` / `icon` / `hintText` を持ち、
  * 全 Cell 共通レイアウト規約 `[icon][title / description][valueText][hintText][accessory]` に従う。
  */
-data class SwitchCell(
+public data class SwitchCell(
     override val id: String = "switch-${java.util.UUID.randomUUID()}",
     override val style: CellStyle = CellStyle(),
     val title: String,

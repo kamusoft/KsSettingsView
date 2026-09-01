@@ -13,7 +13,7 @@ import jp.kamusoft.kssettingsview.core.DSLReidentifiableCell
  * 共通フィールドとして `description` / `valueText` / `icon` / `hintText` を持つ。
  * `accentColor` は Compose の `Color?` を直接受け取る（core/ADR-0009）。
  */
-data class CheckboxCell(
+public data class CheckboxCell(
     override val id: String = "checkbox-${java.util.UUID.randomUUID()}",
     override val style: CellStyle = CellStyle(),
     val title: String,

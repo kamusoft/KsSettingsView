@@ -16,7 +16,7 @@ import android.content.Context
  * - 114: DatePickerCell
  */
 @Suppress("UNUSED_PARAMETER")
-fun KsCellRegistry.registerInputCells(context: Context) {
+public fun KsCellRegistry.registerInputCells(context: Context) {
     register(
         cellClass = EntryCell::class,
         viewType = VIEW_TYPE_ENTRY_CELL,

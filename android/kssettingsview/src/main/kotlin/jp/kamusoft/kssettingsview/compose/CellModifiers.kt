@@ -21,22 +21,22 @@ import jp.kamusoft.kssettingsview.ui.KsImage
  */
 
 /** タイトル / ヒントテキスト用フォントを上書きする。 */
-fun Cell.font(font: TextStyle): Cell {
+public fun Cell.font(font: TextStyle): Cell {
     return mutateStyle { it.copy(titleFont = font) }
 }
 
 /** Cell 高さ（dp）を上書きする。 */
-fun Cell.cellHeight(height: Dp): Cell {
+public fun Cell.cellHeight(height: Dp): Cell {
     return mutateStyle { it.copy(cellHeight = height) }
 }
 
 /** タイトル色を上書きする。 */
-fun Cell.titleColor(color: Color): Cell {
+public fun Cell.titleColor(color: Color): Cell {
     return mutateStyle { it.copy(titleColor = color) }
 }
 
 /** 背景色を上書きする。 */
-fun Cell.backgroundColor(color: Color): Cell {
+public fun Cell.backgroundColor(color: Color): Cell {
     return mutateStyle { it.copy(backgroundColor = color) }
 }
 
@@ -47,7 +47,7 @@ fun Cell.backgroundColor(color: Color): Cell {
  * no-op として扱う（後続提案で正式対応）。
  */
 @Suppress("UNUSED_PARAMETER")
-fun Cell.disabled(flag: Boolean): Cell = this
+public fun Cell.disabled(flag: Boolean): Cell = this
 
 /**
  * Cell のアイコンを上書きする。
@@ -55,7 +55,7 @@ fun Cell.disabled(flag: Boolean): Cell = this
  * Cell が [DSLIconModifiableCell] を実装している場合のみ反映され、未実装な Cell に
  * 対しては no-op になる（アイコン領域を持たない `CustomCell`）。
  */
-fun Cell.icon(icon: KsImage?): Cell {
+public fun Cell.icon(icon: KsImage?): Cell {
     return if (this is DSLIconModifiableCell) {
         this.withDSLIcon(icon)
     } else {
@@ -71,7 +71,7 @@ fun Cell.icon(icon: KsImage?): Cell {
  * 採用しなければならない。本実装は **メソッドチェーン形式** で利用された Cell を
  * [DSLExplicitIdCell] で **ラップ** して返す sentinel パターンを採用する。
  */
-fun Cell.cellID(id: Any): Cell {
+public fun Cell.cellID(id: Any): Cell {
     // すでにラップ済みの場合は最新の明示 ID で上書きする。
     val baseCell = if (this is DSLExplicitIdCell) this.wrapped else this
     return DSLExplicitIdCell(wrapped = baseCell, explicitId = id)

@@ -13,6 +13,6 @@ package jp.kamusoft.kssettingsview.core
  *
  * @property sections セクション群
  */
-data class SettingsRoot(
+public data class SettingsRoot(
     val sections: List<Section> = emptyList(),
 )

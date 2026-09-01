@@ -67,7 +67,7 @@ private fun buildStaticCustomCell(
  * @param isVisible `false` で visible projection から除外される
  * @param builder [content] から Compose コンテンツを組み立てる
  */
-fun <C : Any> DSLSectionScope.CustomCell(
+public fun <C : Any> DSLSectionScope.CustomCell(
     content: C,
     showArrow: Boolean = false,
     style: CellStyle = CellStyle(),
@@ -97,7 +97,7 @@ fun <C : Any> DSLSectionScope.CustomCell(
  * @param isVisible `false` で visible projection から除外される
  * @param builder 表示する Compose コンテンツ
  */
-fun DSLSectionScope.CustomCell(
+public fun DSLSectionScope.CustomCell(
     showArrow: Boolean = false,
     style: CellStyle = CellStyle(),
     onTap: (() -> Unit)? = null,

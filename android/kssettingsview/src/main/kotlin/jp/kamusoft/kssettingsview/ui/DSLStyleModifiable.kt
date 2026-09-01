@@ -19,13 +19,13 @@ import jp.kamusoft.kssettingsview.core.Cell
  * Core の `Cell` は `style` を要求しないため、`style` 取得 API も本インターフェースが束ねて要求する。
  * これにより modifier 経路は `cell as? DSLStyleModifiableCell` 経由で `style` を取得できる。
  */
-interface DSLStyleModifiableCell : Cell {
+public interface DSLStyleModifiableCell : Cell {
     /** Cell 個別の [CellStyle] を返す（読み取り専用）。 */
-    val style: CellStyle
+    public val style: CellStyle
 
     /**
      * 自身を copy し、新しい `style` を持つ Cell を返す。
      * 通常は `data class` の `copy(style = newStyle)` で実装する。
      */
-    fun withDSLStyle(newStyle: CellStyle): Cell
+    public fun withDSLStyle(newStyle: CellStyle): Cell
 }
