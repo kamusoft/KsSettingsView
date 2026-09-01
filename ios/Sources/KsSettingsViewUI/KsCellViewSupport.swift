@@ -77,15 +77,22 @@ internal enum KsCellViewSupport {
     /// `isEnabled == false` の Cell では selectedColor を反映しない。
     static func installSelectedColorHandler(_ listCell: UICollectionViewListCell) {
         listCell.configurationUpdateHandler = { [weak listCell] _, cellState in
-            guard let listCell = listCell as? UICollectionViewListCell else { return }
-            let s = state(listCell)
-            var bg = listCell.backgroundConfiguration ?? listCell.defaultBackgroundConfiguration()
-            if s.isEnabled && (cellState.isHighlighted || cellState.isSelected) {
-                bg.backgroundColor = s.theme.selectedColor
-            } else {
-                bg.backgroundColor = s.effectiveCellBackgroundColor
+            // handler 型は nonisolated で UICellConfigurationState は Sendable ではないため、
+            // actor 境界の外で押下状態を Sendable な Bool に確定する。
+            let isPressed = cellState.isHighlighted || cellState.isSelected
+            // UIKit は configurationUpdateHandler を main thread から呼ぶため、UIKit 状態の
+            // 参照と更新は main actor 上に隔離されているものとして扱える。
+            MainActor.assumeIsolated {
+                guard let listCell else { return }
+                let s = state(listCell)
+                var bg = listCell.backgroundConfiguration ?? listCell.defaultBackgroundConfiguration()
+                if s.isEnabled && isPressed {
+                    bg.backgroundColor = s.theme.selectedColor
+                } else {
+                    bg.backgroundColor = s.effectiveCellBackgroundColor
+                }
+                listCell.backgroundConfiguration = bg
             }
-            listCell.backgroundConfiguration = bg
         }
     }
 

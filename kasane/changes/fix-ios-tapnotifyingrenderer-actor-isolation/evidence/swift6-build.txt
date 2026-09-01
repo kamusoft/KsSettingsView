@@ -1,0 +1,63 @@
+# tasks 4.1: Swift 6 言語モードでのパッケージビルド (抜粋)
+
+コマンド: xcodebuild build -scheme KsSettingsView-Package -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
+一時設定: ios/Package.swift に swiftLanguageVersions: [.version("6")] を追加 (検証後に復元、差分 0 件)
+
+## Swift 6 モードの適用確認
+   9 -swift-version 6
+
+## 結果 (修正後)
+error: 0 件 / warning: 32 件
+** BUILD SUCCEEDED **
+
+## 残存 warning (ユニークメッセージ。行番号は畳んだ)
+   1 ios/Sources/KsSettingsViewUI/KsCellViewSupport.swift:  call to main actor-isolated instance method 'constraint(equalToConstant:)' in a synchronous nonisolated context
+   1 ios/Sources/KsSettingsViewUI/KsCellViewSupport.swift:  call to main actor-isolated instance method 'constraint(greaterThanOrEqualToConstant:)' in a synchronous nonisolated context
+   1 ios/Sources/KsSettingsViewUI/KsCellViewSupport.swift:  call to main actor-isolated instance method 'setNeedsLayout()' in a synchronous nonisolated context
+   2 ios/Sources/KsSettingsViewUI/KsCellViewSupport.swift:  main actor-isolated property 'bounds' can not be referenced from a nonisolated context
+   1 ios/Sources/KsSettingsViewUI/KsCellViewSupport.swift:  main actor-isolated property 'configurationUpdateHandler' can not be mutated from a nonisolated context
+   1 ios/Sources/KsSettingsViewUI/KsCellViewSupport.swift:  main actor-isolated property 'contentView' can not be referenced from a nonisolated context
+   2 ios/Sources/KsSettingsViewUI/KsCellViewSupport.swift:  main actor-isolated property 'heightAnchor' can not be referenced from a nonisolated context
+   2 ios/Sources/KsSettingsViewUI/KsCellViewSupport.swift:  main actor-isolated property 'isActive' can not be mutated from a nonisolated context
+   1 ios/Sources/KsSettingsViewUI/KsCellViewSupport.swift:  main actor-isolated property 'isUserInteractionEnabled' can not be mutated from a nonisolated context
+   2 ios/Sources/KsSettingsViewUI/KsCellViewSupport.swift:  main actor-isolated property 'layer' can not be mutated from a nonisolated context
+   2 ios/Sources/KsSettingsViewUI/KsCellViewSupport.swift:  main actor-isolated property 'layer' can not be referenced from a nonisolated context
+   1 ios/Sources/KsSettingsViewUI/KsCellViewSupport.swift:  main actor-isolated property 'priority' can not be mutated from a nonisolated context
+   1 ios/Sources/KsSettingsViewUI/KsCellViewSupport.swift:  main actor-isolated property 'size' can not be mutated from a nonisolated context
+   1 ios/Sources/KsSettingsViewUI/KsCellViewSupport.swift:  main actor-isolated property 'size' can not be referenced from a nonisolated context
+   1 ios/Sources/KsSettingsViewUI/KsSettingsViewController.swift:  'supplementariesFollowContentInsets' was deprecated in iOS 16.0
+   2 ios/Sources/KsSettingsViewUI/SectionBoxAttributes.swift:  main actor-isolated property 'borderColor' can not be referenced from a nonisolated autoclosure
+   1 ios/Sources/KsSettingsViewUI/SectionBoxAttributes.swift:  main actor-isolated property 'borderColor' can not be referenced from a nonisolated context
+   2 ios/Sources/KsSettingsViewUI/SectionBoxAttributes.swift:  main actor-isolated property 'borderWidth' can not be referenced from a nonisolated autoclosure
+   1 ios/Sources/KsSettingsViewUI/SectionBoxAttributes.swift:  main actor-isolated property 'borderWidth' can not be referenced from a nonisolated context
+   2 ios/Sources/KsSettingsViewUI/SectionBoxAttributes.swift:  main actor-isolated property 'boxBackgroundColor' can not be referenced from a nonisolated autoclosure
+   1 ios/Sources/KsSettingsViewUI/SectionBoxAttributes.swift:  main actor-isolated property 'boxBackgroundColor' can not be referenced from a nonisolated context
+   2 ios/Sources/KsSettingsViewUI/SectionBoxAttributes.swift:  main actor-isolated property 'cornerRadius' can not be referenced from a nonisolated autoclosure
+   1 ios/Sources/KsSettingsViewUI/SectionBoxAttributes.swift:  main actor-isolated property 'cornerRadius' can not be referenced from a nonisolated context
+
+## 修正前コードとの比較
+
+同じ一時設定を HEAD (修正前) のソースに当ててビルドした結果: error 12 件 / BUILD FAILED (exit 65)。
+エラーで中断するため後続ファイルの warning は出力されず、件数の単純比較はできない。ユニークメッセージの差分は次のとおり。
+
+### 修正後に消えたもの (本 change が解消した warning)
+- ios/Sources/KsSettingsViewUI/KsCellViewSupport.swift:  call to main actor-isolated instance method 'defaultBackgroundConfiguration()' in a synchronous nonisolated context
+- ios/Sources/KsSettingsViewUI/KsCellViewSupport.swift:  conditional downcast from 'UICollectionViewListCell?' to 'UICollectionViewListCell' does nothing
+- ios/Sources/KsSettingsViewUI/KsCellViewSupport.swift:  main actor-isolated property 'backgroundConfiguration' can not be mutated from a nonisolated context
+- ios/Sources/KsSettingsViewUI/KsCellViewSupport.swift:  main actor-isolated property 'backgroundConfiguration' can not be referenced from a nonisolated context
+
+### 修正後にだけ現れるもの
+- ios/Sources/KsSettingsViewUI/KsSettingsViewController.swift:  'supplementariesFollowContentInsets' was deprecated in iOS 16.0
+- ios/Sources/KsSettingsViewUI/SectionBoxAttributes.swift:  main actor-isolated property 'borderColor' can not be referenced from a nonisolated autoclosure
+- ios/Sources/KsSettingsViewUI/SectionBoxAttributes.swift:  main actor-isolated property 'borderColor' can not be referenced from a nonisolated context
+- ios/Sources/KsSettingsViewUI/SectionBoxAttributes.swift:  main actor-isolated property 'borderWidth' can not be referenced from a nonisolated autoclosure
+- ios/Sources/KsSettingsViewUI/SectionBoxAttributes.swift:  main actor-isolated property 'borderWidth' can not be referenced from a nonisolated context
+- ios/Sources/KsSettingsViewUI/SectionBoxAttributes.swift:  main actor-isolated property 'boxBackgroundColor' can not be referenced from a nonisolated autoclosure
+- ios/Sources/KsSettingsViewUI/SectionBoxAttributes.swift:  main actor-isolated property 'boxBackgroundColor' can not be referenced from a nonisolated context
+- ios/Sources/KsSettingsViewUI/SectionBoxAttributes.swift:  main actor-isolated property 'cornerRadius' can not be referenced from a nonisolated autoclosure
+- ios/Sources/KsSettingsViewUI/SectionBoxAttributes.swift:  main actor-isolated property 'cornerRadius' can not be referenced from a nonisolated context
+
+後者はいずれも本 change の diff が 1 行も触っていないファイル・行のもので (SectionBoxAttributes.swift は無変更、
+KsSettingsViewController.swift:589 の deprecated API は proposal の Non-Goal)、修正前ビルドがエラー中断して
+集計に載らなかったことによる見かけの増加である。本 change が書き換えた KsCellViewSupport.swift については
+新規に現れた warning は無く、4 種が消えている。
