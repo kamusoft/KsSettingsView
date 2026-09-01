@@ -15,6 +15,7 @@
 import XCTest
 import UIKit
 import SwiftUI
+import KsSettingsViewTestSupport
 @testable import KsSettingsViewUI
 @testable import KsSettingsViewCore
 
@@ -390,7 +391,7 @@ final class SectionAccessoryRenderingTests: XCTestCase {
         rootView.layoutIfNeeded()
         let cv = controller.internalCollectionView
         cv.frame = CGRect(origin: .zero, size: size)
-        pump(cv)
+        awaitInitialRender(controller)
         return (controller, cv, window)
     }
 
@@ -414,17 +415,8 @@ final class SectionAccessoryRenderingTests: XCTestCase {
         rootView.layoutIfNeeded()
         let cv = controller.internalCollectionView
         cv.frame = CGRect(origin: .zero, size: size)
-        pump(cv)
+        awaitInitialRender(controller)
         return (controller, cv, window)
-    }
-
-    /// レイアウトと再構成を確定させる。
-    private func pump(_ view: UIView, seconds: TimeInterval = 0.05) {
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
-        RunLoop.current.run(until: Date().addingTimeInterval(seconds))
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
     }
 
     /// 画面に表示されている実物の Header supplementary から UILabel を取得する。
@@ -473,7 +465,7 @@ final class SectionAccessoryRenderingTests: XCTestCase {
         let unknownID = UUID()
         store.updateAccessory(target: .sectionHeader(sectionID: unknownID), accessory: .section(.text("ヘッダX")))
         store.updateAccessory(target: .sectionFooter(sectionID: unknownID), accessory: .section(.text("フッタX")))
-        pump(cv)
+        waitForNegativeVerification(in: cv)
 
         XCTAssertEqual(visibleHeaderLabel(cv, section: 0)?.text, "ヘッダA",
                        "未知 sectionID の updateAccessory で header 表示が変化している")
@@ -481,7 +473,12 @@ final class SectionAccessoryRenderingTests: XCTestCase {
                        "未知 sectionID の updateAccessory で footer 表示が変化している")
 
         store.updateAccessory(target: .sectionHeader(sectionID: section.id), accessory: .section(.text("ヘッダB")))
-        pump(cv)
+        awaitEqual(
+            "表示中 header の実描画テキスト",
+            expected: "ヘッダB" as String?,
+            in: cv,
+            actual: { visibleHeaderLabel(cv, section: 0)?.text }
+        )
 
         XCTAssertEqual(visibleHeaderLabel(cv, section: 0)?.text, "ヘッダB",
                        "後続の既知 sectionID の更新が表示へ届かない (Store 購読が生きていない)")
@@ -506,7 +503,12 @@ final class SectionAccessoryRenderingTests: XCTestCase {
             cells: section1.cells
         )
         controller.applyDiff(.replaceSection(sectionID: section1.id, new: section2))
-        pump(cv)
+        awaitEqual(
+            "表示中 header の実描画テキスト",
+            expected: "ヘッダB" as String?,
+            in: cv,
+            actual: { visibleHeaderLabel(cv, section: 0)?.text }
+        )
 
         XCTAssertEqual(visibleHeaderLabel(cv, section: 0)?.text, "ヘッダB",
                        "replaceSection の header text 変更が表示中の supplementary に反映されていない")
@@ -531,7 +533,12 @@ final class SectionAccessoryRenderingTests: XCTestCase {
             cells: section1.cells
         )
         controller.applyDiff(.full(SettingsRoot(sections: [section2])))
-        pump(cv)
+        awaitEqual(
+            "表示中 header の実描画テキスト",
+            expected: "ヘッダB" as String?,
+            in: cv,
+            actual: { visibleHeaderLabel(cv, section: 0)?.text }
+        )
 
         XCTAssertEqual(visibleHeaderLabel(cv, section: 0)?.text, "ヘッダB",
                        "full Diff の header text 変更が表示中の supplementary に反映されていない")
@@ -556,7 +563,7 @@ final class SectionAccessoryRenderingTests: XCTestCase {
             cells: section1.cells
         )
         controller.applyDiff(.full(SettingsRoot(sections: [section2])))
-        pump(cv)
+        waitForNegativeVerification(in: cv)
 
         let afterCell = cv.cellForItem(at: IndexPath(item: 0, section: 0))
         XCTAssertTrue(beforeCell === afterCell,
@@ -622,7 +629,15 @@ final class SectionAccessoryRenderingTests: XCTestCase {
             headerHeight: 90
         )
         store.replaceSection(sectionID: section1.id, new: section2)
-        pump(cv)
+        awaitCondition(
+            "headerHeight の変更が表示中 header の実高さへ届く",
+            in: cv,
+            actual: { "header 高さ \(String(describing: visibleHeaderFrameHeight(cv, section: 0)))" },
+            until: {
+                guard let height = visibleHeaderFrameHeight(cv, section: 0) else { return false }
+                return abs(height - 90) <= 0.5
+            }
+        )
 
         let afterLayoutHeight = try XCTUnwrap(layoutHeaderHeight(cv, section: 0),
                                               "更新後の header layout attributes が取得できない")
@@ -664,7 +679,15 @@ final class SectionAccessoryRenderingTests: XCTestCase {
             headerHeight: 90
         )
         store.replaceAll(SettingsRoot(sections: [section2]))
-        pump(cv)
+        awaitCondition(
+            "headerHeight の変更が表示中 header の実高さへ届く",
+            in: cv,
+            actual: { "header 高さ \(String(describing: visibleHeaderFrameHeight(cv, section: 0)))" },
+            until: {
+                guard let height = visibleHeaderFrameHeight(cv, section: 0) else { return false }
+                return abs(height - 90) <= 0.5
+            }
+        )
 
         let afterLayoutHeight = try XCTUnwrap(layoutHeaderHeight(cv, section: 0),
                                               "更新後の header layout attributes が取得できない")
@@ -711,7 +734,19 @@ final class SectionAccessoryRenderingTests: XCTestCase {
             headerHeight: 90
         )
         store.replaceAll(SettingsRoot(sections: [section2]))
-        pump(cv)
+        awaitCondition(
+            "replaceAll 1 回の header 高さと Cell 内容が表示へ届く",
+            in: cv,
+            actual: {
+                "header 高さ \(String(describing: visibleHeaderFrameHeight(cv, section: 0))) / "
+                    + "title \(String(describing: visibleCellTitle(cv, section: 0, item: 0)))"
+            },
+            until: {
+                guard let height = visibleHeaderFrameHeight(cv, section: 0) else { return false }
+                return abs(height - 90) <= 0.5
+                    && visibleCellTitle(cv, section: 0, item: 0) == "新タイトル"
+            }
+        )
 
         let afterLayoutHeight = try XCTUnwrap(layoutHeaderHeight(cv, section: 0),
                                               "更新後の header layout attributes が取得できない")
@@ -756,7 +791,19 @@ final class SectionAccessoryRenderingTests: XCTestCase {
         )
         store.replaceAll(SettingsRoot(sections: [section2]))
         store.replaceCell(cellID: KsCellID(id: cellID), new: LabelCell(id: cellID, title: "最終タイトル"))
-        pump(cv)
+        awaitCondition(
+            "full 適用の直後に重ねた部分更新が表示へ届く",
+            in: cv,
+            actual: {
+                "header 高さ \(String(describing: visibleHeaderFrameHeight(cv, section: 0))) / "
+                    + "title \(String(describing: visibleCellTitle(cv, section: 0, item: 0)))"
+            },
+            until: {
+                guard let height = visibleHeaderFrameHeight(cv, section: 0) else { return false }
+                return abs(height - 90) <= 0.5
+                    && visibleCellTitle(cv, section: 0, item: 0) == "最終タイトル"
+            }
+        )
 
         let afterFrameHeight = try XCTUnwrap(visibleHeaderFrameHeight(cv, section: 0),
                                              "更新後の表示中 header supplementary が取得できない")
@@ -793,7 +840,22 @@ final class SectionAccessoryRenderingTests: XCTestCase {
             cells: section1.cells
         )
         controller.applyDiff(.replaceSection(sectionID: section1.id, new: section2))
-        pump(cv)
+        awaitCondition(
+            "差し替えた view header が表示中の supplementary へ載る",
+            in: cv,
+            actual: {
+                let cell = cv.supplementaryView(
+                    forElementKind: UICollectionView.elementKindSectionHeader, at: headerPath
+                ) as? UICollectionViewListCell
+                return "subview tags = \(cell?.contentView.subviews.map(\.tag) ?? [])"
+            },
+            until: {
+                let cell = cv.supplementaryView(
+                    forElementKind: UICollectionView.elementKindSectionHeader, at: headerPath
+                ) as? UICollectionViewListCell
+                return cell?.contentView.subviews.contains(where: { $0.tag == 2222 }) == true
+            }
+        )
 
         let after = cv.supplementaryView(
             forElementKind: UICollectionView.elementKindSectionHeader, at: headerPath
@@ -955,7 +1017,7 @@ final class SectionAccessoryRenderingTests: XCTestCase {
                        "自動高さ側の header が固定高さに引きずられている")
 
         cv.collectionViewLayout.invalidateLayout()
-        pump(cv)
+        layoutNow(cv)
 
         XCTAssertEqual(try XCTUnwrap(visibleHeaderFrameHeight(cv, section: 0)), 40, accuracy: 0.5,
                        "レイアウト再計算で固定高さ側の header 高さが変化している")

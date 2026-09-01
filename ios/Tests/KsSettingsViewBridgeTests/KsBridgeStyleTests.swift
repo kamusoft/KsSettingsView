@@ -6,6 +6,7 @@
 #if canImport(UIKit)
 import XCTest
 import UIKit
+import KsSettingsViewTestSupport
 @testable import KsSettingsViewBridge
 @testable import KsSettingsViewUI
 @testable import KsSettingsViewCore
@@ -40,7 +41,7 @@ final class KsBridgeStyleTests: XCTestCase {
         XCTAssertEqual(Self.firstRowLeading(attachment), 0, "classic では Section が全幅で並ぶ")
 
         fixture.bridge.setStyle(1)
-        KsBridgeTestHost.pump(attachment)
+        Self.awaitFirstRowLeading(attachment, equals: Self.marginPoints)
 
         XCTAssertEqual(attachment.controller.style, .modern)
         XCTAssertEqual(
@@ -56,10 +57,10 @@ final class KsBridgeStyleTests: XCTestCase {
         fixture.bridge.setTheme(Self.marginTheme())
         let attachment = KsBridgeTestHost.attach(fixture.bridge)
         fixture.bridge.setStyle(1)
-        KsBridgeTestHost.pump(attachment)
+        Self.awaitFirstRowLeading(attachment, equals: Self.marginPoints)
 
         fixture.bridge.setStyle(0)
-        KsBridgeTestHost.pump(attachment)
+        Self.awaitFirstRowLeading(attachment, equals: 0)
 
         XCTAssertEqual(attachment.controller.style, .classic)
         XCTAssertEqual(Self.firstRowLeading(attachment), 0)
@@ -83,7 +84,7 @@ final class KsBridgeStyleTests: XCTestCase {
         fixture.bridge.setTheme(Self.marginTheme())
         let first = KsBridgeTestHost.attach(fixture.bridge)
         fixture.bridge.setStyle(1)
-        KsBridgeTestHost.pump(first)
+        Self.awaitFirstRowLeading(first, equals: Self.marginPoints)
 
         fixture.bridge.releaseHost()
         let second = KsBridgeTestHost.attach(fixture.bridge)
@@ -99,10 +100,10 @@ final class KsBridgeStyleTests: XCTestCase {
         fixture.bridge.setTheme(Self.marginTheme())
         let attachment = KsBridgeTestHost.attach(fixture.bridge)
         fixture.bridge.setStyle(1)
-        KsBridgeTestHost.pump(attachment)
+        Self.awaitFirstRowLeading(attachment, equals: Self.marginPoints)
 
         fixture.bridge.setStyle(7)
-        KsBridgeTestHost.pump(attachment)
+        Self.awaitFirstRowLeading(attachment, equals: 0)
 
         XCTAssertEqual(attachment.controller.style, .classic)
         XCTAssertEqual(Self.firstRowLeading(attachment), 0)
@@ -116,6 +117,26 @@ final class KsBridgeStyleTests: XCTestCase {
         theme.sectionMarginBottom = NSNumber(value: 0.0)
         theme.sectionMarginTrailing = NSNumber(value: Double(marginPoints))
         return theme
+    }
+
+    /// 先頭行の水平位置が期待値になるまで待つ。
+    ///
+    /// style の切替は `applyFullSnapshot` / `reconfigureVisibleCells` を通って layout へ届くため、
+    /// 行の水平位置が切替後の値になったことを完了条件とする。
+    private static func awaitFirstRowLeading(
+        _ attachment: KsBridgeTestHost.Attachment,
+        equals expected: CGFloat,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        awaitEqual(
+            "先頭行の水平位置",
+            expected: expected,
+            in: attachment.collectionView,
+            file: file,
+            line: line,
+            actual: { firstRowLeading(attachment) }
+        )
     }
 
     /// 先頭 Section の先頭行が実描画された水平位置 (leading) を返す。

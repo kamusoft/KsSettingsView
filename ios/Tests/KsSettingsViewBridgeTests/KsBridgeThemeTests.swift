@@ -7,12 +7,20 @@
 import XCTest
 import UIKit
 import Combine
+import KsSettingsViewTestSupport
 @testable import KsSettingsViewBridge
 @testable import KsSettingsViewUI
 @testable import KsSettingsViewCore
 
 @MainActor
 final class KsBridgeThemeTests: XCTestCase {
+
+    /// 先頭 Section の先頭行が実描画された水平位置を返す。
+    private static func firstRowMinX(_ attachment: KsBridgeTestHost.Attachment) -> CGFloat? {
+        return attachment.collectionView.layoutAttributesForItem(
+            at: IndexPath(item: 0, section: 0)
+        )?.frame.minX
+    }
 
     /// 不透明な緑 (ARGB) を表す輸送値。
     private static let opaqueGreen = NSNumber(value: Int32(bitPattern: 0xFF00FF00))
@@ -92,7 +100,15 @@ final class KsBridgeThemeTests: XCTestCase {
         let theme = KsBridgeTheme()
         theme.cellTitleColor = Self.opaqueGreen
         fixture.bridge.setTheme(theme)
-        KsBridgeTestHost.pump(attachment)
+        awaitEqual(
+            "先頭行のタイトル色",
+            expected: UIColor(red: 0, green: 1, blue: 0, alpha: 1),
+            in: attachment.collectionView,
+            actual: {
+                (attachment.collectionView.cellForItem(at: IndexPath(item: 0, section: 0))
+                    as? KsListCellBase)?.titleLabel.textColor
+            }
+        )
 
         XCTAssertEqual(diffs.count, 0, "Theme 変更は構造 Diff を発行しない")
         XCTAssertEqual(
@@ -194,7 +210,13 @@ final class KsBridgeThemeTests: XCTestCase {
         let fixture = KsBridgeFixture.standard()
         let attachment = KsBridgeTestHost.attach(fixture.bridge)
         fixture.bridge.setStyle(Self.modernOrdinal)
-        KsBridgeTestHost.pump(attachment)
+        // classic では行が全幅 (minX == 0) のため、modern の既定水平余白が効くことが遷移証拠になる。
+        awaitCondition(
+            "modern への切替が行の水平位置へ反映される",
+            in: attachment.collectionView,
+            actual: { "先頭行の minX \(String(describing: Self.firstRowMinX(attachment)))" },
+            until: { (Self.firstRowMinX(attachment) ?? 0) > 0 }
+        )
 
         let theme = KsBridgeTheme()
         theme.sectionMarginTop = NSNumber(value: Double.nan)
@@ -204,7 +226,12 @@ final class KsBridgeThemeTests: XCTestCase {
         theme.sectionCornerRadius = NSNumber(value: Double.nan)
         theme.sectionBorderWidth = NSNumber(value: -2.0)
         fixture.bridge.setTheme(theme)
-        KsBridgeTestHost.pump(attachment)
+        awaitEqual(
+            "先頭行の minX (不正な余白の 0 正規化)",
+            expected: 0,
+            in: attachment.collectionView,
+            actual: { Self.firstRowMinX(attachment) ?? .nan }
+        )
 
         XCTAssertEqual(KsBridgeTestHost.renderedTitles(attachment), [["A", "B"], ["C"]])
         let firstRow = attachment.collectionView.layoutAttributesForItem(

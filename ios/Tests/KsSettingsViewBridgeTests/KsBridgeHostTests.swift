@@ -6,6 +6,7 @@
 #if canImport(UIKit)
 import XCTest
 import UIKit
+import KsSettingsViewTestSupport
 @testable import KsSettingsViewBridge
 @testable import KsSettingsViewUI
 @testable import KsSettingsViewCore
@@ -23,7 +24,7 @@ final class KsBridgeHostTests: XCTestCase {
         let section = builder.addSection(headerText: "S", footerText: nil)
         builder.addLabelCell(KsBridgeLabelCell(title: "A"), sectionID: section.sectionID)
         bridge.setRoot(builder)
-        KsBridgeTestHost.pump(attachment)
+        KsBridgeTestHost.awaitRenderedTitles(attachment, equals: [["A"]])
 
         XCTAssertEqual(KsBridgeTestHost.renderedTitles(attachment), [["A"]])
     }

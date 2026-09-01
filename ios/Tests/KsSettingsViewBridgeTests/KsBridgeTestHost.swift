@@ -6,6 +6,7 @@
 #if canImport(UIKit)
 import Foundation
 import UIKit
+import KsSettingsViewTestSupport
 @testable import KsSettingsViewBridge
 @testable import KsSettingsViewUI
 @testable import KsSettingsViewCore
@@ -29,7 +30,11 @@ internal enum KsBridgeTestHost {
 
     /// Bridge から Host を生成し、window に載せて実描画を確定させる。
     /// - Parameter bridge: 対象 Bridge
-    static func attach(_ bridge: KsSettingsBridge) -> Attachment {
+    static func attach(
+        _ bridge: KsSettingsBridge,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) -> Attachment {
         guard let controller = bridge.makeHostViewController() as? KsSettingsViewController else {
             fatalError("Bridge が Native Host を返さなかった")
         }
@@ -42,18 +47,113 @@ internal enum KsBridgeTestHost {
         rootView.layoutIfNeeded()
         let attachment = Attachment(controller: controller, window: window)
         attachment.collectionView.frame = CGRect(origin: .zero, size: size)
-        pump(attachment)
+        awaitInitialRender(attachment, file: file, line: line)
         return attachment
     }
 
-    /// レイアウトと再構成を確定させる。
-    static func pump(_ attachment: Attachment, seconds: TimeInterval = 0.05) {
-        let view = attachment.collectionView
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
-        RunLoop.current.run(until: Date().addingTimeInterval(seconds))
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
+    /// 初期スナップショットが実描画されるまで待つ。
+    ///
+    /// 期待する Section 構造は visible projection から、Section に属さない Root accessory の
+    /// boundary supplementary は controller の設定から求め、行と supplementary の実体化まで
+    /// `awaitCollectionRender` が待つ。
+    private static func awaitInitialRender(
+        _ attachment: Attachment,
+        file: StaticString,
+        line: UInt
+    ) {
+        let controller = attachment.controller
+        let expected = KsSettingsViewController.computeVisibleSections(from: controller.root.sections)
+        awaitCollectionRender(
+            attachment.collectionView,
+            "Host attach 後の初期スナップショット反映",
+            expectedItemCounts: expected.map(\.cells.count),
+            requiredSupplementaryKinds: expectedRootSupplementaryKinds(controller),
+            file: file,
+            line: line
+        )
+    }
+
+    /// 設定済みの Root accessory から、実体化していなければならない boundary supplementary の
+    /// elementKind を求める。
+    ///
+    /// Root accessory は layout 全体の boundary supplementary であり、どの Section にも属さない。
+    /// Section 構造からは存在を導けないため、controller の設定から明示的に列挙する。
+    private static func expectedRootSupplementaryKinds(
+        _ controller: KsSettingsViewController
+    ) -> [String] {
+        var kinds: [String] = []
+        if controller.rootHeader != nil {
+            kinds.append(KsSettingsViewController.rootHeaderElementKind)
+        }
+        if controller.rootFooter != nil {
+            kinds.append(KsSettingsViewController.rootFooterElementKind)
+        }
+        return kinds
+    }
+
+    // MARK: - 収束待ち
+
+    /// 観測した view が期待インスタンスと同一になるまで待つ。
+    ///
+    /// accessory の attach・置換・リサイクル後の再バインドは実描画の周回を挟んで完了するため、
+    /// 同一性が成立したことをその完了条件として待つ。
+    static func awaitSameView(
+        _ attachment: Attachment,
+        _ description: String,
+        is expected: UIView,
+        file: StaticString = #filePath,
+        line: UInt = #line,
+        observe: () -> UIView?
+    ) {
+        awaitCondition(
+            description,
+            in: attachment.collectionView,
+            actual: { describe(observe()) },
+            file: file,
+            line: line,
+            until: { observe() === expected }
+        )
+    }
+
+    /// 実描画された行タイトルが期待どおりになるまで待つ。
+    static func awaitRenderedTitles(
+        _ attachment: Attachment,
+        equals expected: [[String]],
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        awaitEqual(
+            "実描画された行タイトル",
+            expected: expected,
+            in: attachment.collectionView,
+            file: file,
+            line: line,
+            actual: { renderedTitles(attachment) }
+        )
+    }
+
+    /// 指定 Section の header に実描画されたテキストが期待どおりになるまで待つ。
+    static func awaitHeaderText(
+        _ attachment: Attachment,
+        section: Int,
+        equals expected: String?,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        awaitEqual(
+            "section \(section) の header テキスト",
+            expected: expected,
+            in: attachment.collectionView,
+            file: file,
+            line: line,
+            actual: { headerText(attachment, section: section) }
+        )
+    }
+
+    /// view を失敗メッセージ用に識別できる形へ整形する。
+    static func describe(_ view: UIView?) -> String {
+        guard let view else { return "nil" }
+        return "\(type(of: view))(\(UInt(bitPattern: ObjectIdentifier(view).hashValue)))"
     }
 
     /// Section ごとに実描画された行タイトルを返す。

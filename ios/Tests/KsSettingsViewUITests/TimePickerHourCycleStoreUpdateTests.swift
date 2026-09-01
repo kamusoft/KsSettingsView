@@ -14,6 +14,7 @@
 #if canImport(UIKit)
 import XCTest
 import UIKit
+import KsSettingsViewTestSupport
 @testable import KsSettingsViewUI
 @testable import KsSettingsViewCore
 
@@ -37,17 +38,8 @@ final class TimePickerHourCycleStoreUpdateTests: XCTestCase {
         root.layoutIfNeeded()
         let cv = controller.internalCollectionView
         cv.frame = CGRect(origin: .zero, size: size)
-        pump(cv)
+        awaitInitialRender(controller)
         return (controller, cv, window)
-    }
-
-    /// レイアウトと再構成を確定させる。
-    private func pump(_ view: UIView, seconds: TimeInterval = 0.05) {
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
-        RunLoop.current.run(until: Date().addingTimeInterval(seconds))
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
     }
 
     /// 先頭 Section の先頭行が実際に提示する picker の時制を返す。
@@ -88,7 +80,9 @@ final class TimePickerHourCycleStoreUpdateTests: XCTestCase {
             cellID: KsCellID(id: cellID),
             new: TimePickerCell(id: cellID, title: "就寝", time: time, is24Hour: false)
         )
-        pump(cv)
+        awaitEqual("Store 経由の is24Hour 変更が picker の時制へ届く", expected: false as Bool?, in: cv) {
+            renderedIs24Hour(cv)
+        }
 
         XCTAssertEqual(renderedIs24Hour(cv), false, "Store 経由の is24Hour 変更が picker へ届いていない")
     }
@@ -114,7 +108,9 @@ final class TimePickerHourCycleStoreUpdateTests: XCTestCase {
             cellID: KsCellID(id: cellID),
             new: TimePickerCell(id: cellID, title: "就寝", time: time, is24Hour: true)
         )
-        pump(cv)
+        awaitEqual("Store 経由の is24Hour 変更が picker の時制へ届く", expected: true as Bool?, in: cv) {
+            renderedIs24Hour(cv)
+        }
 
         XCTAssertEqual(renderedIs24Hour(cv), true, "Store 経由の is24Hour 変更が picker へ届いていない")
     }

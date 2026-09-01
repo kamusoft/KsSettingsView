@@ -6,6 +6,7 @@
 #if canImport(UIKit)
 import XCTest
 import UIKit
+import KsSettingsViewTestSupport
 @testable import KsSettingsViewBridge
 @testable import KsSettingsViewUI
 @testable import KsSettingsViewCore
@@ -33,7 +34,7 @@ final class KsBridgeRootTests: XCTestCase {
         let section = builder.addSection(headerText: "NEW", footerText: nil)
         builder.addLabelCell(KsBridgeLabelCell(title: "X"), sectionID: section.sectionID)
         fixture.bridge.setRoot(builder)
-        KsBridgeTestHost.pump(attachment)
+        KsBridgeTestHost.awaitRenderedTitles(attachment, equals: [["X"]])
 
         XCTAssertEqual(KsBridgeTestHost.renderedTitles(attachment), [["X"]])
         XCTAssertEqual(KsBridgeTestHost.headerText(attachment, section: 0), "NEW")
@@ -48,7 +49,7 @@ final class KsBridgeRootTests: XCTestCase {
             cellID: fixture.cellB.cellID,
             newCell: KsBridgeLabelCell(title: "B-updated")
         )
-        KsBridgeTestHost.pump(attachment)
+        KsBridgeTestHost.awaitRenderedTitles(attachment, equals: [["A", "B-updated"], ["C"]])
 
         XCTAssertEqual(KsBridgeTestHost.renderedTitles(attachment), [["A", "B-updated"], ["C"]])
     }
@@ -75,7 +76,7 @@ final class KsBridgeRootTests: XCTestCase {
 
         fixture.bridge.removeCell(cellID: KsBridgeFixture.unknownIdentifier)
         fixture.bridge.removeCell(cellID: KsBridgeFixture.unusedIdentifier())
-        KsBridgeTestHost.pump(attachment)
+        waitForNegativeVerification(in: attachment.collectionView)
 
         XCTAssertEqual(KsBridgeTestHost.renderedTitles(attachment), before)
         XCTAssertEqual(fixture.bridge.store.root.sections.flatMap { $0.cells }.count, 3)

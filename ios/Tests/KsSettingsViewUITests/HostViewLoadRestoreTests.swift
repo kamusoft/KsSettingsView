@@ -11,6 +11,7 @@
 #if canImport(UIKit)
 import XCTest
 import UIKit
+import KsSettingsViewTestSupport
 @testable import KsSettingsViewUI
 @testable import KsSettingsViewCore
 
@@ -33,17 +34,8 @@ final class HostViewLoadRestoreTests: XCTestCase {
         rootView.layoutIfNeeded()
         let cv = controller.internalCollectionView
         cv.frame = CGRect(origin: .zero, size: size)
-        pump(cv)
+        awaitInitialRender(controller)
         return (cv, window)
-    }
-
-    /// レイアウトと再構成を確定させる。
-    private func pump(_ view: UIView, seconds: TimeInterval = 0.05) {
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
-        RunLoop.current.run(until: Date().addingTimeInterval(seconds))
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
     }
 
     /// 指定 Section の各行に実際に表示されているタイトル文字列を返す。
@@ -284,7 +276,12 @@ final class HostViewLoadRestoreTests: XCTestCase {
 
         // 所有者が view load 後に再適用すると表示される。
         store.updateAccessory(target: .rootHeader, accessory: .root(.text("Root H")))
-        pump(cv)
+        awaitEqual(
+            "再適用した Root header の実描画",
+            expected: "Root H" as String?,
+            in: cv,
+            actual: { visibleRootHeaderText(cv) }
+        )
 
         XCTAssertEqual(controller.rootHeader, .text("Root H"))
         XCTAssertEqual(

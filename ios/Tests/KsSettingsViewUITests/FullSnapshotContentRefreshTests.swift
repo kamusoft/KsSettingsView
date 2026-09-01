@@ -10,6 +10,7 @@
 #if canImport(UIKit)
 import XCTest
 import UIKit
+import KsSettingsViewTestSupport
 @testable import KsSettingsViewUI
 @testable import KsSettingsViewCore
 
@@ -33,17 +34,27 @@ final class FullSnapshotContentRefreshTests: XCTestCase {
         root.layoutIfNeeded()
         let cv = controller.internalCollectionView
         cv.frame = CGRect(origin: .zero, size: size)
-        pump(cv)
+        awaitInitialRender(controller)
         return (controller, cv, window)
     }
 
-    /// レイアウトと再構成を確定させる。
-    private func pump(_ view: UIView, seconds: TimeInterval = 0.05) {
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
-        RunLoop.current.run(until: Date().addingTimeInterval(seconds))
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
+    /// 実描画された行タイトルが期待どおりになるまで待つ。
+    private func awaitRenderedTitles(
+        _ cv: UICollectionView,
+        count: Int,
+        section: Int = 0,
+        equals expected: [String?],
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        awaitEqual(
+            "実描画された行タイトル",
+            expected: expected,
+            in: cv,
+            file: file,
+            line: line,
+            actual: { renderedTitles(cv, count: count, section: section) }
+        )
     }
 
     /// 指定 Section の各行に実際に表示されているタイトル文字列を返す。
@@ -95,7 +106,7 @@ final class FullSnapshotContentRefreshTests: XCTestCase {
             ]
         )
         store.replaceAll(SettingsRoot(sections: [newSec]))
-        pump(cv)
+        awaitRenderedTitles(cv, count: 3, equals: ["A2", "B", "C2"])
 
         XCTAssertEqual(
             renderedTitles(cv, count: 3),
@@ -128,7 +139,7 @@ final class FullSnapshotContentRefreshTests: XCTestCase {
             cells: [LabelCell(id: cellA.id, title: "A2"), cellB]
         )
         store.replaceAll(SettingsRoot(sections: [newSec]))
-        pump(cv)
+        awaitRenderedTitles(cv, count: 2, equals: ["A2", "B"])
 
         let firstRowAfter = cv.cellForItem(at: IndexPath(item: 0, section: 0))
         XCTAssertTrue(
@@ -162,7 +173,7 @@ final class FullSnapshotContentRefreshTests: XCTestCase {
             ]
         )
         store.replaceAll(SettingsRoot(sections: [newSec]))
-        pump(cv)
+        awaitRenderedTitles(cv, count: 3, equals: ["残る", "変わる新", "増える"])
 
         XCTAssertEqual(
             renderedTitles(cv, count: 3),
@@ -192,7 +203,7 @@ final class FullSnapshotContentRefreshTests: XCTestCase {
             ]
         )
         store.replaceAll(SettingsRoot(sections: [newSec]))
-        pump(cv)
+        awaitRenderedTitles(cv, count: 2, equals: ["表示中新", "隠れていた新"])
 
         XCTAssertEqual(
             renderedTitles(cv, count: 2),
@@ -219,7 +230,7 @@ final class FullSnapshotContentRefreshTests: XCTestCase {
             cells: [LabelCell(id: cellA.id, title: "A2"), cellB]
         )
         store.replaceSection(sectionID: sec.id, new: newSec)
-        pump(cv)
+        awaitRenderedTitles(cv, count: 2, equals: ["A2", "B"])
 
         XCTAssertEqual(
             renderedTitles(cv, count: 2),
@@ -249,7 +260,18 @@ final class FullSnapshotContentRefreshTests: XCTestCase {
             cells: [LabelCell(id: cellA.id, title: "A2"), cellB]
         )
         store.replaceAll(SettingsRoot(sections: [newSec]))
-        pump(cv)
+        awaitCondition(
+            "header と Cell 内容の同時変更が実描画へ届く",
+            in: cv,
+            actual: {
+                "header=\(String(describing: visibleHeaderLabel(cv, section: 0)?.text)) "
+                    + "titles=\(renderedTitles(cv, count: 2))"
+            },
+            until: {
+                visibleHeaderLabel(cv, section: 0)?.text == "ヘッダ新"
+                    && renderedTitles(cv, count: 2) == ["A2", "B"]
+            }
+        )
 
         XCTAssertEqual(visibleHeaderLabel(cv, section: 0)?.text, "ヘッダ新",
                        "header の内容変化が表示へ反映されていない")
@@ -281,7 +303,7 @@ final class FullSnapshotContentRefreshTests: XCTestCase {
             cells: [SwitchCell(id: sharedID, title: "スイッチ"), other]
         )
         store.replaceAll(SettingsRoot(sections: [newSec]))
-        pump(cv)
+        awaitRenderedTitles(cv, count: 2, equals: ["スイッチ", "そのまま"])
 
         XCTAssertEqual(renderedTitles(cv, count: 2), ["スイッチ", "そのまま"],
                        "具象型が変わった Cell の内容が表示へ反映されていない")
@@ -310,7 +332,18 @@ final class FullSnapshotContentRefreshTests: XCTestCase {
             cells: [SwitchCell(id: sharedID, title: "スイッチ")]
         )
         store.replaceAll(SettingsRoot(sections: [newSec]))
-        pump(cv)
+        awaitCondition(
+            "header 変更 Section 内の具象型変化が実描画へ届く",
+            in: cv,
+            actual: {
+                "header=\(String(describing: visibleHeaderLabel(cv, section: 0)?.text)) "
+                    + "titles=\(renderedTitles(cv, count: 1))"
+            },
+            until: {
+                visibleHeaderLabel(cv, section: 0)?.text == "ヘッダ新"
+                    && renderedTitles(cv, count: 1) == ["スイッチ"]
+            }
+        )
 
         XCTAssertEqual(visibleHeaderLabel(cv, section: 0)?.text, "ヘッダ新")
         XCTAssertEqual(renderedTitles(cv, count: 1), ["スイッチ"])

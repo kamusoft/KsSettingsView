@@ -14,6 +14,7 @@
 import XCTest
 import SwiftUI
 import UIKit
+import KsSettingsViewTestSupport
 @testable import KsSettingsViewUI
 @testable import KsSettingsViewCore
 
@@ -69,26 +70,31 @@ final class CustomCellTests: XCTestCase {
 
     /// Cell を window に載せてレイアウトを確定させる。
     /// `UIHostingConfiguration` の hosted View 階層は window 上のレイアウトで実体化する。
+    ///
+    /// content に `UIViewRepresentable` 製の probe を埋めた Cell では、probe の UIView が
+    /// view ツリーへ現れるまでが非同期に進むため `renderedIdentifier` にその identifier を渡す。
+    /// `Text` / `Image` だけの content は UIView を一切生やさない (待てる遷移が無い) ため、
+    /// identifier を渡さずレイアウトの確定だけを行う。
     @discardableResult
     private func host(
         _ cell: UICollectionViewCell,
-        size: CGSize = CGSize(width: 375, height: 60)
+        size: CGSize = CGSize(width: 375, height: 60),
+        renderedIdentifier: String? = nil
     ) -> UIWindow {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: size.width, height: 600))
         cell.frame = CGRect(origin: .zero, size: size)
         window.addSubview(cell)
         window.makeKeyAndVisible()
-        pump(cell)
+        if let renderedIdentifier {
+            awaitNonNil(
+                "hosted content の probe (\(renderedIdentifier)) が view ツリーへ現れる",
+                in: cell,
+                produce: { findView(identifier: renderedIdentifier, in: cell) }
+            )
+        } else {
+            layoutNow(cell)
+        }
         return window
-    }
-
-    /// SwiftUI の update / レイアウトを確定させる。
-    private func pump(_ view: UIView, seconds: TimeInterval = 0.05) {
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
-        RunLoop.current.run(until: Date().addingTimeInterval(seconds))
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
     }
 
     /// Cell 群を持つ `KsSettingsViewController` を window に載せて描画を確定させる。
@@ -110,7 +116,7 @@ final class CustomCellTests: XCTestCase {
         root.layoutIfNeeded()
         let cv = controller.internalCollectionView
         cv.frame = CGRect(origin: .zero, size: size)
-        pump(cv)
+        awaitInitialRender(controller)
         return (controller, cv, window)
     }
 
@@ -279,7 +285,7 @@ final class CustomCellTests: XCTestCase {
         let view = CustomCellView()
         let cell = CustomCell { CustomCellProbe(identifier: "probe-static") }
         view.render(cell: cell, theme: Theme())
-        host(view)
+        host(view, renderedIdentifier: "probe-static")
 
         XCTAssertNotNil(
             findView(identifier: "probe-static", in: view),
@@ -340,7 +346,7 @@ final class CustomCellTests: XCTestCase {
             CustomCellProbe(identifier: "probe-\(value)")
         }
         view.render(cell: cell, theme: Theme())
-        host(view)
+        host(view, renderedIdentifier: "probe-A")
 
         XCTAssertNotNil(findView(identifier: "probe-A", in: view))
     }
@@ -362,7 +368,11 @@ final class CustomCellTests: XCTestCase {
             CustomCellProbe(identifier: "probe-\(value)")
         }
         controller.applyDiff(.replaceCell(cellID: KsCellID(cell: a), new: b))
-        pump(cv, seconds: 0.3)
+        awaitNonNil(
+            "差し替えた content の probe が実描画へ現れる",
+            in: cv,
+            produce: { findView(identifier: "probe-B", in: cv) }
+        )
 
         XCTAssertNotNil(findView(identifier: "probe-B", in: cv), "content B の出力に更新される")
         XCTAssertNil(findView(identifier: "probe-A", in: cv), "content A の出力は残らない")
@@ -376,7 +386,7 @@ final class CustomCellTests: XCTestCase {
             CustomCellProbe(identifier: "probe-\(value)")
         }
         view.render(cell: cell, theme: Theme())
-        host(view)
+        host(view, renderedIdentifier: "probe-A")
         XCTAssertNotNil(findView(identifier: "probe-A", in: view))
         XCTAssertNotNil(view.tapHandler)
 
@@ -514,7 +524,7 @@ final class CustomCellTests: XCTestCase {
         let view = CustomCellView()
         let cell = CustomCell(content: "x") { _ in CustomCellProbe(identifier: "probe") }
         view.render(cell: cell, theme: Theme())
-        host(view)
+        host(view, renderedIdentifier: "probe")
 
         guard let probe = findView(identifier: "probe", in: view) else {
             XCTFail("probe content が描画されていない")
@@ -535,14 +545,14 @@ final class CustomCellTests: XCTestCase {
             cell: CustomCell(content: "x") { _ in CustomCellProbe(identifier: "probe") },
             theme: Theme()
         )
-        host(plain)
+        host(plain, renderedIdentifier: "probe")
 
         let arrowed = CustomCellView()
         arrowed.render(
             cell: CustomCell(content: "x", showArrow: true) { _ in CustomCellProbe(identifier: "probe") },
             theme: Theme()
         )
-        host(arrowed)
+        host(arrowed, renderedIdentifier: "probe")
 
         guard
             let plainProbe = findView(identifier: "probe", in: plain),
@@ -714,7 +724,12 @@ final class CustomCellTests: XCTestCase {
 
         // 再バインド API を一切呼ばず、builder 内部の状態だけを動かす。
         toggle.isExpanded = true
-        pump(cv, seconds: 0.5)
+        awaitCondition(
+            "builder 内部の状態変化で行高さが伸びる",
+            in: cv,
+            actual: { "行高さ = \(String(describing: cv.cellForItem(at: path)?.frame.height))" },
+            until: { (cv.cellForItem(at: path)?.frame.height ?? 0) > collapsed + 100 }
+        )
 
         guard let expanded = cv.cellForItem(at: path)?.frame.height else {
             XCTFail("セル frame.height を取得できない")
@@ -728,7 +743,12 @@ final class CustomCellTests: XCTestCase {
 
         // 折りたたみ方向にも追従する。
         toggle.isExpanded = false
-        pump(cv, seconds: 0.5)
+        awaitCondition(
+            "builder 内部の状態変化で行高さが縮む",
+            in: cv,
+            actual: { "行高さ = \(String(describing: cv.cellForItem(at: path)?.frame.height))" },
+            until: { (cv.cellForItem(at: path)?.frame.height ?? 0) < expanded - 100 }
+        )
         guard let recollapsed = cv.cellForItem(at: path)?.frame.height else {
             XCTFail("セル frame.height を取得できない")
             return
@@ -839,7 +859,11 @@ final class CustomCellTests: XCTestCase {
         host.view.frame = CGRect(x: 0, y: 150, width: 375, height: 200)
         window.addSubview(host.view)
         window.makeKeyAndVisible()
-        pump(host.view)
+        awaitNonNil(
+            "hosted content の probe が view ツリーへ現れる",
+            in: host.view,
+            produce: { findView(identifier: "probe", in: host.view) }
+        )
 
         guard let probe = findView(identifier: "probe", in: host.view) else {
             XCTFail("probe content が描画されていない")
@@ -872,7 +896,11 @@ final class CustomCellTests: XCTestCase {
         host.view.frame = CGRect(x: 0, y: 150, width: 375, height: 200)
         window.addSubview(host.view)
         window.makeKeyAndVisible()
-        pump(host.view)
+        awaitNonNil(
+            "hosted content の probe が view ツリーへ現れる",
+            in: host.view,
+            produce: { findView(identifier: "probe", in: host.view) }
+        )
 
         guard let probe = findView(identifier: "probe", in: host.view) else {
             XCTFail("probe content が描画されていない")
@@ -919,10 +947,11 @@ final class CustomCellTests: XCTestCase {
         let cv = controller.internalCollectionView
         cv.frame = CGRect(origin: .zero, size: size)
         cv.layoutIfNeeded()
-        RunLoop.current.run(until: Date().addingTimeInterval(0.05))
-        cv.setNeedsLayout()
-        cv.layoutIfNeeded()
-        return cv.cellForItem(at: IndexPath(item: 0, section: 0))?.frame.height
+        return awaitNonNil(
+            "計測対象の行が生成される",
+            in: cv,
+            produce: { cv.cellForItem(at: IndexPath(item: 0, section: 0))?.frame.height }
+        )
     }
 
     // MARK: - 可視性フィルタへの参加
@@ -970,7 +999,7 @@ final class CustomCellTests: XCTestCase {
         // builder も引き継がれている（copy で content が描画できる）
         let view = CustomCellView()
         view.render(cell: copy, theme: Theme())
-        host(view)
+        host(view, renderedIdentifier: "probe-A")
         XCTAssertNotNil(findView(identifier: "probe-A", in: view))
     }
 
@@ -985,7 +1014,7 @@ final class CustomCellTests: XCTestCase {
 
         let view = CustomCellView()
         view.render(cell: copy, theme: Theme())
-        host(view)
+        host(view, renderedIdentifier: "probe-A")
         XCTAssertNotNil(findView(identifier: "probe-A", in: view))
     }
 }

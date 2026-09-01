@@ -6,6 +6,7 @@
 #if canImport(UIKit)
 import XCTest
 import UIKit
+import KsSettingsViewTestSupport
 @testable import KsSettingsViewBridge
 @testable import KsSettingsViewUI
 @testable import KsSettingsViewCore
@@ -77,7 +78,7 @@ final class KsBridgeHostReleaseTests: XCTestCase {
         let theme = KsBridgeTheme()
         theme.cellTitleColor = Self.opaqueGreen
         fixture.bridge.setTheme(theme)
-        KsBridgeTestHost.pump(attachment)
+        waitForNegativeVerification(in: attachment.collectionView)
 
         XCTAssertEqual(KsBridgeTestHost.renderedTitles(attachment), titlesBefore)
         XCTAssertEqual(firstRowTitleColor(attachment), colorBefore)

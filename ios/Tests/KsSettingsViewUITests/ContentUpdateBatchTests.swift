@@ -7,6 +7,7 @@
 #if canImport(UIKit)
 import XCTest
 import UIKit
+import KsSettingsViewTestSupport
 @testable import KsSettingsViewUI
 @testable import KsSettingsViewCore
 
@@ -27,17 +28,8 @@ final class ContentUpdateBatchTests: XCTestCase {
         root.layoutIfNeeded()
         let cv = controller.internalCollectionView
         cv.frame = CGRect(origin: .zero, size: size)
-        pump(cv)
+        awaitInitialRender(controller)
         return (controller, cv, window)
-    }
-
-    /// レイアウトと再構成を確定させる。
-    private func pump(_ view: UIView, seconds: TimeInterval = 0.05) {
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
-        RunLoop.current.run(until: Date().addingTimeInterval(seconds))
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
     }
 
     /// 先頭 Section の各行に実際に表示されているタイトル文字列を返す。
@@ -72,7 +64,12 @@ final class ContentUpdateBatchTests: XCTestCase {
             (cellID: KsCellID(cell: cellA), new: LabelCell(id: cellA.id, title: "A2")),
             (cellID: KsCellID(cell: cellC), new: LabelCell(id: cellC.id, title: "C2")),
         ])
-        pump(cv)
+        awaitEqual(
+            "バッチ更新後の実描画された行タイトル",
+            expected: ["A2", "B", "C2"] as [String?],
+            in: cv,
+            actual: { renderedTitles(cv, count: 3) }
+        )
 
         XCTAssertEqual(
             renderedTitles(cv, count: 3),
@@ -105,7 +102,7 @@ final class ContentUpdateBatchTests: XCTestCase {
         let beforeItems = controller.internalDataSource?.snapshot().itemIdentifiers ?? []
 
         store.replaceCells([(cellID: KsCellID(id: UUID()), new: LabelCell(title: "X"))])
-        pump(cv)
+        waitForNegativeVerification(in: cv)
 
         XCTAssertEqual(renderedTitles(cv, count: 1), ["A"])
         XCTAssertEqual(controller.internalDataSource?.snapshot().itemIdentifiers ?? [], beforeItems)

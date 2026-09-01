@@ -351,8 +351,13 @@ public final class KsSettingsViewController: UIViewController {
     /// 指定した accessory 領域の高さを測り直す。
     ///
     /// `UICollectionView` の self-sizing は、accessory の中身が内在サイズを無効化しただけでは
-    /// 領域の高さを測り直さない。対象の supplementary だけを指定した無効化を layout へ渡すことで、
+    /// その場で領域の高さを測り直さない。対象の supplementary だけを指定した無効化を layout へ渡すことで、
     /// 他の領域の再計算を巻き込まずに当該領域の高さだけを追従させる。
+    ///
+    /// 追従の条件は accessory の種別で異なる。Section の accessory は layout が領域高さの解を保持するため、
+    /// この無効化が無い限り解が固定されたままになる。Root accessory は layout 全体の
+    /// boundary supplementary で領域高さの解を持たないため、無効化しなくても次の表示更新で
+    /// 測り直される — Root に対してこの API が与えるのは即時性である。
     ///
     /// 対象が表示対象に存在しないとき (未設定の Root accessory・hidden または未知の Section) は
     /// no-op。固定高さの Section header は無効化しても同じ高さに解決されるため表示は変わらない。

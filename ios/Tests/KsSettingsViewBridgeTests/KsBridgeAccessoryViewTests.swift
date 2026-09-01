@@ -6,6 +6,7 @@
 #if canImport(UIKit)
 import XCTest
 import UIKit
+import KsSettingsViewTestSupport
 @testable import KsSettingsViewBridge
 @testable import KsSettingsViewUI
 @testable import KsSettingsViewCore
@@ -48,7 +49,9 @@ final class KsBridgeAccessoryViewTests: XCTestCase {
             sectionID: fixture.section1.sectionID,
             view: probe
         )
-        KsBridgeTestHost.pump(attachment)
+        KsBridgeTestHost.awaitSameView(attachment, "section 0 header へ渡した view の実描画", is: probe) {
+            KsBridgeTestHost.headerAccessoryView(attachment, section: 0)
+        }
 
         XCTAssertTrue(KsBridgeTestHost.headerAccessoryView(attachment, section: 0) === probe,
                       "渡した view インスタンスがそのまま header に表示される")
@@ -67,7 +70,9 @@ final class KsBridgeAccessoryViewTests: XCTestCase {
             sectionID: fixture.section1.sectionID,
             view: probe
         )
-        KsBridgeTestHost.pump(attachment)
+        KsBridgeTestHost.awaitSameView(attachment, "section 0 footer へ渡した view の実描画", is: probe) {
+            KsBridgeTestHost.footerAccessoryView(attachment, section: 0)
+        }
 
         XCTAssertTrue(KsBridgeTestHost.footerAccessoryView(attachment, section: 0) === probe)
     }
@@ -81,7 +86,12 @@ final class KsBridgeAccessoryViewTests: XCTestCase {
 
         fixture.bridge.updateAccessoryView(target: .rootHeader, sectionID: nil, view: headerProbe)
         fixture.bridge.updateAccessoryView(target: .rootFooter, sectionID: nil, view: footerProbe)
-        KsBridgeTestHost.pump(attachment)
+        KsBridgeTestHost.awaitSameView(attachment, "Root header へ渡した view の実描画", is: headerProbe) {
+            KsBridgeTestHost.rootHeaderAccessoryView(attachment)
+        }
+        KsBridgeTestHost.awaitSameView(attachment, "Root footer へ渡した view の実描画", is: footerProbe) {
+            KsBridgeTestHost.rootFooterAccessoryView(attachment)
+        }
 
         XCTAssertTrue(KsBridgeTestHost.rootHeaderAccessoryView(attachment) === headerProbe)
         XCTAssertTrue(KsBridgeTestHost.rootFooterAccessoryView(attachment) === footerProbe)
@@ -98,7 +108,9 @@ final class KsBridgeAccessoryViewTests: XCTestCase {
             sectionID: fixture.section1.sectionID,
             view: probe
         )
-        KsBridgeTestHost.pump(attachment)
+        KsBridgeTestHost.awaitSameView(attachment, "section 0 header へ渡した view の実描画", is: probe) {
+            KsBridgeTestHost.headerAccessoryView(attachment, section: 0)
+        }
         XCTAssertTrue(KsBridgeTestHost.headerAccessoryView(attachment, section: 0) === probe)
 
         fixture.bridge.updateAccessoryView(
@@ -106,7 +118,13 @@ final class KsBridgeAccessoryViewTests: XCTestCase {
             sectionID: fixture.section1.sectionID,
             view: nil
         )
-        KsBridgeTestHost.pump(attachment)
+        // clear 前は probe が表示されているため、accessory が消えることが解除完了の遷移証拠になる。
+        awaitCondition(
+            "section 0 header の view accessory 解除",
+            in: attachment.collectionView,
+            actual: { KsBridgeTestHost.describe(KsBridgeTestHost.headerAccessoryView(attachment, section: 0)) },
+            until: { KsBridgeTestHost.headerAccessoryView(attachment, section: 0) == nil }
+        )
 
         XCTAssertNil(KsBridgeTestHost.headerAccessoryView(attachment, section: 0),
                      "clear 後は accessory が指定されていない場合と同じ表示になる")
@@ -122,7 +140,7 @@ final class KsBridgeAccessoryViewTests: XCTestCase {
         let unusedID = KsBridgeFixture.unusedIdentifier()
         fixture.bridge.updateAccessoryView(target: .sectionHeader, sectionID: unusedID, view: ProbeView())
         fixture.bridge.updateAccessoryView(target: .sectionFooter, sectionID: unusedID, view: ProbeView())
-        KsBridgeTestHost.pump(attachment)
+        waitForNegativeVerification(in: attachment.collectionView)
 
         XCTAssertEqual(KsBridgeTestHost.renderedTitles(attachment), [["A", "B"], ["C"]])
         XCTAssertEqual(KsBridgeTestHost.headerText(attachment, section: 0), "S1")
@@ -134,7 +152,7 @@ final class KsBridgeAccessoryViewTests: XCTestCase {
         )
 
         fixture.bridge.replaceCell(cellID: fixture.cellA.cellID, newCell: KsBridgeLabelCell(title: "A2"))
-        KsBridgeTestHost.pump(attachment)
+        KsBridgeTestHost.awaitRenderedTitles(attachment, equals: [["A2", "B"], ["C"]])
 
         XCTAssertEqual(
             KsBridgeTestHost.renderedTitles(attachment),
@@ -153,7 +171,7 @@ final class KsBridgeAccessoryViewTests: XCTestCase {
             sectionID: KsBridgeFixture.unknownIdentifier,
             view: ProbeView()
         )
-        KsBridgeTestHost.pump(attachment)
+        waitForNegativeVerification(in: attachment.collectionView)
 
         XCTAssertEqual(KsBridgeTestHost.headerText(attachment, section: 0), "S1")
     }
@@ -169,7 +187,7 @@ final class KsBridgeAccessoryViewTests: XCTestCase {
             sectionID: fixture.section1.sectionID,
             view: ProbeView()
         )
-        KsBridgeTestHost.pump(attachment)
+        waitForNegativeVerification(in: attachment.collectionView)
 
         XCTAssertEqual(KsBridgeTestHost.headerText(attachment, section: 0), "S1")
     }
@@ -205,7 +223,10 @@ final class KsBridgeAccessoryViewTests: XCTestCase {
         replacement.headerView = probe
         replacement.addCell(KsBridgeLabelCell(title: "A"))
         fixture.bridge.replaceSection(sectionID: fixture.section1.sectionID, newSection: replacement)
-        KsBridgeTestHost.pump(attachment)
+        KsBridgeTestHost.awaitSameView(attachment, "置換 Section の header view の実描画", is: probe) {
+            KsBridgeTestHost.headerAccessoryView(attachment, section: 0)
+        }
+        KsBridgeTestHost.awaitRenderedTitles(attachment, equals: [["A"], ["C"]])
 
         XCTAssertTrue(KsBridgeTestHost.headerAccessoryView(attachment, section: 0) === probe)
         XCTAssertEqual(KsBridgeTestHost.renderedTitles(attachment), [["A"], ["C"]])
@@ -253,22 +274,30 @@ final class KsBridgeAccessoryViewTests: XCTestCase {
         let attachment = KsBridgeTestHost.attach(bridge)
         let probe = ProbeView()
         bridge.updateAccessoryView(target: .sectionHeader, sectionID: sectionIDs[0], view: probe)
-        KsBridgeTestHost.pump(attachment)
+        KsBridgeTestHost.awaitSameView(attachment, "先頭 Section header への view 適用", is: probe) {
+            KsBridgeTestHost.headerAccessoryView(attachment, section: 0)
+        }
         XCTAssertTrue(KsBridgeTestHost.headerAccessoryView(attachment, section: 0) === probe)
 
         let collectionView = attachment.collectionView
         let maxOffset = max(0, collectionView.contentSize.height - collectionView.bounds.height)
         XCTAssertGreaterThan(maxOffset, 0, "前提: 画面外へスクロールできる長さの list になっていない")
 
-        // 画面外へ出た supplementary の回収は次のレイアウト周回で確定するため、余裕を持って回す。
+        // 画面外へ出た supplementary の回収は次のレイアウト周回で確定するため、回収そのものを待つ。
         collectionView.contentOffset = CGPoint(x: 0, y: maxOffset)
-        KsBridgeTestHost.pump(attachment, seconds: 0.3)
-        KsBridgeTestHost.pump(attachment, seconds: 0.3)
+        awaitCondition(
+            "先頭 Section header が画面外へ出て回収される",
+            in: collectionView,
+            actual: { KsBridgeTestHost.describe(KsBridgeTestHost.headerAccessoryView(attachment, section: 0)) },
+            until: { KsBridgeTestHost.headerAccessoryView(attachment, section: 0) == nil }
+        )
         XCTAssertNil(KsBridgeTestHost.headerAccessoryView(attachment, section: 0),
                      "前提: 先頭 header が画面外へ出ていない")
 
         collectionView.contentOffset = .zero
-        KsBridgeTestHost.pump(attachment, seconds: 0.3)
+        KsBridgeTestHost.awaitSameView(attachment, "先頭 Section header の再バインド", is: probe) {
+            KsBridgeTestHost.headerAccessoryView(attachment, section: 0)
+        }
 
         XCTAssertTrue(KsBridgeTestHost.headerAccessoryView(attachment, section: 0) === probe,
                       "同一 view が再バインドで再表示される")
@@ -287,7 +316,15 @@ final class KsBridgeAccessoryViewTests: XCTestCase {
             sectionID: fixture.section1.sectionID,
             view: probe
         )
-        KsBridgeTestHost.pump(attachment)
+        awaitCondition(
+            "section 0 header への view 適用と初期計測 (期待高さ: 40)",
+            in: attachment.collectionView,
+            actual: { "\(KsBridgeTestHost.describe(KsBridgeTestHost.headerAccessoryView(attachment, section: 0))) / 高さ \(self.headerHeight(attachment, section: 0))" },
+            until: {
+                KsBridgeTestHost.headerAccessoryView(attachment, section: 0) === probe
+                    && abs(self.headerHeight(attachment, section: 0) - 40) <= 0.5
+            }
+        )
         XCTAssertEqual(headerHeight(attachment, section: 0), 40, accuracy: 0.5,
                        "前提: 初期高さが中身の高さになっていない")
 
@@ -297,7 +334,7 @@ final class KsBridgeAccessoryViewTests: XCTestCase {
             target: .sectionHeader,
             sectionID: fixture.section1.sectionID
         )
-        KsBridgeTestHost.pump(attachment)
+        layoutNow(attachment.collectionView)
 
         XCTAssertEqual(headerHeight(attachment, section: 0), 100, accuracy: 0.5,
                        "再計測要求が領域の高さへ届いていない")
@@ -310,7 +347,15 @@ final class KsBridgeAccessoryViewTests: XCTestCase {
         let probe = ProbeView(height: 50)
 
         fixture.bridge.updateAccessoryView(target: .rootHeader, sectionID: nil, view: probe)
-        KsBridgeTestHost.pump(attachment, seconds: 0.3)
+        KsBridgeTestHost.awaitSameView(attachment, "Root header への view 適用", is: probe) {
+            KsBridgeTestHost.rootHeaderAccessoryView(attachment)
+        }
+        awaitCondition(
+            "Root header の初期計測高さ (期待値: \(50 + 22))",
+            in: attachment.collectionView,
+            actual: { "高さ \(self.rootHeaderHeight(attachment))" },
+            until: { abs(self.rootHeaderHeight(attachment) - (50 + 22)) <= 0.5 }
+        )
         // Root accessory は Section 単位余白を自身の内側に持つため、領域の高さは
         // 中身の高さ + Classic 既定 margin の top (22pt) になる。
         XCTAssertEqual(rootHeaderHeight(attachment), 50 + 22, accuracy: 0.5,
@@ -319,7 +364,7 @@ final class KsBridgeAccessoryViewTests: XCTestCase {
         probe.contentHeight = 120
         probe.invalidateIntrinsicContentSize()
         fixture.bridge.invalidateAccessoryMeasurement(target: .rootHeader, sectionID: nil)
-        KsBridgeTestHost.pump(attachment)
+        layoutNow(attachment.collectionView)
 
         XCTAssertEqual(rootHeaderHeight(attachment), 120 + 22, accuracy: 0.5,
                        "Root header の再計測要求が領域の高さへ届いていない")
@@ -336,7 +381,15 @@ final class KsBridgeAccessoryViewTests: XCTestCase {
             sectionID: fixture.section1.sectionID,
             view: probe
         )
-        KsBridgeTestHost.pump(attachment)
+        awaitCondition(
+            "section 0 header への view 適用と初期計測 (期待高さ: 40)",
+            in: attachment.collectionView,
+            actual: { "\(KsBridgeTestHost.describe(KsBridgeTestHost.headerAccessoryView(attachment, section: 0))) / 高さ \(self.headerHeight(attachment, section: 0))" },
+            until: {
+                KsBridgeTestHost.headerAccessoryView(attachment, section: 0) === probe
+                    && abs(self.headerHeight(attachment, section: 0) - 40) <= 0.5
+            }
+        )
 
         probe.contentHeight = 100
         probe.invalidateIntrinsicContentSize()
@@ -344,7 +397,7 @@ final class KsBridgeAccessoryViewTests: XCTestCase {
             target: .sectionHeader,
             sectionID: KsBridgeFixture.unusedIdentifier()
         )
-        KsBridgeTestHost.pump(attachment)
+        waitForNegativeVerification(in: attachment.collectionView)
 
         XCTAssertEqual(headerHeight(attachment, section: 0), 40, accuracy: 0.5,
                        "別の対象への要求で高さが変わってはいけない")

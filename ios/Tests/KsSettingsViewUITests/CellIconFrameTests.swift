@@ -10,6 +10,7 @@
 #if canImport(UIKit)
 import XCTest
 import UIKit
+import KsSettingsViewTestSupport
 @testable import KsSettingsViewUI
 @testable import KsSettingsViewCore
 
@@ -108,7 +109,12 @@ final class CellIconFrameTests: XCTestCase {
         )
 
         controller.applyTheme(Theme(cellIconSize: 40))
-        pump(cv)
+        awaitCondition(
+            "Theme 変更後の icon 枠が新しい cellIconSize へ追従する",
+            in: cv,
+            actual: { "\(listCell(cv, item: 0).iconImageView.bounds.width)" },
+            until: { abs(listCell(cv, item: 0).iconImageView.bounds.width - 40) <= 0.5 }
+        )
 
         let cell = listCell(cv, item: 0)
         XCTAssertEqual(cell.iconImageView.bounds.width, 40, accuracy: 0.5, "枠の幅が新 Theme に追従する")
@@ -310,17 +316,8 @@ final class CellIconFrameTests: XCTestCase {
         hostView.layoutIfNeeded()
         let cv = controller.internalCollectionView
         cv.frame = CGRect(origin: .zero, size: size)
-        pump(cv)
+        awaitInitialRender(controller)
         return (controller, cv, window)
-    }
-
-    /// レイアウトと再構成を確定させる。
-    private func pump(_ view: UIView, seconds: TimeInterval = 0.05) {
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
-        RunLoop.current.run(until: Date().addingTimeInterval(seconds))
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
     }
 
     /// 先頭 Section の指定行に表示されている Cell を取り出す。

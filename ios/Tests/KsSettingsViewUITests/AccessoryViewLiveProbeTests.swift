@@ -5,12 +5,14 @@
 // supplementary の実高さがどこまで自動で追従するかを観測する。
 //
 // UICollectionView の self-sizing は「内側 view の内在サイズを無効化しただけ」では
-// supplementary の再計測を起こさない。追従させるには layout 側の無効化が要る。
+// supplementary の再計測をその場で起こさない。Section H/F は layout 側の無効化が無い限り
+// 追従せず、Root H/F は表示更新の一巡で自力の再計測が走る (無効化はその追従を即時にする)。
 // 本ファイルは、どの段階の無効化で追従が始まるかを実測で固定する。
 
 #if canImport(UIKit)
 import XCTest
 import UIKit
+import KsSettingsViewTestSupport
 @testable import KsSettingsViewUI
 @testable import KsSettingsViewCore
 
@@ -52,16 +54,8 @@ final class AccessoryViewLiveProbeTests: XCTestCase {
         rootView.layoutIfNeeded()
         let cv = controller.internalCollectionView
         cv.frame = CGRect(origin: .zero, size: size)
-        pump(cv)
+        awaitInitialRender(controller)
         return (controller, cv, window)
-    }
-
-    private func pump(_ view: UIView, seconds: TimeInterval = 0.05) {
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
-        RunLoop.current.run(until: Date().addingTimeInterval(seconds))
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
     }
 
     private func headerSupplementary(_ cv: UICollectionView, section: Int) -> UICollectionReusableView? {
@@ -156,20 +150,20 @@ final class AccessoryViewLiveProbeTests: XCTestCase {
         // S1: 内側 view の内在サイズ無効化だけでは届かない
         inner.contentHeight = 140
         inner.invalidateIntrinsicContentSize()
-        pump(cv)
+        waitForNegativeVerification(in: cv)
         XCTAssertEqual(try XCTUnwrap(headerFrameHeight(cv, section: 0)), 70, accuracy: 0.5,
                        "内側 view の内在サイズ無効化だけで追従するようになった (再計算の口の要否が変わる)")
 
         // S2: supplementary view 自身のレイアウト要求まででも届かない
         headerSupplementary(cv, section: 0)?.setNeedsLayout()
         headerSupplementary(cv, section: 0)?.layoutIfNeeded()
-        pump(cv)
+        waitForNegativeVerification(in: cv)
         XCTAssertEqual(try XCTUnwrap(headerFrameHeight(cv, section: 0)), 70, accuracy: 0.5,
                        "supplementary view のレイアウト要求だけで追従するようになった")
 
         // S3: 対象 supplementary の layout 無効化で追従する
         invalidateSupplementary(cv, kind: UICollectionView.elementKindSectionHeader, section: 0)
-        pump(cv)
+        layoutNow(cv)
         XCTAssertEqual(try XCTUnwrap(headerFrameHeight(cv, section: 0)), 140, accuracy: 0.5,
                        "対象 supplementary の layout 無効化でも追従しない")
     }
@@ -191,7 +185,7 @@ final class AccessoryViewLiveProbeTests: XCTestCase {
         inner.contentHeight = 140
         inner.invalidateIntrinsicContentSize()
         invalidateSupplementary(cv, kind: UICollectionView.elementKindSectionHeader, section: 0)
-        pump(cv)
+        layoutNow(cv)
 
         XCTAssertEqual(try XCTUnwrap(headerFrameHeight(cv, section: 0)), 140, accuracy: 0.5,
                        "対象限定の layout 無効化だけでは追従しない")
@@ -214,12 +208,12 @@ final class AccessoryViewLiveProbeTests: XCTestCase {
 
         inner.contentHeight = 120
         inner.invalidateIntrinsicContentSize()
-        pump(cv)
+        waitForNegativeVerification(in: cv)
         XCTAssertEqual(try XCTUnwrap(footerFrameHeight(cv, section: 0)), 50, accuracy: 0.5,
                        "footer は内在サイズ無効化だけで追従するようになった")
 
         invalidateSupplementary(cv, kind: UICollectionView.elementKindSectionFooter, section: 0)
-        pump(cv)
+        layoutNow(cv)
         XCTAssertEqual(try XCTUnwrap(footerFrameHeight(cv, section: 0)), 120, accuracy: 0.5,
                        "footer が layout 無効化でも追従しない")
     }
@@ -252,14 +246,25 @@ final class AccessoryViewLiveProbeTests: XCTestCase {
         inner.contentHeight = 170
         inner.invalidateIntrinsicContentSize()
         invalidateSupplementary(cv, kind: UICollectionView.elementKindSectionHeader, section: 0)
-        pump(cv)
+        layoutNow(cv)
 
         XCTAssertEqual(try XCTUnwrap(section1OriginY()) - before, 100, accuracy: 1.0,
                        "内容拡大 100pt が後続セクションの原点へ届いていない")
     }
 
-    /// Root accessory も同じ条件で追従する (Root H/F は独自の elementKind を使う)。
-    func test_Rootヘッダも同じ条件で追従する() throws {
+    /// Root accessory は Section accessory と追従の条件が違う。
+    ///   S1 内側 view の invalidateIntrinsicContentSize のみ → その場では追従しない
+    ///   S2 + supplementary view 自身の setNeedsLayout / layoutIfNeeded → その場では追従しない
+    ///   放置 → 表示更新が一巡すると自力で追従する
+    ///   S3 + 対象を限定した layout 無効化 → 表示更新を待たずに即座に追従する
+    ///
+    /// Root H/F は独自の elementKind を持つ layout configuration 側の boundary supplementary で
+    /// あり、Section H/F のように layout が解いた領域高さを保持しない。中身が内在サイズを無効化
+    /// すると次の表示更新で測り直されるため、追従そのものは放っておいても起きる。対象を限定した
+    /// layout 無効化は「追従させるため」ではなく「表示更新を待たずに追従させるため」に要る。
+    /// Section H/F は同じ手順を踏んでも自力では追従しない
+    /// (`test_内容変化の追従はsupplementaryのlayout無効化が要る` / `test_footerも同じ条件で追従する`)。
+    func test_Rootヘッダは放置でも追従し無効化で即座に追従する() throws {
         let inner = MutableIntrinsicHeightView(height: 60)
         let store = SettingsRootStore(
             initialRoot: SettingsRoot(
@@ -281,31 +286,67 @@ final class AccessoryViewLiveProbeTests: XCTestCase {
         }
 
         store.updateAccessory(target: .rootHeader, accessory: .root(.view(KsAnyView.uiKit { inner })))
-        pump(cv, seconds: 0.3)
 
-        func rootHeaderHeight() -> CGFloat? {
+        func rootHeaderSupplementary() -> UICollectionReusableView? {
             cv.visibleSupplementaryViews(
                 ofKind: KsSettingsViewController.rootHeaderElementKind
-            ).first?.frame.height
+            ).first
         }
-
+        func rootHeaderHeight() -> CGFloat? {
+            rootHeaderSupplementary()?.frame.height
+        }
         // Root accessory は Section 単位余白を自身の内側に持つため、領域の高さは
-        // 内容高さ + Classic 既定 margin の top (22pt) になる。
-        XCTAssertEqual(try XCTUnwrap(rootHeaderHeight()), 60 + 22, accuracy: 0.5,
+        // 内容高さ + Classic 既定 margin の top になる。
+        let margin: CGFloat = 22
+
+        // 生成されただけでは自己計測が済んでいないことがあるため、内容高さ + 既定 margin へ
+        // 落ち着くところまでを初期反映の完了条件にする。
+        awaitCondition(
+            "Root header の boundary supplementary が内容高さで確定する",
+            in: cv,
+            actual: { "Root header 高さ \(String(describing: rootHeaderHeight()))" },
+            until: {
+                guard let height = rootHeaderHeight() else { return false }
+                return abs(height - (60 + margin)) <= 0.5
+            }
+        )
+        XCTAssertEqual(try XCTUnwrap(rootHeaderHeight()), 60 + margin, accuracy: 0.5,
                        "前提: Root header の初期高さが内容高さ 60pt + 既定 margin 22pt になっていない")
 
+        // S1: 内側 view の内在サイズ無効化とレイアウト実行では、その場の高さは変わらない。
         inner.contentHeight = 130
         inner.invalidateIntrinsicContentSize()
-        pump(cv)
-        XCTAssertEqual(try XCTUnwrap(rootHeaderHeight()), 60 + 22, accuracy: 0.5,
-                       "Root header は内在サイズ無効化だけで追従するようになった")
+        layoutNow(cv)
+        XCTAssertEqual(try XCTUnwrap(rootHeaderHeight()), 60 + margin, accuracy: 0.5,
+                       "Root header が内在サイズ無効化とレイアウト実行だけでその場で追従するようになった")
 
-        // Root H/F は layout configuration 側の boundary supplementary であり、
-        // 対象限定の無効化でも Section 側と同じ indexPath で指定できる。
+        // S2: supplementary view 自身のレイアウト要求まで足しても、その場の高さは変わらない。
+        rootHeaderSupplementary()?.setNeedsLayout()
+        rootHeaderSupplementary()?.layoutIfNeeded()
+        layoutNow(cv)
+        XCTAssertEqual(try XCTUnwrap(rootHeaderHeight()), 60 + margin, accuracy: 0.5,
+                       "Root header が supplementary view のレイアウト要求だけでその場で追従するようになった")
+
+        // 無効化を出さずに置いておくと、表示更新の一巡で自己計測が走って追従する。
+        awaitCondition(
+            "Root header が表示更新の一巡で内容高さ 130pt + 既定 margin 22pt へ追従する",
+            in: cv,
+            actual: { "Root header 高さ \(String(describing: rootHeaderHeight()))" },
+            until: {
+                guard let height = rootHeaderHeight() else { return false }
+                return abs(height - (130 + margin)) <= 0.5
+            }
+        )
+
+        // S3: 対象を限定した layout 無効化を出すと、表示更新を待たずにその場で追従する。
+        // Root H/F は layout configuration 側の boundary supplementary だが、対象限定の
+        // 無効化は Section 側と同じ indexPath で指定できる。
+        inner.contentHeight = 200
+        inner.invalidateIntrinsicContentSize()
         invalidateSupplementary(cv, kind: KsSettingsViewController.rootHeaderElementKind, section: 0)
-        pump(cv)
-        XCTAssertEqual(try XCTUnwrap(rootHeaderHeight()), 130 + 22, accuracy: 0.5,
-                       "Root header が対象限定の layout 無効化で追従しない")
+        layoutNow(cv)
+        XCTAssertEqual(try XCTUnwrap(rootHeaderHeight()), 200 + margin, accuracy: 0.5,
+                       "Root header が対象限定の layout 無効化でその場で追従しない")
     }
 }
 #endif

@@ -11,6 +11,7 @@
 #if canImport(UIKit)
 import XCTest
 import UIKit
+import KsSettingsViewTestSupport
 @testable import KsSettingsViewUI
 @testable import KsSettingsViewCore
 
@@ -34,17 +35,8 @@ final class ReplaceCellTypeChangeTests: XCTestCase {
         root.layoutIfNeeded()
         let cv = controller.internalCollectionView
         cv.frame = CGRect(origin: .zero, size: size)
-        pump(cv)
+        awaitInitialRender(controller)
         return (controller, cv, window)
-    }
-
-    /// レイアウトと再構成を確定させる。
-    private func pump(_ view: UIView, seconds: TimeInterval = 0.05) {
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
-        RunLoop.current.run(until: Date().addingTimeInterval(seconds))
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
     }
 
     /// 先頭 Section の各行に実際に表示されているタイトル文字列を返す。
@@ -79,7 +71,12 @@ final class ReplaceCellTypeChangeTests: XCTestCase {
             cellID: KsCellID(id: sharedID),
             new: SwitchCell(id: sharedID, title: "スイッチ")
         )
-        pump(cv)
+        awaitEqual(
+            "具象型が変わった行の実描画タイトル",
+            expected: ["スイッチ", "そのまま"] as [String?],
+            in: cv,
+            actual: { renderedTitles(cv, count: 2) }
+        )
 
         XCTAssertTrue(
             cv.cellForItem(at: IndexPath(item: 0, section: 0)) is SwitchCellView,
@@ -109,7 +106,12 @@ final class ReplaceCellTypeChangeTests: XCTestCase {
             cellID: KsCellID(cell: cellA),
             new: LabelCell(id: cellA.id, title: "A2")
         )
-        pump(cv)
+        awaitEqual(
+            "内容更新後の実描画タイトル",
+            expected: ["A2"] as [String?],
+            in: cv,
+            actual: { renderedTitles(cv, count: 1) }
+        )
 
         XCTAssertEqual(renderedTitles(cv, count: 1), ["A2"], "内容更新が表示へ反映されていない")
         XCTAssertTrue(
@@ -139,7 +141,12 @@ final class ReplaceCellTypeChangeTests: XCTestCase {
             (cellID: KsCellID(cell: cellA), new: SwitchCell(id: cellA.id, title: "スイッチ")),
             (cellID: KsCellID(cell: cellC), new: LabelCell(id: cellC.id, title: "C2")),
         ])
-        pump(cv)
+        awaitEqual(
+            "バッチ更新後の実描画タイトル",
+            expected: ["スイッチ", "B", "C2"] as [String?],
+            in: cv,
+            actual: { renderedTitles(cv, count: 3) }
+        )
 
         XCTAssertTrue(
             cv.cellForItem(at: IndexPath(item: 0, section: 0)) is SwitchCellView,
@@ -172,7 +179,12 @@ final class ReplaceCellTypeChangeTests: XCTestCase {
             (cellID: KsCellID(cell: cellA), new: SwitchCell(id: cellA.id, title: "スイッチ")),
             (cellID: KsCellID(cell: cellB), new: CommandCell(id: cellB.id, title: "コマンド")),
         ])
-        pump(cv)
+        awaitEqual(
+            "具象型変化のみのバッチ更新後の実描画タイトル",
+            expected: ["スイッチ", "コマンド"] as [String?],
+            in: cv,
+            actual: { renderedTitles(cv, count: 2) }
+        )
 
         XCTAssertTrue(
             cv.cellForItem(at: IndexPath(item: 0, section: 0)) is SwitchCellView,

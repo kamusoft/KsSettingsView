@@ -5,7 +5,7 @@ applies-when:
   tasks: [テスト実行, テスト結果の報告]
 title: テスト実行規約
 description: iOS / Android / MAUI のテストの正しい実行コマンドと、黙って検証にならない範囲 (macOS 上の swift test で失われるテスト・Robolectric の描画検証限界・MAUI facade テストが触らない platform TFM)。収束を待つアサーションの書き方は platform 共通
-timestamp: 2026-08-31
+timestamp: 2026-09-01
 ---
 
 # テスト実行規約
@@ -27,6 +27,7 @@ iOS / Android / MAUI の 3 platform を記載する。いずれも実際に実�
 - deadline 超過時は黙って戻らず、その時点の実測値をメッセージに載せて `fail()` で落とす。黙って戻る待機は収束前の状態を検証したことにされ、「実装が壊れた」と「待機が足りない」も区別できなくなる
 
 この誤りは CPU が競合したときだけ落ちるため、手元では常に緑で、並列実行や CI の混雑時に間欠的に落ちる flaky として表面化する。**手元で通ることは、この形で書けている根拠にならない。** 各 platform で何が非同期に反映されるかは以下の節に示す。
+**例外は負の検証だけ** — 「何も起きないこと」を確かめるアサーション (未知 ID や範囲外指定の更新が表示に影響しないことの確認、dispose・購読解除・Host 解放の後に更新が届かないことの確認) には、待つべき遷移が存在しない。この用途に限り、意図を明示した固定時間待機を使う ([cross/ADR-0027](../../decisions/cross/0027-negative-verification-fixed-wait-exception.md))。**呼び出し名から「不変性を確かめるための待機」と判別できる形にする** — 名前で区別できないと、後から読む人がその固定待機を「条件ベース化の直し漏れ」と見分けられない。収束待ちの用途にこの待機を使ってはならない。
 
 この節は、同じ誤りが 3 つの変更で platform をまたいで再発したことを受けて platform 共通へ引き上げた (出典: clarify-host-attach-order-contract / fix-compose-dsl-double-update-flaky-test / add-verification-ci)。当初は Android の `AsyncListDiffer` を入口に書かれており、iOS のテストを書くときに読まれなかった。
 
@@ -79,7 +80,15 @@ xcodebuild test -scheme KsSettingsView-Package -destination 'platform=iOS Simula
 
 このため RunLoop を固定秒数まわす待機 (`RunLoop.current.run(until:)` を秒数指定で呼ぶ形) は、「収束を待つアサーション」の 1 つ目と 3 つ目の条件を満たさない。指定時間が経てば収束していなくても戻り、戻ったことと収束したことが区別できない。実行機が混んでいると収束前に assert へ進んで落ちる。
 
-適用実例: `KsBridgeTestHost.pump(_:seconds:)` を使う待機は条件ベースへ作り替える対象である (change `fix-ios-test-pump-condition-wait`)。
+適用実例: iOS テストの待機は用途別に 3 つへ分離済みで、共有ターゲット `KsSettingsViewTestSupport` が単一の定義を持ち、3 つのテストターゲットが依存する:
+
+| 用途 | 使うもの |
+|---|---|
+| 非同期反映の収束待ち | 条件ベース待機 (述語 + 実時間 deadline + ループ内で RunLoop を短く回す + 超過時は実測値付き fail) |
+| レイアウトの確定だけが要る | 待機なしのレイアウト実行 |
+| 負の検証 (no-op・不達の確認) | 意図明示の固定待機 (cross/ADR-0027) |
+
+固定秒数で RunLoop をまわす待機は、3 つ目 (負の検証) 以外に定義・呼び出しとも `ios/Tests/` に存在しない。新しいテストを書くときも、収束を待つ場面で固定秒数の待機を持ち込まない。
 
 ### `swift test` を案内している文書は無い
 

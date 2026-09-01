@@ -8,6 +8,7 @@
 import XCTest
 import UIKit
 import SwiftUI
+import KsSettingsViewTestSupport
 @testable import KsSettingsViewUI
 @testable import KsSettingsViewCore
 
@@ -331,7 +332,12 @@ final class InputCellsTests: XCTestCase {
         XCTAssertEqual(placeholderColor(of: entryCell(cv)), UIColor.systemGreen)
 
         controller.applyTheme(Theme(cellPlaceholderColor: .systemPink))
-        pumpEntry(cv)
+        awaitEqual(
+            "表示中の行の placeholder 色が新しい Theme へ追従する",
+            expected: UIColor.systemPink as UIColor?,
+            in: cv,
+            actual: { placeholderColor(of: entryCell(cv)) }
+        )
 
         XCTAssertEqual(
             placeholderColor(of: entryCell(cv)), UIColor.systemPink,
@@ -410,17 +416,12 @@ final class InputCellsTests: XCTestCase {
         hostView.layoutIfNeeded()
         let cv = controller.internalCollectionView
         cv.frame = CGRect(origin: .zero, size: size)
-        pumpEntry(cv)
+        awaitNonNil(
+            "先頭行の EntryCellView が実描画される",
+            in: cv,
+            produce: { cv.cellForItem(at: IndexPath(item: 0, section: 0)) as? EntryCellView }
+        )
         return (controller, cv, window)
-    }
-
-    /// レイアウトと再構成を確定させる。
-    private func pumpEntry(_ view: UIView, seconds: TimeInterval = 0.05) {
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
-        RunLoop.current.run(until: Date().addingTimeInterval(seconds))
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
     }
 
     /// 先頭 Section の先頭行に表示されている `EntryCellView` を取り出す。
@@ -1063,12 +1064,16 @@ final class InputCellsTests: XCTestCase {
         // window に view を載せて key window にする（becomeFirstResponder の成立条件）
         window.addSubview(view)
         window.makeKeyAndVisible()
-        // tapHandler を呼び、async Task で becomeFirstResponder() が走るのを 1 run loop 待つ
         let handler = view.tapHandler
         XCTAssertNotNil(handler, "tapHandler は nil でない")
         handler?()
-        // Task は MainActor 上で 1 cycle 後に実行されるので run loop を回す
-        RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.1))
+        // becomeFirstResponder() は MainActor 上の Task 経由で走るため、成立そのものを待つ。
+        awaitCondition(
+            "tapHandler 経由で UITextField が first responder になる",
+            in: view,
+            actual: { "isFirstResponder = \(view._textField.isFirstResponder)" },
+            until: { view._textField.isFirstResponder }
+        )
         XCTAssertTrue(
             view._textField.isFirstResponder,
             "tapHandler 呼び出しで UITextField が first responder になる"

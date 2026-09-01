@@ -9,6 +9,7 @@
 #if canImport(UIKit)
 import XCTest
 import UIKit
+import KsSettingsViewTestSupport
 @testable import KsSettingsViewUI
 @testable import KsSettingsViewCore
 
@@ -55,16 +56,35 @@ final class RootAccessoryThemeRefreshTests: XCTestCase {
 
         controller.rootHeader = rootHeader
         controller.rootFooter = rootFooter
-        pump(cv, seconds: 0.3)
+        awaitCondition(
+            "設定した Root accessory の boundary supplementary が生成される",
+            in: cv,
+            actual: { "生成済み header/footer = \(hasRootSupplementary(cv, .header))/\(hasRootSupplementary(cv, .footer))" },
+            until: {
+                (rootHeader == nil || hasRootSupplementary(cv, .header))
+                    && (rootFooter == nil || hasRootSupplementary(cv, .footer))
+            }
+        )
         return (controller, cv)
     }
 
-    private func pump(_ view: UIView, seconds: TimeInterval = 0.05) {
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
-        RunLoop.current.run(until: Date().addingTimeInterval(seconds))
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
+    /// Root accessory の位置。
+    @MainActor
+    private enum RootAccessorySlot {
+        case header
+        case footer
+
+        var elementKind: String {
+            switch self {
+            case .header: return KsSettingsViewController.rootHeaderElementKind
+            case .footer: return KsSettingsViewController.rootFooterElementKind
+            }
+        }
+    }
+
+    /// 指定位置の Root accessory の boundary supplementary が表示中かを返す。
+    private func hasRootSupplementary(_ cv: UICollectionView, _ slot: RootAccessorySlot) -> Bool {
+        return !cv.visibleSupplementaryViews(ofKind: slot.elementKind).isEmpty
     }
 
     /// 表示中の Root accessory の text を描く UILabel を取り出す。
@@ -94,7 +114,12 @@ final class RootAccessoryThemeRefreshTests: XCTestCase {
         XCTAssertEqual(label.textColor, initialColor, "前提: 初期 Theme の文字色が反映されていない")
 
         controller.applyTheme(Theme(headerTextColor: updatedColor))
-        pump(cv)
+        awaitEqual(
+            "Root Header の文字色が新しい Theme へ追従する",
+            expected: updatedColor as UIColor?,
+            in: cv,
+            actual: { rootLabel(cv, elementKind: KsSettingsViewController.rootHeaderElementKind)?.textColor }
+        )
 
         let refreshed = try XCTUnwrap(
             rootLabel(cv, elementKind: KsSettingsViewController.rootHeaderElementKind)
@@ -122,7 +147,12 @@ final class RootAccessoryThemeRefreshTests: XCTestCase {
         XCTAssertEqual(label.textColor, initialColor, "前提: 初期 Theme の文字色が反映されていない")
 
         controller.applyTheme(Theme(headerTextColor: updatedColor))
-        pump(cv)
+        awaitEqual(
+            "Root Footer の文字色が新しい Theme へ追従する",
+            expected: updatedColor as UIColor?,
+            in: cv,
+            actual: { rootLabel(cv, elementKind: KsSettingsViewController.rootFooterElementKind)?.textColor }
+        )
 
         let refreshed = try XCTUnwrap(
             rootLabel(cv, elementKind: KsSettingsViewController.rootFooterElementKind)
@@ -148,7 +178,20 @@ final class RootAccessoryThemeRefreshTests: XCTestCase {
                        "前提: 初期 Theme の headerFontSize が反映されていない")
 
         controller.applyTheme(Theme(headerFontSize: 24))
-        pump(cv)
+        awaitCondition(
+            "Root Header のフォントサイズが新しい Theme へ追従する",
+            in: cv,
+            actual: {
+                "pointSize = "
+                    + "\(String(describing: rootLabel(cv, elementKind: KsSettingsViewController.rootHeaderElementKind)?.font.pointSize))"
+            },
+            until: {
+                guard let font = rootLabel(
+                    cv, elementKind: KsSettingsViewController.rootHeaderElementKind
+                )?.font else { return false }
+                return abs(font.pointSize - 24) <= 0.01
+            }
+        )
 
         let refreshed = try XCTUnwrap(
             rootLabel(cv, elementKind: KsSettingsViewController.rootHeaderElementKind)
@@ -173,7 +216,20 @@ final class RootAccessoryThemeRefreshTests: XCTestCase {
                        "前提: 初期 Theme の footerFontSize が反映されていない")
 
         controller.applyTheme(Theme(footerFontSize: 22))
-        pump(cv)
+        awaitCondition(
+            "Root Footer のフォントサイズが新しい Theme へ追従する",
+            in: cv,
+            actual: {
+                "pointSize = "
+                    + "\(String(describing: rootLabel(cv, elementKind: KsSettingsViewController.rootFooterElementKind)?.font.pointSize))"
+            },
+            until: {
+                guard let font = rootLabel(
+                    cv, elementKind: KsSettingsViewController.rootFooterElementKind
+                )?.font else { return false }
+                return abs(font.pointSize - 22) <= 0.01
+            }
+        )
 
         let refreshed = try XCTUnwrap(
             rootLabel(cv, elementKind: KsSettingsViewController.rootFooterElementKind)
@@ -206,7 +262,7 @@ final class RootAccessoryThemeRefreshTests: XCTestCase {
         XCTAssertGreaterThan(before, 0, "前提: View 形式の Root Header が一度も生成されていない")
 
         controller.applyTheme(Theme(headerTextColor: .blue))
-        pump(cv)
+        waitForNegativeVerification(in: cv)
 
         XCTAssertEqual(
             counter.count,
@@ -232,7 +288,7 @@ final class RootAccessoryThemeRefreshTests: XCTestCase {
         XCTAssertGreaterThan(before, 0, "前提: View 形式の Root Footer が一度も生成されていない")
 
         controller.applyTheme(Theme(headerTextColor: .blue))
-        pump(cv)
+        waitForNegativeVerification(in: cv)
 
         XCTAssertEqual(
             counter.count,
@@ -262,7 +318,11 @@ final class RootAccessoryThemeRefreshTests: XCTestCase {
         let cv = controller.internalCollectionView
         cv.frame = CGRect(origin: .zero, size: size)
         controller.rootHeader = .text("プロフィール")
-        pump(cv, seconds: 0.3)
+        awaitNonNil(
+            "Root Header のテキスト label が生成される",
+            in: cv,
+            produce: { rootLabel(cv, elementKind: KsSettingsViewController.rootHeaderElementKind) }
+        )
 
         let label = try XCTUnwrap(
             rootLabel(cv, elementKind: KsSettingsViewController.rootHeaderElementKind)
@@ -270,7 +330,12 @@ final class RootAccessoryThemeRefreshTests: XCTestCase {
         XCTAssertEqual(label.textColor, initialColor, "前提: 初期 Theme の文字色が反映されていない")
 
         store.applyTheme(Theme(headerTextColor: updatedColor))
-        pump(cv, seconds: 0.3)
+        awaitEqual(
+            "Store 経由の Theme 変更が Root Header の文字色へ届く",
+            expected: updatedColor as UIColor?,
+            in: cv,
+            actual: { rootLabel(cv, elementKind: KsSettingsViewController.rootHeaderElementKind)?.textColor }
+        )
 
         let refreshed = try XCTUnwrap(
             rootLabel(cv, elementKind: KsSettingsViewController.rootHeaderElementKind)

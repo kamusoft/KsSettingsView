@@ -7,6 +7,7 @@
 #if canImport(UIKit)
 import XCTest
 import UIKit
+import KsSettingsViewTestSupport
 @testable import KsSettingsViewUI
 @testable import KsSettingsViewCore
 
@@ -52,17 +53,8 @@ final class AccessoryMeasureInvalidationTests: XCTestCase {
         controller.view!.layoutIfNeeded()
         let attachment = Attachment(store: store, controller: controller, window: window)
         attachment.collectionView.frame = CGRect(origin: .zero, size: size)
-        pump(attachment)
+        awaitInitialRender(controller)
         return attachment
-    }
-
-    private func pump(_ attachment: Attachment, seconds: TimeInterval = 0.05) {
-        let view = attachment.collectionView
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
-        RunLoop.current.run(until: Date().addingTimeInterval(seconds))
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
     }
 
     private func headerHeight(_ attachment: Attachment, section: Int) -> CGFloat? {
@@ -100,7 +92,7 @@ final class AccessoryMeasureInvalidationTests: XCTestCase {
         inner.contentHeight = 140
         inner.invalidateIntrinsicContentSize()
         attachment.store.invalidateAccessoryMeasurement(target: .sectionHeader(sectionID: sectionID))
-        pump(attachment)
+        layoutNow(attachment.collectionView)
 
         XCTAssertEqual(try XCTUnwrap(headerHeight(attachment, section: 0)), 140, accuracy: 0.5,
                        "再計測要求が header 領域の高さへ届いていない")
@@ -125,7 +117,7 @@ final class AccessoryMeasureInvalidationTests: XCTestCase {
         inner.contentHeight = 120
         inner.invalidateIntrinsicContentSize()
         attachment.store.invalidateAccessoryMeasurement(target: .sectionFooter(sectionID: sectionID))
-        pump(attachment)
+        layoutNow(attachment.collectionView)
 
         XCTAssertEqual(try XCTUnwrap(footerHeight(attachment, section: 0)), 120, accuracy: 0.5,
                        "再計測要求が footer 領域の高さへ届いていない")
@@ -151,7 +143,7 @@ final class AccessoryMeasureInvalidationTests: XCTestCase {
         inner.contentHeight = 200
         inner.invalidateIntrinsicContentSize()
         attachment.store.invalidateAccessoryMeasurement(target: .sectionHeader(sectionID: sectionID))
-        pump(attachment)
+        layoutNow(attachment.collectionView)
 
         XCTAssertEqual(try XCTUnwrap(headerHeight(attachment, section: 0)), 80, accuracy: 0.5,
                        "固定高さの領域は中身の変化に追従しない")
@@ -171,7 +163,7 @@ final class AccessoryMeasureInvalidationTests: XCTestCase {
         inner.contentHeight = 140
         inner.invalidateIntrinsicContentSize()
         attachment.store.invalidateAccessoryMeasurement(target: .sectionHeader(sectionID: UUID()))
-        pump(attachment)
+        waitForNegativeVerification(in: attachment.collectionView)
 
         XCTAssertEqual(try XCTUnwrap(headerHeight(attachment, section: 0)), 70, accuracy: 0.5,
                        "別の対象への要求で高さが変わってはいけない")
@@ -194,7 +186,7 @@ final class AccessoryMeasureInvalidationTests: XCTestCase {
         inner.contentHeight = 140
         inner.invalidateIntrinsicContentSize()
         attachment.store.invalidateAccessoryMeasurement(target: .sectionHeader(sectionID: sectionID))
-        pump(attachment)
+        waitForNegativeVerification(in: attachment.collectionView)
 
         XCTAssertEqual(try XCTUnwrap(headerHeight(attachment, section: 0)), 70, accuracy: 0.5,
                        "購読解除後の要求が表示へ届いている")
@@ -214,13 +206,24 @@ final class AccessoryMeasureInvalidationTests: XCTestCase {
             target: .rootHeader,
             accessory: .root(.view(KsAnyView.uiKit { inner }))
         )
-        pump(attachment, seconds: 0.3)
 
         func rootHeaderHeight() -> CGFloat? {
             attachment.collectionView.visibleSupplementaryViews(
                 ofKind: KsSettingsViewController.rootHeaderElementKind
             ).first?.frame.height
         }
+
+        // 生成されただけでは自己計測が済んでいないことがあるため、中身の高さ + 既定 margin へ
+        // 落ち着くところまでを初期反映の完了条件にする。
+        awaitCondition(
+            "Root header の boundary supplementary が中身の高さで確定する",
+            in: attachment.collectionView,
+            actual: { "Root header 高さ \(String(describing: rootHeaderHeight()))" },
+            until: {
+                guard let height = rootHeaderHeight() else { return false }
+                return abs(height - (60 + 22)) <= 0.5
+            }
+        )
 
         // Root accessory は Section 単位余白を自身の内側に持つため、領域の高さは
         // 中身の高さ + Classic 既定 margin の top (22pt) になる。
@@ -230,7 +233,7 @@ final class AccessoryMeasureInvalidationTests: XCTestCase {
         inner.contentHeight = 130
         inner.invalidateIntrinsicContentSize()
         attachment.store.invalidateAccessoryMeasurement(target: .rootHeader)
-        pump(attachment)
+        layoutNow(attachment.collectionView)
 
         XCTAssertEqual(try XCTUnwrap(rootHeaderHeight()), 130 + 22, accuracy: 0.5,
                        "Root header の再計測要求が領域の高さへ届いていない")
@@ -244,7 +247,7 @@ final class AccessoryMeasureInvalidationTests: XCTestCase {
         defer { attachment.window.isHidden = true }
 
         attachment.store.invalidateAccessoryMeasurement(target: .rootFooter)
-        pump(attachment)
+        waitForNegativeVerification(in: attachment.collectionView)
 
         XCTAssertTrue(
             attachment.collectionView.visibleSupplementaryViews(

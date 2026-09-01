@@ -42,6 +42,19 @@ let package = Package(
     ],
     dependencies: [],
     targets: [
+        // テスト支援ターゲット: 3 つの UI 系テストターゲットが共有する待機・レイアウト実行ヘルパ。
+        // product として公開せず、テストターゲットからのみ依存される。XCTest を直接リンクし、
+        // deadline 超過時の失敗をこのターゲット内から発火する。
+        .target(
+            name: "KsSettingsViewTestSupport",
+            path: "Tests/KsSettingsViewTestSupport"
+        ),
+        // テスト支援ターゲット自身のテスト
+        .testTarget(
+            name: "KsSettingsViewTestSupportTests",
+            dependencies: ["KsSettingsViewTestSupport"],
+            path: "Tests/KsSettingsViewTestSupportTests"
+        ),
         // Core ターゲット: UIKit に依存しない純粋データモデル
         .target(
             name: "KsSettingsViewCore",
@@ -62,7 +75,7 @@ let package = Package(
         // UI テストターゲット
         .testTarget(
             name: "KsSettingsViewUITests",
-            dependencies: ["KsSettingsViewUI", "KsSettingsViewCore"],
+            dependencies: ["KsSettingsViewUI", "KsSettingsViewCore", "KsSettingsViewTestSupport"],
             path: "Tests/KsSettingsViewUITests"
         ),
         // SwiftUI ターゲット: UIViewControllerRepresentable + DSL
@@ -74,7 +87,7 @@ let package = Package(
         // SwiftUI テストターゲット
         .testTarget(
             name: "KsSettingsViewSwiftUITests",
-            dependencies: ["KsSettingsViewSwiftUI", "KsSettingsViewUI", "KsSettingsViewCore"],
+            dependencies: ["KsSettingsViewSwiftUI", "KsSettingsViewUI", "KsSettingsViewCore", "KsSettingsViewTestSupport"],
             path: "Tests/KsSettingsViewSwiftUITests"
         ),
         // Bridge ターゲット: `@objc` 互換 DTO と内部所有 Store を持つ interop 境界
@@ -86,7 +99,7 @@ let package = Package(
         // Bridge テストターゲット
         .testTarget(
             name: "KsSettingsViewBridgeTests",
-            dependencies: ["KsSettingsViewBridge", "KsSettingsViewUI", "KsSettingsViewCore"],
+            dependencies: ["KsSettingsViewBridge", "KsSettingsViewUI", "KsSettingsViewCore", "KsSettingsViewTestSupport"],
             path: "Tests/KsSettingsViewBridgeTests"
         )
     ]
