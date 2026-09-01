@@ -66,7 +66,7 @@ internal fun View.findKsSettingsViewHost(): KsSettingsView? {
  * }
  * ```
  */
-class KsSettingsView @JvmOverloads constructor(
+public class KsSettingsView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
 ) : FrameLayout(context, attrs) {
@@ -172,7 +172,7 @@ class KsSettingsView @JvmOverloads constructor(
      *
      * setter で内部 `RecyclerView` の `ItemDecoration` を入れ替え、`invalidateItemDecorations` を呼ぶ。
      */
-    var style: KsSettingsViewStyle = KsSettingsViewStyle.Classic
+    public var style: KsSettingsViewStyle = KsSettingsViewStyle.Classic
         set(value) {
             field = value
             applyDecoration(value)
@@ -184,7 +184,7 @@ class KsSettingsView @JvmOverloads constructor(
      * setter で内部 `headerAdapter.view` を更新する（`RootHeaderFooterAdapter` 側で
      * `notifyItemInserted` / `notifyItemRemoved` / `notifyItemChanged` を発行）。
      */
-    var rootHeader: RootAccessory? = null
+    public var rootHeader: RootAccessory? = null
         set(value) {
             field = value
             headerAdapter.view = value
@@ -193,7 +193,7 @@ class KsSettingsView @JvmOverloads constructor(
     /**
      * Root Footer。`null` で非表示。
      */
-    var rootFooter: RootAccessory? = null
+    public var rootFooter: RootAccessory? = null
         set(value) {
             field = value
             footerAdapter.view = value
@@ -219,7 +219,7 @@ class KsSettingsView @JvmOverloads constructor(
      * - 直接呼び出し経路（外部から `view.theme = newTheme`）にも二重防御として同値スキップを
      *   入れ、Compose recomposition 頻発時の不要な `notifyDataSetChanged` 3 連発を抑止する。
      */
-    var theme: Theme
+    public var theme: Theme
         get() = themeBacking
         set(value) {
             // 同値スキップ：`applyThemeInternal` は ConcatAdapter 配下 3 つの Adapter に対して
@@ -323,7 +323,7 @@ class KsSettingsView @JvmOverloads constructor(
      *
      * @param store バインドする Store
      */
-    fun bind(store: SettingsRootStore) {
+    public fun bind(store: SettingsRootStore) {
         // 同一 Store の再 bind: 購読は維持し、初期 state / theme の再適用のみ行う。
         if (pendingStore === store && storeCollectJob?.isActive == true) {
             setRootDirect(store.state.value, store.theme.value)
@@ -354,7 +354,7 @@ class KsSettingsView @JvmOverloads constructor(
      *
      * 冪等であり、Store 未バインドおよび解除済みの状態で呼んでも何も起きない。
      */
-    fun unbind() {
+    public fun unbind() {
         storeCollectJob?.cancel()
         storeCollectJob = null
         pendingStore = null
@@ -452,7 +452,7 @@ class KsSettingsView @JvmOverloads constructor(
      *
      * @param target 再計測する accessory
      */
-    fun invalidateAccessoryMeasurement(target: AccessoryTarget) {
+    public fun invalidateAccessoryMeasurement(target: AccessoryTarget) {
         val position = accessoryAdapterPosition(target) ?: return
         val itemView = recyclerView.findViewHolderForAdapterPosition(position)?.itemView ?: return
         val hosted = (itemView as? ViewGroup)?.getChildAt(0)
@@ -553,7 +553,7 @@ class KsSettingsView @JvmOverloads constructor(
     /**
      * `SettingsRootDiff` を受け取り、内部状態と Adapter を部分更新する。
      */
-    fun applyDiff(diff: SettingsRootDiff) {
+    public fun applyDiff(diff: SettingsRootDiff) {
         when (diff) {
             is SettingsRootDiff.Full -> {
                 setRootDirect(diff.root, internalTheme)
@@ -1095,7 +1095,7 @@ class KsSettingsView @JvmOverloads constructor(
         }
     }
 
-    companion object {
+    public companion object {
         private const val LOG_TAG = "KsSettingsView"
 
         /**
@@ -1109,7 +1109,7 @@ class KsSettingsView @JvmOverloads constructor(
          * 内部状態（入力中のテキスト・スクロール位置・フォーカス）を失うのに対し、View 形式は
          * Theme が決める文字を持たないため、作り直しても得るものがない。
          */
-        const val PAYLOAD_THEME: String = "ks-theme"
+        public const val PAYLOAD_THEME: String = "ks-theme"
 
         /**
          * `SettingsRoot.sections` を `CellListItem` の平坦リストに展開する。

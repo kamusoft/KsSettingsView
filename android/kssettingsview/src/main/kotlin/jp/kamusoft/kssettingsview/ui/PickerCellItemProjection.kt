@@ -24,7 +24,7 @@ private fun newPickerCellId(): String = "picker-cell-${java.util.UUID.randomUUID
  * @param subText 要素から副表示テキストを作る射影（`null` または空文字列を返した要素は副表示なし）
  * @param onItemSelected 確定した index に対応する元要素を受け取る callback
  */
-fun <T> PickerCell(
+public fun <T> PickerCell(
     id: String = newPickerCellId(),
     style: CellStyle = CellStyle(),
     title: String,
@@ -73,7 +73,7 @@ fun <T> PickerCell(
  * @param onItemsSelected 確定した index 集合に対応する元要素を index 昇順で受け取る callback
  *   （範囲外 index に対応する要素は含まれない）
  */
-fun <T> PickerCell(
+public fun <T> PickerCell(
     id: String = newPickerCellId(),
     style: CellStyle = CellStyle(),
     title: String,
@@ -119,7 +119,7 @@ fun <T> PickerCell(
 // =============================================================================
 
 /** 文字列列から単一選択の [PickerCell] を構築する。 */
-fun PickerCell(
+public fun PickerCell(
     id: String = newPickerCellId(),
     style: CellStyle = CellStyle(),
     title: String,
@@ -157,7 +157,7 @@ fun PickerCell(
 )
 
 /** 文字列列から複数選択の [PickerCell] を構築する。 */
-fun PickerCell(
+public fun PickerCell(
     id: String = newPickerCellId(),
     style: CellStyle = CellStyle(),
     title: String,

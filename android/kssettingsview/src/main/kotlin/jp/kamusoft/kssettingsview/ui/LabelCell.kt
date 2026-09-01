@@ -24,7 +24,7 @@ import jp.kamusoft.kssettingsview.core.DSLReidentifiableCell
  * @property hintText ヒントテキスト（任意、右上）
  * @property isEnabled 有効／無効（既定 `true`）。`false` のときはテキスト色を `Theme.disabledTextColor` に置換
  */
-data class LabelCell(
+public data class LabelCell(
     override val id: String = "label-${java.util.UUID.randomUUID()}",
     override val style: CellStyle = CellStyle(),
     val title: String,

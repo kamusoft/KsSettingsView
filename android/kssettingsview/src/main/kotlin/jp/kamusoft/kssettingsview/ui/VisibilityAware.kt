@@ -14,7 +14,7 @@ package jp.kamusoft.kssettingsview.ui
  *
  * 可視性の切替は構造 Diff とは別経路の visible projection 再構築として扱う（core/ADR-0010）。
  */
-interface VisibilityAware {
+public interface VisibilityAware {
     /** Cell の可視性。`true` で UI 層の visible projection に含める、`false` で除外する。 */
-    val isVisible: Boolean
+    public val isVisible: Boolean
 }

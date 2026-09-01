@@ -27,7 +27,7 @@ import java.time.LocalDate
  * @property valueText 明示指定の valueText（`null` で `format` に従って自動表示）
  * @property onValueChanged 日付変更 callback
  */
-data class DatePickerCell(
+public data class DatePickerCell(
     override val id: String = "date-picker-cell-${java.util.UUID.randomUUID()}",
     override val style: CellStyle = CellStyle(),
     val title: String,

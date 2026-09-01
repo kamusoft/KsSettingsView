@@ -81,6 +81,9 @@ android {
 
 // JDK 17 を採用（リポジトリ全体の Android ビルド共通）
 kotlin {
+    // Maven 公開面は visibility と型を明示した宣言だけで構成し、意図しない API の追加を
+    // コンパイル時に拒否する (android/ADR-0022)。
+    explicitApi()
     jvmToolchain(17)
 }
 

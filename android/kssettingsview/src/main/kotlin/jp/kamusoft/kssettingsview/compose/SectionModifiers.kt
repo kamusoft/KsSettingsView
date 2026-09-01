@@ -25,7 +25,7 @@ package jp.kamusoft.kssettingsview.compose
  * 新規記述では [SectionHandle.sectionID] の chain 形式を推奨する。本スコープ関数形式は
  * 動作が等価な別記法として併存する。
  */
-fun DSLSettingsRootScope.sectionID(id: Any) {
+public fun DSLSettingsRootScope.sectionID(id: Any) {
     overrideLastSectionId(DSLIdentityHint.Explicit(id))
 }
 
@@ -46,6 +46,6 @@ fun DSLSettingsRootScope.sectionID(id: Any) {
  * 新規記述では [CellHandle.cellID] の chain 形式を推奨する。本スコープ関数形式は
  * 動作が等価な別記法として併存する。
  */
-fun DSLSectionScope.cellID(id: Any) {
+public fun DSLSectionScope.cellID(id: Any) {
     overrideLastCellId(DSLIdentityHint.Explicit(id))
 }

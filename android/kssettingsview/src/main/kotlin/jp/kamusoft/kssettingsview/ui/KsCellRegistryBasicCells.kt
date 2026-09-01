@@ -26,7 +26,7 @@ import android.content.Context
  *   将来の Material アイコンリソース解決等のために引数として受け取る。
  */
 @Suppress("UNUSED_PARAMETER")
-fun KsCellRegistry.registerBasicCells(context: Context) {
+public fun KsCellRegistry.registerBasicCells(context: Context) {
     register(
         cellClass = LabelCell::class,
         viewType = VIEW_TYPE_LABEL_CELL,

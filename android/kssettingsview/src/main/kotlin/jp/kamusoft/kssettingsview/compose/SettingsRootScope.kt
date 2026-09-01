@@ -15,7 +15,7 @@ import jp.kamusoft.kssettingsview.core.SettingsRoot
  */
 @DslMarker
 @Target(AnnotationTarget.CLASS, AnnotationTarget.TYPE, AnnotationTarget.TYPEALIAS)
-annotation class SettingsRootDsl
+public annotation class SettingsRootDsl
 
 /**
  * `settingsRoot { ... }` DSL の receiver スコープ。
@@ -26,7 +26,7 @@ annotation class SettingsRootDsl
  * `theme` 引数を受け取らない。Theme は `KsSettingsView(theme = ...)` 経路で渡す。
  */
 @SettingsRootDsl
-class SettingsRootScope internal constructor() {
+public class SettingsRootScope internal constructor() {
 
     private val sections: MutableList<Section> = mutableListOf()
 
@@ -46,7 +46,7 @@ class SettingsRootScope internal constructor() {
      * @param isFooterVisible Section フッタの表示トグル
      * @param block [SectionScope] のレシーバラムダ。`cell(...)` で Cell を追加する
      */
-    fun section(
+    public fun section(
         id: String,
         header: SectionAccessory? = null,
         footer: SectionAccessory? = null,
@@ -88,7 +88,7 @@ class SettingsRootScope internal constructor() {
      * @param isFooterVisible Section フッタの表示トグル
      * @param block [SectionScope] のレシーバラムダ。`cell(...)` で Cell を追加する
      */
-    fun section(
+    public fun section(
         id: String,
         header: String,
         footer: String? = null,
@@ -124,7 +124,7 @@ class SettingsRootScope internal constructor() {
  * 内部に Cell リストを蓄え、最後に親 [SettingsRootScope] へ [Section] を渡す。
  */
 @SettingsRootDsl
-class SectionScope internal constructor() {
+public class SectionScope internal constructor() {
 
     private val cells: MutableList<Cell> = mutableListOf()
 
@@ -133,7 +133,7 @@ class SectionScope internal constructor() {
      *
      * @param cell 追加する Cell
      */
-    fun cell(cell: Cell) {
+    public fun cell(cell: Cell) {
         cells.add(cell)
     }
 
@@ -152,7 +152,7 @@ class SectionScope internal constructor() {
  * @param block [SettingsRootScope] のレシーバラムダ
  * @return 構築された [SettingsRoot]
  */
-fun settingsRoot(
+public fun settingsRoot(
     block: SettingsRootScope.() -> Unit,
 ): SettingsRoot {
     return SettingsRootScope().apply(block).build()

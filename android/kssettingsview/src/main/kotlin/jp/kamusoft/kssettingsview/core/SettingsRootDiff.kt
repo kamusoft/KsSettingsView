@@ -14,28 +14,32 @@ package jp.kamusoft.kssettingsview.core
  * なく描画スタイルの再適用であり、UI 層の独立 API
  * （`SettingsRootStore.applyTheme(_:)` / `KsSettingsView.theme` プロパティ）が担う。
  */
-sealed interface SettingsRootDiff {
+public sealed interface SettingsRootDiff {
 
     /** 全体差し替え。 */
-    data class Full(val root: SettingsRoot) : SettingsRootDiff
+    public data class Full(public val root: SettingsRoot) : SettingsRootDiff
 
     /** Section 追加。 */
-    data class InsertSection(val index: Int, val section: Section) : SettingsRootDiff
+    public data class InsertSection(public val index: Int, public val section: Section) : SettingsRootDiff
 
     /** Section 削除。 */
-    data class RemoveSection(val sectionId: String) : SettingsRootDiff
+    public data class RemoveSection(public val sectionId: String) : SettingsRootDiff
 
     /** Section 順序変更。 */
-    data class MoveSection(val from: Int, val to: Int) : SettingsRootDiff
+    public data class MoveSection(public val from: Int, public val to: Int) : SettingsRootDiff
 
     /** Section 全体置換。 */
-    data class ReplaceSection(val sectionId: String, val newSection: Section) : SettingsRootDiff
+    public data class ReplaceSection(public val sectionId: String, public val newSection: Section) : SettingsRootDiff
 
     /** Section 内 Cell 追加。 */
-    data class InsertCell(val sectionId: String, val index: Int, val cell: Cell) : SettingsRootDiff
+    public data class InsertCell(
+        public val sectionId: String,
+        public val index: Int,
+        public val cell: Cell,
+    ) : SettingsRootDiff
 
     /** Cell 削除。 */
-    data class RemoveCell(val cellId: String) : SettingsRootDiff
+    public data class RemoveCell(public val cellId: String) : SettingsRootDiff
 
     /**
      * Cell 置換（= **同一 id を持つ Cell の内容更新 / reconfigure**）。
@@ -61,12 +65,12 @@ sealed interface SettingsRootDiff {
      * 部分更新経路（`KsSettingsView.applyDiff` の [ReplaceCell] ハンドリング）が担う。一方 iOS DSL は
      * 内容変化で [ReplaceCell] を発行し `reconfigureItems` 経路に載せる（経路差は実装都合であり原則は共通）。
      */
-    data class ReplaceCell(val cellId: String, val newCell: Cell) : SettingsRootDiff
+    public data class ReplaceCell(public val cellId: String, public val newCell: Cell) : SettingsRootDiff
 
     /**
      * Cell 順序変更（Section 内のみ、Section 間移動は別途 [RemoveCell] + [InsertCell] で表現）。
      */
-    data class MoveCell(val cellId: String, val toIndex: Int) : SettingsRootDiff
+    public data class MoveCell(public val cellId: String, public val toIndex: Int) : SettingsRootDiff
 
     /**
      * Root H/F / Section H/F の追加・更新・削除。
@@ -74,8 +78,8 @@ sealed interface SettingsRootDiff {
      * @property target 更新対象（Root H/F もしくは Section H/F）
      * @property accessory 新しい Accessory。`null` は削除を意味する
      */
-    data class UpdateAccessory(
-        val target: AccessoryTarget,
-        val accessory: SettingsAccessory?,
+    public data class UpdateAccessory(
+        public val target: AccessoryTarget,
+        public val accessory: SettingsAccessory?,
     ) : SettingsRootDiff
 }

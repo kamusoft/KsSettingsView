@@ -22,10 +22,10 @@ package jp.kamusoft.kssettingsview.core
  * パッケージ）が持つ
  * （core/ADR-0009）。
  */
-interface DSLReidentifiableCell : Cell {
+public interface DSLReidentifiableCell : Cell {
     /**
      * 自身を copy し、新しい `id` を持つ Cell を返す。
      * 通常は `data class` の `copy(id = newId)` で実装する。
      */
-    fun withDSLId(newId: String): Cell
+    public fun withDSLId(newId: String): Cell
 }

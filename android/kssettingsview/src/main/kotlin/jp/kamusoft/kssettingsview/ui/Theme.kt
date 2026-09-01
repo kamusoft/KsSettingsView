@@ -80,7 +80,7 @@ import androidx.compose.ui.unit.Dp
  * @property cellPlaceholderColor `EntryCell` の placeholder 既定色。`null` は未指定 → プラットフォーム既定
  *   （ホストテーマの hint 色）にフォールバックし、ライブラリ独自の既定色を持ち込まない
  */
-data class Theme(
+public data class Theme(
     val separatorColor: Color = DEFAULT_SEPARATOR_COLOR,
     val backgroundColor: Color = DEFAULT_BACKGROUND_COLOR,
     val cellBackgroundColor: Color = Color.White,
@@ -116,46 +116,41 @@ data class Theme(
     val sectionBorderColor: Color? = null,
     val cellPlaceholderColor: Color? = null,
 ) {
-    companion object {
+    public companion object {
         /** システム標準の灰色 separator（おおよそ #C8C7CC） */
-        val DEFAULT_SEPARATOR_COLOR: Color = Color(0xFFC8C7CC)
+        public val DEFAULT_SEPARATOR_COLOR: Color = Color(0xFFC8C7CC)
 
         /** 選択時のグレー（おおよそ #D9D9D9） */
-        val DEFAULT_SELECTED_COLOR: Color = Color(0xFFD9D9D9)
+        public val DEFAULT_SELECTED_COLOR: Color = Color(0xFFD9D9D9)
 
         /**
          * アクセント既定色（システム強調色相当の青、おおよそ #007AFF）。
          * iOS の tint / Material のアクセントに合わせたクロスプラットフォーム既定値。
          */
-        val DEFAULT_ACCENT_COLOR: Color = Color(0xFF007AFF)
+        public val DEFAULT_ACCENT_COLOR: Color = Color(0xFF007AFF)
 
         /** ヘッダ既定背景色（システムグループ化背景に近い #F2F2F7） */
-        val DEFAULT_HEADER_BACKGROUND_COLOR: Color = Color(0xFFF2F2F7)
+        public val DEFAULT_HEADER_BACKGROUND_COLOR: Color = Color(0xFFF2F2F7)
 
         /** フッタ既定背景色（現状はヘッダと同値だが、将来的に独立進化できるよう別定数として宣言） */
-        val DEFAULT_FOOTER_BACKGROUND_COLOR: Color = DEFAULT_HEADER_BACKGROUND_COLOR
+        public val DEFAULT_FOOTER_BACKGROUND_COLOR: Color = DEFAULT_HEADER_BACKGROUND_COLOR
 
         /** ヘッダ既定テキスト色（おおよそ #6D6D72） */
-        val DEFAULT_HEADER_TEXT_COLOR: Color = Color(0xFF6D6D72)
+        public val DEFAULT_HEADER_TEXT_COLOR: Color = Color(0xFF6D6D72)
 
         /** フッタ既定テキスト色（ヘッダと同色） */
-        val DEFAULT_FOOTER_TEXT_COLOR: Color = Color(0xFF6D6D72)
+        public val DEFAULT_FOOTER_TEXT_COLOR: Color = Color(0xFF6D6D72)
 
-        /**
-         * SettingsView 全体の既定背景色（白系、`cellBackgroundColor` と同等のニュートラル既定）。
-         *
-         * 旧名 `DEFAULT_VIEW_BACKGROUND_COLOR` から `port-theme-and-cellstyle-missing-fields`
-         * change で本名にリネームされた。互換シムは提供しない。
-         */
-        val DEFAULT_BACKGROUND_COLOR: Color = Color(0xFFFFFFFF)
+        /** SettingsView 全体の既定背景色（白系、`cellBackgroundColor` と同等のニュートラル既定）。 */
+        public val DEFAULT_BACKGROUND_COLOR: Color = Color(0xFFFFFFFF)
 
         /** `isEnabled = false` 時のテキスト色（やや薄い灰色、おおよそ #999999） */
-        val DEFAULT_DISABLED_TEXT_COLOR: Color = Color(0xFF999999)
+        public val DEFAULT_DISABLED_TEXT_COLOR: Color = Color(0xFF999999)
 
         // ===== Cell 全体既定 / フォールバック先既定値（EffectiveStyle と共有） =====
 
         /** `cellTitleColor` 未指定時のフォールバック色（黒）。 */
-        val DEFAULT_CELL_TITLE_COLOR: Color = Color(0xFF000000)
+        public val DEFAULT_CELL_TITLE_COLOR: Color = Color(0xFF000000)
 
         /**
          * ButtonCell の `titleColor` 4 段解決で「いずれも未指定」のときに使う既定色。
@@ -165,15 +160,15 @@ data class Theme(
          * (android/ADR-0020)。`EffectiveStyle.effectiveButtonTitleColor` /
          * `EffectiveStyle.effectiveButtonTitleColorArgb` の 4 段目フォールバック値として参照される。
          */
-        val DEFAULT_BUTTON_TITLE_COLOR: Color = Color(0xFF007AFF)
+        public val DEFAULT_BUTTON_TITLE_COLOR: Color = Color(0xFF007AFF)
 
         /** `cellDescriptionColor` 未指定時のフォールバック色（やや薄いグレー、おおよそ #6D6D72）。 */
-        val DEFAULT_CELL_DESCRIPTION_COLOR: Color = Color(0xFF6D6D72)
+        public val DEFAULT_CELL_DESCRIPTION_COLOR: Color = Color(0xFF6D6D72)
 
         /** `cellIconSize` 未指定時のフォールバックサイズ（24dp 相当のスカラー値、Dp は呼び出し側で解釈）。 */
-        const val DEFAULT_CELL_ICON_SIZE_DP_VALUE: Float = 24.0f
+        public const val DEFAULT_CELL_ICON_SIZE_DP_VALUE: Float = 24.0f
 
         /** `cellIconRadius` 未指定時のフォールバック半径（0dp = 角丸なし）。 */
-        const val DEFAULT_CELL_ICON_RADIUS_DP_VALUE: Float = 0.0f
+        public const val DEFAULT_CELL_ICON_RADIUS_DP_VALUE: Float = 0.0f
     }
 }

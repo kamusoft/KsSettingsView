@@ -38,7 +38,7 @@ import jp.kamusoft.kssettingsview.core.DSLReidentifiableCell
  * @property placeholderColor プレースホルダ文字色（任意）。`null` は未指定を意味し、
  *   `CellStyle.placeholderColor` → `Theme.cellPlaceholderColor` → プラットフォーム既定の順に解決する
  */
-data class EntryCell(
+public data class EntryCell(
     override val id: String = "entry-cell-${java.util.UUID.randomUUID()}",
     override val style: CellStyle = CellStyle(),
     val title: String,

@@ -46,15 +46,15 @@ import jp.kamusoft.kssettingsview.core.DSLReidentifiableCell
  * @property isVisible `false` で visible projection から除外される（既定 `true`）
  * @property builder [content] から Compose コンテンツを組み立てる
  */
-class CustomCell<Content : Any>(
+public class CustomCell<Content : Any>(
     override val id: String = "custom-${java.util.UUID.randomUUID()}",
     override val style: CellStyle = CellStyle(),
-    val content: Content,
-    val showArrow: Boolean = false,
-    val onTap: (() -> Unit)? = null,
-    val isEnabled: Boolean = true,
+    public val content: Content,
+    public val showArrow: Boolean = false,
+    public val onTap: (() -> Unit)? = null,
+    public val isEnabled: Boolean = true,
     override val isVisible: Boolean = true,
-    val builder: @Composable (Content) -> Unit,
+    public val builder: @Composable (Content) -> Unit,
 ) : Cell, DSLReidentifiableCell, DSLStyleModifiableCell, VisibilityAware {
 
     /**
@@ -119,7 +119,7 @@ class CustomCell<Content : Any>(
  * シングルトンであり常に自身とのみ相等になるため、静的形の [CustomCell] の等価性は実質
  * `id` + 表示スカラー（`style` / `showArrow` / `isEnabled` / `isVisible`）の比較になる。
  */
-object CustomCellEmptyContent
+public object CustomCellEmptyContent
 
 /**
  * content を持たない静的なコンテンツ向けの [CustomCell] を生成する。
@@ -135,7 +135,7 @@ object CustomCellEmptyContent
  * @param isVisible `false` で visible projection から除外される
  * @param builder 表示する Compose コンテンツ
  */
-fun CustomCell(
+public fun CustomCell(
     id: String = "custom-${java.util.UUID.randomUUID()}",
     style: CellStyle = CellStyle(),
     showArrow: Boolean = false,

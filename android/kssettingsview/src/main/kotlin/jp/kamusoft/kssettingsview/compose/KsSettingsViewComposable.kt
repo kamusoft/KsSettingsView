@@ -28,7 +28,7 @@ import jp.kamusoft.kssettingsview.ui.KsSettingsViewStyle
  * @param rootFooter Root Footer として描画する Composable（`null` でフッタ非表示）
  */
 @Composable
-fun KsSettingsView(
+public fun KsSettingsView(
     store: SettingsRootStore,
     modifier: Modifier = Modifier,
     style: KsSettingsViewStyle = KsSettingsViewStyle.Classic,
@@ -60,7 +60,7 @@ fun KsSettingsView(
  * @param content DSL レシーバラムダ
  */
 @Composable
-fun KsSettingsView(
+public fun KsSettingsView(
     modifier: Modifier = Modifier,
     style: KsSettingsViewStyle = KsSettingsViewStyle.Classic,
     theme: Theme = Theme(),

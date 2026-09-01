@@ -24,3 +24,4 @@ Android 系統 (android/ ビルドルート) 固有の決定。採番はこの�
 - [ADR-0019](0019-datepickercell-calendar-compose-datepicker.md) — DatePickerCell のカレンダー型 UI は Compose Material3 DatePicker のダイアログ表示に統一する (accepted, supersedes 0008/0010/0011)
 - [ADR-0020](0020-bundled-theme-always-wrap-host-independent.md) — ライブラリ UI は同梱 Material3 派生テーマの常時ラップで生成し、ホストの XML テーマに依存しない (accepted)
 - [ADR-0021](0021-calendar-dialog-restore-via-view-instance-state.md) — カレンダー選択面の回転復元は KsSettingsView の View インスタンス状態で自前化し、既定 ID の自前付与で成立させる (accepted)
+- [ADR-0022](0022-explicit-api-strict-for-public-library.md) — Android 公開ライブラリは Explicit API Strict で公開境界を強制する (accepted)

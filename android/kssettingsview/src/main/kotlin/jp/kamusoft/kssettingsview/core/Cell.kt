@@ -36,6 +36,6 @@ package jp.kamusoft.kssettingsview.core
  * @property id 一意な ID（Bridge 境界では String として扱われる）。
  *   **一意性は呼び出し側の責務**であり、Core 層では値域チェックを行わない。
  */
-interface Cell {
-    val id: String
+public interface Cell {
+    public val id: String
 }

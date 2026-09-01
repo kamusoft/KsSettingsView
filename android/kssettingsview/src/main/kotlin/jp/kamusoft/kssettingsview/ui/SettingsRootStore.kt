@@ -29,7 +29,7 @@ import kotlinx.coroutines.flow.asStateFlow
  *
  * 内部 [MutableSharedFlow] は `replay = 0`、`extraBufferCapacity = 64` で構成する。
  */
-class SettingsRootStore(
+public class SettingsRootStore(
     initialRoot: SettingsRoot,
     initialTheme: Theme = Theme(),
 ) {
@@ -37,7 +37,7 @@ class SettingsRootStore(
     private val _state: MutableStateFlow<SettingsRoot> = MutableStateFlow(initialRoot)
 
     /** 現在の `SettingsRoot` 状態。Compose `collectAsState` 等で監視可能。 */
-    val state: StateFlow<SettingsRoot> = _state.asStateFlow()
+    public val state: StateFlow<SettingsRoot> = _state.asStateFlow()
 
     private val _theme: MutableStateFlow<Theme> = MutableStateFlow(initialTheme)
 
@@ -46,7 +46,7 @@ class SettingsRootStore(
      *
      * `applyTheme(_)` で更新される。`SettingsRootDiff` 経路では配信しない（独立 StateFlow）。
      */
-    val theme: StateFlow<Theme> = _theme.asStateFlow()
+    public val theme: StateFlow<Theme> = _theme.asStateFlow()
 
     // 内部 Diff Flow。
     private val _diffs: MutableSharedFlow<SettingsRootDiff> = MutableSharedFlow(
@@ -84,7 +84,7 @@ class SettingsRootStore(
     // MARK: - Root 全体操作
 
     /** `SettingsRoot` 全体を差し替える。 */
-    fun replaceAll(root: SettingsRoot) {
+    public fun replaceAll(root: SettingsRoot) {
         _state.value = root
         emitDiff(SettingsRootDiff.Full(root))
     }
@@ -92,7 +92,7 @@ class SettingsRootStore(
     // MARK: - Section 操作
 
     /** Section を追加する。 */
-    fun insertSection(section: Section, at: Int) {
+    public fun insertSection(section: Section, at: Int) {
         val current = _state.value
         val sections = current.sections.toMutableList()
         val clamped = at.coerceIn(0, sections.size)
@@ -102,7 +102,7 @@ class SettingsRootStore(
     }
 
     /** 指定 ID の Section を削除する。存在しない ID は no-op。 */
-    fun removeSection(sectionId: String) {
+    public fun removeSection(sectionId: String) {
         val current = _state.value
         val sections = current.sections.toMutableList()
         val index = sections.indexOfFirst { it.id == sectionId }
@@ -113,7 +113,7 @@ class SettingsRootStore(
     }
 
     /** Section の順序を変更する。範囲外 from は no-op。 */
-    fun moveSection(from: Int, to: Int) {
+    public fun moveSection(from: Int, to: Int) {
         val current = _state.value
         val sections = current.sections.toMutableList()
         if (from !in sections.indices) return
@@ -125,7 +125,7 @@ class SettingsRootStore(
     }
 
     /** 指定 ID の Section を新しい Section で置換する。存在しない ID は no-op。 */
-    fun replaceSection(sectionId: String, new: Section) {
+    public fun replaceSection(sectionId: String, new: Section) {
         val current = _state.value
         val sections = current.sections.toMutableList()
         val index = sections.indexOfFirst { it.id == sectionId }
@@ -138,7 +138,7 @@ class SettingsRootStore(
     // MARK: - Cell 操作
 
     /** Cell を指定 Section に追加する。Section が存在しない場合は no-op。 */
-    fun insertCell(cell: Cell, sectionId: String, at: Int) {
+    public fun insertCell(cell: Cell, sectionId: String, at: Int) {
         val current = _state.value
         val sections = current.sections.toMutableList()
         val sectionIndex = sections.indexOfFirst { it.id == sectionId }
@@ -153,7 +153,7 @@ class SettingsRootStore(
     }
 
     /** 指定 ID の Cell を削除する。存在しない ID は no-op。 */
-    fun removeCell(cellId: String) {
+    public fun removeCell(cellId: String) {
         val current = _state.value
         val sections = current.sections.toMutableList()
         var found = false
@@ -174,7 +174,7 @@ class SettingsRootStore(
     }
 
     /** 指定 ID の Cell を新しい Cell で置換する。存在しない ID は no-op。 */
-    fun replaceCell(cellId: String, new: Cell) {
+    public fun replaceCell(cellId: String, new: Cell) {
         val current = _state.value
         val sections = current.sections.toMutableList()
         var found = false
@@ -197,7 +197,7 @@ class SettingsRootStore(
     /**
      * 複数 Cell の内容を一括置換し、**1 回のバッチ内容更新**として配信する。
      */
-    fun replaceCells(updates: List<Pair<String, Cell>>) {
+    public fun replaceCells(updates: List<Pair<String, Cell>>) {
         if (updates.isEmpty()) return
         val current = _state.value
         val sections = current.sections.toMutableList()
@@ -221,7 +221,7 @@ class SettingsRootStore(
     }
 
     /** 指定 ID の Cell を同一 Section 内で移動する。存在しない ID は no-op。 */
-    fun moveCell(cellId: String, to: Int) {
+    public fun moveCell(cellId: String, to: Int) {
         val current = _state.value
         val sections = current.sections.toMutableList()
         var found = false
@@ -252,7 +252,7 @@ class SettingsRootStore(
      * no-op とする（core/ADR-0020）。Root H/F は `SettingsRoot` 値型に state を持たないため
      * sectionId 検証の対象外であり、常に Diff を emit する。
      */
-    fun updateAccessory(target: AccessoryTarget, accessory: SettingsAccessory?) {
+    public fun updateAccessory(target: AccessoryTarget, accessory: SettingsAccessory?) {
         when (target) {
             AccessoryTarget.RootHeader, AccessoryTarget.RootFooter -> {
                 // state 変更不要（UI 層プロパティへの反映は applyDiff 側で行う）
@@ -286,7 +286,7 @@ class SettingsRootStore(
      *
      * @param target 再計測する accessory
      */
-    fun invalidateAccessoryMeasurement(target: AccessoryTarget) {
+    public fun invalidateAccessoryMeasurement(target: AccessoryTarget) {
         _accessoryMeasureInvalidations.tryEmit(target)
     }
 
@@ -297,7 +297,7 @@ class SettingsRootStore(
      *
      * @param theme 新しい [Theme]
      */
-    fun applyTheme(theme: Theme) {
+    public fun applyTheme(theme: Theme) {
         _theme.value = theme
     }
 
@@ -336,7 +336,7 @@ class SettingsRootStore(
         return true
     }
 
-    companion object {
+    public companion object {
         /**
          * Preview / Test 用ファクトリ。
          *
@@ -344,7 +344,7 @@ class SettingsRootStore(
          * @param theme 初期 `Theme`（既定 `Theme()`）
          * @return 指定 root / theme を初期値とする Store
          */
-        fun preview(root: SettingsRoot, theme: Theme = Theme()): SettingsRootStore {
+        internal fun preview(root: SettingsRoot, theme: Theme = Theme()): SettingsRootStore {
             return SettingsRootStore(initialRoot = root, initialTheme = theme)
         }
     }

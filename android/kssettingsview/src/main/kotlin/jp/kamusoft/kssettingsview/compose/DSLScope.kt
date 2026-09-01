@@ -15,7 +15,7 @@ import jp.kamusoft.kssettingsview.ui.KsImage
  * 内部に [DSLSectionNode] を蓄え、最終的に [build] で [DSLRootTree] を組み立てる。
  */
 @SettingsRootDsl
-class DSLSettingsRootScope internal constructor() {
+public class DSLSettingsRootScope internal constructor() {
 
     private val sectionNodes: MutableList<DSLSectionNode> = mutableListOf()
 
@@ -30,7 +30,7 @@ class DSLSettingsRootScope internal constructor() {
      * @param isFooterVisible Footer 表示トグル（`false` で内容があっても Footer を隠す）
      * @param block [DSLSectionScope] のレシーバラムダ
      */
-    fun Section(
+    public fun Section(
         header: String? = null,
         footer: String? = null,
         headerContent: (@Composable () -> Unit)? = null,
@@ -78,7 +78,7 @@ class DSLSettingsRootScope internal constructor() {
      * @param key 各要素の identity を返す lambda（ID 自動採番に使用）
      * @param content 各要素から Section を構築するレシーバラムダ
      */
-    fun <T> forEach(
+    public fun <T> forEach(
         items: List<T>,
         key: (T) -> Any,
         content: DSLSettingsRootScope.(T) -> Unit,
@@ -146,7 +146,7 @@ class DSLSettingsRootScope internal constructor() {
  * `Section { ... }` の内部スコープ。
  */
 @SettingsRootDsl
-class DSLSectionScope internal constructor() {
+public class DSLSectionScope internal constructor() {
 
     private val cellNodes: MutableList<DSLCellNode> = mutableListOf()
 
@@ -161,7 +161,7 @@ class DSLSectionScope internal constructor() {
      *
      * @param cell 追加する Cell（`Cell.cellID(...)` 適用後の [DSLExplicitIdCell] も受理）
      */
-    fun cell(cell: Cell): CellHandle {
+    public fun cell(cell: Cell): CellHandle {
         val node = when (cell) {
             is DSLExplicitIdCell -> DSLCellNode(
                 cell = cell.wrapped,
@@ -179,12 +179,12 @@ class DSLSectionScope internal constructor() {
      * `Section { +LabelCell(title = "...") }` のように `cell(...)` を省略して
      * 直接 Cell を流せる。
      */
-    operator fun Cell.unaryPlus(): CellHandle = cell(this)
+    public operator fun Cell.unaryPlus(): CellHandle = cell(this)
 
     /**
      * 動的コレクションを Cell 群として展開する。
      */
-    fun <T> forEach(
+    public fun <T> forEach(
         items: List<T>,
         key: (T) -> Any,
         content: DSLSectionScope.(T) -> Unit,
@@ -284,7 +284,7 @@ class DSLSectionScope internal constructor() {
  * }
  * ```
  */
-inline fun <reified T : KsIdentifiable> DSLSettingsRootScope.forEach(
+public inline fun <reified T : KsIdentifiable> DSLSettingsRootScope.forEach(
     items: List<T>,
     noinline content: DSLSettingsRootScope.(T) -> Unit,
 ) {
@@ -294,7 +294,7 @@ inline fun <reified T : KsIdentifiable> DSLSettingsRootScope.forEach(
 /**
  * [KsIdentifiable] を実装したコレクションを Cell 群として展開する（セクション内 forEach の key 省略版）。
  */
-inline fun <reified T : KsIdentifiable> DSLSectionScope.forEach(
+public inline fun <reified T : KsIdentifiable> DSLSectionScope.forEach(
     items: List<T>,
     noinline content: DSLSectionScope.(T) -> Unit,
 ) {

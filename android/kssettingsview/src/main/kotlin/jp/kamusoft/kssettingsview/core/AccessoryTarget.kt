@@ -10,23 +10,23 @@ package jp.kamusoft.kssettingsview.core
  * Root と Section で H/F の責務が分かれるため、位置を型で表現して
  * [SettingsRootDiff.UpdateAccessory] の適用先を一意に決める。
  */
-sealed interface AccessoryTarget {
+public sealed interface AccessoryTarget {
 
     /** Root レベルのヘッダ */
-    data object RootHeader : AccessoryTarget
+    public data object RootHeader : AccessoryTarget
 
     /** Root レベルのフッタ */
-    data object RootFooter : AccessoryTarget
+    public data object RootFooter : AccessoryTarget
 
     /**
      * 指定 Section のヘッダ
      * @property sectionId 対象 Section の ID
      */
-    data class SectionHeader(val sectionId: String) : AccessoryTarget
+    public data class SectionHeader(public val sectionId: String) : AccessoryTarget
 
     /**
      * 指定 Section のフッタ
      * @property sectionId 対象 Section の ID
      */
-    data class SectionFooter(val sectionId: String) : AccessoryTarget
+    public data class SectionFooter(public val sectionId: String) : AccessoryTarget
 }

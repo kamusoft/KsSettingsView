@@ -15,7 +15,7 @@ package jp.kamusoft.kssettingsview.ui
  * 反映する設計。これにより `DatePickerCell.uiStyle` というプロパティ名を両プラットフォームで
  * 共通化できる。
  */
-enum class DatePickerUIStyle {
+public enum class DatePickerUIStyle {
     /** Material Design スタイル（カレンダー選択面、既定）。 */
     Material,
 

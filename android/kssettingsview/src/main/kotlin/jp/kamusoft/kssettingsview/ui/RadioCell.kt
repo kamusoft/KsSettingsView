@@ -16,7 +16,7 @@ import jp.kamusoft.kssettingsview.core.DSLReidentifiableCell
  * `RadioCell.accentColor → CellStyle.accentColor → Theme.cellAccentColor → プラットフォーム既定`。
  * `style` は UI 層所属の [CellStyle] を参照する（core/ADR-0009）。
  */
-data class RadioCell(
+public data class RadioCell(
     override val id: String = "radio-${java.util.UUID.randomUUID()}",
     override val style: CellStyle = CellStyle(),
     val title: String,

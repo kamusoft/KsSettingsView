@@ -36,7 +36,7 @@ import jp.kamusoft.kssettingsview.core.Cell
  * `class XxxCellViewHolder(view: View) : CellViewHolder<XxxCell>(view)`
  * のような派生を書けることが、独自 Cell 型を [KsCellRegistry] に登録する前提となる。
  */
-abstract class CellViewHolder<T : Cell>(itemView: View) : RecyclerView.ViewHolder(itemView) {
+public abstract class CellViewHolder<T : Cell>(itemView: View) : RecyclerView.ViewHolder(itemView) {
 
     /**
      * Cell の内容と Theme を ViewHolder に反映する。
@@ -44,7 +44,7 @@ abstract class CellViewHolder<T : Cell>(itemView: View) : RecyclerView.ViewHolde
      * @param cell 描画対象の Cell
      * @param theme SettingsRoot に紐付く Theme（`CellStyle` の null フィールドを補完するために参照）
      */
-    abstract fun bind(cell: T, theme: Theme)
+    public abstract fun bind(cell: T, theme: Theme)
 
     /**
      * ViewHolder 再利用時の内部状態リセット。
@@ -52,7 +52,7 @@ abstract class CellViewHolder<T : Cell>(itemView: View) : RecyclerView.ViewHolde
      * 既定実装は何もしない。listener / 画像参照 / 進行中 Job などを保持する派生クラスは
      * オーバーライドして必ずクリアすること。
      */
-    open fun reset() {
+    public open fun reset() {
         // no-op（派生クラスでオーバーライド）
     }
 }

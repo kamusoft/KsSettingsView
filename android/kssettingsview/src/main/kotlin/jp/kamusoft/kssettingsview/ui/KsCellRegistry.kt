@@ -7,26 +7,12 @@ import jp.kamusoft.kssettingsview.core.Cell
 import kotlin.reflect.KClass
 
 /**
- * Cell 型から `viewType` Int および `ViewHolder` ファクトリへ解決する中央レジストリ。
+ * 独自 Cell 型を描画対象に登録する中央レジストリ。
  *
- * 後続変更提案 `add-cell-types-*` が新 Cell を独立して登録できるよう、シングルトンで提供する。
- *
- * # 予約 viewType 値
- *
- * `RootHeaderFooterAdapter` および Section H/F の ViewHolder は本 registry とは独立に
- * 専用 viewType（[VIEW_TYPE_ROOT_TEXT] 等の `VIEW_TYPE_*` 定数）を使用し、Cell 用 viewType と
- * 衝突しない値域を割り振る。
- * Cell 用 viewType は [register] で渡された任意 Int を使用するため、利用側で衝突を避ける責務を持つ。
- * 推奨：Cell 用 viewType は 100 以上を使う。
- *
- * # 可視性
- *
- * 外部モジュール（Sample アプリや利用側アプリ）から独自 Cell 型を登録できるよう
- * `public` で公開する。利用側は独自 Cell 型を [register] に渡して描画対象に加える。
- * `createViewHolder` は同モジュール内の `KsSettingsListAdapter` から呼び出される
- * 内部詳細であるため `internal` のままとする。
+ * 外部利用者は [register] に Cell 型、一意な viewType、[CellViewHolder] の生成処理を渡して
+ * 独自 Cell を追加できる。viewType には [CELL_VIEW_TYPE_MIN] 以上の値を推奨する。
  */
-object KsCellRegistry {
+public object KsCellRegistry {
 
     /**
      * Section ヘッダ（Text 形式）用予約 viewType。内部 Adapter / 内部テストからのみ参照する。
@@ -70,7 +56,7 @@ object KsCellRegistry {
     /**
      * Cell 用 viewType の最小推奨値。本値以上を [register] で使うと予約 viewType と衝突しない。
      */
-    const val CELL_VIEW_TYPE_MIN: Int = 100
+    public const val CELL_VIEW_TYPE_MIN: Int = 100
 
     /**
      * 未登録 Cell / 未登録 viewType を検出した時の動作モード。
@@ -84,7 +70,7 @@ object KsCellRegistry {
      * 明示的に設定する想定。デフォルトは安全側に倒して `true`（デバッグ検出優先）とする。
      */
     @Volatile
-    var strictMode: Boolean = true
+    public var strictMode: Boolean = true
 
     /**
      * Cell 型 → viewType / ファクトリ のエントリ。
@@ -123,7 +109,7 @@ object KsCellRegistry {
      * @param viewType ListAdapter.getItemViewType で返す Int 値（`CELL_VIEW_TYPE_MIN` 以上推奨）
      * @param factory ViewHolder 生成ファクトリ
      */
-    fun <T : Cell> register(
+    public fun <T : Cell> register(
         cellClass: KClass<T>,
         viewType: Int,
         factory: (parent: ViewGroup) -> CellViewHolder<T>,
@@ -164,7 +150,7 @@ object KsCellRegistry {
      *
      * @throws IllegalStateException 未登録 Cell が渡され、かつ [strictMode] = true のとき
      */
-    fun viewTypeOf(cell: Cell): Int {
+    internal fun viewTypeOf(cell: Cell): Int {
         val entry = entriesByCellClass[cell::class]
         if (entry != null) return entry.viewType
         if (strictMode) {
@@ -201,9 +187,11 @@ object KsCellRegistry {
     }
 
     /**
-     * 登録済みかを判定する（テスト・診断用）。
+     * 指定 Cell 型が登録済みかを返す。
+     *
+     * 自動登録処理が既存の登録を上書きしないための判定と、テスト・診断に使用する。
      */
-    fun isRegistered(cellClass: KClass<out Cell>): Boolean = entriesByCellClass.containsKey(cellClass)
+    internal fun isRegistered(cellClass: KClass<out Cell>): Boolean = entriesByCellClass.containsKey(cellClass)
 
     /**
      * 全登録を解除する（テスト用）。

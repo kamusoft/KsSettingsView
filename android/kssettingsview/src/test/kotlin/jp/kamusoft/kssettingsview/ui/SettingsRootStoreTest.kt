@@ -404,15 +404,17 @@ class SettingsRootStoreTest {
         assertEquals(Theme(), store.theme.value)
     }
 
-    // MARK: - preview
+    // MARK: - public constructor
 
     @Test
-    fun `preview ファクトリで作った store は渡した root を保持する`() {
+    fun `通常コンストラクタで作った store は渡した root と theme を保持する`() {
         val initial = SettingsRoot(
             sections = listOf(Section(id = "s1", cells = listOf(LabelCell(id = "c1", title = "A")))),
         )
-        val store = SettingsRootStore.preview(root = initial)
+        val initialTheme = Theme(separatorColor = Color(0xFF5A7390))
+        val store = SettingsRootStore(initialRoot = initial, initialTheme = initialTheme)
         assertEquals(initial, store.state.value)
+        assertEquals(initialTheme, store.theme.value)
     }
 
     // MARK: - 存在しない ID への操作（no-op 契約）

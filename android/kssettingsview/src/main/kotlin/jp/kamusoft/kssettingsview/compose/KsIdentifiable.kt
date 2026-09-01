@@ -21,7 +21,7 @@ package jp.kamusoft.kssettingsview.compose
  * }
  * ```
  */
-interface KsIdentifiable {
+public interface KsIdentifiable {
     /** ID 採番に用いる安定キー値。`Int` / `String` / `UUID` 等の `Any` を許容する。 */
-    val id: Any
+    public val id: Any
 }

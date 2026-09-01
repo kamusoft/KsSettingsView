@@ -20,7 +20,7 @@ import jp.kamusoft.kssettingsview.core.DSLReidentifiableCell
  * @property valueText 明示指定の valueText（`null` で [format] による自動表示）
  * @property onValueChanged 値変更 callback
  */
-data class NumberPickerCell(
+public data class NumberPickerCell(
     override val id: String = "number-picker-cell-${java.util.UUID.randomUUID()}",
     override val style: CellStyle = CellStyle(),
     val title: String,
@@ -91,7 +91,7 @@ data class NumberPickerCell(
         return result
     }
 
-    companion object {
+    public companion object {
         /**
          * 値の表示文字列を組み立てる共通フォーマッタ。
          *
