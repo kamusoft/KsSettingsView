@@ -20,6 +20,16 @@
             "statusMessage": "識別子検査"
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/comment-policy-lint.py --hook",
+            "statusMessage": "コメント規約検査"
+          }
+        ]
       }
     ]
   }
