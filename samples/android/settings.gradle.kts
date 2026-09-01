@@ -33,22 +33,17 @@ dependencyResolutionManagement {
 // 本体ライブラリ（android/）の build を本 Sample のビルドへ取り込む（依存置換あり）。
 //
 // 明示的な dependencySubstitution を付与する理由:
-//   AGP (Android Library) はデフォルトでは Maven publication を生成しないため、
-//   `implementation("jp.kamusoft.kssettingsview:ks-settingsview-core:...")` 形式での
-//   composite build 自動置換が発火しない。利用側 (本 Sample) の settings.gradle.kts で
-//   GAV → 含まれるビルドの Project への置換を明示する必要がある。
+//   自動置換に任せると、置換が発火しなかったときに Maven Central の公開版へ静かに
+//   フォールバックし「本体の修正が Sample に映らない」壊れ方をする。明示置換なら
+//   置換先を失った時点で必ずビルドエラーになる。
 includeBuild("../../android") {
     dependencySubstitution {
-        substitute(module("jp.kamusoft.kssettingsview:ks-settingsview-core"))
-            .using(project(":ks-settingsview-core"))
-        substitute(module("jp.kamusoft.kssettingsview:ks-settingsview-ui"))
-            .using(project(":ks-settingsview-ui"))
-        substitute(module("jp.kamusoft.kssettingsview:ks-settingsview-compose"))
-            .using(project(":ks-settingsview-compose"))
+        substitute(module("jp.kamusoft:kssettingsview"))
+            .using(project(":kssettingsview"))
     }
 }
 
-rootProject.name = "ks-settingsview-sample-android"
+rootProject.name = "kssettingsview-sample-android"
 
 // :app: Sample アプリ本体（Compose Activity + 各デモ画面で本体 LabelCell 等を使用）
 include(":app")

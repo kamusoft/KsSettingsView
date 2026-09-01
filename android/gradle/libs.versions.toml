@@ -26,15 +26,21 @@ kotlin = "2.4.10"
 # 版を動かすときは binding csproj の Compose 参照も同時に動かすこと。
 compose-bom = "2025.11.01"
 
-# ライブラリの Maven 座標のバージョン。android/ の 4 モジュールが `version` に使い、
-# samples/android は composite build で置換される GAV の版としてこれを参照する。
-ks-settingsview = "0.1.0-SNAPSHOT"
+# ライブラリの Maven 座標のバージョン。ルート build.gradle.kts が subprojects 一括で
+# `version` に使い、samples/android は composite build で置換される GAV の版として
+# これを参照する。
+kssettingsview = "0.1.0-SNAPSHOT"
+
+# Maven 発行プラグイン (vanniktech)。Sonatype Central Portal への発行・署名・
+# sources / javadoc jar の生成を担う。
+maven-publish = "0.37.0"
 
 [plugins]
 android-library = { id = "com.android.library", version.ref = "agp" }
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "maven-publish" }
 
 [libraries]
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "compose-bom" }

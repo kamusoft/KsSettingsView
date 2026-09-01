@@ -25,6 +25,11 @@ SwiftPM の git 配布はリポジトリルート直下の Package.swift しか�
 | Native Android | Maven Central (`jp.kamusoft:ks-settingsview-*`、cross/ADR-0002) |
 | .NET MAUI | NuGet.org |
 
+(2026-09-01 追記) 表の Native Android の座標は、Android の module 統合により
+`jp.kamusoft:kssettingsview` の単一 artifact になった (android/ADR-0016)。groupId は
+cross/ADR-0002 の `jp.kamusoft` のままで、artifactId が `ks-settingsview-*` の 3 本から
+`kssettingsview` 1 本に変わった。interop Bridge は Maven に公開しない。
+
 GitHub Packages 等の private / 認証付きフィードは提供しない。SwiftPM が git を直接解決する都合上、リポジトリは public に切り替える (切り替えのタイミングは配信 CI の整備と合わせて決める)。
 
 Android の artifact 粒度 (module 間依存の公開スコープ、bridge module の公開可否) と MAUI のパッケージ分割は本 ADR の対象外とし、それぞれ別の決定で扱う。
@@ -74,3 +79,4 @@ cross/ADR-0001 (リポジトリルートに共通ビルドファイルを置か�
 出典: kasane/roadmaps/package-distribution/exploration.md (A・C) / kasane/roadmaps/package-distribution/phases/phase-2-public-readiness/history.md (2026-08-21: SwiftPM の配信形) / ../KsDialogs/kasane/decisions/cross/0008-distribution-model-standard-channels.md (翻案元)
 出典 (2026-08-29 配信リポジトリ名の確定): kasane/roadmaps/package-distribution/phases/phase-9-docs/history.md (2026-08-29「SwiftPM 配信リポジトリの名前」)
 出典 (2026-09-01 実装結果の追記と accepted 昇格): kasane/changes/archive/2026-09-01-add-spm-distribution/deviation.md / 同 review-001.md
+出典 (2026-09-01 Android 座標の統合の追記): kasane/decisions/android/0016-single-module-single-maven-artifact.md / kasane/roadmaps/package-distribution/phases/phase-5-android-packaging/history.md

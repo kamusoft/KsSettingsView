@@ -177,7 +177,7 @@ concepts ハッシュ差分とは独立に、**コードを正**として次の 
 
 | 項目 | 取得元 (コード = 正) | 抽出方法 | 突合先 |
 | --- | --- | --- | --- |
-| ツール最低バージョン | AGP・Kotlin: `android/gradle/libs.versions.toml` (`[versions]` の `agp` / `kotlin`) / Gradle: `android/gradle/wrapper/gradle-wrapper.properties` (`distributionUrl`) / minSdk・compileSdk: `android/ks-settingsview-ui/build.gradle.kts` / Swift tools・iOS Deployment Target: `ios/Package.swift` (`// swift-tools-version:` と `.iOS(.vNN)`) / .NET TFM: `maui/KsSettingsView.Maui/KsSettingsView.Maui.csproj` (`<TargetFrameworks>`) | 各ファイルの該当行を読む | ルート README 群の対応プラットフォーム表・開発環境要件、および該当記載を持つ場合は各 `SKILL.md` の導入節 |
+| ツール最低バージョン | AGP・Kotlin: `android/gradle/libs.versions.toml` (`[versions]` の `agp` / `kotlin`) / Gradle: `android/gradle/wrapper/gradle-wrapper.properties` (`distributionUrl`) / minSdk・compileSdk: `android/kssettingsview/build.gradle.kts` / Swift tools・iOS Deployment Target: `ios/Package.swift` (`// swift-tools-version:` と `.iOS(.vNN)`) / .NET TFM: `maui/KsSettingsView.Maui/KsSettingsView.Maui.csproj` (`<TargetFrameworks>`) | 各ファイルの該当行を読む | ルート README 群の対応プラットフォーム表・開発環境要件、および該当記載を持つ場合は各 `SKILL.md` の導入節 |
 
 > 従前の「モジュール一覧」と「Sample デモ画面一覧」の突合は**行わない**。前者の突合先だったルート README のモジュール表・`android/README.md`・`maui/README.md` と、後者の突合先だった `samples/*/README.md` がいずれも存在しなくなったため (cross/ADR-0023)。Sample の実ソースにデモ画面が増減しても、この手順は要追従リストに何も追加しない。
 
@@ -693,7 +693,7 @@ fi
 
 #### 6-⑧ 配信識別子の表記ゆれ grep
 
-公開識別子の正は [kasane/handbook/cross/public-identifiers.md](../../../kasane/handbook/cross/public-identifiers.md)。ecosystem ごとの表記規則 (SwiftPM は PascalCase、Android namespace は lowercase reverse-DNS、artifactId は kebab-case) を崩した表記を検出する:
+公開識別子の正は [kasane/handbook/cross/public-identifiers.md](../../../kasane/handbook/cross/public-identifiers.md)。ecosystem ごとの表記規則 (SwiftPM は PascalCase、Android namespace は lowercase reverse-DNS、Android の artifact / project 名は lowercase でブランド名の内部にハイフンを入れない) を崩した表記を検出する:
 
 ```bash
 TARGETS=($(cat /tmp/docs-refresh-targets.txt))
@@ -706,7 +706,7 @@ else
 fi
 ```
 
-行が出たら該当ファイルを再修正対象に追加する。Maven `groupId` の記述は ADR-0002 の `jp.kamusoft` と現行 Gradle `group` (`jp.kamusoft.kssettingsview`) の食い違いがあるため、**利用者向けの配布座標として断定的に書かない** (公開が未導入である旨とともに記述する)。
+行が出たら該当ファイルを再修正対象に追加する。Maven の配布座標は ADR-0002 と現行 Gradle `group` がともに `jp.kamusoft` で一致しており、artifactId は `kssettingsview` の 1 本である。ただし Maven Central への公開は未実施のため、**利用者向けの配布座標には公開が未導入である旨を添えて記述する**。
 
 ### 7. manifest の更新
 

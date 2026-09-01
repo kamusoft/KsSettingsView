@@ -1,0 +1,61 @@
+# MAUI binding のビルドと Android IntegrationHost の実行確認 (2026-09-01)
+
+統合後の 2 本の aar (`kssettingsview-release.aar` 同梱 / `kssettingsview-bridge-release.aar` 束縛)
+から binding をビルドし、実機で固定シナリオの成立を確認した。
+
+## binding のビルド
+
+$ dotnet build maui/android/KsSettingsView.Binding.Android/KsSettingsView.Binding.Android.csproj -c Debug
+    20 個の警告
+    0 エラー
+
+警告の内訳は BG8605 / BG8606 / BG8A00 (各 2 重出力) のみ。いずれも本変更以前から出ている
+既知の警告であり、内容も同じ:
+
+- BG8605 / BG8606: 同梱のみ (Bind="false") の aar 内の型を class-parse が解決できないもの。
+  統合前は `core` / `ui` の 2 本が同梱対象、統合後は `kssettingsview` 1 本が同梱対象で、
+  未解決として列挙される型 (`jp.kamusoft.kssettingsview.core.KsAnyView` 等) は同じ
+- BG8A00: `Transforms/Metadata.xml` の `remove-node` が generator 段では対象なしになる
+  2 段適用に由来する恒常警告 (同ファイルのコメントと maui/README.md に記載済み)
+
+## IntegrationHost のビルドと起動
+
+$ dotnet build maui/tests/KsSettingsView.IntegrationHost.Android/KsSettingsView.IntegrationHost.Android.csproj \
+    -c Debug -t:Run -p:AdbTarget="-s <android-serial>"
+ビルドに成功しました。
+    0 個の警告
+    0 エラー
+
+$ adb -s <android-serial> shell dumpsys activity activities | grep -i integrationhost
+topResumedActivity=ActivityRecord{... jp.kamusoft.kssettingsview.integrationhost.android/....MainActivity}
+
+接続端末は 2 台あるため `AdbTarget` で明示した (実機。Emulator ではない)。
+
+2 枚のスクリーンショットは、端末の通知アイコンを証跡に残さないためステータスバー
+(上端 110px) をクロップしてある。照合に使う行はすべてクロップ後の画像に含まれる。
+
+## 固定シナリオの表示 (evidence/android-integrationhost-initial.png)
+
+handbook maui/integration-host-verification.md の「期待される表示」と一致:
+
+| 位置 | 期待 | 実測 |
+|---|---|---|
+| root header | KsSettingsView Bridge | 一致 (緑) |
+| Section 1 | 一般 / テーマ=ダーク / 言語=English / footer「アプリ全体の設定」 | 一致 |
+| Section 2 | 通知設定 / プッシュ通知=オン | 一致 |
+| Section 3 | ストレージ / バージョン=0.1.0 / キャッシュ=0 MB / 同期=無効 / footer「端末内に保存されたデータ」 | 一致 |
+| root footer | C# から Native Bridge を操作しています | 一致 |
+| Section header の色 | Theme で指定した緑 | 一致 |
+
+## 「解放 → 再生成」後の表示 (evidence/android-integrationhost-recreated.png)
+
+| 位置 | 期待 | 実測 |
+|---|---|---|
+| root header | 表示されない | 一致 |
+| Section 1 | テーマ=「解放中に更新」/ 言語=Français | 一致 |
+| Section 2 | 「通知設定 (解放中に更新)」 | 一致 |
+| Section header の色 | オレンジ | 一致 |
+| root footer | 表示されない | 一致 |
+
+判定: aar を 3 本から 2 本へ統合しても、Bridge 経由で本体クラスがロードされ、
+同梱テーマ (res のマージ) も含めて表示に退行はない。

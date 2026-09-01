@@ -5,7 +5,7 @@ applies-when:
   tasks: [環境構築, Sample の起動, 本体のビルド・lint, 本体 source へのステップイン]
 title: ローカル開発環境と Sample の実行
 description: iOS・Android・MAUI のローカル環境設定、Sample の起動、本体モジュールのビルド / lint コマンド、本体 source へのステップイン手順
-timestamp: 2026-08-29
+timestamp: 2026-09-01
 ---
 
 # ローカル開発環境と Sample の実行
@@ -180,10 +180,8 @@ cd android
 
 ```bash
 cd android
-./gradlew :ks-settingsview-core:assembleDebug
-./gradlew :ks-settingsview-ui:assembleDebug
-./gradlew :ks-settingsview-compose:assembleDebug
-./gradlew :ks-settingsview-bridge:assembleDebug
+./gradlew :kssettingsview:assembleDebug
+./gradlew :kssettingsview-bridge:assembleDebug
 ```
 
 ### MAUI
@@ -204,7 +202,7 @@ iOS Sample は `ios/Package.swift` を Local Swift Package として参照する
 
 ### Android
 
-Android Sample は `includeBuild("../../android")` で本体を source 参照する。`samples/android/` を Android Studio で Run し、Core・UI・Compose module の source に breakpoint を置くとステップインできる。本体 test を中心に調べる場合は `android/` を別の project として開く。
+Android Sample は `includeBuild("../../android")` で本体を source 参照する。`samples/android/` を Android Studio で Run し、本体 module `kssettingsview` の source に breakpoint を置くとステップインできる。本体 test を中心に調べる場合は `android/` を別の project として開く。
 
 ### MAUI
 

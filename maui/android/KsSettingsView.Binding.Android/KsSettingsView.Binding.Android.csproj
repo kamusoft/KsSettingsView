@@ -1,9 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    KsSettingsView の Android Bridge (`ks-settingsview-bridge`) を .NET から呼び出すための binding。
-    Bridge モジュールの aar を束縛し、Bridge が実行時に必要とする Core / UI モジュールの aar を
-    同梱する。
+    KsSettingsView の Android Bridge (`kssettingsview-bridge`) を .NET から呼び出すための binding。
+    Bridge モジュールの aar を束縛し、Bridge が実行時に必要とする本体モジュール
+    (`kssettingsview`) の aar を同梱する。
 
     この assembly は interop の輸送層であり、利用者向けの公開契約ではない (maui/ADR-0004)。
   -->
@@ -24,17 +24,16 @@
   </PropertyGroup>
 
   <!--
-    束縛対象は Bridge モジュールだけにする。Core / UI は Bridge の実行時依存であり、
+    束縛対象は Bridge モジュールだけにする。本体は Bridge の実行時依存であり、
     公開 API に型が現れないため同梱するだけで束縛しない。
   -->
   <ItemGroup>
-    <AndroidLibrary Include="$(KsAndroidRoot)ks-settingsview-bridge/build/outputs/aar/ks-settingsview-bridge-release.aar" Bind="true" />
-    <AndroidLibrary Include="$(KsAndroidRoot)ks-settingsview-core/build/outputs/aar/ks-settingsview-core-release.aar" Bind="false" />
-    <AndroidLibrary Include="$(KsAndroidRoot)ks-settingsview-ui/build/outputs/aar/ks-settingsview-ui-release.aar" Bind="false" />
+    <AndroidLibrary Include="$(KsAndroidRoot)kssettingsview-bridge/build/outputs/aar/kssettingsview-bridge-release.aar" Bind="true" />
+    <AndroidLibrary Include="$(KsAndroidRoot)kssettingsview/build/outputs/aar/kssettingsview-release.aar" Bind="false" />
   </ItemGroup>
 
   <!--
-    Core / UI / Bridge が Gradle 側で implementation 依存として宣言しているライブラリ。
+    本体 / Bridge が Gradle 側で implementation 依存として宣言しているライブラリ。
     aar には同梱されないため、消費側アプリへ届くよう binding 側の依存として並べる。
   -->
   <ItemGroup>
@@ -109,17 +108,15 @@
 
   <!-- 束縛対象と同梱対象の aar を再生成するかの判定に使う入力 -->
   <ItemGroup>
-    <KsAndroidModuleSource Include="$(KsAndroidRoot)ks-settingsview-core/src/main/**/*" />
-    <KsAndroidModuleSource Include="$(KsAndroidRoot)ks-settingsview-ui/src/main/**/*" />
-    <KsAndroidModuleSource Include="$(KsAndroidRoot)ks-settingsview-bridge/src/main/**/*" />
+    <KsAndroidModuleSource Include="$(KsAndroidRoot)kssettingsview/src/main/**/*" />
+    <KsAndroidModuleSource Include="$(KsAndroidRoot)kssettingsview-bridge/src/main/**/*" />
     <KsAndroidModuleSource Include="$(KsAndroidRoot)*.kts" />
     <KsAndroidModuleSource Include="$(KsAndroidRoot)gradle.properties" />
     <!-- バージョンカタログと wrapper 設定はビルドスクリプト本体と同じく aar の内容を決める入力 -->
     <KsAndroidModuleSource Include="$(KsAndroidRoot)gradle/libs.versions.toml" />
     <KsAndroidModuleSource Include="$(KsAndroidRoot)gradle/wrapper/gradle-wrapper.properties" />
-    <KsAndroidModuleSource Include="$(KsAndroidRoot)ks-settingsview-core/build.gradle.kts" />
-    <KsAndroidModuleSource Include="$(KsAndroidRoot)ks-settingsview-ui/build.gradle.kts" />
-    <KsAndroidModuleSource Include="$(KsAndroidRoot)ks-settingsview-bridge/build.gradle.kts" />
+    <KsAndroidModuleSource Include="$(KsAndroidRoot)kssettingsview/build.gradle.kts" />
+    <KsAndroidModuleSource Include="$(KsAndroidRoot)kssettingsview-bridge/build.gradle.kts" />
   </ItemGroup>
 
   <!--
@@ -133,7 +130,7 @@
       BeforeTargets="_CategorizeAndroidLibraries;_ResolveLibraryProjectImports"
       Inputs="@(KsAndroidModuleSource)"
       Outputs="@(AndroidLibrary)">
-    <Exec Command="./gradlew --console=plain :ks-settingsview-core:assembleRelease :ks-settingsview-ui:assembleRelease :ks-settingsview-bridge:assembleRelease"
+    <Exec Command="./gradlew --console=plain :kssettingsview:assembleRelease :kssettingsview-bridge:assembleRelease"
         WorkingDirectory="$(KsAndroidRoot)"
         EnvironmentVariables="JAVA_HOME=$(JavaSdkDirectory);ANDROID_HOME=$(AndroidSdkDirectory)" />
   </Target>

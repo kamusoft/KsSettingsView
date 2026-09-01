@@ -10,7 +10,7 @@
       android:theme:
         フレームワーク標準の素のテーマを指定する。Material3 の XML テーマも AppCompat の
         XML テーマも持たない Compose 専業アプリ（Compose テンプレートの既定構成）を模し、
-        ks-settingsview-ui がホストのテーマ種別を問わずに動作することを示すため。
+        KsSettingsView がホストのテーマ種別を問わずに動作することを示すため。
 
         ライブラリの View と選択面は、ライブラリが同梱する Material3 派生テーマを
         かぶせた Context から生成されるので、ホスト側でテーマを整える必要はない

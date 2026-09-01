@@ -1,0 +1,96 @@
+# SNAPSHOT の Central 発行ガードの前提検証と実効確認 (2026-09-01)
+
+## 1. 前提の検証: プラグインは SNAPSHOT を Central の snapshot リポジトリへ送る
+
+依存キャッシュ内の発行プラグイン本体 (com.vanniktech:gradle-maven-publish-plugin:0.37.0) を
+展開し、`publishToMavenCentral()` が生成するリポジトリ設定を逆アセンブルして確認した。
+
+$ javap -p -c -classpath <plugin> \
+    'com.vanniktech.maven.publish.MavenPublishBaseExtension$publishToMavenCentral$versionIsSnapshot$1'
+       7: ldc           #25    // String -SNAPSHOT
+      12: invokestatic  #31    // Method kotlin/text/StringsKt.endsWith$default:(...)Z
+
+$ javap -p -c -classpath <plugin> \
+    'com.vanniktech.maven.publish.MavenPublishBaseExtension$publishToMavenCentral$1'
+      18: invokevirtual #48    // Method java/lang/Boolean.booleanValue:()Z
+      28: ldc           #50    // String https://central.sonatype.com/repository/maven-snapshots/
+      30: invokeinterface #56  // InterfaceMethod ...MavenArtifactRepository.setUrl:(Ljava/lang/Object;)V
+      39: ldc           #58    // class org/gradle/api/credentials/PasswordCredentials
+      41: invokeinterface #62  // InterfaceMethod ...MavenArtifactRepository.credentials:(Ljava/lang/Class;)V
+
+判定: プラグインは version が `-SNAPSHOT` で終わるかを判定し、真のとき mavenCentral
+リポジトリの URL を `https://central.sonatype.com/repository/maven-snapshots/` に設定して
+PasswordCredentials を要求する。偽のときはローカルの staging ディレクトリを URL にする。
+したがって「認証情報のある環境で Central 向けタスクを実行すると SNAPSHOT が公開され得る」
+という前提は成立する。
+
+補強: 本リポジトリの catalog を一時的に `kssettingsview = "0.1.0"` (非 SNAPSHOT) にして
+ダミー認証情報で `prepareMavenCentralPublishing` を実行すると、ガードは発火せず Central
+Portal API へ到達して `Upload failed: {"error":{"message":"Invalid token"}}` で終わった。
+プラグインが実際に Central へ向かうこと、およびガードが version 条件つきであることの
+両方を示す (catalog はその場で元に戻した。無効トークンのため公開は成立していない)。
+
+## 2. ガードの実装
+
+android/kssettingsview/build.gradle.kts で、version が SNAPSHOT のとき Central 向けタスクへ
+`doFirst` で例外を投げるアクションを付ける。`doFirst` はタスク自身のアクションより先に走るため、
+アップロードは 1 バイトも発生しない。
+
+対象はタスク名の述語で決める:
+
+    name.contains("MavenCentral") && name != "dropMavenCentralDeployment"
+
+名前を列挙するとプラグイン更新でタスクが増えたときに素通りし、名前が変わると列挙が死に名に
+なる。どちらも無音で穴が開くため述語で拾う。除外は後始末用の dropMavenCentralDeployment
+(誤って作った deployment の取り下げ用で発行経路ではない) の 1 本だけ。
+
+述語が拾う範囲と実在タスクの一致確認:
+
+$ ./gradlew :kssettingsview:tasks --all | grep -i mavencentral   (タスク名のみ抽出)
+dropMavenCentralDeployment              ← 除外
+enableAutomaticMavenCentralPublishing   ← 対象
+prepareMavenCentralPublishing           ← 対象
+publishAllPublicationsToMavenCentralRepository  ← 対象
+publishAndReleaseToMavenCentral         ← 対象
+publishMavenPublicationToMavenCentralRepository ← 対象
+publishToMavenCentral                   ← 対象
+
+## 3. 実効確認
+
+各エントリポイントをダミー認証情報つきで実行し、ガードが発火することを確認した
+(認証情報が無いと Gradle がタスク実行前に credentials 解決で落ち、ガードまで到達しないため)。
+
+$ ./gradlew --offline :kssettingsview:<task> \
+    -PmavenCentralUsername=<dummy> -PmavenCentralPassword=<dummy>
+
+| 実行したタスク | 結果 | 例外を投げたタスク |
+|---|---|---|
+| publishToMavenCentral | ガード発火 | prepareMavenCentralPublishing |
+| publishAndReleaseToMavenCentral | ガード発火 | enableAutomaticMavenCentralPublishing |
+| publishAllPublicationsToMavenCentralRepository | ガード発火 | prepareMavenCentralPublishing |
+| publishMavenPublicationToMavenCentralRepository | ガード発火 | prepareMavenCentralPublishing |
+| prepareMavenCentralPublishing | ガード発火 | prepareMavenCentralPublishing |
+| enableAutomaticMavenCentralPublishing | ガード発火 | enableAutomaticMavenCentralPublishing |
+| publish (集約タスク) | ガード発火 | prepareMavenCentralPublishing |
+
+エラーメッセージ:
+
+* What went wrong:
+Execution failed for task ':kssettingsview:prepareMavenCentralPublishing'
+> SNAPSHOT (0.1.0-SNAPSHOT) は Maven Central へ発行しない。リリース版の version を
+  gradle/libs.versions.toml の kssettingsview キーへ設定してから実行する。
+  ローカルでの発行物確認には publishToMavenLocal を使う。
+
+除外した dropMavenCentralDeployment はガードが発火しないこと:
+
+$ ./gradlew --offline :kssettingsview:dropMavenCentralDeployment \
+    -PmavenCentralUsername=<dummy> -PmavenCentralPassword=<dummy>
+(ガード例外なし)
+
+ローカル発行は妨げないこと:
+
+$ ./gradlew :kssettingsview:publishToMavenLocal
+BUILD SUCCESSFUL
+
+判定: SNAPSHOT のあいだ Central へ向かう経路はすべて実行不能で、ローカル発行と発行物の
+検証は従来どおり行える。リリース版の version を与えるとガードは発火しない。

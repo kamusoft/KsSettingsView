@@ -105,15 +105,15 @@ cd android
 ./gradlew test
 ```
 
-- Gradle ビルドルートは `android/`。テストは Robolectric を含む JVM 単体テストで、debug / release の両 variant が実行される (2026-08-21 実測: 1261 件 × 2 = 2522 件。件数は変動する)。instrumented test (`androidTest/`) は現状存在しない
+- Gradle ビルドルートは `android/`。テストは Robolectric を含む JVM 単体テストで、debug / release の両 variant が実行される (2026-09-01 実測: 1350 件 × 2 = 2700 件。件数は変動する)。instrumented test (`androidTest/`) は現状存在しない
 - Gradle は up-to-date なテストタスクをスキップするため、**差分なしの再実行は「テスト 0 件で BUILD SUCCESSFUL」になり得る**。全件を確実に回し直して件数を確認するときは `--rerun-tasks` を付ける
 - 実行件数はコンソールに出ない。各モジュールの `build/test-results/testDebugUnitTest/TEST-*.xml` (release は `testReleaseUnitTest/`) の `tests` / `failures` 属性の合計、または `build/reports/tests/testDebugUnitTest/index.html` で確認する。**ディレクトリ名は variant 名 (`debug` / `release`) ではなくタスク名**であり、`debugUnitTest` 等と読み替えると集計対象が 0 件になる
-- 反復中に絞り込むときは `./gradlew :ks-settingsview-ui:testDebugUnitTest --tests '<クラス名のパターン>'` を使えるが、**完了判定には絞り込みなしの全件実行を使う** (iOS と同じ規律)
+- 反復中に絞り込むときは `./gradlew :kssettingsview:testDebugUnitTest --tests '<クラス名のパターン>'` を使えるが、**完了判定には絞り込みなしの全件実行を使う** (iOS と同じ規律)
 - Gradle を動かす JDK は `JAVA_HOME` で選ぶ (JDK 17 / 21 / 25 で実測済み)。成果物のターゲットが Java 17 のため、どの JDK で動かす場合も JDK 17 がローカルにインストールされている必要がある ([Android ビルドツールチェーンの契約](../../concepts/android/architecture/build-toolchain.md))
 
 ### Robolectric で「検証したつもり」になる描画系アサーション
 
-Robolectric の既定 (legacy graphics モード) では一部の描画処理が実行されず、描画結果を見るアサーションが空振りする。実測で確認済みの 2 点 (適用実例: `android/ks-settingsview-ui/src/test/kotlin/jp/kamusoft/kssettingsview/ui/CellRowWidthAllocationTest.kt`):
+Robolectric の既定 (legacy graphics モード) では一部の描画処理が実行されず、描画結果を見るアサーションが空振りする。実測で確認済みの 2 点 (適用実例: `android/kssettingsview/src/test/kotlin/jp/kamusoft/kssettingsview/ui/CellRowWidthAllocationTest.kt`):
 
 - **実 ellipsize**: legacy graphics では `TextUtils.ellipsize` が動作せず、`Layout.getEllipsisCount` が**常に 0 を返す**。末尾省略の発生を検証するテストにはクラスへ `@GraphicsMode(GraphicsMode.Mode.NATIVE)` が必要 (実 Skia を動かすため Robolectric nativeruntime の取得を伴い、起動コストと CI の環境依存が増える)
 - **singleLine な TextView の実描画位置**: `isSingleLine = true` の TextView は内部 `Layout` の幅が `VERY_WIDE` (約 100 万 px) になり、`Layout` 座標は View 座標と一致しない。実描画位置は `viewTreeObserver.dispatchOnPreDraw()` で `TextView.bringTextIntoView()` の `scrollX` 補正を発火させてから `layout.getLineLeft(0) - scrollX` で測る。`root.draw(Canvas)` を呼ぶだけでは補正が入らない。得られる値は **content box (padding を除いた領域) の左端起点**であり、この経路は実機で毎フレーム描画前に走る補正そのものなので Robolectric 固有の抜け道ではない
@@ -122,7 +122,7 @@ Robolectric の既定 (legacy graphics モード) では一部の描画処理が
 
 `RecyclerView` の `ListAdapter` (`AsyncListDiffer`) は差分計算を**バックグラウンドスレッド**で行い、結果を main looper へ post して `currentList` / `itemCount` を更新する。post 前は main looper のキューが空であり、`shadowOf(Looper.getMainLooper()).idle()` も Compose の `waitForIdle()` も**即座に戻る**。idle 系の呼び出しを何度重ねても差分計算の完了は待てない。
 
-待機は「収束を待つアサーション」の 3 条件で書く。全モジュール並列実行 (`android/gradle.properties` の `org.gradle.parallel=true`) で CPU が競合したときだけ落ちるため、単体実行では気づけない。適用実例: `ks-settingsview-compose` の `KsSettingsViewComposeTest.waitForAdapterItemCount` / `DSLAccessoryVisibilityRenderingTest.awaitRows`、`ks-settingsview-ui` の `KsSettingsViewTestSupport.awaitConvergence`。
+待機は「収束を待つアサーション」の 3 条件で書く。全モジュール並列実行 (`android/gradle.properties` の `org.gradle.parallel=true`) で CPU が競合したときだけ落ちるため、単体実行では気づけない。適用実例: `jp.kamusoft.kssettingsview.compose` の `KsSettingsViewComposeTest.waitForAdapterItemCount` / `DSLAccessoryVisibilityRenderingTest.awaitRows`、`jp.kamusoft.kssettingsview.ui` の `KsSettingsViewTestSupport.awaitConvergence`。
 
 ## MAUI
 
