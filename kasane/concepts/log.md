@@ -352,3 +352,7 @@
 - updated: `handbook/cross/test-execution.md` — 収束を待つアサーションの 3 条件 (実時間 deadline / 実行機会を譲る / 超過時に実測値付きで fail) を Android 節から **platform 共通の節へ引き上げ**、iOS での現れ方 (RunLoop を固定秒数まわす待機) を追加 (timestamp 2026-08-31)。同じ誤りが 3 変更で platform をまたいで再発したため (教訓 `fixed-time-wait-instead-of-condition-based` count 3 の昇格先を lessons ではなく規範層とした — 規範は既に存在し、問題は適用範囲が Android に閉じていたこと)。
 - promoted: `lessons/process.md` L-007 (レビュー・セカンドオピニオンへ渡す成果物が実態を反映しているかを起動前に確認する。既知の切り出し済み先送り問題に加え、実施済みだが未反映の作業も対象)。教訓 1 件を新規捕捉 (`spec-requirement-targets-nonexistent-external-resource`、count 1 で inbox 保留)。
 - 残課題: `handbook/cross/test-execution.md` の構造 lint 違反 5 件は本改訂の前から Android 節に存在し、件数は 5 → 5 で増減なし (今回は解消しない)。
+
+## 2026-09-01
+
+- distilled: identity-lint-adb-colon-pattern-gap (S 級スタブ — 蒸留物なし。identity-lint の `adb:` ラベル形式検出と `git grep --untracked` は Kasane 本体で修正済み・本リポジトリの scripts/ へ再配置済みで、検出形式の知識は ksn-core references/evidence.md 側が持つ。ADR 候補なし (可逆な lint パターン追加)。lessons: `lint-zero-treated-as-convention-compliance` への合流を検討したが、発見元 entrycell-keyboard-avoidance-check の review はレビューが手動検出に成功しルート修正まで完了した事例のため pain として数えない。deviation なし)
