@@ -37,13 +37,15 @@ iOS / Android / MAUI の 3 platform を記載する。いずれも実際に実�
 
 ```
 cd ios
-xcodebuild test -scheme KsSettingsView-Package -destination 'platform=iOS Simulator,name=<機種名>'
+xcodebuild test -scheme KsSettingsView -destination 'platform=iOS Simulator,name=<機種名>'
 ```
 
 - Swift Package のルートは `ios/` であり、**リポジトリルートで実行すると `does not contain an Xcode project` で失敗する**
-- scheme は `KsSettingsView-Package` (パッケージ全体) を使う。個別ターゲットの scheme (`KsSettingsViewCore` / `KsSettingsViewUI` / `KsSettingsViewSwiftUI`) もあるが、全件検証にはパッケージ全体の scheme を使う
+- scheme は `KsSettingsView` を使う。公開 product は umbrella 1 本のみで、Xcode が自動生成する scheme もこれ 1 つであり、パッケージの全テストターゲットを含む
 - `<機種名>` は手元で利用可能な Simulator の機種名に置き換える。一覧は `xcrun simctl list devices available` で得られる
-- 実行件数は `xcodebuild` 出力末尾の `Executed N tests, with M failures` で確認する
+- 実行件数は `xcodebuild` 出力の `Executed N tests, with M failures` で確認する
+- **出力末尾の 1 行だけを見ない** — この行はテストバンドル単位の集計であり、バンドルが複数あるパッケージでは最後に実行されたバンドルの値しか映らない
+- 全体件数は**バンドル集計行** (`Test Suite '<名>.xctest' passed/failed` の直後の `Executed` 行) だけを拾って合算する。クラス・スイート単位の `Executed` 行まで含めると多重集計になる
 
 ### `swift test` では検証にならない
 
@@ -69,7 +71,7 @@ xcodebuild test -scheme KsSettingsView-Package -destination 'platform=iOS Simula
 
 ```
 cd ios
-xcodebuild test -scheme KsSettingsView-Package -destination 'platform=iOS Simulator,name=<機種名>' -only-testing:KsSettingsViewCoreTests
+xcodebuild test -scheme KsSettingsView -destination 'platform=iOS Simulator,name=<機種名>' -only-testing:KsSettingsViewCoreTests
 ```
 
 こうすればガードの穴を作らずに実行範囲だけを狭められる。ただし**完了判定には絞り込みなしの全件実行を使う**。

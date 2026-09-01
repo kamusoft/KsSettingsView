@@ -102,3 +102,8 @@ jobs:
 
       - name: Comment policy lint
         run: python3 scripts/comment-policy-lint.py
+
+      # 配信リポジトリ同期スクリプトの安全弁 (破壊的操作前の 4 段検証) の回帰テスト。
+      # bash と git しか使わないので macOS ランナーを起こさずこの job で回す。
+      - name: SPM snapshot sync script test
+        run: scripts/spm-snapshot/sync-snapshot-test.sh

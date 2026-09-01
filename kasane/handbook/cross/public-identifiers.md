@@ -6,7 +6,7 @@ applies-when:
   tasks: [公開識別子・配布座標の決定]
 title: 公開識別子と配布座標
 description: 所有主体・製品・成果物の役割を ecosystem ごとの識別子へ写像する規約
-timestamp: 2026-08-29
+timestamp: 2026-09-01
 ---
 
 # 公開識別子と配布座標
@@ -20,13 +20,21 @@ timestamp: 2026-08-29
 | 対象 | 規則または現行値 | 表すもの |
 |---|---|---|
 | SwiftPM package | `KsSettingsView` | 製品 |
-| SwiftPM product | `KsSettingsViewCore` / `KsSettingsViewUI` / `KsSettingsViewSwiftUI` | 製品内の公開層 |
+| SwiftPM product | `KsSettingsView` (umbrella 1 本) | 製品 |
+| SwiftPM module | `KsSettingsViewCore` / `KsSettingsViewUI` / `KsSettingsViewSwiftUI` | 製品内の公開層 |
+| SwiftPM 配信リポジトリ | `KsSettingsView-SPM` / `https://github.com/kamusoft/KsSettingsView-SPM` | 製品の SwiftPM 配布経路 |
 | Android library namespace | `jp.kamusoft.kssettingsview.core` / `.ui` / `.compose` | 所有主体・製品・公開層 |
 | Apple bundle ID / Android application ID | `jp.kamusoft.kssettingsview.*` | 所有主体・製品・application 用途 |
 | Maven artifactId | `ks-settingsview-*` | 製品内の個別成果物 |
 | .NET namespace | `KsSettingsView.*` | 製品・用途。実装時にこの規則から導く |
 
 iOS / Android の Sample application は `jp.kamusoft.kssettingsview.samples.ios` / `.android` を使う。後続の module や Sample も独自の体系を作らず、上表の接頭辞と各 ecosystem の表記規則から用途を導く。
+
+## SwiftPM の配布座標
+
+`ios/Package.swift` が公開する product は umbrella の `KsSettingsView` 1 本だけである。利用者はこれ 1 つを依存に追加し、必要な module (`KsSettingsViewCore` / `KsSettingsViewUI` / `KsSettingsViewSwiftUI`) を import する。module 名は product 名とは別の識別子であり、公開層の区別はこちらが担う。
+
+配布は monorepo からではなく、専用の配信リポジトリ `KsSettingsView-SPM` から行う ([ADR-0018](../../decisions/cross/0018-distribution-public-channels-root-swiftpm-manifest.md))。利用者が書く Package URL は `https://github.com/kamusoft/KsSettingsView-SPM` であり、product 参照は `.product(name: "KsSettingsView", package: "KsSettingsView-SPM")` になる。
 
 ## Maven 座標の現在地
 
@@ -50,12 +58,14 @@ GAV は Maven 系の `groupId:artifactId:version` 形式の座標を指す。And
 - Swift product は PascalCase、Android namespace は lowercase reverse-DNS、artifact / project 名は kebab-case を使う。
 - Sample application は `jp.kamusoft.kssettingsview.samples.*` の下で platform を区別する。
 - Android の Core、UI、Compose は `ks-settingsview-*` の suffix で対応付ける。
+- SwiftPM で公開する product は umbrella 1 本 (`KsSettingsView`) に保ち、公開層の区別は module 名で表す。
 
 ## してはいけないこと
 
 - 各 ecosystem の大小文字や区切りを無視して、識別子の文字列表現を一律にしない。
 - Maven の `groupId` と `artifactId` の責務を混同しない。
 - ADR と現行 Gradle `group` の食い違いを、判断なしにどちらかへ合わせない。
+- SwiftPM の Package URL に monorepo (`.../KsSettingsView`) を書かない。利用者が指すのは配信リポジトリだけである。
 
 ## 関連
 

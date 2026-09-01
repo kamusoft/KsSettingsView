@@ -28,9 +28,7 @@
 		A1000001000000000000A016 /* SectionDecorationDemoControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002000000000000A016 /* SectionDecorationDemoControls.swift */; };
 		A1000001000000000000A017 /* SampleIconBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002000000000000A017 /* SampleIconBadge.swift */; };
 		A1000001000000000000A018 /* SampleMember.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002000000000000A018 /* SampleMember.swift */; };
-		A1000003000000000000B001 /* KsSettingsViewCore in Frameworks */ = {isa = PBXBuildFile; productRef = A1000004000000000000B001 /* KsSettingsViewCore */; };
-		A1000003000000000000B002 /* KsSettingsViewUI in Frameworks */ = {isa = PBXBuildFile; productRef = A1000004000000000000B002 /* KsSettingsViewUI */; };
-		A1000003000000000000B003 /* KsSettingsViewSwiftUI in Frameworks */ = {isa = PBXBuildFile; productRef = A1000004000000000000B003 /* KsSettingsViewSwiftUI */; };
+		A1000003000000000000B001 /* KsSettingsView in Frameworks */ = {isa = PBXBuildFile; productRef = A1000004000000000000B001 /* KsSettingsView */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -63,9 +61,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A1000003000000000000B001 /* KsSettingsViewCore in Frameworks */,
-				A1000003000000000000B002 /* KsSettingsViewUI in Frameworks */,
-				A1000003000000000000B003 /* KsSettingsViewSwiftUI in Frameworks */,
+				A1000003000000000000B001 /* KsSettingsView in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -141,9 +137,7 @@
 			);
 			name = KsSettingsViewSample;
 			packageProductDependencies = (
-				A1000004000000000000B001 /* KsSettingsViewCore */,
-				A1000004000000000000B002 /* KsSettingsViewUI */,
-				A1000004000000000000B003 /* KsSettingsViewSwiftUI */,
+				A1000004000000000000B001 /* KsSettingsView */,
 			);
 			productName = KsSettingsViewSample;
 			productReference = A1000005000000000000C001 /* KsSettingsViewSample.app */;
@@ -440,17 +434,9 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		A1000004000000000000B001 /* KsSettingsViewCore */ = {
+		A1000004000000000000B001 /* KsSettingsView */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = KsSettingsViewCore;
-		};
-		A1000004000000000000B002 /* KsSettingsViewUI */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = KsSettingsViewUI;
-		};
-		A1000004000000000000B003 /* KsSettingsViewSwiftUI */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = KsSettingsViewSwiftUI;
+			productName = KsSettingsView;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -88,7 +88,7 @@ jobs:
         run: |
           set -o pipefail
           xcodebuild test \
-            -scheme KsSettingsView-Package \
+            -scheme KsSettingsView \
             -destination "platform=iOS Simulator,id=${KS_SIMULATOR_UDID}" \
             | tee "${RUNNER_TEMP}/xcodebuild.log"
 

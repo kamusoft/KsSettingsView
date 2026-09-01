@@ -67,8 +67,9 @@
 
     SDK の既定は xcodeproj のあるディレクトリ配下しか走査しないが、Xcode target が取り込む
     Swift の実体は ios/Sources にあるため、そのままでは Swift を直しても native が再ビルドされない。
-    追加するのは Xcode target が実際にビルドする 3 つだけで、target の依存 (同期グループと
-    package product) を増やしたらここも足す。
+    追加するのは Xcode target が実際にビルドする source ターゲットだけで、target の依存
+    (同期グループと package product) を増やしたらここも足す。umbrella product `KsSettingsView`
+    は Core / UI / SwiftUI の 3 module を束ねるため、Bridge と合わせて 4 つが入力になる。
     逆に、xcframework をスクリプトから単体生成したときの出力 (ios/binding/build 配下) が残って
     いると、生成物が入力として拾われて無意味な再ビルドを招くので除外する。
 
@@ -83,6 +84,7 @@
       <_XcbInputs Include="$([MSBuild]::NormalizeDirectory('$(KsBridgeSwiftRoot)Sources/KsSettingsViewBridge'))**/*.swift" />
       <_XcbInputs Include="$([MSBuild]::NormalizeDirectory('$(KsBridgeSwiftRoot)Sources/KsSettingsViewCore'))**/*.swift" />
       <_XcbInputs Include="$([MSBuild]::NormalizeDirectory('$(KsBridgeSwiftRoot)Sources/KsSettingsViewUI'))**/*.swift" />
+      <_XcbInputs Include="$([MSBuild]::NormalizeDirectory('$(KsBridgeSwiftRoot)Sources/KsSettingsViewSwiftUI'))**/*.swift" />
       <_XcbInputs Include="$([MSBuild]::NormalizePath('$(KsBridgeSwiftRoot)Package.swift'))" />
     </ItemGroup>
   </Target>
