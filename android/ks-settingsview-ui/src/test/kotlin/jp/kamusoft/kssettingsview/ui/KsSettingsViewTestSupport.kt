@@ -97,6 +97,30 @@ internal fun awaitDifferCommit(
 }
 
 /**
+ * 直前に流した root の Cell 構成が Adapter へコミットされるまで待つ。
+ *
+ * [CustomCell] はテキストを持たず [committedTexts] では観測できないため、コミット済みリストと
+ * 内部 root の一致を Cell の id で観測する。待機の本体は [awaitDifferCommit] に委ね、時間切れ時は
+ * その時点のコミット済み id 一覧が失敗メッセージに載る。
+ */
+internal fun awaitRootCommit(view: KsSettingsView, timeoutMillis: Long = 5_000) {
+    awaitDifferCommit(
+        committedSummary = { committedCellIds(view) },
+        timeoutMillis = timeoutMillis,
+    ) { committedCellIds(view) == rootCellIds(view) }
+}
+
+/** Adapter がコミット済みの平坦リストから、Cell 行の id を上から順に取り出す。 */
+internal fun committedCellIds(view: KsSettingsView): List<String> =
+    view.internalMainListAdapter().currentList.mapNotNull { item ->
+        (item as? CellListItem.CellRow)?.cell?.id
+    }
+
+/** 内部 root が保持している Cell の id を順に取り出す。 */
+internal fun rootCellIds(view: KsSettingsView): List<String> =
+    view.internalRoot().sections.flatMap { section -> section.cells.map { it.id } }
+
+/**
  * Adapter がコミット済みの平坦リストから、表示されるはずのテキストを上から順に取り出す。
  *
  * Section header / footer 行と Cell 行の双方を対象とし、テキストを持たない accessory や

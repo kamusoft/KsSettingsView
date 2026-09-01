@@ -382,14 +382,11 @@ class CustomCellRecycleTest {
      * 差分計算の完了を待ってレイアウトを確定させる。
      *
      * `submitList` の差分計算は更新前後がどちらも非空のときバックグラウンドスレッドへ回り、結果は
-     * メインスレッドへ post されてから反映される。単発の `idle()` では取りこぼすため、CPU を譲りつつ
-     * 繰り返してからレイアウトを走らせる。
+     * メインスレッドへ post されてから反映される。単発の `idle()` では取りこぼすため、直前に流した
+     * root がコミットされる収束条件を待ってからレイアウトを走らせる。
      */
     private fun pump() {
-        repeat(PUMP_ROUNDS) {
-            idle()
-            Thread.yield()
-        }
+        awaitRootCommit(settingsView)
         settle()
     }
 
@@ -527,9 +524,6 @@ class CustomCellRecycleTest {
 
         /** 埋め草・probe の行高さ（dp）。 */
         const val ROW_HEIGHT_DP: Int = 48
-
-        /** 差分コミット待ちで main looper を回す回数。 */
-        const val PUMP_ROUNDS: Int = 30
 
         /** 刻みスクロール 1 回分の移動量（dp）。 */
         const val SCROLL_STEP_DP: Int = ROW_HEIGHT_DP * 2
