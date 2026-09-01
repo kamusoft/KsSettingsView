@@ -34,3 +34,22 @@ xcodebuild test -scheme KsSettingsView-Package -destination 'platform=iOS Simula
 - **完了判定に使うのはこの絞り込みなしの全件実行**である (`kasane/handbook/cross/test-execution.md`)。`swift test` は UI 系テストが `#if canImport(UIKit)` で除外され「1 件も実行されない」状態が成功として返るため使わない
 - flaky が観測されたテストの反復実行は evidence/repeat-run-after-fix.md
 - 初期反映の述語の検出力は evidence/initial-render-predicate-detection.md
+
+## develop マージ後の再実行 (2026-09-01)
+
+実装完了後、develop (7 コミット先行。うち `fix(ios): 行タップ通知と押下フィードバックを Swift 6 の actor 分離に適合させる` が `ios/` に影響) をマージしたうえで再実行した。
+
+| バンドル | 実行件数 | 失敗 | 本 change 単独時 |
+|---|---:|---:|---:|
+| `KsSettingsViewBridgeTests` | 166 | 0 | 166 |
+| `KsSettingsViewCoreTests` | 88 | 0 | 88 |
+| `KsSettingsViewSwiftUITests` | 94 | 0 | 94 |
+| `KsSettingsViewTestSupportTests` | 7 | 0 | 7 |
+| `KsSettingsViewUITests` | **645** | 0 | 642 |
+| **合計** | **1000** | **0** | 997 |
+
+`** TEST SUCCEEDED **`。UITests の +3 件は develop 側が追加した `KsCellViewSupportTests` / `KsSettingsViewControllerTests` によるもので、マージによる欠落や競合は無い。
+
+ログ中の `error:` 18 件はいずれも `CHHapticPattern` のセレクタ名 (`patternForKey:error:`) を含む情報ログで、Simulator に触覚デバイスが無いことによる。テストの失敗ではない。
+
+なお develop 由来の新規テストは独自の private 待機ヘルパを持つ (待機規約には準拠。共有ターゲットへ寄せる件は change `share-wait-helpers-in-ios-cellviewsupport-tests` として起票済み)。
