@@ -20,6 +20,119 @@ import UIKit
 
 @MainActor
 final class KsCellViewSupportTests: XCTestCase {
+    private static let viewSize = CGSize(width: 375, height: 700)
+
+    private func host(
+        cell: LabelCell,
+        theme: Theme
+    ) -> (KsSettingsViewController, UICollectionView, UIWindow) {
+        let root = SettingsRoot(sections: [Section(cells: [cell])])
+        let controller = KsSettingsViewController(root: root, theme: theme, style: .classic)
+        let window = UIWindow(frame: CGRect(origin: .zero, size: Self.viewSize))
+        window.rootViewController = controller
+        window.makeKeyAndVisible()
+        controller.loadViewIfNeeded()
+        controller.view.frame = CGRect(origin: .zero, size: Self.viewSize)
+        controller.view.layoutIfNeeded()
+        let collectionView = controller.internalCollectionView
+        collectionView.frame = CGRect(origin: .zero, size: Self.viewSize)
+        collectionView.setNeedsLayout()
+        collectionView.layoutIfNeeded()
+        return (controller, collectionView, window)
+    }
+
+    private func waitForFirstCell(
+        in collectionView: UICollectionView,
+        timeout: TimeInterval = 1.0,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) -> UICollectionViewCell? {
+        let deadline = Date.now.addingTimeInterval(timeout)
+        while Date.now < deadline {
+            collectionView.setNeedsLayout()
+            collectionView.layoutIfNeeded()
+            if let cell = collectionView.cellForItem(at: IndexPath(item: 0, section: 0)) {
+                return cell
+            }
+            _ = RunLoop.current.run(mode: .default, before: Date.now.addingTimeInterval(0.001))
+        }
+        XCTFail(
+            "期限までに先頭 Cell が生成されなかった。表示中 Cell 数: \(collectionView.visibleCells.count)",
+            file: file,
+            line: line
+        )
+        return nil
+    }
+
+    @discardableResult
+    private func waitForBackgroundColor(
+        _ expectedColor: UIColor,
+        of cell: UICollectionViewCell,
+        in collectionView: UICollectionView,
+        timeout: TimeInterval = 1.0,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) -> Bool {
+        let deadline = Date.now.addingTimeInterval(timeout)
+        while Date.now < deadline {
+            collectionView.setNeedsLayout()
+            collectionView.layoutIfNeeded()
+            if cell.backgroundConfiguration?.backgroundColor?.isEqual(expectedColor) == true {
+                return true
+            }
+            _ = RunLoop.current.run(mode: .default, before: Date.now.addingTimeInterval(0.001))
+        }
+        XCTFail(
+            "背景色が期限までに収束しなかった。期待値: \(expectedColor)、実測値: \(String(describing: cell.backgroundConfiguration?.backgroundColor))",
+            file: file,
+            line: line
+        )
+        return false
+    }
+
+    func test_押下中は選択色になり解除後は平常時の実効背景色へ戻る() {
+        let selectedColor = UIColor.magenta
+        let normalColor = UIColor.yellow
+        let model = LabelCell(
+            style: CellStyle(backgroundColor: normalColor),
+            title: "A"
+        )
+        let (_, collectionView, window) = host(
+            cell: model,
+            theme: Theme(selectedColor: selectedColor)
+        )
+        defer { window.isHidden = true }
+        guard let cell = waitForFirstCell(in: collectionView) else { return }
+
+        cell.isHighlighted = true
+        guard waitForBackgroundColor(selectedColor, of: cell, in: collectionView) else { return }
+
+        cell.isHighlighted = false
+        waitForBackgroundColor(normalColor, of: cell, in: collectionView)
+    }
+
+    func test_無効Cellは押下しても選択色を塗らない() {
+        let selectedColor = UIColor.magenta
+        let normalColor = UIColor.yellow
+        let model = LabelCell(
+            style: CellStyle(backgroundColor: normalColor),
+            title: "A",
+            isEnabled: false
+        )
+        let (_, collectionView, window) = host(
+            cell: model,
+            theme: Theme(selectedColor: selectedColor)
+        )
+        defer { window.isHidden = true }
+        guard let cell = waitForFirstCell(in: collectionView) else { return }
+
+        var sentinelBackground = cell.backgroundConfiguration ?? UIBackgroundConfiguration.clear()
+        sentinelBackground.backgroundColor = .cyan
+        cell.backgroundConfiguration = sentinelBackground
+        cell.isHighlighted = true
+
+        waitForBackgroundColor(normalColor, of: cell, in: collectionView)
+    }
 
     /// `applyEffectiveHeight` を呼ぶと `lastHeight` / `lastIsFixedHeight` が記録され、
     /// 続く `adjustedLayoutAttributes` で intrinsic（proposed）が `effectiveCellHeight` 未満なら

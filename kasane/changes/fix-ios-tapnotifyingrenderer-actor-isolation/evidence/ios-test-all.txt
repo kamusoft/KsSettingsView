@@ -1,0 +1,13 @@
+# tasks 4.2: iOS 全件テスト (Simulator, 抜粋)
+
+コマンド: xcodebuild test -scheme KsSettingsView-Package -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
+言語モード: Swift 5 (既定。4.1 の一時設定は復元済み)
+
+## レビュー指摘対応後 (最終)
+Executed 645 tests, with 0 failures (0 unexpected) in 31.111 (31.403) seconds
+** TEST SUCCEEDED **
+
+## 指摘対応前 (押下解除テストを実経路へ作り替える前)
+Executed 644 tests, with 0 failures (0 unexpected) in 30.837 (31.115) seconds
+
+件数の差 (644 -> 645) は、押下解除テスト 1 件を実経路の往復検証へ作り替え、無効 Cell のケース 1 件を足した分。
