@@ -20,13 +20,26 @@ fix-ios-test-pump-condition-wait の develop マージ時 (2026-09-01) に受け
 
 出典: `kasane/changes/fix-ios-test-pump-condition-wait/` の実装完了後、develop (`e93fafe fix(ios): 行タップ通知と押下フィードバックを Swift 6 の actor 分離に適合させる`) をマージした際に発見。
 
-## 検討した選択肢 (未検討)
+## 検討した選択肢 (却下案と理由を含む)
 
-- 案A: 2 つの private ヘルパを共有ターゲットのヘルパ (`awaitNonNil` / `awaitEqual` / `awaitInitialRender`) の呼び出しへ置き換える
-- 案B: `waitForBackgroundColor` のように「特定の Cell の特定プロパティが期待値になる」型が今後も要るなら、共有ターゲット側に便利関数として追加してから寄せる
-
-どちらが妥当かは、共有ヘルパで置き換えたときに検証内容が変わらないかを実物で確かめてから決める。
+- **案A (採用): 2 つの private ヘルパを既存共有ヘルパの呼び出しへ置き換える。** `waitForFirstCell` → host 内の `awaitInitialRender(controller)` (前例: `SectionBoxDecorationTests.host`) + `cellForItem` の guard 取得、`waitForBackgroundColor` → `awaitCondition` に背景色述語を直接渡す形 (前例: `SectionBoxDecorationTests.swift:1066-1069`)
+- **案B (却下): 共有ターゲットに「特定 Cell の背景色が期待値になるまで待つ」便利関数を追加してから寄せる。** UIColor の比較は色空間の都合で `isEqual` を使う必要があり `awaitEqual` (Equatable `==`) に寄せられないため、専用関数は「isEqual 比較の色待ち」という薄い層にしかならない。利用箇所は 2 ファイルで割に合わず、前例側 (`SectionBoxDecorationTests` の 2 箇所) も書き換えないと不揃いになる
 
 ## 決定事項
 
-(未定 — 探索前)
+- 案A を採用 (2026-09-01 探索で確定)。根拠:
+  - 対象テストは「1 Section・1 Cell・Root accessory なし」の構成で、`awaitInitialRender` の広い述語に置き換えても検証内容は変わらない (待つ対象が「先頭 Cell だけ」から「テストが直後に読む全部」へ広がるだけ)
+  - 置き換え先はすべて既存の形で揃っており、新規 API の追加は不要
+- ADR は不要 (テスト 1 ファイルの内部書き換え。覆すコスト低・境界を越えない・将来を制約しない)
+
+## ADR 候補
+
+なし (決定事項に記載のとおり選別基準に該当しない)
+
+## 未決の論点
+
+なし
+
+## 変更級の推奨: S (確定)
+
+テストファイル 1 つの内部書き換えのみ・公開 API 変更なし・完全可逆・UI なし。デルタスペック不要、直接実装 (置き換え + Simulator 全件テスト) で進める。
