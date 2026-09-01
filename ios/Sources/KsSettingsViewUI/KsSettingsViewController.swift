@@ -122,13 +122,13 @@ public final class KsSettingsViewController: UIViewController {
     /// 余白が実際に変わったときだけ再構成する。
     private var appliedRootAccessoryMargin: NSDirectionalEdgeInsets?
 
-    /// Store 購読 Cancellable（deinit で cancel する）
+    /// Store 購読 Cancellable。Controller の解放時に自動で購読を解除する。
     private var storeSubscription: AnyCancellable?
 
-    /// 内容更新バッチ購読 Cancellable（deinit で cancel する）
+    /// 内容更新バッチ購読 Cancellable。Controller の解放時に自動で購読を解除する。
     private var contentUpdateSubscription: AnyCancellable?
 
-    /// accessory 再計測要求の購読 Cancellable（deinit で cancel する）
+    /// accessory 再計測要求の購読 Cancellable。Controller の解放時に自動で購読を解除する。
     private var accessoryMeasureSubscription: AnyCancellable?
 
     /// 購読中の Store。バッチ内容更新の受信時に更新後の状態を読み直すために保持する。
@@ -213,34 +213,6 @@ public final class KsSettingsViewController: UIViewController {
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("init(coder:) is not supported")
-    }
-
-    deinit {
-        // メモリリーク防止: DataSource / Delegate / 内部 index / Store 購読を明示的に解放する。
-        // 解放順序が重要: Store 購読 → CollectionView の dataSource/delegate → DataSource 本体 → index。
-        // UICollectionView は `dataSource` を strong 参照で保持するため、先に
-        // `collectionView.dataSource = nil` で解除しないと `self.dataSource = nil` を代入しても
-        // メモリ解放されない。本順序により Cycle を確実に断つ。
-        // 購読解除は disconnectStore() と同内容の複製。deinit は nonisolated な文脈のため
-        // MainActor-isolated な disconnectStore() を呼べず、一本化できない (プロパティへの
-        // 直接アクセスは deinit の特例で許される)。購読を増やすときは両方に追記すること。
-        storeSubscription?.cancel()
-        storeSubscription = nil
-        contentUpdateSubscription?.cancel()
-        contentUpdateSubscription = nil
-        accessoryMeasureSubscription?.cancel()
-        accessoryMeasureSubscription = nil
-        themeSubscription?.cancel()
-        themeSubscription = nil
-        if let cv = self.collectionView {
-            // collectionView が dataSource / delegate を retain しているため、先に解除する。
-            cv.dataSource = nil
-            cv.delegate = nil
-        }
-        // DataSource は内部で collectionView を強参照しうるため明示解放
-        self.dataSource = nil
-        self.sectionIndex.removeAll()
-        self.cellIndex.removeAll()
     }
 
     // MARK: - visible projection 構築
@@ -2433,9 +2405,8 @@ extension KsSettingsViewController: UICollectionViewDelegate {
 
     /// Cell タップ時に各 CellView の `tapHandler` を呼び出す。
     ///
-    /// CommandCell / ButtonCell / CheckboxCell / RadioCell / SimpleCheckCell の
-    /// Renderer が `tapHandler` プロパティに `onTap` / `onValueChanged` クロージャを保持しているため、
-    /// 共通の Protocol 経由で呼び出す。
+    /// 行タップ通知に対応する CellView が `tapHandler` プロパティに `onTap` / `onValueChanged`
+    /// クロージャを保持しているため、共通の Protocol 経由で呼び出す。
     public func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         defer {
             // 選択ハイライトは残さない（チェックマーク状態は accessory で表現される）
@@ -2450,8 +2421,9 @@ extension KsSettingsViewController: UICollectionViewDelegate {
 
 /// `tapHandler` プロパティを持つ Cell View が満たす内部プロトコル。
 ///
-/// CommandCell / ButtonCell / CheckboxCell / RadioCell / SimpleCheckCell の
-/// Renderer 群が共通で参照される。
+/// 準拠するのは Command / Button / Checkbox / Radio / SimpleCheck / Picker / NumberPicker /
+/// TimePicker / DatePicker / Entry / Custom の各 CellView。
+@MainActor
 internal protocol TapNotifyingRenderer: AnyObject {
     var tapHandler: (@Sendable () -> Void)? { get }
 }

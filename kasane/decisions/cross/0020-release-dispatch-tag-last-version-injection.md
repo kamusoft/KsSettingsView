@@ -18,12 +18,14 @@ date: 2026-08-21
 - リリース CI は **`workflow_dispatch` で version (semver) を入力して手動起動**する。tag push をトリガーにしない。
 - CI は全 platform のビルド・テストを通した後、**取り消せる順**で publish する: Maven Central Portal へ upload (自動 release せず保留) → NuGet.org へ push → Maven を release → 最後に **git tag と GitHub Release を作る**。tag は publish 全成功時にのみ生まれる。
 - **version の SSoT は dispatch の入力値 (= 生成される tag)** とし、CI が Gradle (`-Pversion=`) と MSBuild (`-p:Version=`) へ注入する。リポジトリ内の宣言値 (catalog / Directory.Build.props) は開発用の既定値 (SNAPSHOT / dev) に留め、リリースのたびに version bump のコミットを積まない。
+- (2026-09-01 追記) **tag の表記は接頭辞なしの `X.Y.Z`**。dispatch 入力・tag・SwiftPM の解決バージョン・Gradle / MSBuild への注入値が同一文字列のまま変換なしで流れることを優先する。monorepo と SwiftPM 配信リポジトリ (`KsSettingsView-SPM`) の tag は同じ値。姉妹ライブラリ KsDialogs も同表記で揃える。
 
 ## Alternatives Considered
 
 - **tag push をトリガーにする (tag が先)**: 却下。SwiftPM は tag の時点でリリース済みになるため、後段の Maven / NuGet publish が失敗すると iOS だけ先行した状態が残り、tag 削除 + 打ち直しでしか回復できない。
 - **release ブランチ / PR マージをトリガーにする**: 却下。tag が先に出る問題は同じで、ブランチ運用だけが増える。
 - **ファイル (catalog / Directory.Build.props) を version の正とし、tag との一致を CI で検証する**: 却下。version bump のコミットが毎リリース必要になり、platform ごとに別ファイルを同時に更新する手間と不一致の余地が残る。tag 起点の注入なら構造的にずれない。
+- **tag 表記を `vX.Y.Z` にする** (2026-09-01 追記): 却下。SwiftPM は `v` 付き tag も解決できるため技術差はないが、Maven / NuGet の version 表記には `v` が入らないため、CI・手順書・検証の各所に v の付け外し変換が散らばる。GitHub 慣例の見た目より変換ゼロを取った。
 
 ## Consequences
 
@@ -35,3 +37,4 @@ date: 2026-08-21
 - 負: Maven Central Portal の「upload して保留 → 後で release」の 2 段階を CI から操作する必要がある。
 
 出典: kasane/roadmaps/package-distribution/exploration.md (F1・F2) / kasane/decisions/cross/0019-lockstep-single-version.md
+出典 (2026-09-01 tag 表記の確定): kasane/roadmaps/package-distribution/phases/phase-4-ios-packaging/history.md (2026-09-01「tag 表記の統一」)

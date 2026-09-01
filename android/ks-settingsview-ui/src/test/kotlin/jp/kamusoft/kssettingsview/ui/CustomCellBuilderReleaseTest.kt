@@ -153,14 +153,11 @@ class CustomCellBuilderReleaseTest {
      * 差分計算の完了を待ってレイアウトと再 composition を確定させる。
      *
      * `submitList` の差分計算は更新前後がどちらも非空のときバックグラウンドスレッドへ回り、結果は
-     * メインスレッドへ post されてから反映される。単発の `idle()` では取りこぼすため、CPU を譲りつつ
-     * 繰り返してから確定させる。
+     * メインスレッドへ post されてから反映される。単発の `idle()` では取りこぼすため、直前に流した
+     * root がコミットされる収束条件を待ってから確定させる。
      */
     private fun pump() {
-        repeat(PUMP_ROUNDS) {
-            idle()
-            Thread.yield()
-        }
+        awaitRootCommit(settingsView)
         settle()
     }
 
@@ -200,9 +197,6 @@ class CustomCellBuilderReleaseTest {
 
         /** スクロール量を稼ぐための埋め草の数。 */
         const val FILLER_COUNT: Int = 60
-
-        /** 差分コミット待ちで main looper を回す回数。 */
-        const val PUMP_ROUNDS: Int = 30
 
         /** 刻みスクロール 1 回分の移動量（dp）。 */
         const val SCROLL_STEP_DP: Int = ROW_HEIGHT_DP * 2

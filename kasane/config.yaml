@@ -53,17 +53,20 @@ second-opinion:
 # — 外部への持ち出し経路になり得るため、そのリスクを受容できるプロジェクトのみ counterpart を選ぶ
 # 実装系を counterpart にできるのは相方が codex のときのみ (claude は未対応でエラー停止)
 workers:
-  impl: counterpart
+  impl: host
   ui-impl: host        # counterpart は非推奨 (視覚照合ループが相方の sandbox で成立しない)
   review: host  # impl を counterpart にする場合、host に残すと単独レビューもクロスモデルになる
                        # (counterpart にすると second-opinion 該当級で両レビューが相方モデルに揃い、ホスト視点が消える)
-  verify: counterpart
+  verify: host
   scout: counterpart
   extract: host
   live: host           # UI 調整でも counterpart 可 (結果確認はユーザーの目で行うため)
 
 
-# 標準 lint / hook (scripts/local-path-lint.py / identity-lint.py / log-sanitize.py)
+distill:
+  archive-media: delete               # archive 時の媒体ファイル (画像・動画) の扱い: delete (既定。trash で削除してから移動) | keep
+
+# 標準 lint / hook (scripts/local-path-lint.py / identity-lint.py / log-sanitize.py / doc-structure-lint.py / comment-policy-lint.py)
 lint:
   exclude: []                         # 検査から外すリポジトリ相対パス (先頭セグメント一致または glob)
   identity:
@@ -74,6 +77,16 @@ lint:
     allow: ["@kamusoft.jp"]          # 正当な値 (名前空間 UUID 等)。@ドメインはそのドメインのメール (デモデータ) を許可
     disable: []                       # 無効化する検出群: device / developer / network / personal / secret
   internal-hosts: []                  # 未公開サーバのホスト名
+  doc-structure:                      # 育つ文書の構造 lint。hook には登録しない
+    scope: [kasane/concepts, kasane/handbook, kasane/roadmaps]
+    item-chars: 200                   # 箇条書き 1 項目の上限字数
+    section-items: 10                 # 1 見出し配下のトップレベル項目数の上限
+    nest-depth: 3                     # 違反となるネスト段数 (3 なら 2 段まで許す)
+    heading-chars: 1200               # 見出しあたり散文字数の警告閾値
+    file-chars: 10000                 # 1 ファイルの散文字数の警告閾値
+  comment-policy:                     # ソースコメント規約の lint / hook (この節の存在が採用宣言)
+    exclude: [openspec, docs]         # 凍結資料とドキュメント置き場は対象外 (kasane/ .claude/ build/ .git/ は常に対象外)
+    ext: []                           # 検査対象に追加する拡張子 (既定は scripts/comment-policy-lint.py 冒頭の列挙)
 
 drift:
   timestamp-threshold-days: 90
