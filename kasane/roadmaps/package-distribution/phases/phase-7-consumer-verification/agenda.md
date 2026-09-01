@@ -20,6 +20,6 @@
 - [ ] 論点の解消
 - [ ] ksn-propose で変更提案を起こす
 - [ ] **phase-9 からの申し送り** (2026-08-30): `verification/` の消費者プロジェクトに、ルート README / `skills/` と同じ最小コード例を入れて CI でビルドさせる。README の例は現状 `skills/` の Skill 本文との文字列一致でしか担保されておらず、実際にビルドが通るかは未検証
-- [ ] **phase-5 からの申し送り・人の作業 (オーナー)** (2026-09-01): Central Portal アカウントで `jp.kamusoft` 名前空間を登録し DNS TXT 検証を通す (本フェーズと phase-8 の発行検証の前提。KsDialogs と共用)
+- [x] **phase-5 からの申し送り・人の作業 (オーナー)** (2026-09-01): Central Portal アカウントで `jp.kamusoft` 名前空間を登録し DNS TXT 検証を通す → 2026-09-01 完了 (Portal で namespace 追加 → kamusoft.jp の apex に検証用 TXT を追加 → Verified → TXT は削除済み)。KsDialogs 含む `jp.kamusoft` 配下で共用できる
 - [ ] **phase-5 からの申し送り** (2026-09-01): Explicit API mode の導入 ([changes/adopt-android-explicit-api-mode](../../../../changes/adopt-android-explicit-api-mode/exploration.md) に簡易起票済み) を本フェーズの消費者検証と併せて実施するか判断する — API 面の棚卸しと消費者視点の検証は同じ問いの別角度で、逆順は検証やり直しを招く
 - [ ] **phase-5 からの申し送り** (2026-09-01): docs-refresh の明示依頼 (skills/ とルート README の module 統合追随、互換情報 Kotlin 2.3+ / minSdk 29 / compileSdk 35 の明記) をユーザーへ依頼する
