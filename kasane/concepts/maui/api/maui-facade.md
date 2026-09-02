@@ -22,7 +22,7 @@ Binding assembly は Bridge API を C# へ運ぶだけの層で、アプリか�
 
 ## 導入と前提
 
-配布物は NuGet の 3 パッケージで、利用者が書くのは facade `KsSettingsView.Maui` の `PackageReference` 1 行だけである (binding 2 件は platform TFM の依存として推移的に届く — [maui/ADR-0025](../../../decisions/maui/0025-nuget-three-package-root-namespace.md))。公開レジストリへの発行は未着手で、現時点ではローカル pack の成果物とリポジトリ内の `ProjectReference` から利用できる。pack の構成は [MAUI binding の Native artifact 統合](../architecture/binding-build-integration.md) が持つ。
+配布物は NuGet の 3 パッケージで、利用者が書くのは facade `KsSettingsView.Maui` の `PackageReference` 1 行だけである (binding 2 件は platform TFM の依存として推移的に届く — [maui/ADR-0025](../../../decisions/maui/0025-nuget-three-package-root-namespace.md))。公開レジストリへの発行は未着手で、現時点ではローカル pack の成果物とリポジトリ内の `ProjectReference` から利用できる。ローカル pack の成果物を利用者と同じ経路 (NuGet フィード) で解決・ビルドできることは消費者検証 `verification/maui` が PR CI で確かめている ([リポジトリとビルドの責務境界](../../cross/architecture/repository-boundaries.md))。pack の構成は [MAUI binding の Native artifact 統合](../architecture/binding-build-integration.md) が持つ。
 
 公開型の名前空間は `KsSettingsView` (配下 `KsSettingsView.Internals` / `KsSettingsView.Handlers`) で、アセンブリ名・Package ID の `KsSettingsView.Maui` とは意図的に非対称である ([公開識別子と配布座標](../../../handbook/cross/public-identifiers.md))。最小の導入は XAML の xmlns と `MauiProgram` の登録の 2 箇所:
 
@@ -39,7 +39,7 @@ using KsSettingsView;
 builder.UseMauiApp<App>().AddKsSettingsView();
 ```
 
-利用者アプリ側の前提は次の 4 つで、いずれも facade が利用者アプリ側に要求する値である。満たさないと右列の形で restore・ビルドが失敗する。
+利用者アプリ側の前提は次の 5 つで、いずれも facade が利用者アプリ側に要求する値である。満たさないと右列の形で restore・ビルドが失敗する (最後の 1 つだけは失敗せず静かに欠ける)。
 
 | 前提 | 値 | 満たさないときの現れ方 |
 |---|---|---|
@@ -47,6 +47,7 @@ builder.UseMauiApp<App>().AddKsSettingsView();
 | `Microsoft.Maui.Controls` | 10.0.70 以上 | テンプレート既定 (SDK 10.0.300 時点で 10.0.20) のままだと restore が NU1605 (ダウングレード) で失敗する。iOS の icon 所有権分類 (maui/ADR-0026) が 10.0.60 以降の内部挙動に依存し、10.0.70 はその挙動を実測で確認した版のため、検証済み版を下限にしている |
 | `SupportedOSPlatformVersion` (Android) | 29 以上 | facade 同梱のビルド時ガードが `KSSV0001` で platform ビルドを止める (依存 AndroidX の manifest merger エラーより先に出る)。未設定時は SDK 既定 21 のため同じく止まる |
 | `SupportedOSPlatformVersion` (iOS) | 16.0 以上 | 同じく `KSSV0001` で止まる。未設定時は SDK 既定 (26.x) が要件を満たすためガードは発火しない |
+| TFM の API 版 (明示する場合のみ) | `net10.0-android36.0` / `net10.0-ios26.0` 以上 (パッケージの TFM group は SDK 10.0.300 の既定 platform 版で付く) | 失敗しない — 古い API 版 (例: `net10.0-android35.0` / `net10.0-ios18.0`) を固定すると restore は警告なく成功するが、`lib/net10.0` (platform 中立) の assembly が選ばれ binding 2 件が依存グラフに入らず native 実装が静かに欠ける。API 版なしの `net10.0-android` / `net10.0-ios` なら常に platform 版が選ばれる |
 
 複数 TFM のプロジェクトは TFM ごとの内部ビルド (inner build) に分かれるが、ガードが働くのはそのうち `net10.0-android` / `net10.0-ios` の内部ビルドだけで、TFM をまたぐ外側のビルド・素の `net10.0`・facade を間接参照するライブラリの非 platform TFM では何もしない。仕組みと宣言元は [MAUI binding の Native artifact 統合](../architecture/binding-build-integration.md) の「最低 OS 版のビルド時ガード」。
 

@@ -52,12 +52,12 @@ sample-parity 規約の適用範囲は `samples/**` で閉じており、cross/A
 ## TODO
 
 - [x] 論点の解消 (2026-09-02 全 7 論点)
-- [ ] ksn-propose で変更提案を起こす
-- [ ] **決定「CI への届け方」に伴う人の作業** (2026-09-02): 消費者検証 3 job を `develop` の branch protection に必須 status check として追加する (change の実装完了時)。phase-8 の `main` 作成申し送りにも追記済み
-- [ ] **docs-refresh の明示依頼をユーザーへ依頼する** (phase-5・6 からの申し送りの併合): 内容は下表「docs-refresh 依頼の内容」。phase-6 は change 完了直後の依頼を求めており、本フェーズの着手を待たずに依頼してよい。API 版付き TFM の SDK 要件は下の確認結果を待たず「SDK 10.0.300 で検証」の形で先に載せてよい
-- [ ] **phase-6 からの申し送り: API 版付き TFM の解決要件** (2026-09-02): change のタスクとして実測し、結果を docs-refresh 依頼へ追加する (詳細は下表)
-- [ ] **phase-8: 署名任意化の経路が CI で踏まれない** (2026-09-02 実装レビュー): 「リリース版 version × 署名鍵なし」の発行は PR CI (SNAPSHOT のみ) で踏まれない。publish 前に署名ファイルの生成を確認するステップを置く
-- [ ] **phase-8: 呼び出し側で `secrets: inherit` を使わない** (2026-09-02 実装レビュー): 消費者検証 workflow は secrets を宣言しないが `secrets: inherit` なら全 secrets が渡る。release から呼ぶときに使わないことを必須確認事項にする
+- [x] ksn-propose で変更提案を起こす (2026-09-02 [add-consumer-verification](../../../../changes/archive/2026-09-02-add-consumer-verification/proposal.md)、L 級。実装・マージ・蒸留まで完了)
+- [x] **決定「CI への届け方」に伴う人の作業** (2026-09-02): 消費者検証 3 job を `develop` の branch protection に必須 status check として追加する (change の実装完了時)。phase-8 の `main` 作成申し送りにも追記済み → 2026-09-02 完了 (7 checks)
+- [ ] **docs-refresh の明示依頼をユーザーへ依頼する** (phase-5・6 からの申し送りの併合): 内容は下表「docs-refresh 依頼の内容」。phase-6 は change 完了直後の依頼を求めており、本フェーズの着手を待たずに依頼してよい。API 版付き TFM の要件は実測済み (下表) → 受け皿は下表「申し送りの受け皿」
+- [x] **phase-6 からの申し送り: API 版付き TFM の解決要件** (2026-09-02): change のタスクとして実測し、結果を docs-refresh 依頼へ追加する (詳細は下表) → 2026-09-02 実測・蒸留済み (下表)
+- [ ] **phase-8: 署名任意化の経路が CI で踏まれない** (2026-09-02 実装レビュー): 「リリース版 version × 署名鍵なし」の発行は PR CI (SNAPSHOT のみ) で踏まれない。publish 前に署名ファイルの生成を確認するステップを置く → phase-8 agenda へ転記 (2026-09-02)
+- [ ] **phase-8: 呼び出し側で `secrets: inherit` を使わない** (2026-09-02 実装レビュー): 消費者検証 workflow は secrets を宣言しないが `secrets: inherit` なら全 secrets が渡る。release から呼ぶときに使わないことを必須確認事項にする → phase-8 へ転記
 
 ### API 版付き TFM の解決要件の実測 (phase-6 申し送り)
 
@@ -89,3 +89,34 @@ sample-parity 規約の適用範囲は `samples/**` で閉じており、cross/A
 | phase-5 (2026-09-01): Explicit API mode の導入を消費者検証と併せて実施するか判断する | [changes/archive/2026-09-01-adopt-android-explicit-api-mode](../../../../changes/archive/2026-09-01-adopt-android-explicit-api-mode/exploration.md) として 2026-09-01 に M 級で実装・蒸留済み。本フェーズの検証は Explicit API 適用後の API 面に対して行う (逆順の懸念は解消) |
 | phase-6 (2026-09-02): MAUI 消費者の `nuget.config` 設計 (`<clear/>` + ローカルフィードのみでは NU1101、nuget.org 併記 + 隔離 packages path + `.nupkg.metadata` 検査。証跡 [consumer-verification.txt](../../../../changes/archive/2026-09-02-add-maui-nuget-distribution/evidence/consumer-verification.txt) 0 節・6-1) | 決定「dry-run の参照先」で packageSourceMapping 方式に置き換え (nuget.org 併記は維持、事後検査は不要) |
 | phase-6 (2026-09-02): `dotnet publish` (フル trimming) と実機起動を smoke に含めるか | 決定「検証範囲」で含めないと確定。Release ビルドまでで trimming 後のアセンブリ残存は確認済み、同梱 README 最小例の無編集ビルド証跡が MAUI 消費者の雛形 |
+
+## 実装結果 (2026-09-02 反映)
+
+change [add-consumer-verification](../../../../changes/archive/2026-09-02-add-consumer-verification/proposal.md) (L 級、PR #2 を 2026-09-02 にマージ) で `verification/{ios,android,maui}/` の消費者 3 件・フィード準備 / 消費者ビルドの 2 段スクリプト・`scripts/readme-example-lint.py`・再利用可能 workflow `verify-consumer-{ios,android,maui}.yml`・`ci.yml` の 7 job 化・`develop` の必須 status check 7 件を実装した。決定 7 件はすべて実装され、提案化のセカンドオピニオンで訂正した 2 件 (`exclusiveContent` + 空の packages path、platform 別 3 workflow + artifact 入力) が最終形になった。
+
+### 決定と違った点・実測で判明した点
+
+| 項目 | 内容 |
+|---|---|
+| version 注入の受け口 (付随修正) | cross/ADR-0020 の `-Pversion=` 注入は Gradle 側の受け口が未実装だった。`android/build.gradle.kts` を「注入があればそれを、無ければカタログ既定値」に改めた (deviation 1 件目) |
+| 署名の任意化 (付随修正) | 署名鍵の無い Maven 発行はリリース版でも未署名で成功するよう改めた (deviation 2 件目)。「リリース版 × 鍵なし」の経路は PR CI では踏まれない |
+| `smoke` + artifact | spec が定義していなかった組み合わせを入力検査で拒否する (artifact は dry-run 専用。deviation 3 件目) |
+| `lint.identity.allow` | レビュー証跡の `maven.repo.local` 引用が mDNS ホスト名として誤検出されるため `repo.local` を許可 (deviation 4 件目) |
+| CI の所要時間 | consumer-maui が約 20 分 (workload install + 空の RestorePackagesPath による毎回フル restore) で、proposal の見込み 5〜10 分を超えた。CI 全体は maui / verify の 8 分から 20 分へ延びる |
+| ランナーの Xcode | `/Applications/Xcode_26.5.0.app` がシンボリックリンクで、MAUI iOS の trimming 後に `install_name_tool` の探索が失敗した。`DEVELOPER_DIR` を `pwd -P` で実体に解決して解消 |
+| Android SDK の解決 | 消費者の Gradle build root は `ANDROID_HOME` → `ANDROID_SDK_ROOT` → `android/local.properties` の順に解決する (handbook の 2 経路のどちらでも動く) |
+| API 版付き TFM | 上表「API 版付き TFM の解決要件の実測」のとおり。concepts へ蒸留済み |
+
+### 申し送りの受け皿
+
+| 申し送り | 受け皿 |
+|---|---|
+| smoke 正ケース (3 公開レジストリからの解決成功) の実証 | [phase-8 agenda](../phase-8-release-workflow/agenda.md) の「phase-7 からの申し送り」(呼び出し契約) |
+| release からの呼び出し契約 (artifact は dry-run 専用、smoke は version のみ、upload 名は release 側で決める、consumer-maui の所要 20 分) | 同上 |
+| `main` の branch protection (7 checks の名前確定。`develop` の設定証跡は [branch-protection-develop.txt](../../../../changes/archive/2026-09-02-add-consumer-verification/evidence/branch-protection-develop.txt)) | phase-8 agenda の phase-3 申し送り行を更新済み |
+| 署名任意化の経路が CI で踏まれない → publish 前の署名ファイル確認 | phase-8 agenda の「phase-7 からの申し送り」(署名の生成確認) |
+| 呼び出し側で `secrets: inherit` を使わない | phase-8 agenda の「phase-7 からの申し送り」(呼び出し契約) |
+| docs-refresh 依頼 (上表「docs-refresh 依頼の内容」) | 蒸留サマリでユーザーへ依頼を提示。先に依頼されなければ [phase-8 agenda](../phase-8-release-workflow/agenda.md) の「phase-7 からの申し送り」で初回リリース時の docs-refresh に併合 |
+| `verification/maui/check-dependencies.py` に `--selftest` が無い (版一致検査の回帰検出が手動実行のみ) | 見送り: spec の要求外で、検査自体は毎 PR の dry-run で実行される。回帰が疑われたら簡易起票する |
+| R8 の縮小が走らず consumer ProGuard ルール不足は検出できない | 見送り: 決定「検証範囲」の Release ビルドまでで足りる。`verification/android/app/build.gradle.kts` にコメントで明示済み |
+| iOS 最小例の main actor 分離警告 (公開 API の `@Sendable` 宣言由来、実害なし) | 見送り: 利用者に見せる例は素直な形を保つ (2026-09-02 オーナー判断)。警告の根本対処は起票しない |

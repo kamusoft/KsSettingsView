@@ -1,12 +1,12 @@
 ---
 type: concept
 title: リポジトリとビルドの責務境界
-description: 横断変更をまとめる monorepo と、独立した platform build・Sample の責務分担
-tags: [architecture, monorepo, build, sample]
+description: 横断変更をまとめる monorepo と、独立した platform build・Sample・消費者検証 (verification/) の責務分担
+tags: [architecture, monorepo, build, sample, verification]
 timestamp: 2026-09-02
 ---
 
-この文書は、KsSettingsView の単一リポジトリと platform 別 build root、利用側 Sample の責務を説明する。読むと、横断変更を一つのリポジトリで扱いながら、iOS・Android・MAUI を一つの build graph に統合しない理由と、Sample が保証する範囲が分かる。
+この文書は、KsSettingsView の単一リポジトリと platform 別 build root、利用側 Sample、配布物の消費者検証 (`verification/`) の責務を説明する。読むと、横断変更を一つのリポジトリで扱いながら、iOS・Android・MAUI を一つの build graph に統合しない理由と、Sample が保証する範囲、消費者検証が確かめる範囲が分かる。
 
 ## リポジトリと build root
 
@@ -39,6 +39,27 @@ Android の composite build は source 参照を接続するが、Sample と inc
 
 Sample は公開 API の組み合わせ、app host の前提、統合状態、視覚、操作結果を実行・目視確認する。挙動契約の唯一の正（SSoT）と自動回帰検証は library code と test が担う。Sample の画面数、navigation、表示文字列、デモデータ、比較用の色値は製品契約にしない。ただし製品契約にしないことと platform 間で揃えることは別軸であり、Sample の文言・画面構成は platform 間で一致させる（[Sample のプラットフォーム間一致](../../../handbook/cross/sample-parity.md)）。
 
+## 消費者検証 (`verification/`) の境界
+
+`verification/{ios,android,maui}/` は、配布物を利用者と同じ経路で解決してビルドできるかを確かめる消費者プロジェクトである。Sample と違って本体のソースは参照せず、公開座標 (SwiftPM product `KsSettingsView` / `jp.kamusoft:kssettingsview` / `KsSettingsView.Maui`) だけを参照する。ソースはルート README の最小コード例 (iOS / Android / MAUI XAML / MAUI C# の 4 コードブロック) の無編集の写しで、README と食い違うと `scripts/readme-example-lint.py` が CI の lint job で失敗する — README の例が壊れれば消費者ビルドが落ちる仕組みである。`samples/` のプラットフォーム間一致規約の対象ではなく、3 platform で内容が揃うのは README 一致の帰結にすぎない。
+
+検証するのは配信経路 (解決・メタデータ・推移依存・利用者側 SDK での Release ビルド) までで、Simulator / Emulator / 実機での起動、`dotnet publish`、R8 の縮小 (`isMinifyEnabled` は false) は含めない。実行時挙動は Sample と手元の手順が担う ([ADR-0026](../../../decisions/cross/0026-ci-guarantee-logic-and-wiring-not-e2e.md))。
+
+### 参照先の切り替えと排他性
+
+参照先はモードと version の 2 引数で切り替える。消費者のソースはモードで変わらない。
+
+| モード | 参照先 | 呼ばれる場面 |
+|---|---|---|
+| `dry-run` | iOS はスナップショット (`scripts/spm-snapshot/` の出力を identity `KsSettingsView-SPM` のディレクトリに置いた `path:` 参照)、Android は mavenLocal、MAUI はローカルフォルダフィード。version 未指定なら本体の開発用既定値 (Android `0.1.0-SNAPSHOT` / MAUI `0.0.0-dev`。iOS は version を持たない) | PR / push の検証 CI で毎回。release では publish 前 |
+| `smoke` | 配信リポジトリ `KsSettingsView-SPM` の tag、Maven Central、nuget.org。version は必須 | release の publish 後 (初回リリースまで正ケースは未実証) |
+
+dry-run の参照先は本リポジトリ由来の座標について排他的である。Android は `exclusiveContent` で `jp.kamusoft` を mavenLocal だけに割り当て、MAUI は packageSourceMapping で `KsSettingsView.*` をローカルフィードに固定したうえで実行ごとに空のパッケージ展開先を使い、取得元をパッケージ単位の `.nupkg.metadata` で検査する (global packages folder に既にある版には mapping が働かないため)。ローカルに無い version は公開レジストリやユーザー環境のキャッシュへ黙ってフォールバックせず失敗する — フォールバックを許すと dry-run が偽陽性になる。MAUI はさらに restore 警告 NU1605 / NU1608 / NU1107 をエラーにし、binding 2 件の解決版が facade と一致することを検査する (lockstep の消費者側の現れ)。
+
+### 実行手段と CI
+
+実行手段は platform ごとに「フィード準備」(`prepare-feed.sh`: スナップショット配置 / `publishToMavenLocal` / `pack`) と「消費者ビルド」(`build-consumer.sh`: Release 構成、署名情報なし、MAUI iOS は Simulator RID) の 2 段に分かれ、準備済みの参照先を `--reference` で渡せば準備段を再実行しない。CI では platform 別の再利用可能 workflow `verify-consumer-{ios,android,maui}.yml` ([ADR-0025](../../../decisions/cross/0025-verification-ci-reusable-platform-workflows.md) の形) がこの 2 段を包み、release workflow の publish 段が作った成果物は `artifact` 入力で受け取る。artifact は dry-run 専用で、smoke は version だけを受ける (`smoke` + `artifact` は入力検査で拒否する — 消費者ビルドが artifact を使わないため、許すと公開済みの版を検証したものが artifact の検証に見える)。消費者 job は `contents: read` だけで secrets を受け取らず、配信先への書き込み経路を持たない。手元での実行手順は [ローカル開発環境と Sample の実行](../../../handbook/cross/local-development-setup.md) にある。
+
 ## 保証すること
 
 - platform をまたぐ変更と長命な知識を一つのリポジトリで調整できる。
@@ -47,6 +68,7 @@ Sample は公開 API の組み合わせ、app host の前提、統合状態、�
 - Sample は本体の内部 source set を混在させず、利用者側から公開 product / module を参照する。
 - Sample の local source reference により、開発中の本体変更を利用 application で確認できる。
 - Android Sample と included library は、それぞれの build root で SDK / toolchain を解決する。バージョン宣言だけは共有 catalog で一致させる。
+- `verification/` の消費者は公開座標だけを参照し、dry-run ではローカル参照先に無い配布物を公開レジストリやキャッシュから補わずに失敗する。
 
 ## してはいけないこと
 
@@ -56,6 +78,8 @@ Sample は公開 API の組み合わせ、app host の前提、統合状態、�
 - local source reference の成功を、公開 repository からの配布成立と説明しない。
 - MAUI の 3 パッケージがローカルで pack できることを、公開レジストリから取得できる配布物があることと説明しない (発行は未着手。ローカル pack と消費者検証まで)。
 - 配信リポジトリ `KsSettingsView-SPM` を開発の入口として扱わない。手で commit せず、ソース・Issue の窓口は monorepo である。
+- `verification/` を Sample や本体開発の入口として扱わない。README 最小例の写し以外のコードを置かず、Sample の一致規約の対象にも数えない。
+- 消費者 dry-run の成功を、公開レジストリから取得できる配布物があることと説明しない (それを示すのは smoke である)。
 
 ## 関連
 
@@ -76,3 +100,6 @@ Sample は公開 API の組み合わせ、app host の前提、統合状態、�
 - [Sample のプラットフォーム間一致](../../../handbook/cross/sample-parity.md)
 - [ADR-0001: モノレポとプラットフォーム別ビルドルート](../../../decisions/cross/0001-monorepo-platform-build-roots.md)
 - [ADR-0018: 配布チャネルと SwiftPM 配信リポジトリ](../../../decisions/cross/0018-distribution-public-channels-root-swiftpm-manifest.md)
+- [ADR-0025: 検証 CI は platform 別の再利用可能 workflow で構成する](../../../decisions/cross/0025-verification-ci-reusable-platform-workflows.md)
+- [ADR-0026: CI が保証する範囲](../../../decisions/cross/0026-ci-guarantee-logic-and-wiring-not-e2e.md)
+- [ローカル開発環境と Sample の実行](../../../handbook/cross/local-development-setup.md) — 消費者検証を手元で回す手順

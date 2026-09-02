@@ -62,3 +62,7 @@
 ## 2026-09-02: 提案化とセカンドオピニオンでの決定の訂正
 
 change `add-consumer-verification` を起票 (M 級として提案)。セカンドオピニオン (codex、second-opinion-spec-001.md) で決定 2 件を訂正した: (1) dry-run の参照先 — Gradle の content filter は排他でないため `exclusiveContent` に、NuGet は mapping に加えて空の packages path と `.nupkg.metadata` の取得元検査を併用 (「事後検査は不要」を撤回)。(2) CI への届け方 — workflow は 1 本 3 job ではなく platform 別 3 本 (ADR-0025 の形)、publish 成果物は artifact 入力で受け取る。級の再分類 (M → L) はオーナー判断待ち。
+
+## 2026-09-02: 実装完了と蒸留
+
+級はオーナー判断で L に確定し、実装 (レビュー 2 周 + セカンドオピニオン 2 周 + verify 2 周) を経て PR #2 をマージ、`develop` の必須 status check を 7 job にした。蒸留で `verification/` の役割を concepts `cross/architecture/repository-boundaries.md` に、API 版付き TFM の要件を `maui/api/maui-facade.md` に、version 注入と署名の条件を `android/architecture/build-toolchain.md` と cross/ADR-0020 (追記) に反映した。新規 ADR は起票なし。申し送りは agenda の「実装結果」に受け皿つきで整理し、フェーズを completed にした。

@@ -4,7 +4,7 @@
 
 ## architecture/
 
-- [architecture/repository-boundaries.md](architecture/repository-boundaries.md) — 横断変更をまとめる monorepo と、独立した platform build・Sample の責務分担
+- [architecture/repository-boundaries.md](architecture/repository-boundaries.md) — 横断変更をまとめる monorepo と、独立した platform build・Sample・消費者検証 (`verification/`) の責務分担
 
 ## reference/
 
