@@ -1,0 +1,26 @@
+# develop の branch protection (tasks 6.1) — 2026-09-02
+
+## 更新前 (GET required_status_checks)
+  contexts: ["ios / verify", "android / verify", "maui / verify", "lint"]
+
+## 更新 (PATCH required_status_checks、他の保護設定は触らない)
+  strict: false / checks: 7 件 (app_id 15368 = GitHub Actions)
+
+## 更新後 (GET で再取得)
+  strict: False
+  checks (7):
+    - ios / verify (app_id 15368)
+    - android / verify (app_id 15368)
+    - maui / verify (app_id 15368)
+    - lint (app_id 15368)
+    - consumer-ios / verify (app_id 15368)
+    - consumer-android / verify (app_id 15368)
+    - consumer-maui / verify (app_id 15368)
+
+## 他の保護設定 (変更なし)
+  enforce_admins: False
+  allow_force_pushes: False
+  allow_deletions: False
+  required_pull_request_reviews: あり
+
+main は未作成のため phase-8 の作成時に同じ 7 job で設定する (proposal Non-Goals)。

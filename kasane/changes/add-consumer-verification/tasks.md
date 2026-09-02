@@ -34,12 +34,12 @@
 - [x] 5.3 version `0.1.0-rc.1` のような値を与えて 3 platform に同じ文字列が流れること (iOS はテンプレート生成結果、Android は解決座標、MAUI は assets.json) を確認する (→ Scenario: version を与えると全 platform に同じ文字列が流れる)
 - [x] 5.4 smoke モードで参照先の設定が公開レジストリを指し (iOS の URL + version、Android の mavenCentral への exclusiveContent、MAUI の nuget.org への mapping)、ローカル参照先を含まないことを生成物で確認する。公開レジストリからの解決成功 (Scenario「公開レジストリからの解決」) は配布物が未公開のため本変更では実証せず、phase-8 の初回リリースで行う旨を evidence に明記する (→ Scenario: 参照先が公開レジストリを指す)
 - [x] 5.5 API 版付き TFM の解決要件: MAUI 消費者の `TargetPlatformVersion` を古い値 (例: android 35.0 / ios 18.0) に固定した restore で解決可否を実測し、結果を evidence と agenda の docs-refresh 依頼内容に追記する (→ agenda TODO「API 版付き TFM の解決要件」)
-- [ ] 5.6 draft PR で 7 job が起動・成功すること、消費者検証 3 job の所要時間、job summary に解決結果が出ること、消費者 job の `permissions` が read だけで secrets を受け取っていないことを確認する (→ Scenario: PR で全 job が起動する / 解決版と取得元が読める / 消費者検証は dry-run で動く)
-- [ ] 5.7 フィード準備を実行せず、5.1 で準備済みの参照先パスだけを渡して消費者ビルドを実行し、準備段が再実行されずに同じ結果になることを手元で確認する。CI の `artifact` 入力は、draft PR 上で一時的な呼び出し (upload → `artifact` 指定で download) を 1 回通して確認する (→ Scenario: 外部で準備した配布物を消費者に渡す / artifact を与えた呼び出し)
+- [x] 5.6 draft PR で 7 job が起動・成功すること、消費者検証 3 job の所要時間、job summary に解決結果が出ること、消費者 job の `permissions` が read だけで secrets を受け取っていないことを確認する (→ Scenario: PR で全 job が起動する / 解決版と取得元が読める / 消費者検証は dry-run で動く)
+- [x] 5.7 フィード準備を実行せず、5.1 で準備済みの参照先パスだけを渡して消費者ビルドを実行し、準備段が再実行されずに同じ結果になることを手元で確認する。CI の `artifact` 入力は、draft PR 上で一時的な呼び出し (upload → `artifact` 指定で download) を 1 回通して確認する (→ Scenario: 外部で準備した配布物を消費者に渡す / artifact を与えた呼び出し)
 
 ## 6. branch protection (GitHub 設定操作)
 
-- [ ] 6.1 `develop` の必須 status check に `consumer-ios / verify` / `consumer-android / verify` / `consumer-maui / verify` を追加する (`gh api -X PUT` は全体置換のため既存 4 job を含む完全な payload を送る。実例は phase-3 の evidence)。設定後に再取得して 7 job を確認する。`main` は未作成のため phase-8 の申し送りどおり作成時に設定する (→ Requirement: マージ保護)
+- [x] 6.1 `develop` の必須 status check に `consumer-ios / verify` / `consumer-android / verify` / `consumer-maui / verify` を追加する (`gh api -X PUT` は全体置換のため既存 4 job を含む完全な payload を送る。実例は phase-3 の evidence)。設定後に再取得して 7 job を確認する。`main` は未作成のため phase-8 の申し送りどおり作成時に設定する (→ Requirement: マージ保護)
 
 ## 備考
 
