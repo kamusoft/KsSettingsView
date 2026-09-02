@@ -9,14 +9,21 @@
   -->
   <PropertyGroup>
     <TargetFramework>net10.0-ios</TargetFramework>
-    <!-- Bridge が依存する KsSettingsViewUI は UIHostingConfiguration を使うため iOS 16 以上が必要 -->
-    <SupportedOSPlatformVersion>16.0</SupportedOSPlatformVersion>
+    <!-- Bridge が依存する KsSettingsViewUI は UIHostingConfiguration を使うため iOS 16 以上が必要
+         (要件の数値は buildTransitive の props が宣言元) -->
+    <SupportedOSPlatformVersion>$(KsSettingsViewMinIOSVersion)</SupportedOSPlatformVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>true</ImplicitUsings>
     <IsBindingProject>true</IsBindingProject>
     <IsTrimmable>true</IsTrimmable>
     <RootNamespace>KsSettingsView.Bridge</RootNamespace>
     <AssemblyName>KsSettingsView.Binding.iOS</AssemblyName>
+  </PropertyGroup>
+
+  <!-- PackageId はアセンブリ名の既定に任せる -->
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <Description>iOS native bridge binding for KsSettingsView.Maui. Referenced transitively by KsSettingsView.Maui; do not reference this package directly.</Description>
   </PropertyGroup>
 
   <ItemGroup>

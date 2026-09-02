@@ -1,0 +1,31 @@
+<Project>
+
+  <!--
+    利用者アプリのビルドで、最低 OS 版の要件 (KsSettingsView.Maui.props の定数) を検査する。
+
+    有効になるのは android / ios の platform inner build だけに限る。この資産は推移的な全消費者へ
+    import されるため、素の net10.0、複数 TFM プロジェクトの outer build (TargetFramework が空)、
+    KsSettingsView を間接参照するライブラリの非 platform TFM では何もしてはいけない。
+
+    Android の manifest merger は要件未満を読み取りにくいエラーで報告するため、それより前に
+    出るよう CoreCompile の前で走らせる。
+    比較は文字列比較や数値演算子ではなく VersionLessThan で行う (iOS の "16.0" のような
+    ドット区切りと Android の API level の双方を同じ形で扱うため)。
+  -->
+  <Target Name="KsSettingsViewValidateSupportedOSPlatformVersion"
+      BeforeTargets="CoreCompile"
+      Condition=" '$(TargetFramework)' != '' and ('$(TargetPlatformIdentifier)' == 'android' or '$(TargetPlatformIdentifier)' == 'ios') ">
+
+    <PropertyGroup>
+      <_KsSettingsViewRequiredOSVersion Condition=" '$(TargetPlatformIdentifier)' == 'android' ">$(KsSettingsViewMinAndroidApi)</_KsSettingsViewRequiredOSVersion>
+      <_KsSettingsViewRequiredOSVersion Condition=" '$(TargetPlatformIdentifier)' == 'ios' ">$(KsSettingsViewMinIOSVersion)</_KsSettingsViewRequiredOSVersion>
+      <_KsSettingsViewOSVersionUnsatisfied Condition=" '$(SupportedOSPlatformVersion)' == '' ">true</_KsSettingsViewOSVersionUnsatisfied>
+      <_KsSettingsViewOSVersionUnsatisfied Condition=" '$(SupportedOSPlatformVersion)' != '' and $([MSBuild]::VersionLessThan('$(SupportedOSPlatformVersion)', '$(_KsSettingsViewRequiredOSVersion)')) ">true</_KsSettingsViewOSVersionUnsatisfied>
+    </PropertyGroup>
+
+    <Error Condition=" '$(_KsSettingsViewOSVersionUnsatisfied)' == 'true' "
+        Code="KSSV0001"
+        Text="KsSettingsView requires SupportedOSPlatformVersion $(_KsSettingsViewRequiredOSVersion) or later for $(TargetFramework) (minimum supported: Android API $(KsSettingsViewMinAndroidApi), iOS $(KsSettingsViewMinIOSVersion)), but the current value is '$(SupportedOSPlatformVersion)'. Add &lt;SupportedOSPlatformVersion&gt;$(_KsSettingsViewRequiredOSVersion)&lt;/SupportedOSPlatformVersion&gt; to a PropertyGroup for this target framework in your project file." />
+  </Target>
+
+</Project>

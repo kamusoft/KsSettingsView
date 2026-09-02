@@ -2,7 +2,7 @@
 
 # KsSettingsView
 
-[English](README.md)
+[English](https://github.com/kamusoft/KsSettingsView/blob/develop/README.md)
 
 ## 概要と主な特徴
 
@@ -20,8 +20,8 @@ KsSettingsViewは、iOS、Android、.NET MAUIでリスト形式の設定画面�
 
 | Modern | Classic |
 | --- | --- |
-| **iOS — Modern**<br>![iOS Modernスタイル](assets/ios-modern.png) | **iOS — Classic**<br>![iOS Classicスタイル](assets/ios-classic.png) |
-| **Android — Modern**<br>![Android Modernスタイル](assets/android-modern.png) | **Android — Classic**<br>![Android Classicスタイル](assets/android-classic.png) |
+| **iOS — Modern**<br>![iOS Modernスタイル](https://raw.githubusercontent.com/kamusoft/KsSettingsView/develop/assets/ios-modern.png) | **iOS — Classic**<br>![iOS Classicスタイル](https://raw.githubusercontent.com/kamusoft/KsSettingsView/develop/assets/ios-classic.png) |
+| **Android — Modern**<br>![Android Modernスタイル](https://raw.githubusercontent.com/kamusoft/KsSettingsView/develop/assets/android-modern.png) | **Android — Classic**<br>![Android Classicスタイル](https://raw.githubusercontent.com/kamusoft/KsSettingsView/develop/assets/android-classic.png) |
 
 .NET MAUIはNative実装をラップするため、上記と同じ画面を描画します。
 
@@ -35,7 +35,7 @@ KsSettingsViewは、iOS、Android、.NET MAUIでリスト形式の設定画面�
 
 ## インストール
 
-詳しい導入方法はplatform別の[Agent Skills](skills/README_ja.md)を参照してください。この節には依存宣言とprerelease版の指定方法だけを示します。
+詳しい導入方法はplatform別の[Agent Skills](https://github.com/kamusoft/KsSettingsView/blob/develop/skills/README_ja.md)を参照してください。この節には依存宣言とprerelease版の指定方法だけを示します。
 
 ### iOS — Swift Package Manager
 
@@ -123,7 +123,7 @@ fun SettingsScreen() {
 ```xml
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:ks="clr-namespace:KsSettingsView.Maui;assembly=KsSettingsView.Maui"
+             xmlns:ks="clr-namespace:KsSettingsView;assembly=KsSettingsView.Maui"
              x:Class="MyApp.SettingsPage">
   <ks:SettingsView>
     <ks:Section HeaderText="General">
@@ -134,11 +134,34 @@ fun SettingsScreen() {
 </ContentPage>
 ```
 
-利用前に `MauiProgram` で `.AddKsSettingsView()` を一度呼んでハンドラを登録します。手順は [.NET MAUI Skill](skills/ja/kssettingsview-maui/SKILL.md) を参照してください。
+利用前に `MauiProgram` でハンドラを一度登録します。
+
+```csharp
+using KsSettingsView;
+using Microsoft.Maui.Hosting;
+
+namespace MyApp;
+
+public static class MauiProgram
+{
+    public static MauiApp CreateMauiApp()
+    {
+        MauiAppBuilder builder = MauiApp.CreateBuilder();
+
+        builder
+            .UseMauiApp<App>()
+            .AddKsSettingsView();
+
+        return builder.Build();
+    }
+}
+```
+
+手順は [.NET MAUI Skill](https://github.com/kamusoft/KsSettingsView/blob/develop/skills/ja/kssettingsview-maui/SKILL.md) を参照してください。
 
 ## Skills
 
-[iOS](skills/ja/kssettingsview-ios/SKILL.md)、[Android](skills/ja/kssettingsview-android/SKILL.md)、[.NET MAUI](skills/ja/kssettingsview-maui/SKILL.md)、[AiForms.Maui.SettingsViewからの移行](skills/ja/kssettingsview-aiforms-migration/SKILL.md)について、Agent Skillsが用途別の案内とAPIレシピを提供します。英語版・日本語版の一覧は[Skills索引](skills/README_ja.md)を参照してください。
+[iOS](https://github.com/kamusoft/KsSettingsView/blob/develop/skills/ja/kssettingsview-ios/SKILL.md)、[Android](https://github.com/kamusoft/KsSettingsView/blob/develop/skills/ja/kssettingsview-android/SKILL.md)、[.NET MAUI](https://github.com/kamusoft/KsSettingsView/blob/develop/skills/ja/kssettingsview-maui/SKILL.md)、[AiForms.Maui.SettingsViewからの移行](https://github.com/kamusoft/KsSettingsView/blob/develop/skills/ja/kssettingsview-aiforms-migration/SKILL.md)について、Agent Skillsが用途別の案内とAPIレシピを提供します。英語版・日本語版の一覧は[Skills索引](https://github.com/kamusoft/KsSettingsView/blob/develop/skills/README_ja.md)を参照してください。
 
 ## リポジトリ構成
 
@@ -153,17 +176,17 @@ fun SettingsScreen() {
 | `kasane/` | Kasaneの変更成果物、決定、concepts |
 | `openspec/` | 旧運用 (OpenSpec) の歴史資料。凍結済みで現行の仕様ではありません |
 
-[エージェント向け開発規約](AGENTS.md) · [Kasane concepts](kasane/concepts/index.md)
+[エージェント向け開発規約](https://github.com/kamusoft/KsSettingsView/blob/develop/AGENTS.md) · [Kasane concepts](https://github.com/kamusoft/KsSettingsView/blob/develop/kasane/concepts/index.md)
 
 ## 貢献
 
 外部からのPull Requestは受け付けていません。不具合報告と改善提案はGitHub Issuesで受け付けます。
 レビューに必要な情報が揃うよう、用意されたIssueテンプレートを使用してください。
-Issueを投稿する前に[貢献ガイドライン](.github/CONTRIBUTING_ja.md)を確認してください。
+Issueを投稿する前に[貢献ガイドライン](https://github.com/kamusoft/KsSettingsView/blob/develop/.github/CONTRIBUTING_ja.md)を確認してください。
 
 ## ライセンス
 
-KsSettingsViewは[MIT License](LICENSE)で提供されます。
+KsSettingsViewは[MIT License](https://github.com/kamusoft/KsSettingsView/blob/develop/LICENSE)で提供されます。
 
 ### サードパーティ通知
 

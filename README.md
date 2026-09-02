@@ -2,7 +2,7 @@
 
 # KsSettingsView
 
-[日本語](README_ja.md)
+[日本語](https://github.com/kamusoft/KsSettingsView/blob/develop/README_ja.md)
 
 ## Overview and key features
 
@@ -20,8 +20,8 @@ The public API may introduce breaking changes while the project remains on `0.x`
 
 | Modern | Classic |
 | --- | --- |
-| **iOS — Modern**<br>![iOS Modern style](assets/ios-modern.png) | **iOS — Classic**<br>![iOS Classic style](assets/ios-classic.png) |
-| **Android — Modern**<br>![Android Modern style](assets/android-modern.png) | **Android — Classic**<br>![Android Classic style](assets/android-classic.png) |
+| **iOS — Modern**<br>![iOS Modern style](https://raw.githubusercontent.com/kamusoft/KsSettingsView/develop/assets/ios-modern.png) | **iOS — Classic**<br>![iOS Classic style](https://raw.githubusercontent.com/kamusoft/KsSettingsView/develop/assets/ios-classic.png) |
+| **Android — Modern**<br>![Android Modern style](https://raw.githubusercontent.com/kamusoft/KsSettingsView/develop/assets/android-modern.png) | **Android — Classic**<br>![Android Classic style](https://raw.githubusercontent.com/kamusoft/KsSettingsView/develop/assets/android-classic.png) |
 
 .NET MAUI wraps the Native implementations, so it renders the same screens shown above.
 
@@ -35,7 +35,7 @@ The public API may introduce breaking changes while the project remains on `0.x`
 
 ## Installation
 
-The platform [Agent Skills](skills/README.md) contain the detailed setup guidance. This section contains only dependency declarations and prerelease version selection.
+The platform [Agent Skills](https://github.com/kamusoft/KsSettingsView/blob/develop/skills/README.md) contain the detailed setup guidance. This section contains only dependency declarations and prerelease version selection.
 
 ### iOS — Swift Package Manager
 
@@ -123,7 +123,7 @@ fun SettingsScreen() {
 ```xml
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:ks="clr-namespace:KsSettingsView.Maui;assembly=KsSettingsView.Maui"
+             xmlns:ks="clr-namespace:KsSettingsView;assembly=KsSettingsView.Maui"
              x:Class="MyApp.SettingsPage">
   <ks:SettingsView>
     <ks:Section HeaderText="General">
@@ -134,11 +134,34 @@ fun SettingsScreen() {
 </ContentPage>
 ```
 
-Register the handler once in `MauiProgram` with `.AddKsSettingsView()` before use. See the [.NET MAUI Skill](skills/en/kssettingsview-maui/SKILL.md) for the setup.
+Register the handler once in `MauiProgram` before use.
+
+```csharp
+using KsSettingsView;
+using Microsoft.Maui.Hosting;
+
+namespace MyApp;
+
+public static class MauiProgram
+{
+    public static MauiApp CreateMauiApp()
+    {
+        MauiAppBuilder builder = MauiApp.CreateBuilder();
+
+        builder
+            .UseMauiApp<App>()
+            .AddKsSettingsView();
+
+        return builder.Build();
+    }
+}
+```
+
+See the [.NET MAUI Skill](https://github.com/kamusoft/KsSettingsView/blob/develop/skills/en/kssettingsview-maui/SKILL.md) for the setup.
 
 ## Skills
 
-Agent Skills provide task-oriented guidance and API recipes for [iOS](skills/en/kssettingsview-ios/SKILL.md), [Android](skills/en/kssettingsview-android/SKILL.md), [.NET MAUI](skills/en/kssettingsview-maui/SKILL.md), and [migration from AiForms.Maui.SettingsView](skills/en/kssettingsview-aiforms-migration/SKILL.md). See the [Skills index](skills/README.md) for English and Japanese editions.
+Agent Skills provide task-oriented guidance and API recipes for [iOS](https://github.com/kamusoft/KsSettingsView/blob/develop/skills/en/kssettingsview-ios/SKILL.md), [Android](https://github.com/kamusoft/KsSettingsView/blob/develop/skills/en/kssettingsview-android/SKILL.md), [.NET MAUI](https://github.com/kamusoft/KsSettingsView/blob/develop/skills/en/kssettingsview-maui/SKILL.md), and [migration from AiForms.Maui.SettingsView](https://github.com/kamusoft/KsSettingsView/blob/develop/skills/en/kssettingsview-aiforms-migration/SKILL.md). See the [Skills index](https://github.com/kamusoft/KsSettingsView/blob/develop/skills/README.md) for English and Japanese editions.
 
 ## Repository structure
 
@@ -153,17 +176,17 @@ Agent Skills provide task-oriented guidance and API recipes for [iOS](skills/en/
 | `kasane/` | Kasane change artifacts, decisions, and concepts |
 | `openspec/` | Frozen historical artifacts from the previous OpenSpec workflow; not the current specification |
 
-[Agent development rules](AGENTS.md) · [Kasane concepts](kasane/concepts/index.md)
+[Agent development rules](https://github.com/kamusoft/KsSettingsView/blob/develop/AGENTS.md) · [Kasane concepts](https://github.com/kamusoft/KsSettingsView/blob/develop/kasane/concepts/index.md)
 
 ## Contributing
 
 We do not accept external pull requests. Please report bugs and propose improvements through GitHub Issues.
 Use the provided Issue template so the report contains the information needed for review.
-See the [contribution guidelines](.github/CONTRIBUTING.md) before submitting an Issue.
+See the [contribution guidelines](https://github.com/kamusoft/KsSettingsView/blob/develop/.github/CONTRIBUTING.md) before submitting an Issue.
 
 ## License
 
-KsSettingsView is available under the [MIT License](LICENSE).
+KsSettingsView is available under the [MIT License](https://github.com/kamusoft/KsSettingsView/blob/develop/LICENSE).
 
 ### Third-party notices
 

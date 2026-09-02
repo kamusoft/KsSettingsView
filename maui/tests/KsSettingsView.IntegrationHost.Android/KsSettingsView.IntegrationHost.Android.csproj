@@ -10,7 +10,7 @@
     <OutputType>Exe</OutputType>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <SupportedOSPlatformVersion>29</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion>$(KsSettingsViewMinAndroidApi)</SupportedOSPlatformVersion>
     <RootNamespace>KsSettingsView.IntegrationHost</RootNamespace>
     <AssemblyName>KsSettingsView.IntegrationHost.Android</AssemblyName>
     <ApplicationId>jp.kamusoft.kssettingsview.integrationhost.android</ApplicationId>

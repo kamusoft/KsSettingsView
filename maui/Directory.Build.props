@@ -1,0 +1,40 @@
+<Project>
+
+  <!--
+    maui/ ビルドルート配下の全プロジェクトに効く共通設定。
+    samples/maui は別のビルドルートであり、この props の対象ではない (cross/ADR-0001)。
+  -->
+
+  <!--
+    最低 OS 版の要件は、facade パッケージに同梱する buildTransitive の props が単一の宣言元。
+    リポジトリ内の SupportedOSPlatformVersion もここから供給される定数を参照する。
+  -->
+  <Import Project="$(MSBuildThisFileDirectory)KsSettingsView.Maui/buildTransitive/KsSettingsView.Maui.props" />
+
+  <PropertyGroup>
+    <Authors>kamusoft</Authors>
+    <Company>kamusoft LLC</Company>
+    <Copyright>Copyright (c) kamusoft</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/kamusoft/KsSettingsView</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/kamusoft/KsSettingsView</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageIcon>icon.png</PackageIcon>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- 発行版は CI が -p:Version= で上書きする (cross/ADR-0020)。ローカル pack はこの既定値になる -->
+    <Version>0.0.0-dev</Version>
+    <!-- pack は opt-in。テストプロジェクトと検証ホストが nupkg を作らないよう既定を false に倒す -->
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- SourceLink は .NET SDK 同梱のため追加パッケージは要らない -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,17 @@
+<Project>
+
+  <!--
+    最低 OS 版の検査は、利用者へ配るものと同じ資産をリポジトリ内のビルドにも当てる。
+    facade / binding / 検証ホストが要件を割った設定になっていれば自分たちのビルドで気づける。
+  -->
+  <Import Project="$(MSBuildThisFileDirectory)KsSettingsView.Maui/buildTransitive/KsSettingsView.Maui.targets" />
+
+  <!--
+    パッケージアイコン。IsPackable はプロジェクト本体で設定されるため、
+    その評価が済んだ後に読まれる targets 側で pack 対象だけに同梱する。
+  -->
+  <ItemGroup Condition=" '$(IsPackable)' == 'true' ">
+    <None Include="$(MSBuildThisFileDirectory)../assets/icon.png" Pack="true" PackagePath="" Visible="false" />
+  </ItemGroup>
+
+</Project>

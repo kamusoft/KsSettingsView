@@ -45,3 +45,21 @@ iOS Simulator (iPhone 17 Pro, udid=<uuid>) / Android Emulator (serial=<android-s
 
 再訪問後の最終状態は evidence/mauihost-ios-revisit-restored.png と
 evidence/mauihost-android-revisit-restored.png に残す。
+
+## IntegrationHost をビルド成功までで判定した根拠
+handbook maui/integration-host-verification.md の完了条件は固定シナリオの表示確認を含むが、
+IntegrationHost.Android / IntegrationHost.iOS についてはビルド成功までを確認し、
+起動と表示確認は MauiHost (上表、両 OS) で代表させた。判定根拠は次の 3 点:
+
+1. IntegrationHost が直接使う binding 層の名前空間 KsSettingsView.Bridge は改名対象外である。
+   本変更で binding 2 プロジェクトに入った差分は csproj だけ (CPM への版移動と pack メタデータ) で、
+   maui/macios/KsSettingsView.Binding.iOS/ApiDefinition.cs (namespace KsSettingsView.Bridge) と
+   maui/android/KsSettingsView.Binding.Android/Transforms/Metadata.xml は無変更。
+2. 版集約の前後で対象 7 プロジェクトの解決パッケージが完全一致することを確認済み
+   (evidence/cpm-restore-invariance.txt)。binding が引き込む AndroidX / Kotlin / Compose の
+   実体は変わっていない。
+3. 本変更で新たに加えた pack 設定と buildTransitive のガードは、いずれもビルド時にのみ働き、
+   実行時に通るコード経路を持たない。
+
+以上より binding 層の実行時挙動が変わる経路が無く、facade を通る end-to-end 疎通は
+MauiHost の固定シナリオで足りると判断した。

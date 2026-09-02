@@ -19,16 +19,36 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
-  <PropertyGroup Condition=" $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios' ">
-    <SupportedOSPlatformVersion>16.0</SupportedOSPlatformVersion>
-  </PropertyGroup>
-
-  <PropertyGroup Condition=" $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android' ">
-    <SupportedOSPlatformVersion>29</SupportedOSPlatformVersion>
+  <!--
+    NuGet パッケージとしての公開面。Package ID はアセンブリ名と同じ KsSettingsView.Maui で、
+    名前空間 KsSettingsView とは非対称になる (maui/ADR-0025)。
+  -->
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>KsSettingsView.Maui</PackageId>
+    <Description>A settings screen UI library for .NET MAUI, providing list-style settings screens with built-in cell types on iOS and Android. Successor to AiForms.Maui.SettingsView.</Description>
+    <PackageTags>maui settings settingsview ios android</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Maui.Controls" Version="10.0.70" />
+    <!-- package README はこのパッケージ固有のため、共通の props ではなくここで同梱する -->
+    <None Include="../../README.md" Pack="true" PackagePath="" Visible="false" />
+    <!-- 最低 OS 版の検査を利用者のビルドへ届ける。定数の props と検査の targets を対で同梱する -->
+    <None Include="buildTransitive/KsSettingsView.Maui.props" Pack="true" PackagePath="buildTransitive/" />
+    <None Include="buildTransitive/KsSettingsView.Maui.targets" Pack="true" PackagePath="buildTransitive/" />
+  </ItemGroup>
+
+  <PropertyGroup Condition=" $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios' ">
+    <SupportedOSPlatformVersion>$(KsSettingsViewMinIOSVersion)</SupportedOSPlatformVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android' ">
+    <SupportedOSPlatformVersion>$(KsSettingsViewMinAndroidApi)</SupportedOSPlatformVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Maui.Controls" />
   </ItemGroup>
 
   <!--

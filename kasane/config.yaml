@@ -86,7 +86,7 @@ lint:
     file-chars: 10000                 # 1 ファイルの散文字数の警告閾値
   comment-policy:                     # ソースコメント規約の lint / hook (この節の存在が採用宣言)
     exclude: [openspec, docs]         # 凍結資料とドキュメント置き場は対象外 (kasane/ .claude/ build/ .git/ は常に対象外)
-    ext: []                           # 検査対象に追加する拡張子 (既定は scripts/comment-policy-lint.py 冒頭の列挙)
+    ext: [.csproj, .props, .targets]  # 検査対象に追加する拡張子 (既定は scripts/comment-policy-lint.py 冒頭の列挙)
 
 drift:
   timestamp-threshold-days: 90

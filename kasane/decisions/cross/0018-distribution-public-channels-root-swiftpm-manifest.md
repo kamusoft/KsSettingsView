@@ -30,6 +30,11 @@ SwiftPM の git 配布はリポジトリルート直下の Package.swift しか�
 cross/ADR-0002 の `jp.kamusoft` のままで、artifactId が `ks-settingsview-*` の 3 本から
 `kssettingsview` 1 本に変わった。interop Bridge は Maven に公開しない。
 
+(2026-09-02 追記) 表の .NET MAUI の NuGet.org へ出す座標は、facade の
+`KsSettingsView.Maui` と binding 2 件の `KsSettingsView.Binding.iOS` /
+`KsSettingsView.Binding.Android` の 3 件である (maui/ADR-0025)。利用者が書くのは facade の
+1 件だけで、binding は platform TFM の依存として推移的に届く。
+
 GitHub Packages 等の private / 認証付きフィードは提供しない。SwiftPM が git を直接解決する都合上、リポジトリは public に切り替える (切り替えのタイミングは配信 CI の整備と合わせて決める)。
 
 Android の artifact 粒度 (module 間依存の公開スコープ、bridge module の公開可否) と MAUI のパッケージ分割は本 ADR の対象外とし、それぞれ別の決定で扱う。
@@ -80,3 +85,4 @@ cross/ADR-0001 (リポジトリルートに共通ビルドファイルを置か�
 出典 (2026-08-29 配信リポジトリ名の確定): kasane/roadmaps/package-distribution/phases/phase-9-docs/history.md (2026-08-29「SwiftPM 配信リポジトリの名前」)
 出典 (2026-09-01 実装結果の追記と accepted 昇格): kasane/changes/archive/2026-09-01-add-spm-distribution/deviation.md / 同 review-001.md
 出典 (2026-09-01 Android 座標の統合の追記): kasane/decisions/android/0016-single-module-single-maven-artifact.md / kasane/roadmaps/package-distribution/phases/phase-5-android-packaging/history.md
+出典 (2026-09-02 MAUI の Package ID の追記): kasane/decisions/maui/0025-nuget-three-package-root-namespace.md / kasane/roadmaps/package-distribution/phases/phase-6-maui-packaging/history.md

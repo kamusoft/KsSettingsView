@@ -1,0 +1,63 @@
+# 3 パッケージの Release pack と内容検査 (2026-09-02)
+
+コマンド (binding 2 件 → facade の順に 2 回):
+  dotnet pack <proj> -c Release -o <out>
+  dotnet pack <proj> -c Release -p:Version=0.1.0-alpha.1 -o <out>
+
+## 生成物
+
+Version 未指定:
+  KsSettingsView.Binding.iOS.0.0.0-dev.nupkg / .snupkg
+  KsSettingsView.Binding.Android.0.0.0-dev.nupkg / .snupkg
+  KsSettingsView.Maui.0.0.0-dev.nupkg / .snupkg
+-p:Version=0.1.0-alpha.1:
+  同 3 パッケージが 0.1.0-alpha.1 で生成 (.snupkg も同時)
+
+3 パッケージとも nuspec に authors=kamusoft / license expression=MIT /
+projectUrl=https://github.com/kamusoft/KsSettingsView / repository (type=git, url 同左) /
+icon=icon.png / copyright=Copyright (c) kamusoft を含む。
+readme=README.md は facade の nuspec にのみ存在する。
+
+## facade (KsSettingsView.Maui) の nuspec 依存
+
+  net10.0              : Microsoft.Maui.Controls 10.0.70
+  net10.0-android36.0  : KsSettingsView.Binding.Android 0.1.0-alpha.1 + Microsoft.Maui.Controls 10.0.70
+  net10.0-ios26.0      : KsSettingsView.Binding.iOS 0.1.0-alpha.1 + Microsoft.Maui.Controls 10.0.70
+
+## facade の同梱物 (全 12 エントリ)
+
+  KsSettingsView.Maui.nuspec
+  README.md
+  icon.png
+  buildTransitive/KsSettingsView.Maui.props
+  buildTransitive/KsSettingsView.Maui.targets
+  lib/net10.0/KsSettingsView.Maui.dll + .xml
+  lib/net10.0-ios26.0/KsSettingsView.Maui.dll + .xml
+  lib/net10.0-android36.0/KsSettingsView.Maui.dll + .xml + KsSettingsView.Maui.aar
+
+binding の dll・xcframework・Bridge / 本体の aar (kssettingsview*.aar) はいずれも含まれない。
+lib/net10.0-android36.0/KsSettingsView.Maui.aar は .NET Android SDK が
+Android ライブラリ assembly に対して常に生成する自 assembly 用 aar で、中身は
+推移依存 androidx.graphics.path の 4 ABI 分の .so のみ (17 KB)。
+pack 設定を入れる前の状態で pack しても同じく生成されるため、本変更で増えたものではない。
+
+## Android binding (KsSettingsView.Binding.Android)
+
+  lib/net10.0-android36.0/ : KsSettingsView.Binding.Android.dll + .xml + .aar (SDK 生成)
+                             kssettingsview-release.aar
+                             kssettingsview-bridge-release.aar
+  nuspec dependencies (net10.0-android36.0) : AndroidX / Kotlin / Material / Compose 系 14 本
+    Xamarin.AndroidX.Lifecycle.LiveData 2.11.0.1 を含む
+  description に "do not reference this package directly" を含む
+
+## iOS binding (KsSettingsView.Binding.iOS)
+
+  lib/net10.0-ios26.0/ : KsSettingsView.Binding.iOS.dll
+                         KsSettingsView.Binding.iOS.resources.zip
+  resources.zip 内 KsSettingsViewBridgeiOS.xcframework のスライス:
+    ios-arm64
+    ios-arm64_x86_64-simulator
+  nuspec dependencies は空 group
+  description に "do not reference this package directly" を含む
+
+pack ログの全文は手元保管。
