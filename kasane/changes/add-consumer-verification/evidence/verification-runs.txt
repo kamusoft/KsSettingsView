@@ -404,3 +404,28 @@ $ ./verification/android/build-consumer.sh                                      
 $ bash -n verification/android/prepare-feed.sh verification/lib/verification-args.sh   OK
 $ python3 scripts/identity-lint.py / local-path-lint.py                          exit 0
 $ python3 -c '<${user.home}/custom/repo を補間>'  →  <HOME>/custom/repo
+
+================================================================
+15. tasks 5.7 (CI 側): artifact 入力を与えた呼び出し
+================================================================
+draft PR (#2) のブランチに一時 workflow (tmp-consumer-artifact-check.yml、確認後に削除) を載せ、
+prepare job で Android のフィード準備 → mavenLocal の jp/ 配下を artifact `consumer-android-feed`
+として upload → verify-consumer-android.yml を mode=dry-run + artifact 指定で呼んだ。
+run: https://github.com/kamusoft/KsSettingsView/actions/runs/33632320326
+
+  prepare                    success  (12:51:50 -> 12:54:00)
+  consumer-android / verify  success  (12:54:02 -> 12:56:56)
+
+consumer-android / verify の step 列:
+  Validate inputs / Checkout / Setup JDK / Cache Gradle dependencies / Show toolchain /
+  Download prepared distribution / Verify consumer   — すべて success
+ログ抜粋:
+  Downloading single artifact
+  Total of 1 artifact(s) downloaded
+  args+=(--reference "${RUNNER_TEMP}/reference")
+  BUILD SUCCESSFUL in 2m 41s
+  +--- jp.kamusoft:kssettingsview:0.1.0-SNAPSHOT
+ログに publishToMavenLocal / prepare-feed の実行は無く、フィード準備は再実行されていない。
+
+備考: workflow_dispatch は既定ブランチにファイルが無いと起動できないため、一時 workflow は
+確認用ブランチへの push をトリガーにした。
