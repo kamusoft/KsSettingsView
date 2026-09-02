@@ -4,8 +4,11 @@
 # 消費者検証 workflow を artifact 入力つきで呼んでフィード準備が再実行されないことを確認する。
 name: tmp consumer artifact check
 
+# workflow_dispatch は既定ブランチにファイルが無いと起動できないため、確認用ブランチへの push で起動する。
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - feat/add-consumer-verification
 
 permissions:
   contents: read
