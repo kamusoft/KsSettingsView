@@ -1,6 +1,6 @@
 using NUnit.Framework;
 
-namespace KsSettingsView.Maui.Tests.Fakes;
+namespace KsSettingsView.Tests.Fakes;
 
 /// <summary>テスト用 dispatcher がバッチ境界を作れることを確認する。</summary>
 [TestFixture]

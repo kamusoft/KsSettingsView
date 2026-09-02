@@ -14,7 +14,7 @@
     <UseMaui>true</UseMaui>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <RootNamespace>KsSettingsView.Maui</RootNamespace>
+    <RootNamespace>KsSettingsView</RootNamespace>
     <AssemblyName>KsSettingsView.Maui</AssemblyName>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>

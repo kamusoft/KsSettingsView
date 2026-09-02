@@ -1,8 +1,8 @@
 using System.Collections.Generic;
-using KsSettingsView.Maui.Internals;
+using KsSettingsView.Internals;
 using NUnit.Framework;
 
-namespace KsSettingsView.Maui.Tests.Fakes;
+namespace KsSettingsView.Tests.Fakes;
 
 /// <summary>
 /// テスト用 gateway が Bridge 側の ID 採番と no-op 契約を再現していることを確認する。

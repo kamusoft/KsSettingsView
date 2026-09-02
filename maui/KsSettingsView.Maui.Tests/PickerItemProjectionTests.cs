@@ -2,11 +2,11 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using KsSettingsView.Maui.Internals;
-using KsSettingsView.Maui.Tests.Support;
+using KsSettingsView.Internals;
+using KsSettingsView.Tests.Support;
 using NUnit.Framework;
 
-namespace KsSettingsView.Maui.Tests;
+namespace KsSettingsView.Tests;
 
 /// <summary>PickerCell の object 候補と DisplayMember / SubDisplayMember による表示射影を確認する。</summary>
 [TestFixture]

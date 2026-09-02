@@ -6,7 +6,7 @@ using Microsoft.Maui.Graphics;
 using Microsoft.Maui.Platform;
 using UIKit;
 
-namespace KsSettingsView.Maui.Internals;
+namespace KsSettingsView.Internals;
 
 /// <summary>
 /// accessory の View を包み、自分で計測・配置を行う platform view。

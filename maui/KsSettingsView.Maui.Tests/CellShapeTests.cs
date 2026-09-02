@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using KsSettingsView.Maui.Internals;
-using KsSettingsView.Maui.Tests.Support;
+using KsSettingsView.Internals;
+using KsSettingsView.Tests.Support;
 using Microsoft.Maui;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
 using NUnit.Framework;
 
-namespace KsSettingsView.Maui.Tests;
+namespace KsSettingsView.Tests;
 
 /// <summary>Cell 種別ごとの公開プロパティの形 (名前・型・既定値・binding mode) を確認する。</summary>
 [TestFixture]

@@ -1,7 +1,7 @@
 using System;
 using Microsoft.Maui.Dispatching;
 
-namespace KsSettingsView.Maui.Tests.Support;
+namespace KsSettingsView.Tests.Support;
 
 /// <summary>
 /// 予約された処理をその場で実行する dispatcher。

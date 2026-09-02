@@ -2,11 +2,11 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Windows.Input;
-using KsSettingsView.Maui.Internals;
+using KsSettingsView.Internals;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
 
-namespace KsSettingsView.Maui;
+namespace KsSettingsView;
 
 /// <summary>
 /// 一覧から項目を選ぶ Cell。

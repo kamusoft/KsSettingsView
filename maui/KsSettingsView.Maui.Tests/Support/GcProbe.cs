@@ -1,7 +1,7 @@
 using System;
 using NUnit.Framework;
 
-namespace KsSettingsView.Maui.Tests.Support;
+namespace KsSettingsView.Tests.Support;
 
 /// <summary>
 /// 参照が GC で回収されることを確かめる検証ヘルパ。

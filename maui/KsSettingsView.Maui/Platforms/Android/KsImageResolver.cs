@@ -5,7 +5,7 @@ using Microsoft.Maui;
 using Microsoft.Maui.Controls;
 using Drawable = Android.Graphics.Drawables.Drawable;
 
-namespace KsSettingsView.Maui.Internals;
+namespace KsSettingsView.Internals;
 
 /// <summary>
 /// Android で <see cref="ImageSource"/> を <see cref="Drawable"/> へ解決する口。

@@ -10,7 +10,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
-    <RootNamespace>KsSettingsView.Maui.Tests</RootNamespace>
+    <RootNamespace>KsSettingsView.Tests</RootNamespace>
     <AssemblyName>KsSettingsView.Maui.Tests</AssemblyName>
   </PropertyGroup>
 

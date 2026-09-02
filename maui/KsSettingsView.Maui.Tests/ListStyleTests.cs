@@ -1,9 +1,9 @@
 using System.Linq;
-using KsSettingsView.Maui.Internals;
-using KsSettingsView.Maui.Tests.Fakes;
+using KsSettingsView.Internals;
+using KsSettingsView.Tests.Fakes;
 using NUnit.Framework;
 
-namespace KsSettingsView.Maui.Tests;
+namespace KsSettingsView.Tests;
 
 /// <summary>
 /// 見た目スタイルが既定スタイルとは独立した経路で gateway へ届くことを確認する。

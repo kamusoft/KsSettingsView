@@ -1,13 +1,13 @@
 using System;
-using KsSettingsView.Maui.Handlers;
-using KsSettingsView.Maui.Internals;
-using KsSettingsView.Maui.Tests.Fakes;
+using KsSettingsView.Handlers;
+using KsSettingsView.Internals;
+using KsSettingsView.Tests.Fakes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Maui;
 using Microsoft.Maui.Hosting;
 using NUnit.Framework;
 
-namespace KsSettingsView.Maui.Tests;
+namespace KsSettingsView.Tests;
 
 /// <summary>Handler の接続・切断と登録を検証する。</summary>
 [TestFixture]

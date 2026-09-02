@@ -1,8 +1,8 @@
-using KsSettingsView.Maui.Internals;
+using KsSettingsView.Internals;
 using Microsoft.Maui.Primitives;
 using NUnit.Framework;
 
-namespace KsSettingsView.Maui.Tests;
+namespace KsSettingsView.Tests;
 
 /// <summary>
 /// 割り当て領域を満たすビューの大きさが、制約と大きさの指定だけから決まることを確認する。

@@ -8,7 +8,7 @@ using JavaBoolean = Java.Lang.Boolean;
 using JavaDouble = Java.Lang.Double;
 using JavaInteger = Java.Lang.Integer;
 
-namespace KsSettingsView.Maui.Internals;
+namespace KsSettingsView.Internals;
 
 /// <summary>
 /// Android の Native Bridge を操作する gateway。

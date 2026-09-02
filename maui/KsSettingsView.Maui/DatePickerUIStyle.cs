@@ -1,4 +1,4 @@
-namespace KsSettingsView.Maui;
+namespace KsSettingsView;
 
 /// <summary>
 /// <see cref="DatePickerCell"/> の選択面の形式 (maui/ADR-0013)。

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace KsSettingsView.Maui.Tests.Fakes;
+namespace KsSettingsView.Tests.Fakes;
 
 /// <summary>
 /// fake gateway と fake dispatcher を接続した SettingsView を扱うテスト用の足場。

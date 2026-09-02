@@ -1,8 +1,8 @@
 using System;
-using KsSettingsView.Maui.Handlers;
+using KsSettingsView.Handlers;
 using Microsoft.Maui.Hosting;
 
-namespace KsSettingsView.Maui;
+namespace KsSettingsView;
 
 /// <summary>
 /// KsSettingsView をアプリへ組み込むための <see cref="MauiAppBuilder"/> 拡張。

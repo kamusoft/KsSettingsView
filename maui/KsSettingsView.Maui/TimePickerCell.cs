@@ -1,9 +1,9 @@
 using System;
-using KsSettingsView.Maui.Internals;
+using KsSettingsView.Internals;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
 
-namespace KsSettingsView.Maui;
+namespace KsSettingsView;
 
 /// <summary>
 /// 時刻を選ぶ Cell。

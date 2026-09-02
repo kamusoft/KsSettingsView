@@ -2,7 +2,7 @@ using System;
 using Microsoft.Maui;
 using Microsoft.Maui.Controls;
 
-namespace KsSettingsView.Maui.Internals;
+namespace KsSettingsView.Internals;
 
 /// <summary>
 /// iOS で accessory の View を platform view へ実体化する口。

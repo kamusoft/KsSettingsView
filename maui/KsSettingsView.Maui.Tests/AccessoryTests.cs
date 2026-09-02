@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
-using KsSettingsView.Maui.Internals;
-using KsSettingsView.Maui.Tests.Fakes;
+using KsSettingsView.Internals;
+using KsSettingsView.Tests.Fakes;
 using NUnit.Framework;
 
-namespace KsSettingsView.Maui.Tests;
+namespace KsSettingsView.Tests;
 
 /// <summary>
 /// Root / Section の header・footer テキストが accessory の更新へ変換されることを確認する。

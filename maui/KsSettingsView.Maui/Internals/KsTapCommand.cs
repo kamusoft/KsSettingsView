@@ -1,7 +1,7 @@
 using System;
 using System.Windows.Input;
 
-namespace KsSettingsView.Maui.Internals;
+namespace KsSettingsView.Internals;
 
 /// <summary>
 /// タップで実行する Command と、その実行可否の追随をまとめて受け持つ。

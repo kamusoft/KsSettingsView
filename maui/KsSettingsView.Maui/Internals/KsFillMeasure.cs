@@ -1,7 +1,7 @@
 using System;
 using Microsoft.Maui.Primitives;
 
-namespace KsSettingsView.Maui.Internals;
+namespace KsSettingsView.Internals;
 
 /// <summary>
 /// 割り当て領域を満たすビューの大きさを、親から与えられた制約だけから決める計算。

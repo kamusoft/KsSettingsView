@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Windows.Input;
-using KsSettingsView.Maui.Internals;
-using KsSettingsView.Maui.Tests.Fakes;
+using KsSettingsView.Internals;
+using KsSettingsView.Tests.Fakes;
 using NUnit.Framework;
 
-namespace KsSettingsView.Maui.Tests;
+namespace KsSettingsView.Tests;
 
 /// <summary>タップ通知が Tapped と Command へ届き、実効有効状態に従うことを確認する。</summary>
 [TestFixture]

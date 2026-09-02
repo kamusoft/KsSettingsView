@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using KsSettingsView.Maui.Internals;
-using KsSettingsView.Maui.Tests.Fakes;
+using KsSettingsView.Internals;
+using KsSettingsView.Tests.Fakes;
 using Microsoft.Maui.Controls;
 using NUnit.Framework;
 
-namespace KsSettingsView.Maui.Tests;
+namespace KsSettingsView.Tests;
 
 /// <summary>
 /// Native で起きたユーザー操作が facade のプロパティへ書き戻され、Store へコミットされることを

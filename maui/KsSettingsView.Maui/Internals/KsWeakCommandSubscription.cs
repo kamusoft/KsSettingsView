@@ -1,7 +1,7 @@
 using System;
 using System.Windows.Input;
 
-namespace KsSettingsView.Maui.Internals;
+namespace KsSettingsView.Internals;
 
 /// <summary>
 /// Command の実行可否の変化を弱参照で観測者へ中継する購読。

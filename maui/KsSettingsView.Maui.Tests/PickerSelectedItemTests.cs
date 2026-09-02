@@ -1,10 +1,10 @@
 using System.Collections;
 using System.Collections.Generic;
-using KsSettingsView.Maui.Tests.Support;
+using KsSettingsView.Tests.Support;
 using Microsoft.Maui.Controls;
 using NUnit.Framework;
 
-namespace KsSettingsView.Maui.Tests;
+namespace KsSettingsView.Tests;
 
 /// <summary>PickerCell の SelectedItem / SelectedItems と選択位置の相互導出を確認する。</summary>
 [TestFixture]

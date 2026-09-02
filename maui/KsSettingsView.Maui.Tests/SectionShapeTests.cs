@@ -4,7 +4,7 @@ using System.Reflection;
 using Microsoft.Maui.Controls;
 using NUnit.Framework;
 
-namespace KsSettingsView.Maui.Tests;
+namespace KsSettingsView.Tests;
 
 /// <summary>Section の公開コンテナ形状と accessory テキストの公開面を確認する。</summary>
 [TestFixture]

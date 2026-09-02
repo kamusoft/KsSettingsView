@@ -2,12 +2,12 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Windows.Input;
-using KsSettingsView.Maui.Internals;
-using KsSettingsView.Maui.Tests.Fakes;
+using KsSettingsView.Internals;
+using KsSettingsView.Tests.Fakes;
 using Microsoft.Maui.Controls;
 using NUnit.Framework;
 
-namespace KsSettingsView.Maui.Tests;
+namespace KsSettingsView.Tests;
 
 /// <summary>PickerCell の選択完了 Command の公開面と通知境界を確認する。</summary>
 [TestFixture]

@@ -1,6 +1,6 @@
 using System.Collections.ObjectModel;
 
-namespace KsSettingsView.Maui;
+namespace KsSettingsView;
 
 /// <summary>
 /// <see cref="SettingsView.Root"/> の既定コレクション。Section を順に保持する observable な器。

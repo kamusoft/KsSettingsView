@@ -2,7 +2,7 @@ using System.Collections.ObjectModel;
 using Microsoft.Maui.Controls;
 using NUnit.Framework;
 
-namespace KsSettingsView.Maui.Tests;
+namespace KsSettingsView.Tests;
 
 /// <summary>XAML で直接並べた Section / Cell への BindingContext 伝播を検証する。</summary>
 [TestFixture]

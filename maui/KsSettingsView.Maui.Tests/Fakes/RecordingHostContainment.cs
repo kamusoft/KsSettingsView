@@ -1,9 +1,9 @@
 using System.Collections.Generic;
-using KsSettingsView.Maui.Handlers;
-using KsSettingsView.Maui.Internals;
+using KsSettingsView.Handlers;
+using KsSettingsView.Internals;
 using Microsoft.Maui;
 
-namespace KsSettingsView.Maui.Tests.Fakes;
+namespace KsSettingsView.Tests.Fakes;
 
 /// <summary>
 /// 親子関係の手順を記録するだけの結び付け。

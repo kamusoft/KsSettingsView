@@ -1,10 +1,10 @@
 using System;
-using KsSettingsView.Maui.Internals;
+using KsSettingsView.Internals;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Handlers;
 using UIKit;
 
-namespace KsSettingsView.Maui.Handlers;
+namespace KsSettingsView.Handlers;
 
 /// <summary>
 /// iOS の <see cref="SettingsViewHandler"/> の実体。

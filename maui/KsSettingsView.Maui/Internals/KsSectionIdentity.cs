@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace KsSettingsView.Maui.Internals;
+namespace KsSettingsView.Internals;
 
 /// <summary>
 /// gateway が採番した Section の ID と、その Section 配下の Cell の ID (配置順)。

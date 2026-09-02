@@ -1,8 +1,8 @@
-using KsSettingsView.Maui.Internals;
+using KsSettingsView.Internals;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
 
-namespace KsSettingsView.Maui;
+namespace KsSettingsView;
 
 /// <summary>
 /// 設定画面の 1 行を表す Cell の共通基底。

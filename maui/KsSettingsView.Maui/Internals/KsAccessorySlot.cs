@@ -1,4 +1,4 @@
-namespace KsSettingsView.Maui.Internals;
+namespace KsSettingsView.Internals;
 
 /// <summary>
 /// accessory を置ける 1 箇所を指す座標。

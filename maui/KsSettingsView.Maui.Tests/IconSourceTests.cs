@@ -1,11 +1,11 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using KsSettingsView.Maui.Tests.Fakes;
+using KsSettingsView.Tests.Fakes;
 using Microsoft.Maui.Controls;
 using NUnit.Framework;
 
-namespace KsSettingsView.Maui.Tests;
+namespace KsSettingsView.Tests;
 
 /// <summary>
 /// IconSource が platform の画像へ解決され、解決できた時点で内容更新として表示へ反映されることを

@@ -1,4 +1,4 @@
-namespace KsSettingsView.Maui.Internals;
+namespace KsSettingsView.Internals;
 
 /// <summary>
 /// 複数 Cell の内容をまとめて更新するときの 1 件分の指定。

@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using KsSettingsView.Maui.Internals;
+using KsSettingsView.Internals;
 using NUnit.Framework;
 
-namespace KsSettingsView.Maui.Tests;
+namespace KsSettingsView.Tests;
 
 /// <summary>
 /// ファイル指定から解決した画像を facade が後片付けしてよいか、の分類を確認する。

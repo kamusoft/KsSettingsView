@@ -1,4 +1,4 @@
-namespace KsSettingsView.Maui.Internals;
+namespace KsSettingsView.Internals;
 
 /// <summary>Command の実行可否の変化を受け取る観測者。</summary>
 internal interface IKsCommandObserver

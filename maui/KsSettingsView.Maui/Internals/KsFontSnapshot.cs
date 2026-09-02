@@ -1,4 +1,4 @@
-namespace KsSettingsView.Maui.Internals;
+namespace KsSettingsView.Internals;
 
 /// <summary>
 /// フォントの指定を interop 境界へ運ぶために写し取った値。

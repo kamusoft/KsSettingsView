@@ -1,4 +1,4 @@
-namespace KsSettingsView.Maui.Internals;
+namespace KsSettingsView.Internals;
 
 /// <summary>
 /// Cell の内容を interop 境界へ運ぶために写し取った値の共通基底。

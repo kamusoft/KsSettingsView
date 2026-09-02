@@ -1,6 +1,6 @@
 using System;
 
-namespace KsSettingsView.Maui.Internals;
+namespace KsSettingsView.Internals;
 
 /// <summary>
 /// 解決済みの platform 画像と、その画像を有効に保つ後片付けの口を一体で持つ器。

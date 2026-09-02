@@ -1,4 +1,4 @@
-using KsSettingsView.Maui;
+using KsSettingsView;
 
 namespace KsSettingsView.Sample.Maui;
 

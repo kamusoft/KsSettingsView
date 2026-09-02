@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace KsSettingsView.Maui.Internals;
+namespace KsSettingsView.Internals;
 
 /// <summary>
 /// 連続した範囲の移動を、1 件ずつの移動の並びへ分解する小道具。

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using KsSettingsView.Maui.Internals;
+using KsSettingsView.Internals;
 
-namespace KsSettingsView.Maui.Tests.Fakes;
+namespace KsSettingsView.Tests.Fakes;
 
 /// <summary>
 /// <see cref="FakeSettingsGateway"/> が記録する呼び出し 1 件。

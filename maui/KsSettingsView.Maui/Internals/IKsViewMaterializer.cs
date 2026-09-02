@@ -1,7 +1,7 @@
 using System;
 using Microsoft.Maui.Controls;
 
-namespace KsSettingsView.Maui.Internals;
+namespace KsSettingsView.Internals;
 
 /// <summary>
 /// accessory として表示する <see cref="View"/> を platform view へ実体化する口。

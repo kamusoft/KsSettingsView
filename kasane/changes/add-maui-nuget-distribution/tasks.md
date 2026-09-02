@@ -2,11 +2,11 @@
 
 ## 1. 名前空間改名 (独立コミット)
 
-- [ ] 1.1 facade の `RootNamespace` と全 namespace 宣言 (`KsSettingsView.Maui` / `.Internals` / `.Handlers`) を `KsSettingsView` 系に改め、facade 内の using を追随する。`AssemblyName` と `InternalsVisibleTo` は変えない (→ Requirement: facade の公開名前空間)
-- [ ] 1.2 テストプロジェクトの namespace 宣言 (`KsSettingsView.Maui.Tests` / `.Fakes` / `.Support`) を `KsSettingsView.Tests` 系に改め、facade への using を追随する。`AssemblyName` は変えない (→ Requirement: facade の公開名前空間)
-- [ ] 1.3 MauiHost と `samples/maui` の Sample の using と XAML xmlns を `clr-namespace:KsSettingsView;assembly=KsSettingsView.Maui` に追随する (→ Scenario: 利用側の XAML と C# からの参照)
-- [ ] 1.4 facade を 3 TFM でビルドし、`KsSettingsView.Maui.Tests` を実行して改名前と同じ件数 (実行件数を併記、handbook cross/test-execution.md) がすべて成功することを確認する。`KsSettingsView.Maui*` の宣言が残っていないことを grep で確認する (→ Scenario: 改名後の facade のビルドとテスト)
-- [ ] 1.5 MauiHost を両 OS で起動し既存の固定シナリオの成立を確認する (handbook maui/integration-host-verification.md) (→ Scenario: 利用側の XAML と C# からの参照)
+- [x] 1.1 facade の `RootNamespace` と全 namespace 宣言 (`KsSettingsView.Maui` / `.Internals` / `.Handlers`) を `KsSettingsView` 系に改め、facade 内の using を追随する。`AssemblyName` と `InternalsVisibleTo` は変えない (→ Requirement: facade の公開名前空間)
+- [x] 1.2 テストプロジェクトの namespace 宣言 (`KsSettingsView.Maui.Tests` / `.Fakes` / `.Support`) を `KsSettingsView.Tests` 系に改め、facade への using を追随する。`AssemblyName` は変えない (→ Requirement: facade の公開名前空間)
+- [x] 1.3 MauiHost と `samples/maui` の Sample の using と XAML xmlns を `clr-namespace:KsSettingsView;assembly=KsSettingsView.Maui` に追随する (→ Scenario: 利用側の XAML と C# からの参照)
+- [x] 1.4 facade を 3 TFM でビルドし、`KsSettingsView.Maui.Tests` を実行して改名前と同じ件数 (実行件数を併記、handbook cross/test-execution.md) がすべて成功することを確認する。`KsSettingsView.Maui*` の宣言が残っていないことを grep で確認する (→ Scenario: 改名後の facade のビルドとテスト)
+- [x] 1.5 MauiHost を両 OS で起動し既存の固定シナリオの成立を確認する (handbook maui/integration-host-verification.md) (→ Scenario: 利用側の XAML と C# からの参照)
 
 ## 2. 共通メタデータと版集約
 

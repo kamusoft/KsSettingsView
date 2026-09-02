@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace KsSettingsView.Maui.Internals;
+namespace KsSettingsView.Internals;
 
 /// <summary>
 /// Native で起きたユーザー操作を facade へ届ける受け口 (maui/ADR-0003)。

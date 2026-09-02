@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 
-namespace KsSettingsView.Maui.Tests.Support;
+namespace KsSettingsView.Tests.Support;
 
 /// <summary>
 /// 複数件をまとめて追加できる observable なコレクション。

@@ -1,9 +1,9 @@
 using System.Collections.Generic;
-using KsSettingsView.Maui.Internals;
-using KsSettingsView.Maui.Tests.Fakes;
+using KsSettingsView.Internals;
+using KsSettingsView.Tests.Fakes;
 using NUnit.Framework;
 
-namespace KsSettingsView.Maui.Tests;
+namespace KsSettingsView.Tests;
 
 /// <summary>
 /// Section のヘッダ高さが設定ツリーに載り、変更が Section 単位の差し替えとして届くことを確認する。

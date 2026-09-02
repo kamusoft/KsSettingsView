@@ -1,8 +1,8 @@
 using System.Collections.ObjectModel;
-using KsSettingsView.Maui.Tests.Fakes;
+using KsSettingsView.Tests.Fakes;
 using NUnit.Framework;
 
-namespace KsSettingsView.Maui.Tests;
+namespace KsSettingsView.Tests;
 
 /// <summary>
 /// コレクションから外れた Section / Cell への通知が gateway へ届かないことを確認する。

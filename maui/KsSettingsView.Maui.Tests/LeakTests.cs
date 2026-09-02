@@ -1,12 +1,12 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Runtime.CompilerServices;
-using KsSettingsView.Maui.Handlers;
-using KsSettingsView.Maui.Tests.Fakes;
-using KsSettingsView.Maui.Tests.Support;
+using KsSettingsView.Handlers;
+using KsSettingsView.Tests.Fakes;
+using KsSettingsView.Tests.Support;
 using NUnit.Framework;
 
-namespace KsSettingsView.Maui.Tests;
+namespace KsSettingsView.Tests;
 
 /// <summary>切断後の資源回収を検証する。</summary>
 [TestFixture]
