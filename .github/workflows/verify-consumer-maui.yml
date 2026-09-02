@@ -87,6 +87,12 @@ jobs:
             ls -d /Applications/Xcode_*.app || true
             exit 1
           fi
+          # ランナーイメージの Xcode_<版>.0.app はシンボリックリンクのことがある。消費者アプリの
+          # iOS ビルドは trimming 後に xcrun 経由で install_name_tool を探し、その際 xcodebuild が
+          # DEVELOPER_DIR 配下の MacOSX.sdk を絶対パスで解決する。リンク経由のパスだと
+          # 「SDK cannot be located」で exit 72 になるため、実体パスに解決してから渡す
+          # (本体の verify-maui.yml はライブラリビルドのみでこの経路を踏まない)。
+          app=$(cd "${app}" && pwd -P)
           echo "DEVELOPER_DIR=${app}/Contents/Developer" >> "$GITHUB_ENV"
 
       - name: Setup JDK
@@ -115,6 +121,7 @@ jobs:
       - name: Show toolchain
         run: |
           echo "DEVELOPER_DIR=${DEVELOPER_DIR}"
+          ls -ld /Applications/Xcode_*.app
           xcodebuild -version
           dotnet --info
           java -version
