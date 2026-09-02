@@ -58,7 +58,7 @@ workers:
   review: host  # impl を counterpart にする場合、host に残すと単独レビューもクロスモデルになる
                        # (counterpart にすると second-opinion 該当級で両レビューが相方モデルに揃い、ホスト視点が消える)
   verify: host
-  scout: counterpart
+  scout: host
   extract: host
   live: host           # UI 調整でも counterpart 可 (結果確認はユーザーの目で行うため)
 
