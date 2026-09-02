@@ -1,6 +1,6 @@
 ---
 name: kssettingsview-android
-description: Build Android settings screens with KsSettingsView - a Jetpack Compose declarative DSL or an XML View host (the KsSettingsView view), with 12 built-in cells (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker) plus CustomCell rows holding any Composable, live updates through SettingsRootStore, and Theme / CellStyle styling. Use when adding, changing, or reviewing a settings screen in a Kotlin app that depends on jp.kamusoft:kssettingsview or imports jp.kamusoft.kssettingsview.core, .ui, or .compose.
+description: Build Android settings screens with KsSettingsView - a Jetpack Compose declarative DSL or an XML View host (the KsSettingsView view), with built-in cells (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker) plus CustomCell rows holding any Composable, live updates through SettingsRootStore, and Theme / CellStyle styling. Use when adding, changing, or reviewing a settings screen in a Kotlin app that depends on jp.kamusoft:kssettingsview or imports jp.kamusoft.kssettingsview.core, .ui, or .compose.
 license: MIT
 metadata:
   language: en
@@ -37,6 +37,8 @@ dependencies {
 }
 ```
 
+The first release has not been published to Maven Central yet, so at the time of writing this coordinate does not resolve from a public repository; `0.1.0` stands for the first release version. Until it is published, the artifact can be built from the `android/` Gradle build with `./gradlew publishToMavenLocal` (it comes out as `0.1.0-SNAPSHOT`) and consumed through `mavenLocal()`. The artifact declares Compose runtime / ui / foundation-layout, kotlinx-coroutines-core, androidx.annotation and RecyclerView as `api` dependencies, so this one line is enough to compile against the public API.
+
 ### Versions
 
 These are what your own application module has to satisfy.
@@ -47,9 +49,9 @@ These are what your own application module has to satisfy.
 | compileSdk | 35 |
 | Java / Kotlin JVM target | 17 |
 | Kotlin | 2.4.10 |
-| Compose BOM | 2024.10.01 |
+| Compose BOM | 2025.11.01 |
 
-The library itself is built with Gradle 9.5.0 and Android Gradle Plugin 8.13.2. Those are its own toolchain rather than a requirement on your build.
+The library itself is built with Gradle 9.5.0 and Android Gradle Plugin 8.13.2. Those are its own toolchain rather than a requirement on your build. The Compose BOM row is what the artifact is compiled against, and the lower bound of the Compose libraries it pulls in transitively follows it.
 
 The library puts no prerequisites on the host application. It draws everything inside a context wrapped in its own bundled Material3-derived theme, so any XML theme works - a minimal theme, AppCompat, or a MAUI template default - and any activity works, `ComponentActivity` included; the time and date pickers open everywhere. Two consequences of that self-containment are worth knowing:
 

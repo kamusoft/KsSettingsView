@@ -77,7 +77,7 @@ let updated = LabelCell(id: cell.id, title: "Version", valueText: "1.1.0")
 store.replaceCell(cellID: KsCellID(cell: cell), new: updated)
 ```
 
-識別子そのものを変える場合は、削除と挿入で表す。
+新しい Cell は別の型でもよい — `LabelCell` を `SwitchCell` に差し替えるなど。行は同一性と位置を保ったまま、背後の Native cell だけが交換される。識別子そのものを変える場合は、削除と挿入で表す。
 
 ## 複数行を 1 バッチで更新する
 

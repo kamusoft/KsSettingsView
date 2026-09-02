@@ -9,7 +9,7 @@
 KsSettingsViewは、iOS、Android、.NET MAUIでリスト形式の設定画面を構築するためのクロスプラットフォームUIライブラリです。iOSとAndroidのNative実装が描画と操作モデルを担い、MAUI層は同じ画面をXAMLとC#から利用できる形で公開します。
 
 - SwiftUIとJetpack Composeの宣言的API、およびUIKitとAndroid Viewのhost
-- 12種類の組み込みCellと、アプリケーション独自の内容を置ける`CustomCell`
+- ラベル・スイッチ・テキスト入力・Pickerなどの組み込みCellと、アプリケーション独自の内容を置ける`CustomCell`
 - Storeによる構造・内容の動的更新と、編集可能なCellの双方向値反映
 - `Theme`と`CellStyle`によるカスタマイズ、およびClassicとModernのリストstyle
 - .NET MAUIから利用する場合も含めた、両platformでのNative描画
@@ -47,6 +47,8 @@ dependencies: [
 
 productは`.product(name: "KsSettingsView", package: "KsSettingsView-SPM")`として参照します。prerelease版は、そのsemantic version tagを`from: "X.Y.Z-beta.N"`で明示するか、`exact: "X.Y.Z-beta.N"`で固定します。
 
+公開状況: packageは配信リポジトリ`KsSettingsView-SPM`から配布され、各リリースはsemantic version tagとして公開されます。
+
 ### Android — Maven
 
 ```kotlin
@@ -57,6 +59,8 @@ dependencies {
 
 prerelease版は、依存宣言のversionに`X.Y.Z-alpha.N`、`X.Y.Z-beta.N`、`X.Y.Z-rc.N`のような値を指定します。
 
+公開状況: `jp.kamusoft:kssettingsview`はMaven Centralへ未公開です。上記の座標は公開予定のもので、初回リリースまでは解決できません。
+
 ### .NET MAUI — NuGet
 
 ```xml
@@ -66,6 +70,26 @@ prerelease版は、依存宣言のversionに`X.Y.Z-alpha.N`、`X.Y.Z-beta.N`、`
 ```
 
 prerelease版は、`Version`に`X.Y.Z-beta.N`のような値を指定します。versionを固定せず検索する場合は、prereleaseを含める設定を有効にします（.NET CLIでは`--prerelease`）。
+
+公開状況: `KsSettingsView.Maui`はNuGet.orgへ未公開です。上記のpackage参照は公開予定のもので、初回リリースまではrestoreできません。
+
+互換要件: Microsoft.Maui.Controls（`MauiVersion`）10.0.70以上、最低OS版はiOS 16.0 / Android API 29です。packageにはビルド時のガードが同梱されており、利用側プロジェクトの`SupportedOSPlatformVersion`がこれらの値を下回るとエラー`KSSV0001`でビルドが失敗します。次の断片はSampleアプリケーションと同じ形です。
+
+```xml
+<PropertyGroup>
+  <MauiVersion>10.0.70</MauiVersion>
+</PropertyGroup>
+
+<PropertyGroup Condition=" $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios' ">
+  <SupportedOSPlatformVersion>16.0</SupportedOSPlatformVersion>
+</PropertyGroup>
+
+<PropertyGroup Condition=" $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android' ">
+  <SupportedOSPlatformVersion>29</SupportedOSPlatformVersion>
+</PropertyGroup>
+```
+
+名前衝突: `KsSettingsView.SwitchCell`と`KsSettingsView.EntryCell`は`Microsoft.Maui.Controls`の同名型と名前が重なります。C#で`using KsSettingsView;`とMAUIの暗黙usingを併用すると、この2つの名前はあいまい参照（CS0104）になります。XAMLの`ks:` prefixでは起きません。C#では完全修飾（`KsSettingsView.SwitchCell`）またはusing alias（`using SwitchCell = KsSettingsView.SwitchCell;`）を使用してください。
 
 ## 最小コード例
 
@@ -172,6 +196,7 @@ public static class MauiProgram
 | `maui/` | .NET MAUI facadeとNative binding |
 | `samples/` | 対応platformのSampleアプリケーション |
 | `skills/` | 英語・日本語の利用者向けAgent Skills |
+| `scripts/` | リポジトリのlintスクリプトとSwiftPM snapshotツール |
 | `assets/` | ルートドキュメントで使用する画像 |
 | `kasane/` | Kasaneの変更成果物、決定、concepts |
 | `openspec/` | 旧運用 (OpenSpec) の歴史資料。凍結済みで現行の仕様ではありません |

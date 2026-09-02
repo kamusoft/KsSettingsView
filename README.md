@@ -9,7 +9,7 @@
 KsSettingsView is a cross-platform UI library for building list-style settings screens on iOS, Android, and .NET MAUI. Native iOS and Android implementations provide the rendering and interaction model, while the MAUI layer exposes the same screens through XAML and C#.
 
 - Declarative APIs for SwiftUI and Jetpack Compose, plus UIKit and Android View hosts
-- Twelve built-in cell types and `CustomCell` for application-defined content
+- Built-in cell types for labels, switches, text entry, pickers, and more, plus `CustomCell` for application-defined content
 - Live structural and content updates through a store, with two-way values on editable cells
 - `Theme` and `CellStyle` customization with Classic and Modern list styles
 - Native rendering on both platforms, including when used through .NET MAUI
@@ -47,6 +47,8 @@ dependencies: [
 
 Reference the product as `.product(name: "KsSettingsView", package: "KsSettingsView-SPM")`. To select a prerelease, use its semantic version tag explicitly with `from: "X.Y.Z-beta.N"`, or pin it with `exact: "X.Y.Z-beta.N"`.
 
+Publication status: the package is served from the `KsSettingsView-SPM` distribution repository, where each release is published as a semantic version tag.
+
 ### Android — Maven
 
 ```kotlin
@@ -57,6 +59,8 @@ dependencies {
 
 To select a prerelease, use a version such as `X.Y.Z-alpha.N`, `X.Y.Z-beta.N`, or `X.Y.Z-rc.N` in the dependency declaration.
 
+Publication status: `jp.kamusoft:kssettingsview` is not yet published to Maven Central. The coordinates above are the planned ones and cannot be resolved until the first release.
+
 ### .NET MAUI — NuGet
 
 ```xml
@@ -66,6 +70,26 @@ To select a prerelease, use a version such as `X.Y.Z-alpha.N`, `X.Y.Z-beta.N`, o
 ```
 
 To select a prerelease, set `Version` to a value such as `X.Y.Z-beta.N`. When searching without an exact version, enable prerelease results (`--prerelease` with the .NET CLI).
+
+Publication status: `KsSettingsView.Maui` is not yet published to NuGet.org. The package reference above is the planned one and cannot be restored until the first release.
+
+Compatibility requirements: Microsoft.Maui.Controls (`MauiVersion`) 10.0.70 or later, and a minimum OS version of iOS 16.0 / Android API 29. The package ships a build-time guard; if the consuming project's `SupportedOSPlatformVersion` is lower than these values, the build fails with error `KSSV0001`. The following fragment shows the same form used by the Sample application.
+
+```xml
+<PropertyGroup>
+  <MauiVersion>10.0.70</MauiVersion>
+</PropertyGroup>
+
+<PropertyGroup Condition=" $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios' ">
+  <SupportedOSPlatformVersion>16.0</SupportedOSPlatformVersion>
+</PropertyGroup>
+
+<PropertyGroup Condition=" $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android' ">
+  <SupportedOSPlatformVersion>29</SupportedOSPlatformVersion>
+</PropertyGroup>
+```
+
+Name collision: `KsSettingsView.SwitchCell` and `KsSettingsView.EntryCell` share their names with types in `Microsoft.Maui.Controls`. In C#, combining `using KsSettingsView;` with the MAUI implicit usings makes these two names ambiguous (CS0104). The XAML `ks:` prefix is not affected. Use the fully qualified name (`KsSettingsView.SwitchCell`) or a using alias (`using SwitchCell = KsSettingsView.SwitchCell;`) in C#.
 
 ## Minimal code examples
 
@@ -172,6 +196,7 @@ Agent Skills provide task-oriented guidance and API recipes for [iOS](https://gi
 | `maui/` | .NET MAUI facade and Native bindings |
 | `samples/` | Sample applications for the supported platforms |
 | `skills/` | User-facing Agent Skills in English and Japanese |
+| `scripts/` | Repository lint scripts and the SwiftPM snapshot tooling |
 | `assets/` | Images used by the root documentation |
 | `kasane/` | Kasane change artifacts, decisions, and concepts |
 | `openspec/` | Frozen historical artifacts from the previous OpenSpec workflow; not the current specification |

@@ -62,7 +62,7 @@ private void OnOpenLogTapped(object? sender, EventArgs e)
 
 ## Toggle a boolean value
 
-`SwitchCell.On` is two-way by default, so a user flipping the switch writes straight back to the bound property.
+`SwitchCell.On` is two-way by default, so a user flipping the switch writes straight back to the bound property. From C#, write the type as `KsSettingsView.SwitchCell` or through a using alias - the bare name collides with the MAUI type of the same name ([SKILL.md](../SKILL.md)).
 
 ```xml
 <ks:SwitchCell Title="Push notifications"
@@ -92,7 +92,7 @@ Rows that share a `GroupId` form one selection. Each row carries its own `Value`
 
 ## Edit text in a row
 
-`EntryCell` turns the row itself into the editor, so `ValueText` is not a separate display slot here: it is the edited string, and it is two-way by default.
+`EntryCell` turns the row itself into the editor, so `ValueText` is not a separate display slot here: it is the edited string, and it is two-way by default. From C#, write the type as `KsSettingsView.EntryCell` or through a using alias - the bare name collides with the MAUI type of the same name ([SKILL.md](../SKILL.md)).
 
 ```xml
 <ks:EntryCell Title="Name"

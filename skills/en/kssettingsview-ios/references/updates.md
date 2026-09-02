@@ -77,7 +77,7 @@ let updated = LabelCell(id: cell.id, title: "Version", valueText: "1.1.0")
 store.replaceCell(cellID: KsCellID(cell: cell), new: updated)
 ```
 
-To change the identifier itself, remove the row and insert a new one instead.
+The new cell may even be of a different type - a `LabelCell` replaced by a `SwitchCell`, say: the row keeps its identity and position, and the native cell behind it is swapped. To change the identifier itself, remove the row and insert a new one instead.
 
 ## Update several rows in one batch
 

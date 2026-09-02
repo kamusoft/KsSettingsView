@@ -51,7 +51,7 @@ Leave the row without a command and the content owns every gesture. The value co
 Derive from `CustomCell`, build the content in the constructor, and expose the parts callers set as bindable properties. In XAML it is placed like any other cell and needs no registration. Declare the namespace that holds it on the page root next to `ks` - `xmlns:local="clr-namespace:MyApp.Cells"` for a type in the same assembly as the page, or `xmlns:local="clr-namespace:MyApp.Cells;assembly=MyApp.Cells"` for one in another assembly.
 
 ```csharp
-using KsSettingsView.Maui;
+using KsSettingsView;
 using Microsoft.Maui.Controls;
 
 public class SliderCell : CustomCell

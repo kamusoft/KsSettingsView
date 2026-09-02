@@ -51,7 +51,7 @@ Command を持たせなければ、ジェスチャは内容側が受け取る。
 `CustomCell` を継承し、コンストラクタで内容を組み立て、呼び出し側が設定する部分を bindable property として公開する。XAML では他の Cell と同じように置け、登録は要らない。そのクラスがある名前空間はページのルートで `ks` と並べて宣言する — ページと同じアセンブリの型なら `xmlns:local="clr-namespace:MyApp.Cells"`、別アセンブリの型なら `xmlns:local="clr-namespace:MyApp.Cells;assembly=MyApp.Cells"`。
 
 ```csharp
-using KsSettingsView.Maui;
+using KsSettingsView;
 using Microsoft.Maui.Controls;
 
 public class SliderCell : CustomCell

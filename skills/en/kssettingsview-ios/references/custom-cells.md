@@ -224,7 +224,7 @@ An unregistered cell trips an assertion in debug builds and falls back to an emp
 
 ## Use a registry of your own
 
-A registry of your own is reachable through the UIKit host only. Automatic registration of the built-in cells applies to the shared registry and to nothing else, so a registry you inject starts empty regardless of the `autoRegister...` arguments, and you register everything the screen needs into it yourself.
+A registry of your own is reachable through the UIKit host only. Automatic registration of the built-in cells applies to the shared registry and to nothing else, so a registry you inject starts empty regardless of the `autoRegisterBasicCells` / `autoRegisterInputCells` / `autoRegisterCustomCell` arguments of the controller, and you register everything the screen needs into it yourself.
 
 `registerBasicCells()` covers `LabelCell`, `CommandCell`, `ButtonCell`, `SwitchCell`, `CheckboxCell`, `RadioCell` and `SimpleCheckCell`; `registerInputCells()` covers `EntryCell`, `PickerCell`, `NumberPickerCell`, `TimePickerCell` and `DatePickerCell`; `registerCustomCell()` covers `CustomCell`.
 

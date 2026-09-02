@@ -1,6 +1,6 @@
 # Updating the screen while it is shown
 
-Recipes for changing a settings screen that is already on display, for getting user edits back into a view model, and for generating rows from data. XAML fragments assume the `ks` namespace declaration from the minimal example in [SKILL.md](../SKILL.md); C# snippets assume `using KsSettingsView.Maui;` and a `SettingsView` named `Settings` in the page.
+Recipes for changing a settings screen that is already on display, for getting user edits back into a view model, and for generating rows from data. XAML fragments assume the `ks` namespace declaration from the minimal example in [SKILL.md](../SKILL.md); C# snippets assume `using KsSettingsView;` and a `SettingsView` named `Settings` in the page.
 
 ## Receive what the user changed
 

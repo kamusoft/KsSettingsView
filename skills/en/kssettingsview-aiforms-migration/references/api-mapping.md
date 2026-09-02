@@ -8,11 +8,13 @@ Everything you reference from XAML or C# moves to one namespace, and registratio
 
 | AiForms | KsSettingsView | Notes |
 |---|---|---|
-| `AiForms.Settings` namespace | `KsSettingsView.Maui` | XAML: `clr-namespace:KsSettingsView.Maui;assembly=KsSettingsView.Maui` (was `clr-namespace:AiForms.Settings;assembly=SettingsView`) |
-| `AiForms.Maui.SettingsView` NuGet package | `KsSettingsView.Maui` NuGet package | The package name is the whole change; nothing else to add |
+| `AiForms.Settings` namespace | `KsSettingsView` | XAML: `clr-namespace:KsSettingsView;assembly=KsSettingsView.Maui` (was `clr-namespace:AiForms.Settings;assembly=SettingsView`). The namespace is `KsSettingsView`; the assembly and the package are `KsSettingsView.Maui` - the asymmetry is deliberate, so do not write the package ID into `using` or `clr-namespace` |
+| `AiForms.Maui.SettingsView` NuGet package | `KsSettingsView.Maui` NuGet package | The package name is the whole change; the binding packages come in transitively. Not on NuGet.org yet - until it is published, use a `ProjectReference` to the facade project in a repository checkout or a feed holding a locally packed build |
 | `MauiAppBuilder.UseSettingsView(bool)` | `MauiAppBuilder.AddKsSettingsView()` | The `bool` selected the leak workaround, which no longer exists |
 | `IMauiHandlersCollection.AddSettingsViewHandler()` | Not provided | `AddKsSettingsView()` registers the one handler there is |
 | Per-cell handler registrations | Not provided | Cells are data converted to native rows, not handler-backed views |
+
+One thing the new namespace brings that `AiForms.Settings` did not: `KsSettingsView.SwitchCell` and `KsSettingsView.EntryCell` share their names with types in `Microsoft.Maui.Controls`. XAML is unaffected, because the `ks:` prefix names the namespace. In C# - the place where an AiForms port builds cells by hand - a file with `using KsSettingsView;` next to the implicit MAUI usings cannot resolve the bare names and the compiler reports CS0104 (ambiguous reference). Write `KsSettingsView.SwitchCell` / `KsSettingsView.EntryCell` in full, or declare a using alias such as `using SwitchCell = KsSettingsView.SwitchCell;` in that file. The kssettingsview-maui Skill covers this under "Name collisions with MAUI's own cells" in its SKILL.md.
 
 ## Rebuild the screen skeleton
 
@@ -98,7 +100,7 @@ AiForms hid `Description` and its font properties on `ButtonCell` with `private 
 
 | AiForms | KsSettingsView | Notes |
 |---|---|---|
-| `SwitchCell.On` | `SwitchCell.On` | Two-way by default, as before |
+| `SwitchCell.On` | `SwitchCell.On` | Two-way by default, as before. In C# write the type as `KsSettingsView.SwitchCell` or through a using alias - the bare name collides with `Microsoft.Maui.Controls.SwitchCell` (see the namespace section) |
 | `SwitchCell.AccentColor` (`Color`) | `SwitchCell.AccentColor` (`Color?`) | |
 | `CheckboxCell.Checked` | `CheckboxCell.Checked` | Two-way by default, as before |
 | `CheckboxCell.AccentColor` (`Color`) | `CheckboxCell.AccentColor` (`Color?`) | |
@@ -154,7 +156,7 @@ Rows generated from a collection need one more step. Each generated cell takes t
 
 | AiForms | KsSettingsView | Notes |
 |---|---|---|
-| `EntryCell.ValueText` | `EntryCell.ValueText` (`string`) | Two-way by default; non-nullable |
+| `EntryCell.ValueText` | `EntryCell.ValueText` (`string`) | Two-way by default; non-nullable. In C# write the type as `KsSettingsView.EntryCell` or through a using alias - the bare name collides with `Microsoft.Maui.Controls.EntryCell` (see the namespace section) |
 | `EntryCell.MaxLength` (`int`, -1) | `EntryCell.MaxLength` (`int?`) | -1 meant no limit; null means no limit |
 | `EntryCell.Keyboard` | `EntryCell.Keyboard` (`Keyboard?`) | Still `Microsoft.Maui.Keyboard` |
 | `EntryCell.Placeholder` | `EntryCell.Placeholder` | |
@@ -319,7 +321,7 @@ AiForms exposed a handler per cell type, which was the seam for customizing rend
 
 | AiForms | KsSettingsView | Notes |
 |---|---|---|
-| `SettingsViewHandler` and its platform partials | `SettingsViewHandler` (public, in `KsSettingsView.Maui.Handlers`) | Registered by `AddKsSettingsView()`. It creates and releases the native host only; the settings tree reaches the screen through the conversion path inside `KsSettingsView.Maui`, so this is not the seam for cell rendering. Its `Mapper` and the `SettingsViewHandler(IPropertyMapper?)` constructor let you replace the view-level property mapping, nothing cell-level |
+| `SettingsViewHandler` and its platform partials | `SettingsViewHandler` (public, in `KsSettingsView.Handlers`) | Registered by `AddKsSettingsView()`. It creates and releases the native host only; the settings tree reaches the screen through the conversion path inside the `KsSettingsView.Maui` assembly, so this is not the seam for cell rendering. Its `Mapper` and the `SettingsViewHandler(IPropertyMapper?)` constructor let you replace the view-level property mapping, nothing cell-level |
 | `CellBaseHandler<TCell, TNativeCell>` | Not provided | |
 | `LabelCellBaseHandler` / `EntryCellBaseHandler` and the per-cell handlers | Not provided | |
 | `BasePropertyMapper` and the per-cell `PropertyMapper` entries | Not provided | Add a property to a cell only if the native row already carries the matching state |
@@ -379,6 +381,8 @@ Collected here so a search finds them, with the reason and whatever you can do i
 | Android | API 27 | API 29 |
 | Android host theme | any | any - the library ships its own Material3 theme and draws its UI inside it |
 | Placement | any layout | a layout that decides the size: a page, a `*` grid row, or an explicit size |
+
+The `Microsoft.Maui.Controls` floor is enforced at restore: a `MauiVersion` below 10.0.70 fails the restore with NU1605 (package downgrade). The OS floors are enforced at build: the package brings a check into your project that stops the `net10.0-ios` / `net10.0-android` build with error `KSSV0001` when that target framework's `SupportedOSPlatformVersion` is below the floor. On Android the check also fires when the value is unset, because the SDK default lies below API 29.
 
 On Android the rows, headers, and selection surfaces are visually isolated from the host theme: the library wraps them in its bundled Material3 (DayNight) theme, so the host theme's colors - dynamic color included - do not restyle them, and there is no requirement on the host activity type or theme. Where AiForms drew with the host theme, expect the default look to change; restyle through the `SettingsView` properties and per-cell overrides instead. Light or dark follows the device's night mode and the app's own uiMode control, not the host theme's declared parent. Views you embed (`CustomCell.Content`, header and footer views) still resolve against the host theme.
 

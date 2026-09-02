@@ -224,7 +224,7 @@ KsCellRegistry.shared.register(
 
 ## 独自の Registry を使う
 
-独自の Registry を使えるのは UIKit ホスト経由だけである。組み込み Cell の自動登録は共有 Registry に対してのみ行われるため、注入した Registry は `autoRegister...` 引数の値によらず空のまま始まる。その画面が使うものはすべて自分で登録する。
+独自の Registry を使えるのは UIKit ホスト経由だけである。組み込み Cell の自動登録は共有 Registry に対してのみ行われるため、注入した Registry は Controller の `autoRegisterBasicCells` / `autoRegisterInputCells` / `autoRegisterCustomCell` 引数の値によらず空のまま始まる。その画面が使うものはすべて自分で登録する。
 
 `registerBasicCells()` は `LabelCell` / `CommandCell` / `ButtonCell` / `SwitchCell` / `CheckboxCell` / `RadioCell` / `SimpleCheckCell`、`registerInputCells()` は `EntryCell` / `PickerCell` / `NumberPickerCell` / `TimePickerCell` / `DatePickerCell`、`registerCustomCell()` は `CustomCell` を登録する。
 

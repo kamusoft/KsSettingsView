@@ -8,11 +8,13 @@ XAML と C# から参照するものはすべて 1 つの namespace に移り、
 
 | AiForms | KsSettingsView | 備考 |
 |---|---|---|
-| `AiForms.Settings` namespace | `KsSettingsView.Maui` | XAML: `clr-namespace:KsSettingsView.Maui;assembly=KsSettingsView.Maui` (旧: `clr-namespace:AiForms.Settings;assembly=SettingsView`) |
-| `AiForms.Maui.SettingsView` NuGet パッケージ | `KsSettingsView.Maui` NuGet パッケージ | 変わるのはパッケージ名だけで、他に足すものはない |
+| `AiForms.Settings` namespace | `KsSettingsView` | XAML: `clr-namespace:KsSettingsView;assembly=KsSettingsView.Maui` (旧: `clr-namespace:AiForms.Settings;assembly=SettingsView`)。namespace は `KsSettingsView`、アセンブリとパッケージは `KsSettingsView.Maui` で、この非対称は意図したもの。`using` や `clr-namespace` にパッケージ ID を書かない |
+| `AiForms.Maui.SettingsView` NuGet パッケージ | `KsSettingsView.Maui` NuGet パッケージ | 変わるのはパッケージ名だけで、binding パッケージは推移的に入る。まだ NuGet.org には上がっていない。公開までは、リポジトリのチェックアウト内の facade プロジェクトへの `ProjectReference` か、ローカルで pack した成果物を置いたフィードを使う |
 | `MauiAppBuilder.UseSettingsView(bool)` | `MauiAppBuilder.AddKsSettingsView()` | 引数の `bool` はリーク回避策の有効化だったが、その仕組み自体が無くなった |
 | `IMauiHandlersCollection.AddSettingsViewHandler()` | 提供しない | 登録すべき Handler は 1 件だけで、`AddKsSettingsView()` が行う |
 | Cell 種別ごとの Handler 登録 | 提供しない | Cell は Native の行へ変換されるデータであり、Handler を持つ View ではない |
+
+`AiForms.Settings` には無かった注意点が新 namespace には 1 つある。`KsSettingsView.SwitchCell` と `KsSettingsView.EntryCell` は `Microsoft.Maui.Controls` の型と同名である。XAML は `ks:` prefix が namespace を示すので影響しない。C# — AiForms からの移植で Cell を手で組む場面 — では、`using KsSettingsView;` と MAUI の暗黙 using が同居するファイルで型名だけを書くと解決できず、コンパイラが CS0104 (あいまい参照) を報告する。`KsSettingsView.SwitchCell` / `KsSettingsView.EntryCell` と完全修飾で書くか、そのファイルに `using SwitchCell = KsSettingsView.SwitchCell;` のような using alias を宣言する。詳細は kssettingsview-maui Skill の SKILL.md にある「MAUI 本体の Cell との名前衝突」節を参照。
 
 ## 画面の骨格を組み直す
 
@@ -98,7 +100,7 @@ AiForms は `ButtonCell` で `Description` とそのフォント系プロパテ�
 
 | AiForms | KsSettingsView | 備考 |
 |---|---|---|
-| `SwitchCell.On` | `SwitchCell.On` | 従来どおり既定で双方向 |
+| `SwitchCell.On` | `SwitchCell.On` | 従来どおり既定で双方向。C# では型名を `KsSettingsView.SwitchCell` と完全修飾するか using alias で書く。型名だけだと `Microsoft.Maui.Controls.SwitchCell` と衝突する (namespace の節を参照) |
 | `SwitchCell.AccentColor` (`Color`) | `SwitchCell.AccentColor` (`Color?`) | |
 | `CheckboxCell.Checked` | `CheckboxCell.Checked` | 従来どおり既定で双方向 |
 | `CheckboxCell.AccentColor` (`Color`) | `CheckboxCell.AccentColor` (`Color?`) | |
@@ -154,7 +156,7 @@ AiForms は `ButtonCell` で `Description` とそのフォント系プロパテ�
 
 | AiForms | KsSettingsView | 備考 |
 |---|---|---|
-| `EntryCell.ValueText` | `EntryCell.ValueText` (`string`) | 既定で双方向。non-nullable |
+| `EntryCell.ValueText` | `EntryCell.ValueText` (`string`) | 既定で双方向。non-nullable。C# では型名を `KsSettingsView.EntryCell` と完全修飾するか using alias で書く。型名だけだと `Microsoft.Maui.Controls.EntryCell` と衝突する (namespace の節を参照) |
 | `EntryCell.MaxLength` (`int`, -1) | `EntryCell.MaxLength` (`int?`) | 旧は -1 が無制限、新は null が無制限 |
 | `EntryCell.Keyboard` | `EntryCell.Keyboard` (`Keyboard?`) | `Microsoft.Maui.Keyboard` のまま |
 | `EntryCell.Placeholder` | `EntryCell.Placeholder` | |
@@ -319,7 +321,7 @@ AiForms は Cell 種別ごとに Handler を公開しており、そこが描画
 
 | AiForms | KsSettingsView | 備考 |
 |---|---|---|
-| `SettingsViewHandler` とその platform 別 partial | `SettingsViewHandler` (public、`KsSettingsView.Maui.Handlers`) | `AddKsSettingsView()` が登録する。担うのは Native Host の生成と解放だけで、設定ツリーの反映は `KsSettingsView.Maui` 内部の変換経路が受け持つため、Cell 描画のカスタマイズ点にはならない。`Mapper` と `SettingsViewHandler(IPropertyMapper?)` コンストラクタで差し替えられるのは View 共通の対応付けであり、Cell 単位ではない |
+| `SettingsViewHandler` とその platform 別 partial | `SettingsViewHandler` (public、`KsSettingsView.Handlers`) | `AddKsSettingsView()` が登録する。担うのは Native Host の生成と解放だけで、設定ツリーの反映は `KsSettingsView.Maui` アセンブリ内部の変換経路が受け持つため、Cell 描画のカスタマイズ点にはならない。`Mapper` と `SettingsViewHandler(IPropertyMapper?)` コンストラクタで差し替えられるのは View 共通の対応付けであり、Cell 単位ではない |
 | `CellBaseHandler<TCell, TNativeCell>` | 提供しない | |
 | `LabelCellBaseHandler` / `EntryCellBaseHandler` と Cell ごとの Handler | 提供しない | |
 | `BasePropertyMapper` と Cell ごとの `PropertyMapper` エントリ | 提供しない | Cell へプロパティを足せるのは、対応する状態を Native の行が既に持っている場合に限る |
@@ -379,6 +381,8 @@ AiForms は Cell 種別ごとに Handler を公開しており、そこが描画
 | Android | API 27 | API 29 |
 | Android のホストテーマ | 任意 | 任意 — ライブラリが自前の Material3 テーマを同梱し、その中で UI を描く |
 | 配置 | 任意のレイアウト | 大きさが決まる配置 (ページ直下・Grid の `*` 行・明示サイズ) |
+
+`Microsoft.Maui.Controls` の下限は restore 時に効く: `MauiVersion` が 10.0.70 より低いと restore が NU1605 (パッケージのダウングレード) で失敗する。OS の下限はビルド時に効く: パッケージが利用側プロジェクトへ持ち込む検査が、その TFM の `SupportedOSPlatformVersion` が下限を下回ると `net10.0-ios` / `net10.0-android` のビルドをエラー `KSSV0001` で止める。Android は未設定でも SDK 既定値が API 29 を下回るため同じく止まる。
 
 Android では行・Header・選択面はホストテーマから視覚的に隔離されている: ライブラリは同梱の Material3 (DayNight) テーマでそれらをラップするため、ホストテーマの色 (dynamic color を含む) では変わらず、ホスト Activity の型・テーマへの要求もない。AiForms がホストテーマで描いていた画面は既定の見た目が変わり得るので、調整は `SettingsView` のプロパティと Cell 単位の上書きで行う。ライト / ダークは端末の夜間モードとアプリ自身の uiMode 制御で決まり、ホストテーマの親宣言では決まらない。埋め込む View (`CustomCell.Content`・Header / Footer の View) は従来どおりホストテーマで解決される。
 

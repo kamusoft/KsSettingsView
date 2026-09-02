@@ -1,6 +1,6 @@
 ---
 name: kssettingsview-maui
-description: Build .NET MAUI settings screens with KsSettingsView - a public XAML / C# API (SettingsView, Section, CellBase) over the native iOS and Android settings list, with 12 built-in cells (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker) plus CustomCell rows holding any MAUI view, two-way bindings for user edits, ItemsSource / ItemTemplate, header and footer views, and Classic / Modern list styling. Use when adding, changing, or reviewing a settings page in a .NET MAUI app that references KsSettingsView.Maui.
+description: Build .NET MAUI settings screens with KsSettingsView - a public XAML / C# API (SettingsView, Section, CellBase) over the native iOS and Android settings list, with built-in cells (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker) plus CustomCell rows holding any MAUI view, two-way bindings for user edits, ItemsSource / ItemTemplate, header and footer views, and Classic / Modern list styling. Use when adding, changing, or reviewing a settings page in a .NET MAUI app that references KsSettingsView.Maui.
 license: MIT
 metadata:
   language: en
@@ -37,10 +37,10 @@ Add the package reference in the `.csproj` of your app.
 </ItemGroup>
 ```
 
-That one reference is all you add; the binding layer underneath comes in transitively. Then register the library once during startup. A single handler is registered; there is no per-cell handler to add.
+That one reference is all you add; the binding layer underneath comes in transitively. The package is not on NuGet.org yet - public distribution is being prepared. Until it is published, reference the facade project `maui/KsSettingsView.Maui/KsSettingsView.Maui.csproj` from a checkout of the repository with a `ProjectReference` (the sample app does the same), or point restore at a feed that holds a locally packed build; everything else in this Skill is the same either way. Then register the library once during startup. A single handler is registered; there is no per-cell handler to add.
 
 ```csharp
-using KsSettingsView.Maui;
+using KsSettingsView;
 using Microsoft.Maui.Hosting;
 
 public static class MauiProgram
@@ -68,6 +68,35 @@ public static class MauiProgram
 | iOS | 16.0 |
 | Android | API 29 |
 
+The `Microsoft.Maui.Controls` floor is enforced at restore time: the version the .NET 10 project template writes into `MauiVersion` is lower than 10.0.70 (10.0.20 at SDK 10.0.300), and leaving it there fails the restore with NU1605 (package downgrade), so set `MauiVersion` to 10.0.70 or later. The OS floors are enforced at build time: the package carries a check into your project that stops the `net10.0-ios` / `net10.0-android` build with error `KSSV0001` when the `SupportedOSPlatformVersion` of that target framework is below iOS 16.0 / Android API 29. On Android the check also fires when the value is unset, because the SDK default lies below the floor, so declare both values explicitly.
+
+```xml
+<PropertyGroup>
+  <MauiVersion>10.0.70</MauiVersion>
+</PropertyGroup>
+
+<PropertyGroup Condition=" $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios' ">
+  <SupportedOSPlatformVersion>16.0</SupportedOSPlatformVersion>
+</PropertyGroup>
+
+<PropertyGroup Condition=" $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android' ">
+  <SupportedOSPlatformVersion>29</SupportedOSPlatformVersion>
+</PropertyGroup>
+```
+
+### Name collisions with MAUI's own cells
+
+`SwitchCell` and `EntryCell` exist under the same names in `Microsoft.Maui.Controls`, and they are the only two public types of the library that do. XAML is unaffected, because the `ks:` prefix names the namespace. In C#, a file that has `using KsSettingsView;` next to the implicit MAUI usings cannot resolve the bare names - the compiler reports CS0104 (ambiguous reference). Write the full name (`KsSettingsView.SwitchCell`) or declare a using alias in that file.
+
+```csharp
+using KsSettingsView;
+using SwitchCell = KsSettingsView.SwitchCell;
+
+Section account = new() { HeaderText = "Account" };
+account.Cells.Add(new SwitchCell { Title = "Push notifications", On = true });
+account.Cells.Add(new KsSettingsView.EntryCell { Title = "Name", Placeholder = "Taro Yamada" });
+```
+
 ### Android theming
 
 On Android the rows are drawn inside a Material3 theme the library ships with, so the host app has nothing to provide: any activity type and any XML theme work, a plain `ComponentActivity` on a minimal theme included. The flip side is isolation - the host theme's colors (dynamic color included) do not reach the library's rows, so looks are adjusted through the styling properties of `SettingsView` ([references/styling.md](references/styling.md)). Light and dark follow the device night mode and the app's own uiMode control, not the host theme.
@@ -77,7 +106,7 @@ On Android the rows are drawn inside a Material3 theme the library ships with, s
 ```xml
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:ks="clr-namespace:KsSettingsView.Maui;assembly=KsSettingsView.Maui"
+             xmlns:ks="clr-namespace:KsSettingsView;assembly=KsSettingsView.Maui"
              x:Class="MyApp.SettingsPage">
   <ks:SettingsView>
     <ks:Section HeaderText="General">

@@ -349,6 +349,8 @@ class SettingsActivity : AppCompatActivity() {
 
 `bind` applies the current root and theme immediately, and every later change goes through the store. The view keeps up with the store across detach and reattach - a pager page scrolling off screen, for instance - by re-reading the current state, though the scroll position is not restored. Assigning `view.theme` directly after `bind` only changes the view until the next store notification overwrites it, so once a store is bound the theme belongs to `applyTheme`; `view.theme` is for a view you drive without one.
 
+`unbind()` releases the store: later store changes no longer reach the view, what is displayed stays as it is, and re-attaching the view does not resume the subscription - call `bind` again to follow a store. It is idempotent, so calling it on a view that has no store does nothing.
+
 ## Drive the view directly with diffs, without a store
 
 Where you do not want to bring in a store - an external binding, a preview - the view can be driven by handing a `SettingsRootDiff` straight to its `applyDiff`. `SettingsRootDiff` is a sealed interface that names where in the settings tree a change applies and what kind of change it is, and its cases correspond one-to-one to the public store operations.
