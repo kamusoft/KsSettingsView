@@ -1,9 +1,9 @@
 ---
 type: concept
 title: MAUI facade (KsSettingsView.Maui) の公開契約
-description: XAML / C# から SettingsView を利用する facade 層 — 公開 API・双方向バインド・更新の意味論・lifecycle・配置制約
+description: XAML / C# から SettingsView を利用する facade 層 — 導入と前提・公開 API・双方向バインド・更新の意味論・lifecycle・配置制約
 tags: [maui, facade, xaml, handler]
-timestamp: 2026-08-29
+timestamp: 2026-09-02
 ---
 
 # MAUI facade (KsSettingsView.Maui) の公開契約
@@ -19,6 +19,40 @@ SettingsView (facade) → Binding assembly (KsSettingsView.Binding.*) → Bridge
 ```
 
 Binding assembly は Bridge API を C# へ運ぶだけの層で、アプリからは直接使わない (詳細は [native-bridge.md](native-bridge.md))。利用開始は `MauiAppBuilder.AddKsSettingsView()` — 登録される Handler は `SettingsViewHandler` 1件のみで、Cell 種別ごとの Handler は存在しない (Cell は Bridge DTO へ変換される純粋なデータ)。
+
+## 導入と前提
+
+配布物は NuGet の 3 パッケージで、利用者が書くのは facade `KsSettingsView.Maui` の `PackageReference` 1 行だけである (binding 2 件は platform TFM の依存として推移的に届く — [maui/ADR-0025](../../../decisions/maui/0025-nuget-three-package-root-namespace.md))。公開レジストリへの発行は未着手で、現時点ではローカル pack の成果物とリポジトリ内の `ProjectReference` から利用できる。pack の構成は [MAUI binding の Native artifact 統合](../architecture/binding-build-integration.md) が持つ。
+
+公開型の名前空間は `KsSettingsView` (配下 `KsSettingsView.Internals` / `KsSettingsView.Handlers`) で、アセンブリ名・Package ID の `KsSettingsView.Maui` とは意図的に非対称である ([公開識別子と配布座標](../../../handbook/cross/public-identifiers.md))。最小の導入は XAML の xmlns と `MauiProgram` の登録の 2 箇所:
+
+```xml
+<!-- xmlns はアセンブリ名 KsSettingsView.Maui で修飾する (名前空間は KsSettingsView) -->
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:ks="clr-namespace:KsSettingsView;assembly=KsSettingsView.Maui">
+```
+
+```csharp
+using KsSettingsView;
+// MauiProgram — Handler の登録
+builder.UseMauiApp<App>().AddKsSettingsView();
+```
+
+利用者アプリ側の前提は次の 4 つで、いずれも facade が利用者アプリ側に要求する値である。満たさないと右列の形で restore・ビルドが失敗する。
+
+| 前提 | 値 | 満たさないときの現れ方 |
+|---|---|---|
+| `TargetFramework` | `net10.0-android` / `net10.0-ios` (.NET 10。参照用に素の `net10.0` も持つ) | .NET 10 より前の TFM ではパッケージを解決できない |
+| `Microsoft.Maui.Controls` | 10.0.70 以上 | テンプレート既定 (SDK 10.0.300 時点で 10.0.20) のままだと restore が NU1605 (ダウングレード) で失敗する。iOS の icon 所有権分類 (maui/ADR-0026) が 10.0.60 以降の内部挙動に依存し、10.0.70 はその挙動を実測で確認した版のため、検証済み版を下限にしている |
+| `SupportedOSPlatformVersion` (Android) | 29 以上 | facade 同梱のビルド時ガードが `KSSV0001` で platform ビルドを止める (依存 AndroidX の manifest merger エラーより先に出る)。未設定時は SDK 既定 21 のため同じく止まる |
+| `SupportedOSPlatformVersion` (iOS) | 16.0 以上 | 同じく `KSSV0001` で止まる。未設定時は SDK 既定 (26.x) が要件を満たすためガードは発火しない |
+
+複数 TFM のプロジェクトは TFM ごとの内部ビルド (inner build) に分かれるが、ガードが働くのはそのうち `net10.0-android` / `net10.0-ios` の内部ビルドだけで、TFM をまたぐ外側のビルド・素の `net10.0`・facade を間接参照するライブラリの非 platform TFM では何もしない。仕組みと宣言元は [MAUI binding の Native artifact 統合](../architecture/binding-build-integration.md) の「最低 OS 版のビルド時ガード」。
+
+### MAUI 本体との型名衝突
+
+`KsSettingsView.SwitchCell` と `KsSettingsView.EntryCell` は `Microsoft.Maui.Controls` の同名型と衝突する (facade の公開型のうちこの 2 型のみ)。XAML の `ks:` prefix では起きないが、C# で `using KsSettingsView;` と MAUI の暗黙 using を併用すると CS0104 (あいまい参照) になる。AiForms.Maui.SettingsView 互換の型名を保つ方針 (maui/ADR-0008) のため型名・名前空間は変えない (maui/ADR-0025)。C# から使うときは完全修飾 (`KsSettingsView.SwitchCell`) か using alias (`using SwitchCell = KsSettingsView.SwitchCell;`) を書く。
 
 ## 公開 API の形
 
@@ -124,7 +158,7 @@ iOS の handler は measure を override しない。大きさが決まる配置
 ## 現時点の範囲
 
 - 利用者定義 Cell 型の登録機構 (maui/ADR-0019)、CustomCell の `ContentTemplate` と行の仮想化、D&D 並べ替え・スクロール制御等の Native 起点強化は未提供 (ロードマップ `kasane/roadmaps/maui-support/` の後続フェーズ)。CustomCell は行数分の View が常存するため、大量行を並べる用途は仮想化の提供まで見送る
-- 配布は ProjectReference のみ (NuGet パッケージングは別途)。AndroidX Lifecycle の版競合 (NU1608 / NU1107) は、ProjectReference 経路では binding 層の明示宣言で解消済み — 利用側プロジェクトにピンや `NoWarn` は不要 (maui/ADR-0010)。NuGet パッケージ参照経由の利用者への効果は未検証 (パッケージング着手時の課題)
+- 配布状況は上の「導入と前提」を参照。AndroidX Lifecycle の版競合 (NU1608 / NU1107) は ProjectReference 経路・NuGet 経路の両方で binding 層の明示宣言により解消済み — 利用側にピンや `NoWarn` は不要 (maui/ADR-0010)
 
 ## 関連
 
@@ -132,4 +166,4 @@ iOS の handler は measure を override しない。大きさが決まる配置
 - [Store の状態と更新通知](../../core/architecture/store-and-update-streams.md)
 - [入力 Cell](../../core/cells/input-cells.md) / [基本 Cell](../../core/cells/basic-cells.md) / [CustomCell](../../core/cells/custom-cell.md) — Cell 意味論の共通契約
 - [MauiView の native 実体化機構](../architecture/view-materialization.md) — accessory View と `CustomCell.Content` を native へ届ける内部機構
-- 決定の経緯: maui/ADR-0008 (AiForms 互換公開面の方針)、maui/ADR-0009 (net10.0 TFM + テスト seam)、maui/ADR-0007 (releaseHost)、core/ADR-0019 (attach 時復元)、maui/ADR-0011 (per-type 輸送)、maui/ADR-0012 (双方向値の輸送規約)、maui/ADR-0013 (DatePickerUIStyle)、maui/ADR-0014 (Android measure 契約)、maui/ADR-0015 (IconSource 実体化)、maui/ADR-0016〜0018 (accessory View の実体化・輸送・更新セマンティクス)、maui/ADR-0019〜0021 (CustomCell の提供層・content の live view と世代トークン・公開面と silent no-op)、maui/ADR-0023 (ListStyle の Theme 独立経路)、maui/ADR-0024 (SectionMargin の論理方向解釈)、maui/ADR-0026 (iOS icon 後片付けの所有権分類)
+- 決定の経緯: maui/ADR-0025 (3 パッケージ構成と名前空間 `KsSettingsView`)、maui/ADR-0008 (AiForms 互換公開面の方針)、maui/ADR-0009 (net10.0 TFM + テスト seam)、maui/ADR-0007 (releaseHost)、core/ADR-0019 (attach 時復元)、maui/ADR-0011 (per-type 輸送)、maui/ADR-0012 (双方向値の輸送規約)、maui/ADR-0013 (DatePickerUIStyle)、maui/ADR-0014 (Android measure 契約)、maui/ADR-0015 (IconSource 実体化)、maui/ADR-0016〜0018 (accessory View の実体化・輸送・更新セマンティクス)、maui/ADR-0019〜0021 (CustomCell の提供層・content の live view と世代トークン・公開面と silent no-op)、maui/ADR-0023 (ListStyle の Theme 独立経路)、maui/ADR-0024 (SectionMargin の論理方向解釈)、maui/ADR-0026 (iOS icon 後片付けの所有権分類)

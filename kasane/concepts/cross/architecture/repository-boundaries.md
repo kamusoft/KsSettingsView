@@ -3,7 +3,7 @@ type: concept
 title: リポジトリとビルドの責務境界
 description: 横断変更をまとめる monorepo と、独立した platform build・Sample の責務分担
 tags: [architecture, monorepo, build, sample]
-timestamp: 2026-09-01
+timestamp: 2026-09-02
 ---
 
 この文書は、KsSettingsView の単一リポジトリと platform 別 build root、利用側 Sample の責務を説明する。読むと、横断変更を一つのリポジトリで扱いながら、iOS・Android・MAUI を一つの build graph に統合しない理由と、Sample が保証する範囲が分かる。
@@ -16,7 +16,7 @@ timestamp: 2026-09-01
 |---|---|---|---|
 | iOS `ios/Package.swift` | umbrella product `KsSettingsView` 1 本 (module は `KsSettingsViewCore` / `KsSettingsViewUI` / `KsSettingsViewSwiftUI`) | SwiftUI wrapper → UI Host → Core | iOS library と test の入口 |
 | Android `android/settings.gradle.kts` | 単一 artifact `jp.kamusoft:kssettingsview` (単一 module。層は Kotlin パッケージ `.core` / `.ui` / `.compose` で表す) | Compose wrapper → UI Host → Core | Android library と test の入口 |
-| MAUI `maui/KsSettingsView.slnx` | `KsSettingsView.Maui` (facade。公開レジストリへは未配信) | facade → binding (iOS / Android) → native の xcframework / aar | MAUI library・binding・test・検証ホストの入口 |
+| MAUI `maui/KsSettingsView.slnx` | NuGet 3 パッケージ — facade `KsSettingsView.Maui` (利用者が書く 1 点) + binding `KsSettingsView.Binding.iOS` / `.Android` (推移依存)。pack 可、公開レジストリへは未発行 | facade → binding (iOS / Android) → native の xcframework / aar | MAUI library・binding・test・検証ホストの入口 |
 
 公開単位のほかに、iOS の `KsSettingsViewBridge` target と Android の `kssettingsview-bridge` module が interop 境界として存在する。product / artifact としては公開せず、MAUI binding が束縛する入口である ([Native Bridge の interop 境界](../../maui/api/native-bridge.md))。MAUI の build root は binding の中から native 2 系統の build root を呼ぶ (Android は `gradlew` の Exec、iOS は Xcode project) 取り込む側であり、native が MAUI に依存する逆方向はない。
 
@@ -54,7 +54,7 @@ Sample は公開 API の組み合わせ、app host の前提、統合状態、�
 - 一つの platform の build や test を、別 platform の検証結果として扱わない。
 - Sample を library の配布物、挙動契約の SSoT、自動 test の代替として扱わない。
 - local source reference の成功を、公開 repository からの配布成立と説明しない。
-- MAUI facade がビルドできることを、公開レジストリから取得できる配布物があることと説明しない (配信は未着手)。
+- MAUI の 3 パッケージがローカルで pack できることを、公開レジストリから取得できる配布物があることと説明しない (発行は未着手。ローカル pack と消費者検証まで)。
 - 配信リポジトリ `KsSettingsView-SPM` を開発の入口として扱わない。手で commit せず、ソース・Issue の窓口は monorepo である。
 
 ## 関連
@@ -68,6 +68,7 @@ Sample は公開 API の組み合わせ、app host の前提、統合状態、�
 - [Android ビルドツールチェーンの契約](../../android/architecture/build-toolchain.md)
 - [MAUI facade の公開契約](../../maui/api/maui-facade.md)
 - [Native Bridge の interop 境界](../../maui/api/native-bridge.md)
+- [MAUI binding の Native artifact 統合](../../maui/architecture/binding-build-integration.md) — NuGet 3 パッケージの pack 構成
 
 ### 規約と決定
 

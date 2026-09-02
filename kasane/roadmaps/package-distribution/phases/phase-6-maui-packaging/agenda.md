@@ -73,8 +73,39 @@ PoC ([artifacts/pack-poc.md](artifacts/pack-poc.md)) で 3 パッケージが `d
 ## TODO
 
 - [x] 論点の解消 (2026-09-02 全 11 論点を決定事項へ)
-- [ ] **change 完了直後に docs-refresh を明示依頼する**: 改名直後から skills の XAML 例 (xmlns) が実物と食い違うため (README の例は change に同梱、2026-09-02 提案時の相方指摘)。phase-5 申し送り分 (Android 互換情報) と 1 回の依頼にまとめる (2026-09-02)
-- [ ] **docs-refresh 依頼に含める**: MAUI の互換情報 (最低 OS 版 Android 29 / iOS 16.0 とビルド時ガード、`Microsoft.Maui.Controls` 10.0.70 以上と NU1605 の注意) を README / skills に明記する (2026-09-02)
-- [ ] **phase-7 への申し送り**: 消費者検証で API 版付き TFM (`net10.0-android36.0` / `net10.0-ios26.0`) の解決要件を確認し、README / skills の互換情報に SDK 要件として載せる (docs-refresh 依頼に含める) (2026-09-02)
-- [ ] **別作業の候補 (phase-6 外)**: LICENSE (KsSettingsView / KsDialogs) と `Copyright` プロパティを法人の正式名 `kamusoft LLC` に揃えるかを決める。揃える場合は props の 1 行修正で追随できる (2026-09-02)
-- [x] ksn-propose で変更提案を起こす (2026-09-02 [changes/add-maui-nuget-distribution](../../../../changes/add-maui-nuget-distribution/proposal.md))
+- [ ] **change 完了直後に docs-refresh を明示依頼する**: 改名直後から skills の XAML 例 (xmlns) が実物と食い違うため (README の例は change に同梱、2026-09-02 提案時の相方指摘)。phase-5 申し送り分 (Android 互換情報) と 1 回の依頼にまとめる (2026-09-02)。→ 依頼に含める内容は [phase-7 agenda の TODO](../phase-7-consumer-verification/agenda.md) に集約済み (2026-09-02 蒸留時)。依頼の実行はユーザーの作業
+- [x] **docs-refresh 依頼に含める**: MAUI の互換情報 (最低 OS 版 Android 29 / iOS 16.0 とビルド時ガード、`Microsoft.Maui.Controls` 10.0.70 以上と NU1605 の注意) を README / skills に明記する (2026-09-02) → phase-7 agenda の TODO (docs-refresh 依頼) へ集約 (2026-09-02 蒸留時)
+- [x] **phase-7 への申し送り**: 消費者検証で API 版付き TFM (`net10.0-android36.0` / `net10.0-ios26.0`) の解決要件を確認し、README / skills の互換情報に SDK 要件として載せる (docs-refresh 依頼に含める) (2026-09-02) → phase-7 agenda の TODO へ追記 (2026-09-02 蒸留時)
+- [x] **別作業の候補 (phase-6 外)**: LICENSE (KsSettingsView / KsDialogs) と `Copyright` プロパティを法人の正式名 `kamusoft LLC` に揃えるかを決める。揃える場合は props の 1 行修正で追随できる (2026-09-02) → **見送り** (2026-09-02 蒸留時のオーナー判断): 揃えない。Authors / Copyright は `kamusoft`、Company だけ `kamusoft LLC` の現状を確定とする
+- [x] ksn-propose で変更提案を起こす (2026-09-02 [changes/archive/2026-09-02-add-maui-nuget-distribution](../../../../changes/archive/2026-09-02-add-maui-nuget-distribution/proposal.md))
+
+## 実装結果 (2026-09-02 反映)
+
+change: [changes/archive/2026-09-02-add-maui-nuget-distribution](../../../../changes/archive/2026-09-02-add-maui-nuget-distribution/proposal.md) (コミット `abf6e0a` 名前空間改名 / `2ac5fd4` 本体)。review-002 APPROVED・verify-001 VALID (7 Requirement / 15 Scenario)。
+
+決定事項どおりに成立したもの: 名前空間改名 (facade 74 / テスト 45 の宣言、利用側は using / xmlns の追随のみ、テスト 516 件不変)、props / CPM (18 版、restore の解決版は導入前と同一)、3 パッケージの pack (nuspec のメタデータ・TFM 別依存・snupkg)、buildTransitive ガード (`KSSV0001`)、package README (画像 4 + リンク 12 箇所を絶対 URL 化、`MauiProgram` 例を追加)、handbook / cross/ADR-0018 の追随、消費者検証 (restore 警告 0・両 OS Release ビルド・README 例の無編集ビルド・ガードの発火と非発火)。
+
+### 決定事項と違った点 (deviation.md 12 項目の要点)
+
+| 領域 | 実際 |
+|---|---|
+| 置き場 | `PackageIcon` の同梱アイテムは props では `IsPackable` 評価前のため `maui/Directory.Build.targets` へ。`PackageReadmeFile` は facade 固有のため facade の csproj へ |
+| 成果物 | .NET Android SDK が facade / Android binding に自動生成する自 assembly 用 aar が各 nupkg に 1 本入る (中身は `androidx.graphics.path` の `.so` のみ)。利用者の Android Release ビルドで XA4301 4 件 |
+| ガード | iOS は `SupportedOSPlatformVersion` 未設定時に SDK 既定 (26.x) が入り発火しない (Android の既定 21 は止まる)。Android の評価値は `29.0` に正規化される |
+| 消費者検証 | `nuget.config` を `<clear/>` + ローカルフィードのみにすると MAUI テンプレートの依存 14 件が NU1101 で restore できず、nuget.org を併記 (隔離 packages path と `.nupkg.metadata` の source で取得元を確認) |
+| 公開面 | 名前空間改名で `SwitchCell` / `EntryCell` が `Microsoft.Maui.Controls` の同名型と衝突 (C# の CS0104)。型名・名前空間は変えず完全修飾 / using alias を案内 (オーナー判断、maui/ADR-0025 Consequences) |
+| 付随修正 | README のリンク参照 12 箇所の絶対 URL 化、`kasane/config.yaml` の `lint.comment-policy.ext` に MSBuild 拡張子を追加 |
+| アイコン帰属 | review-001 Minor の「第三者素材」は前提不成立 (原典 AiForms の著作権者は本リポジトリと同一人物)。帰属表示は不要で申し送りなし |
+
+### 申し送りと受け皿
+
+| 項目 | 受け皿 |
+|---|---|
+| docs-refresh の明示依頼 (名前空間 / xmlns、`MauiVersion` 10.0.70 以上と NU1605、最低 OS 版とガード `KSSV0001`、`SwitchCell` / `EntryCell` の alias 注意書き、API 版付き TFM の SDK 要件) | 依頼はユーザーが change 完了直後に行う (phase-5 の Android 分と 1 回に)。依頼内容の集約先は [phase-7 agenda の TODO](../phase-7-consumer-verification/agenda.md) |
+| API 版付き TFM (`net10.0-android36.0` / `net10.0-ios26.0`) の解決要件の確認 | [phase-7 agenda の TODO](../phase-7-consumer-verification/agenda.md) |
+| `dotnet publish` (フル trimming) と実機起動の smoke の要否、`verification/` の MAUI `nuget.config` 設計 (nuget.org 併記 + 隔離 packages path) | 同上 |
+| NU1507 の恒久対処、XA4301 の扱い、`ContinuousIntegrationBuild` の CI 側注入 | [phase-8 agenda の TODO](../phase-8-release-workflow/agenda.md) |
+| LICENSE / `Copyright` の法人正式名化 | 見送り (2026-09-02 オーナー判断: 揃えない。Authors / Copyright `kamusoft`・Company `kamusoft LLC` の現状を確定) |
+| Android 側 Gradle の Gradle 10 非互換 deprecation | Android ビルド基盤の課題として [phase-1 agenda](../phase-1-android-build-toolchain/agenda.md) の検証 CI ランナー要件に既出 (AGP 8.13 系が Gradle 10 非対応 API を内部使用)。本フェーズでは扱わない |
+
+長命層への反映: maui/ADR-0025 を accepted へ昇格し実装結果を Consequences に追記、maui/ADR-0010 (NuGet 経路の実証) と maui/ADR-0026 (MAUI 要求版への依存) に日付付き追記。concepts は `maui/api/maui-facade.md` (導入と前提)・`maui/architecture/binding-build-integration.md` (NuGet パッケージ化)・`maui/api/native-bridge.md`・`cross/architecture/repository-boundaries.md` を更新。

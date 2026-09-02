@@ -1,7 +1,7 @@
 ---
 id: 0025
 title: MAUI は facade + binding 2 件の 3 NuGet パッケージで配布し、名前空間は `KsSettingsView`・Package ID は `KsSettingsView.Maui` とする
-status: proposed
+status: accepted
 date: 2026-08-21
 ---
 
@@ -49,5 +49,11 @@ iOS (umbrella product 1 本、cross/ADR-0018) と Android (artifact 1 本、andr
 - 負: 名前空間改名 (`KsSettingsView.Maui` → `KsSettingsView`) は facade 全ファイル・Sample・検証ホスト・テスト・XAML xmlns に及ぶ。公開前の下準備として実施する。
 - 負: Android binding の aar 参照は android/ADR-0016 の module 統合後のパス (2 本) へ追随が必要で、Exec 経由 gradlew (maui/ADR-0006) と pack 経路の整合は PoC で確認する。
 - 負: iOS binding resource の manifest に発行マシンの絶対パスが記録される (SDK 標準挙動。消費者ビルドでは無害だが公開物に含まれる)。
+- 正 (実装結果 2026-09-02): 3 パッケージが SDK 標準の `dotnet pack` だけで成立し、ローカルフィードの facade 1 行を足した素の MAUI アプリで restore 警告 0 件・binding 2 件の推移解決・両 OS の Release (trimming + AOT) ビルド成功を実測した。
+- 中立 (実装結果 2026-09-02): facade パッケージに `buildTransitive/` の props / targets (最低 OS 版 Android 29 / iOS 16.0 のビルド時ガード) を同梱する。本 ADR が避けた「pack 内部構造に依存する自作 MSBuild」ではなく利用者ビルドの資産だが、推移的な全消費者へ import されるため、platform inner build 以外では何もしないことがこの資産の契約に加わる。
+- 負 (実装結果 2026-09-02): 名前空間 `KsSettingsView` の `SwitchCell` / `EntryCell` が `Microsoft.Maui.Controls` の同名型と衝突し、C# で `using KsSettingsView;` と MAUI の暗黙 using を併用すると CS0104 になる (XAML の prefix では起きない)。型名・名前空間は変えず、完全修飾または using alias を利用者向けに案内する (オーナー判断。衝突するのはこの 2 型のみと公開型の列挙で確認)。
+- 中立 (実装結果 2026-09-02): 本 ADR が props 集約に含めた `PackageReadmeFile` は facade 固有のため facade の csproj に置く。`PackageIcon` の同梱アイテムは props の評価時点で `IsPackable` が未確定のため `maui/Directory.Build.targets` に置く (値 `PackageIcon` 自体は props)。
+- 中立 (実装結果 2026-09-02): iOS manifest の絶対パスは、リリースを CI で pack する前提で CI ランナーのパスになる。.NET Android SDK が facade と Android binding に自動生成する自 assembly 用 aar (推移依存 `androidx.graphics.path` の ABI 別 `.so` のみ) がパッケージに入り、利用者の Android Release ビルドで XA4301 が出る — 扱いは release workflow の論点。
 
 出典: kasane/roadmaps/package-distribution/exploration.md (E) / ../KsDialogs/kasane/decisions/maui/0004-nuget-three-package-structure.md / ../KsDialogs/kasane/decisions/cross/0005-public-identifier-mapping.md (翻案元)
+出典 (2026-09-02 実装結果の追記と accepted 昇格): kasane/roadmaps/package-distribution/phases/phase-6-maui-packaging/history.md (2026-09-02: pack PoC / 最低 OS 版の利用者への伝え方) / kasane/changes/archive/2026-09-02-add-maui-nuget-distribution/design.md (Decision 2・4・5・6) / 同 deviation.md / 同 evidence/consumer-verification.txt

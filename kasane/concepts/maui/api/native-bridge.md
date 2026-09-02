@@ -3,7 +3,7 @@ type: concept
 title: MAUI Native Bridge の interop 境界
 description: C# から Native SettingsView を操作する Bridge 層の公開契約 — 内部所有 Store・ID 採番・操作通知・lifecycle・binding 構成
 tags: [maui, bridge, interop, binding]
-timestamp: 2026-09-01
+timestamp: 2026-09-02
 ---
 
 # MAUI Native Bridge の interop 境界
@@ -90,6 +90,7 @@ Native → C# のユーザー操作通知は、**設定画面 1 つ (= Bridge �
 - Android: .NET SDK の `AndroidGradleProject` アイテムは複数モジュールの Gradle 構成で成立しないため、`android/gradlew` を Exec で直接呼び `AndroidLibrary` で束縛する (maui/ADR-0006)。Exec が `assembleRelease` するのは core / ui / bridge の 3 module (compose は束縛しない)。aar 再生成の判定入力には module ソースと `build.gradle.kts` のほか `android/gradle/libs.versions.toml`・wrapper 設定・`gradle.properties` を含める。Gradle JVM の要件と catalog の扱いは [Android ビルドツールチェーンの契約](../../android/architecture/build-toolchain.md)
 - Native artifact の生成、binding 固有の既知の制約、SDK 更新時の再検証箇所は [MAUI binding の Native artifact 統合](../architecture/binding-build-integration.md) に集約する
 - `maui/tests/` の検証用ホストアプリ (iOS / Android) は、C# から Native 表示までの end-to-end 疎通を確認する回帰テスト資産として維持する (使い捨てにしない)
+- 配布では binding 2 件は NuGet パッケージ `KsSettingsView.Binding.iOS` / `.Android` になり、facade `KsSettingsView.Maui` の platform TFM 依存として推移的に届く。利用者が直接参照する対象ではない (maui/ADR-0025)
 
 ## 関連
 

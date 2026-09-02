@@ -16,3 +16,4 @@ evidence:
 ## 経緯
 
 - 2026-09-02 add-maui-nuget-distribution: 消費者検証中の CS0104 で SwitchCell の衝突が見つかり、オーナーが「受け入れて注意書き」と決定。deviation と review-001 は 1 件を前提にしたが、相方レビューが EntryCell も衝突すると指摘 (採用)。実装側の lessons/impl.md L-003 (単一検索軸で網羅と判定しない) と同型の見逃しがレビュー側で再現した。
+- 2026-09-02 add-maui-nuget-distribution (同一 change 内の再発、カウント外): 同じ形が deviation の記録でも起きた — .NET Android SDK が自動生成する自 assembly 用 aar を facade の nupkg で観測して deviation に記録したが、同じ機構で生成される Android binding 側の aar は記録せず、review-002 が Scenario「aar 2 本」との不一致として検出。1 件目を見つけた時点で「同じ機構の産物」を全成果物で数える動きが要る (型名衝突と同じ、1 件で数え終える誤り)。
