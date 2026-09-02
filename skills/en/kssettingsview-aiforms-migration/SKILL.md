@@ -25,6 +25,7 @@ The mapping is against AiForms.Maui.SettingsView, the .NET MAUI release. Coming 
 | Carry screen-wide styling over: `Cell*` defaults, header and footer, row height, section borders | [references/api-mapping.md](references/api-mapping.md) |
 | Decide what to do about a dropped feature: drag sort, `ScrollToTop`, `UseDescriptionAsValue`, `LongCommand` | [references/api-mapping.md](references/api-mapping.md) |
 | Delete the per-cell Handler / PropertyMapper code and the `HandlerCleanUpHelper` leak workaround | [references/api-mapping.md](references/api-mapping.md) |
+| Fix a CS0104 on `SwitchCell` / `EntryCell` in C# that migrated cell-building code now hits | [references/api-mapping.md](references/api-mapping.md), then the kssettingsview-maui Skill |
 | Look up the KsSettingsView API itself | the kssettingsview-maui Skill |
 
 ## Setup
@@ -39,6 +40,8 @@ In place of the `PackageReference` you removed, add this one in the `.csproj` of
 </ItemGroup>
 ```
 
+That one line is the whole reference; the binding packages underneath arrive transitively. The package is not on NuGet.org yet - public distribution is being prepared. Until it is published, reference the facade project `maui/KsSettingsView.Maui/KsSettingsView.Maui.csproj` from a checkout of the repository with a `ProjectReference`, or point restore at a feed that holds a locally packed build; the rest of this Skill reads the same either way.
+
 | Requirement | AiForms | KsSettingsView |
 |---|---|---|
 | .NET SDK | 9.0.314 | 10.0.300 |
@@ -46,6 +49,8 @@ In place of the `PackageReference` you removed, add this one in the `.csproj` of
 | Microsoft.Maui.Controls | 9.0.120 | 10.0.70 |
 | iOS | 14.2 | 16.0 |
 | Android | API 27 | API 29 |
+
+The `Microsoft.Maui.Controls` floor is checked at restore: an AiForms project carries a `MauiVersion` below 10.0.70, and leaving it there fails the restore with NU1605 (package downgrade), so raise `MauiVersion` to 10.0.70 or later. The OS floors are checked at build: the package brings a check into your project that stops the `net10.0-ios` / `net10.0-android` build with error `KSSV0001` when that target framework's `SupportedOSPlatformVersion` is below iOS 16.0 / Android API 29 - the AiForms values (14.2 / 27) trip it, so raise both.
 
 Mac Catalyst is not a target. Android puts no requirement on the host activity type or theme: the library ships its own Material3 theme and draws its rows inside it, so the host theme does not restyle them - AiForms screens that relied on the host theme may look different until you restyle through the `SettingsView` properties - and light or dark follows the device's night mode.
 
@@ -69,7 +74,7 @@ builder
     .AddKsSettingsView();
 ```
 
-In XAML, the namespace declaration changes and section header text moves from `Section.Title` to `Section.HeaderText`. Cell names and the properties in this example are unchanged.
+In XAML, the namespace declaration changes and section header text moves from `Section.Title` to `Section.HeaderText`. The CLR namespace is `KsSettingsView` while the assembly (and the package) is `KsSettingsView.Maui`, so the two halves of the `xmlns` differ on purpose. Cell names and the properties in this example are unchanged.
 
 Before, in AiForms:
 
@@ -92,7 +97,7 @@ After, in KsSettingsView:
 ```xml
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:ks="clr-namespace:KsSettingsView.Maui;assembly=KsSettingsView.Maui"
+             xmlns:ks="clr-namespace:KsSettingsView;assembly=KsSettingsView.Maui"
              x:Class="MyApp.SettingsPage">
   <ks:SettingsView>
     <ks:Section HeaderText="General">

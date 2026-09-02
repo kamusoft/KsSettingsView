@@ -1,10 +1,10 @@
 using System;
 using System.Windows.Input;
-using KsSettingsView.Maui.Internals;
+using KsSettingsView.Internals;
 using Microsoft.Maui;
 using Microsoft.Maui.Controls;
 
-namespace KsSettingsView.Maui;
+namespace KsSettingsView;
 
 /// <summary>
 /// 明示的なボタン操作を表す Cell。

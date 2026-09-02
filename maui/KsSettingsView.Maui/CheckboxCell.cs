@@ -1,8 +1,8 @@
-using KsSettingsView.Maui.Internals;
+using KsSettingsView.Internals;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
 
-namespace KsSettingsView.Maui;
+namespace KsSettingsView;
 
 /// <summary>独立した二値をチェックボックスで表す Cell。</summary>
 public class CheckboxCell : CellBase

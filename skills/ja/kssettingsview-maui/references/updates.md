@@ -1,6 +1,6 @@
 # 表示中の画面の更新
 
-表示中の設定画面を変える、ユーザーの操作を ViewModel へ戻す、データから行を生成する、ためのレシピ。XAML の断片は [SKILL.md](../SKILL.md) の最小動作コードにある `ks` 名前空間宣言を前提とし、C# の断片は `using KsSettingsView.Maui;` と、ページ内に `Settings` という名前の `SettingsView` があることを前提とする。
+表示中の設定画面を変える、ユーザーの操作を ViewModel へ戻す、データから行を生成する、ためのレシピ。XAML の断片は [SKILL.md](../SKILL.md) の最小動作コードにある `ks` 名前空間宣言を前提とし、C# の断片は `using KsSettingsView;` と、ページ内に `Settings` という名前の `SettingsView` があることを前提とする。
 
 ## ユーザーが変えた値を受け取る
 

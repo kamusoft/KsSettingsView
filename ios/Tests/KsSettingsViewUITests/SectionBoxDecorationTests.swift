@@ -11,6 +11,7 @@
 #if canImport(UIKit)
 import XCTest
 import UIKit
+import KsSettingsViewTestSupport
 @testable import KsSettingsViewUI
 @testable import KsSettingsViewCore
 
@@ -41,16 +42,8 @@ final class SectionBoxDecorationTests: XCTestCase {
         rootView.layoutIfNeeded()
         let cv = controller.internalCollectionView
         cv.frame = CGRect(origin: .zero, size: Self.viewSize)
-        pump(cv)
+        awaitInitialRender(controller)
         return (controller, cv, window)
-    }
-
-    private func pump(_ view: UIView, seconds: TimeInterval = 0.05) {
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
-        RunLoop.current.run(until: Date().addingTimeInterval(seconds))
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
     }
 
     private func boxAttributes(_ cv: UICollectionView, section: Int) -> SectionBoxAttributes? {
@@ -77,6 +70,10 @@ final class SectionBoxDecorationTests: XCTestCase {
     }
 
     /// Root Header / Footer を載せた controller を window に置いて実レイアウトを走らせる。
+    ///
+    /// `awaitInitialRender` は controller に設定済みの Root accessory の boundary supplementary が
+    /// 実体化するまで待つため、戻った直後に Root accessory の実体を読んでよい。可視 Section が
+    /// 0 件の構成でもこの待機は効く。
     private func hostWithRootAccessories(
         root: SettingsRoot,
         theme: Theme = Theme(),
@@ -95,7 +92,7 @@ final class SectionBoxDecorationTests: XCTestCase {
         rootView.layoutIfNeeded()
         let cv = controller.internalCollectionView
         cv.frame = CGRect(origin: .zero, size: Self.viewSize)
-        pump(cv)
+        awaitInitialRender(controller)
         return (controller, cv, window)
     }
 
@@ -335,7 +332,12 @@ final class SectionBoxDecorationTests: XCTestCase {
 
         // sectionCornerRadius だけが異なる Theme を適用する
         controller.applyTheme(Theme(sectionCornerRadius: 4))
-        pump(cv)
+        awaitEqual(
+            "Theme 変更後の箱の角丸",
+            expected: CGFloat(4) as CGFloat?,
+            in: cv,
+            actual: { boxAttributes(cv, section: 0)?.cornerRadius }
+        )
 
         XCTAssertEqual(boxAttributes(cv, section: 0)?.cornerRadius, 4)
         XCTAssertEqual(controller.internalDataSource?.snapshot().sectionIdentifiers, sectionIDsBefore)
@@ -485,7 +487,14 @@ final class SectionBoxDecorationTests: XCTestCase {
 
         // Section が現れたら余白が付く
         controller.applyDiff(.insertSection(at: 0, section: KsSettingsViewCore.Section(cells: [LabelCell(title: "A")])))
-        pump(cv)
+        awaitCondition(
+            "Section 追加で list 端に Section 単位余白が付く",
+            in: cv,
+            actual: { "contentInset \(cv.contentInset)" },
+            until: {
+                abs(cv.contentInset.top - 24) <= 0.5 && abs(cv.contentInset.bottom - 18) <= 0.5
+            }
+        )
         XCTAssertEqual(cv.contentInset.top, 24, accuracy: 0.5, "Section 追加後に余白が付いていない")
         XCTAssertEqual(cv.contentInset.bottom, 18, accuracy: 0.5)
     }
@@ -501,7 +510,12 @@ final class SectionBoxDecorationTests: XCTestCase {
         XCTAssertEqual(cv.contentInset.top, 24, accuracy: 0.5)
 
         controller.applyDiff(.removeSection(sectionID: sectionID))
-        pump(cv)
+        awaitCondition(
+            "最後の Section 削除で list 端の余白が消える",
+            in: cv,
+            actual: { "contentInset \(cv.contentInset)" },
+            until: { abs(cv.contentInset.top) <= 0.5 && abs(cv.contentInset.bottom) <= 0.5 }
+        )
 
         XCTAssertEqual(cv.contentInset.top, 0, accuracy: 0.5, "Section が無くなったのに余白が残っている")
         XCTAssertEqual(cv.contentInset.bottom, 0, accuracy: 0.5)
@@ -522,7 +536,11 @@ final class SectionBoxDecorationTests: XCTestCase {
         let emptyBottomGap = cv.contentSize.height - emptyLabel.maxY
 
         controller.applyDiff(.insertSection(at: 0, section: KsSettingsViewCore.Section(cells: [LabelCell(title: "A")])))
-        pump(cv)
+        awaitNonNil(
+            "Section 追加後の箱の属性が現れる",
+            in: cv,
+            produce: { boxAttributes(cv, section: 0) }
+        )
 
         guard let filledLabel = rootAccessoryContentFrame(cv, kind: KsSettingsViewController.rootHeaderElementKind),
               let box = boxAttributes(cv, section: 0) else {
@@ -560,17 +578,17 @@ final class SectionBoxDecorationTests: XCTestCase {
 
         // Root accessory と無関係な内容更新
         controller.applyDiff(.replaceCell(cellID: KsCellID(cell: cells[0]), new: LabelCell(title: "A2")))
-        pump(cv)
+        waitForNegativeVerification(in: cv)
         XCTAssertEqual(counter.count, baseline, "内容 Diff で Root Header が作り直されている")
 
         // 余白が変わらない構造 Diff（Section 数は 1 のまま）
         controller.applyDiff(.insertCell(sectionID: section.id, at: 2, cell: LabelCell(title: "C")))
-        pump(cv)
+        waitForNegativeVerification(in: cv)
         XCTAssertEqual(counter.count, baseline, "構造 Diff で Root Header が作り直されている")
 
         // 余白が変わらない Theme 変更
         controller.applyTheme(Theme(cellBackgroundColor: .green))
-        pump(cv)
+        waitForNegativeVerification(in: cv)
         XCTAssertEqual(counter.count, baseline, "余白と無関係な Theme 変更で Root Header が作り直されている")
     }
 
@@ -596,7 +614,12 @@ final class SectionBoxDecorationTests: XCTestCase {
 
         // 可視 Section 0 件 → 非 0 件で余白が 0 から 24 へ変わる
         controller.applyDiff(.insertSection(at: 0, section: KsSettingsViewCore.Section(cells: [LabelCell(title: "A")])))
-        pump(cv)
+        awaitCondition(
+            "余白が変わる遷移で Root Header が作り直される",
+            in: cv,
+            actual: { "factory 実行回数 \(counter.count) (変更前 \(baseline))" },
+            until: { counter.count > baseline }
+        )
         XCTAssertGreaterThan(counter.count, baseline,
                              "余白が変わる遷移で Root Header が作り直されていない")
         let afterInsert = counter.count
@@ -605,7 +628,12 @@ final class SectionBoxDecorationTests: XCTestCase {
         controller.applyTheme(
             Theme(sectionMargin: NSDirectionalEdgeInsets(top: 40, leading: 16, bottom: 0, trailing: 16))
         )
-        pump(cv)
+        awaitCondition(
+            "sectionMargin の Theme 変更で Root Header が作り直される",
+            in: cv,
+            actual: { "factory 実行回数 \(counter.count) (変更前 \(afterInsert))" },
+            until: { counter.count > afterInsert }
+        )
         XCTAssertGreaterThan(counter.count, afterInsert,
                              "sectionMargin の Theme 変更で Root Header が作り直されていない")
     }
@@ -675,7 +703,24 @@ final class SectionBoxDecorationTests: XCTestCase {
         controller.applyTheme(
             Theme(sectionMargin: NSDirectionalEdgeInsets(top: 24, leading: 16, bottom: 0, trailing: 16))
         )
-        pump(cv)
+        awaitCondition(
+            "Theme 変更が Root Header 内側の余白へ反映される",
+            in: cv,
+            actual: {
+                guard let after = rootAccessoryContentFrame(
+                    cv, kind: KsSettingsViewController.rootHeaderElementKind
+                ), let afterBox = boxAttributes(cv, section: 0) else {
+                    return "内容または箱の属性が取得できない"
+                }
+                return "余白 \(afterBox.frame.minY - after.maxY) (変更前 \(beforeGap))"
+            },
+            until: {
+                guard let after = rootAccessoryContentFrame(
+                    cv, kind: KsSettingsViewController.rootHeaderElementKind
+                ), let afterBox = boxAttributes(cv, section: 0) else { return false }
+                return abs(((afterBox.frame.minY - after.maxY) - beforeGap) - 24) <= 0.5
+            }
+        )
 
         guard let after = rootAccessoryContentFrame(cv, kind: KsSettingsViewController.rootHeaderElementKind),
               let afterBox = boxAttributes(cv, section: 0) else {
@@ -744,7 +789,19 @@ final class SectionBoxDecorationTests: XCTestCase {
 
         // Cell を末尾に挿入する
         controller.applyDiff(.insertCell(sectionID: sectionID, at: 2, cell: LabelCell(title: "C")))
-        pump(cv)
+        awaitCondition(
+            "Cell 挿入後の箱が末尾 Cell まで伸びる",
+            in: cv,
+            actual: {
+                "箱 \(String(describing: boxAttributes(cv, section: 0)?.frame)) / "
+                    + "末尾 Cell \(String(describing: itemFrame(cv, section: 0, item: 2)))"
+            },
+            until: {
+                guard let box = boxAttributes(cv, section: 0)?.frame,
+                      let last = itemFrame(cv, section: 0, item: 2) else { return false }
+                return abs(box.maxY - last.maxY) <= 0.5
+            }
+        )
 
         guard let after = boxAttributes(cv, section: 0)?.frame,
               let last = itemFrame(cv, section: 0, item: 2) else {
@@ -824,7 +881,12 @@ final class SectionBoxDecorationTests: XCTestCase {
         XCTAssertTrue(liveRoundsBottom(cv, section: 0, item: 1), "挿入前の末尾 Cell に角丸 clip が無い")
 
         controller.applyDiff(.insertCell(sectionID: sectionID, at: 2, cell: LabelCell(title: "C")))
-        pump(cv)
+        awaitCondition(
+            "末尾 Cell 挿入で旧末尾 Cell の角丸 clip が外れる",
+            in: cv,
+            actual: { "item 1 の角丸 clip \(liveRoundsBottom(cv, section: 0, item: 1))" },
+            until: { !liveRoundsBottom(cv, section: 0, item: 1) }
+        )
 
         XCTAssertFalse(liveRoundsBottom(cv, section: 0, item: 1),
                        "末尾でなくなった Cell に角丸 clip が残っている")
@@ -840,7 +902,12 @@ final class SectionBoxDecorationTests: XCTestCase {
         XCTAssertFalse(liveRoundsBottom(cv, section: 0, item: 1), "削除前の中間 Cell に角丸 clip がある")
 
         controller.applyDiff(.removeCell(cellID: KsCellID(cell: cells[2])))
-        pump(cv)
+        awaitCondition(
+            "末尾 Cell 削除で新しい末尾 Cell に角丸 clip が付く",
+            in: cv,
+            actual: { "item 1 の角丸 clip \(liveRoundsBottom(cv, section: 0, item: 1))" },
+            until: { liveRoundsBottom(cv, section: 0, item: 1) }
+        )
 
         XCTAssertTrue(liveRoundsBottom(cv, section: 0, item: 1),
                       "新しい末尾 Cell に角丸 clip が付いていない")
@@ -995,7 +1062,12 @@ final class SectionBoxDecorationTests: XCTestCase {
             return XCTFail("先頭 Cell を取得できない")
         }
         cell.isHighlighted = true
-        pump(cv)
+        awaitCondition(
+            "押下背景が selectedColor で塗られる",
+            in: cv,
+            actual: { "背景色 \(String(describing: cell.backgroundConfiguration?.backgroundColor))" },
+            until: { cell.backgroundConfiguration?.backgroundColor?.isEqual(UIColor.magenta) ?? false }
+        )
 
         XCTAssertTrue(
             cell.backgroundConfiguration?.backgroundColor?.isEqual(UIColor.magenta) ?? false,
@@ -1245,7 +1317,12 @@ final class SectionBoxDecorationTests: XCTestCase {
         XCTAssertNil(boxAttributes(cv, section: 0))
 
         controller.style = .modern
-        pump(cv)
+        awaitCondition(
+            "Modern への切替で箱の装飾が現れる",
+            in: cv,
+            actual: { "箱 \(String(describing: boxAttributes(cv, section: 0)))" },
+            until: { boxAttributes(cv, section: 0) != nil }
+        )
 
         XCTAssertEqual(controller.internalDataSource?.snapshot().sectionIdentifiers, sectionIDsBefore)
         XCTAssertEqual(controller.internalDataSource?.snapshot().itemIdentifiers, itemIDsBefore)
@@ -1260,7 +1337,12 @@ final class SectionBoxDecorationTests: XCTestCase {
         XCTAssertNotNil(boxAttributes(cv, section: 0))
 
         controller.style = .classic
-        pump(cv)
+        awaitCondition(
+            "Classic への切替で箱の装飾が外れる",
+            in: cv,
+            actual: { "箱 \(String(describing: boxAttributes(cv, section: 0)))" },
+            until: { boxAttributes(cv, section: 0) == nil }
+        )
 
         XCTAssertNil(boxAttributes(cv, section: 0))
         XCTAssertEqual(separator(controller, section: 0, item: 0).topSeparatorVisibility, .visible)

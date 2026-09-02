@@ -1,7 +1,7 @@
 using System;
 using UIKit;
 
-namespace KsSettingsView.Maui.Internals;
+namespace KsSettingsView.Internals;
 
 /// <summary>
 /// Native Host の ViewController を、それを抱える ViewController の子として結び付ける。

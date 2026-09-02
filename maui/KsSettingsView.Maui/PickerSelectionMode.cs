@@ -1,4 +1,4 @@
-namespace KsSettingsView.Maui;
+namespace KsSettingsView;
 
 /// <summary><see cref="PickerCell"/> の選択モード。</summary>
 public enum PickerSelectionMode

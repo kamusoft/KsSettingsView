@@ -10,6 +10,7 @@
 #if canImport(UIKit)
 import XCTest
 import UIKit
+import KsSettingsViewTestSupport
 @testable import KsSettingsViewUI
 @testable import KsSettingsViewCore
 
@@ -50,16 +51,95 @@ final class SectionAccessoryThemeRefreshTests: XCTestCase {
         rootView.layoutIfNeeded()
         let cv = controller.internalCollectionView
         cv.frame = CGRect(origin: .zero, size: size)
-        pump(cv, seconds: 0.3)
+        awaitCondition(
+            "初期 Section と先頭 Section の accessory supplementary が生成される",
+            in: cv,
+            actual: {
+                "Section \(cv.numberOfSections) / header \(hasSupplementary(cv, .header, 0))"
+                    + " / footer \(hasSupplementary(cv, .footer, 0))"
+            },
+            until: {
+                guard cv.numberOfSections == sections.count, let first = sections.first else {
+                    return false
+                }
+                if first.header != nil, !hasSupplementary(cv, .header, 0) { return false }
+                if first.footer != nil, !hasSupplementary(cv, .footer, 0) { return false }
+                return true
+            }
+        )
         return (controller, cv)
     }
 
-    private func pump(_ view: UIView, seconds: TimeInterval = 0.05) {
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
-        RunLoop.current.run(until: Date().addingTimeInterval(seconds))
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
+    /// Section accessory の位置。
+    @MainActor
+    private enum SectionAccessorySlot {
+        case header
+        case footer
+
+        var elementKind: String {
+            switch self {
+            case .header: return UICollectionView.elementKindSectionHeader
+            case .footer: return UICollectionView.elementKindSectionFooter
+            }
+        }
+    }
+
+    /// 指定 section の accessory supplementary が生成されているかを返す。
+    private func hasSupplementary(
+        _ cv: UICollectionView,
+        _ slot: SectionAccessorySlot,
+        _ section: Int
+    ) -> Bool {
+        return cv.supplementaryView(
+            forElementKind: slot.elementKind,
+            at: IndexPath(item: 0, section: section)
+        ) != nil
+    }
+
+    /// 指定 section の accessory label の文字色が期待値になるまで待つ。
+    private func awaitLabelColor(
+        _ cv: UICollectionView,
+        _ slot: SectionAccessorySlot,
+        section: Int = 0,
+        equals expected: UIColor,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        awaitEqual(
+            "Section accessory の文字色",
+            expected: expected as UIColor?,
+            in: cv,
+            file: file,
+            line: line,
+            actual: { sectionLabel(cv, elementKind: slot.elementKind, section: section)?.textColor }
+        )
+    }
+
+    /// 指定 section の accessory label のフォントサイズが期待値になるまで待つ。
+    private func awaitLabelFontSize(
+        _ cv: UICollectionView,
+        _ slot: SectionAccessorySlot,
+        section: Int = 0,
+        equals expected: CGFloat,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        awaitCondition(
+            "Section accessory のフォントサイズ (期待値: \(expected))",
+            in: cv,
+            actual: {
+                let size = sectionLabel(cv, elementKind: slot.elementKind, section: section)?.font.pointSize
+                return "pointSize = \(String(describing: size))"
+            },
+            file: file,
+            line: line,
+            until: {
+                guard let font = sectionLabel(
+                    cv, elementKind: slot.elementKind, section: section
+                )?.font else { return false }
+                return abs(font.pointSize - expected) <= 0.01
+            }
+        )
     }
 
     /// 指定 section の supplementary の text を描く UILabel を取り出す。
@@ -98,7 +178,7 @@ final class SectionAccessoryThemeRefreshTests: XCTestCase {
         XCTAssertEqual(label.textColor, initialColor, "前提: 初期 Theme の文字色が反映されていない")
 
         controller.applyTheme(Theme(headerTextColor: updatedColor))
-        pump(cv)
+        awaitLabelColor(cv, .header, equals: updatedColor)
 
         let refreshed = try XCTUnwrap(
             sectionLabel(cv, elementKind: UICollectionView.elementKindSectionHeader, section: 0)
@@ -132,7 +212,7 @@ final class SectionAccessoryThemeRefreshTests: XCTestCase {
         XCTAssertEqual(label.textColor, initialColor, "前提: 初期 Theme の文字色が反映されていない")
 
         controller.applyTheme(Theme(footerTextColor: updatedColor))
-        pump(cv)
+        awaitLabelColor(cv, .footer, equals: updatedColor)
 
         let refreshed = try XCTUnwrap(
             sectionLabel(cv, elementKind: UICollectionView.elementKindSectionFooter, section: 0)
@@ -163,7 +243,8 @@ final class SectionAccessoryThemeRefreshTests: XCTestCase {
         )
 
         controller.applyTheme(Theme(headerTextColor: headerAfter, footerTextColor: footerAfter))
-        pump(cv)
+        awaitLabelColor(cv, .header, equals: headerAfter)
+        awaitLabelColor(cv, .footer, equals: footerAfter)
 
         let header = try XCTUnwrap(
             sectionLabel(cv, elementKind: UICollectionView.elementKindSectionHeader, section: 0)
@@ -191,7 +272,7 @@ final class SectionAccessoryThemeRefreshTests: XCTestCase {
                        "前提: 初期 Theme の headerFontSize が反映されていない")
 
         controller.applyTheme(Theme(headerFontSize: 24))
-        pump(cv)
+        awaitLabelFontSize(cv, .header, equals: 24)
 
         let refreshed = try XCTUnwrap(
             sectionLabel(cv, elementKind: UICollectionView.elementKindSectionHeader, section: 0)
@@ -222,7 +303,7 @@ final class SectionAccessoryThemeRefreshTests: XCTestCase {
                        "前提: 初期 Theme の footerFontSize が反映されていない")
 
         controller.applyTheme(Theme(footerFontSize: 22))
-        pump(cv)
+        awaitLabelFontSize(cv, .footer, equals: 22)
 
         let refreshed = try XCTUnwrap(
             sectionLabel(cv, elementKind: UICollectionView.elementKindSectionFooter, section: 0)
@@ -246,7 +327,9 @@ final class SectionAccessoryThemeRefreshTests: XCTestCase {
         )
 
         controller.applyTheme(Theme(headerTextColor: updatedColor))
-        pump(cv)
+        for section in 0..<3 {
+            awaitLabelColor(cv, .header, section: section, equals: updatedColor)
+        }
 
         for section in 0..<3 {
             let label = try XCTUnwrap(
@@ -289,7 +372,7 @@ final class SectionAccessoryThemeRefreshTests: XCTestCase {
         XCTAssertGreaterThan(before, 0, "前提: View 形式の Section Header が一度も生成されていない")
 
         controller.applyTheme(Theme(headerTextColor: .blue))
-        pump(cv)
+        waitForNegativeVerification(in: cv)
 
         XCTAssertEqual(
             counter.count,
@@ -321,7 +404,7 @@ final class SectionAccessoryThemeRefreshTests: XCTestCase {
         XCTAssertGreaterThan(before, 0, "前提: View 形式の Section Footer が一度も生成されていない")
 
         controller.applyTheme(Theme(footerTextColor: .blue))
-        pump(cv)
+        waitForNegativeVerification(in: cv)
 
         XCTAssertEqual(
             counter.count,
@@ -355,7 +438,7 @@ final class SectionAccessoryThemeRefreshTests: XCTestCase {
         XCTAssertGreaterThan(before, 0, "前提: View 形式の Section Header が一度も生成されていない")
 
         controller.applyTheme(Theme(footerTextColor: updatedColor))
-        pump(cv)
+        awaitLabelColor(cv, .footer, equals: updatedColor)
 
         let footer = try XCTUnwrap(
             sectionLabel(cv, elementKind: UICollectionView.elementKindSectionFooter, section: 0)
@@ -388,7 +471,13 @@ final class SectionAccessoryThemeRefreshTests: XCTestCase {
         controller.view!.layoutIfNeeded()
         let cv = controller.internalCollectionView
         cv.frame = CGRect(origin: .zero, size: size)
-        pump(cv, seconds: 0.3)
+        awaitNonNil(
+            "Section Header のテキスト label が生成される",
+            in: cv,
+            produce: {
+                sectionLabel(cv, elementKind: UICollectionView.elementKindSectionHeader, section: 0)
+            }
+        )
 
         let label = try XCTUnwrap(
             sectionLabel(cv, elementKind: UICollectionView.elementKindSectionHeader, section: 0)
@@ -396,7 +485,7 @@ final class SectionAccessoryThemeRefreshTests: XCTestCase {
         XCTAssertEqual(label.textColor, initialColor, "前提: 初期 Theme の文字色が反映されていない")
 
         store.applyTheme(Theme(headerTextColor: updatedColor))
-        pump(cv, seconds: 0.3)
+        awaitLabelColor(cv, .header, equals: updatedColor)
 
         let refreshed = try XCTUnwrap(
             sectionLabel(cv, elementKind: UICollectionView.elementKindSectionHeader, section: 0)

@@ -8,6 +8,7 @@
 import XCTest
 import UIKit
 import Combine
+import KsSettingsViewTestSupport
 @testable import KsSettingsViewBridge
 @testable import KsSettingsViewUI
 @testable import KsSettingsViewCore
@@ -437,6 +438,12 @@ final class KsBridgeOperationContractTests: XCTestCase {
         ]
     }
 
+    /// 標準構成の起点で実描画される行タイトル。
+    private static let baselineTitles = [["A", "B"], ["C"]]
+
+    /// 標準構成の起点で実描画される Section header のテキスト。
+    private static let baselineHeaders: [String?] = ["S1", "S2"]
+
     /// 全 12 操作が契約どおりに反映されることを、観察可能な結果 (表示内容と通知) で検証する。
     func test_全12操作が契約どおりに反映される() {
         for testCase in Self.cases() {
@@ -444,7 +451,7 @@ final class KsBridgeOperationContractTests: XCTestCase {
             let attachment = KsBridgeTestHost.attach(fixture.bridge)
             XCTAssertEqual(
                 KsBridgeTestHost.renderedTitles(attachment),
-                [["A", "B"], ["C"]],
+                Self.baselineTitles,
                 "起点の表示が標準構成である: \(testCase.label)"
             )
 
@@ -454,7 +461,27 @@ final class KsBridgeOperationContractTests: XCTestCase {
             let batchSubscription = fixture.bridge.store.contentUpdateBatchPublisher.sink { batches.append($0) }
 
             testCase.act(fixture)
-            KsBridgeTestHost.pump(attachment)
+            // 表 (契約) の期待値が起点と同じケースは「表示が変わらないこと」の検証であり、
+            // 待つべき正の完了条件を持たない (cross/ADR-0027)。期待値が起点と異なるケースだけ
+            // 期待の表示へ到達したことを完了条件として待つ。
+            let expectsNoVisibleChange = testCase.titles == Self.baselineTitles
+                && testCase.headers == Self.baselineHeaders
+            if expectsNoVisibleChange {
+                waitForNegativeVerification(in: attachment.collectionView)
+            } else {
+                awaitCondition(
+                    "操作後の表示への反映: \(testCase.label)",
+                    in: attachment.collectionView,
+                    actual: {
+                        "行タイトル \(KsBridgeTestHost.renderedTitles(attachment)) / "
+                            + "header \(Self.renderedHeaders(attachment))"
+                    },
+                    until: {
+                        KsBridgeTestHost.renderedTitles(attachment) == testCase.titles
+                            && Self.renderedHeaders(attachment) == testCase.headers
+                    }
+                )
+            }
 
             XCTAssertEqual(
                 KsBridgeTestHost.renderedTitles(attachment),
@@ -462,9 +489,7 @@ final class KsBridgeOperationContractTests: XCTestCase {
                 "表示される行タイトル: \(testCase.label)"
             )
             XCTAssertEqual(
-                (0..<attachment.collectionView.numberOfSections).map {
-                    KsBridgeTestHost.headerText(attachment, section: $0)
-                },
+                Self.renderedHeaders(attachment),
                 testCase.headers,
                 "表示される Section header: \(testCase.label)"
             )
@@ -473,6 +498,13 @@ final class KsBridgeOperationContractTests: XCTestCase {
 
             diffSubscription.cancel()
             batchSubscription.cancel()
+        }
+    }
+
+    /// 実描画されている Section header のテキストを Section 順に返す。
+    private static func renderedHeaders(_ attachment: KsBridgeTestHost.Attachment) -> [String?] {
+        return (0..<attachment.collectionView.numberOfSections).map {
+            KsBridgeTestHost.headerText(attachment, section: $0)
         }
     }
 }

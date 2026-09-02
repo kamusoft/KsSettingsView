@@ -1,0 +1,149 @@
+# publishToMavenLocal 発行物の検証 (2026-09-01)
+
+コマンド: cd android && ./gradlew :kssettingsview:publishToMavenLocal
+発行座標: jp.kamusoft:kssettingsview:0.1.0-SNAPSHOT
+
+## 発行物一覧 (~/.m2/repository/jp/kamusoft/kssettingsview/0.1.0-SNAPSHOT/)
+
+261 kssettingsview-0.1.0-SNAPSHOT-javadoc.jar
+260761 kssettingsview-0.1.0-SNAPSHOT-sources.jar
+607001 kssettingsview-0.1.0-SNAPSHOT.aar
+6620 kssettingsview-0.1.0-SNAPSHOT.module
+4863 kssettingsview-0.1.0-SNAPSHOT.pom
+1288 maven-metadata-local.xml
+
+## javadoc jar の中身 (空であること)
+
+---------  ---------- -----   ----
+        0  02-01-1980 00:00   META-INF/
+       25  02-01-1980 00:00   META-INF/MANIFEST.MF
+---------                     -------
+       25                     2 files
+
+## sources jar のパッケージ別 .kt ファイル数 (.core / .ui / .compose の 3 パッケージ)
+
+  13 jp/kamusoft/kssettingsview/compose
+  12 jp/kamusoft/kssettingsview/core
+  68 jp/kamusoft/kssettingsview/ui
+
+## aar (classes.jar) のパッケージ別クラス数
+
+  34 jp/kamusoft/kssettingsview/compose
+  35 jp/kamusoft/kssettingsview/core
+ 201 jp/kamusoft/kssettingsview/ui
+
+## aar のトップレベル構成
+
+AndroidManifest.xml
+META-INF
+R.txt
+classes.jar
+res
+
+## POM の依存スコープ一覧
+
+  compile  androidx.compose.runtime:runtime:(BOM 管理)
+  compile  androidx.compose.ui:ui:(BOM 管理)
+  compile  androidx.compose.foundation:foundation-layout:(BOM 管理)
+  compile  org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1
+  compile  androidx.annotation:annotation:1.9.1
+  compile  androidx.recyclerview:recyclerview:1.3.2
+  compile  org.jetbrains.kotlin:kotlin-stdlib:2.4.10
+  runtime  androidx.appcompat:appcompat:1.7.0
+  runtime  androidx.constraintlayout:constraintlayout:2.1.4
+  runtime  com.google.android.material:material:1.12.0
+  runtime  androidx.activity:activity:1.9.3
+  runtime  org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1
+  runtime  androidx.lifecycle:lifecycle-runtime-ktx:2.8.6
+  runtime  androidx.compose.foundation:foundation:(BOM 管理)
+  runtime  androidx.compose.material3:material3:(BOM 管理)
+  runtime  androidx.compose.ui:ui-viewbinding:(BOM 管理)
+
+公開 API に型が現れる依存がすべて compile スコープに載っている。内訳と根拠:
+
+  compose runtime          KsAnyView.Compose の @Composable () -> Unit
+  compose ui               Theme の Color / TextStyle / Dp
+  compose foundation-layout  Theme.sectionMargin の PaddingValues
+  kotlinx-coroutines-core  SettingsRootStore.state / .theme の StateFlow
+  androidx.annotation      KsImage.Resource の @DrawableRes
+  recyclerview             CellViewHolder が継承する RecyclerView.ViewHolder
+
+foundation-layout は宣言元 artifact を直接 api に置いている。foundation の
+androidApiElements には foundation-layout が含まれず、foundation を api へ格上げしても
+成立は間接的になるため。foundation 自身は内部利用のみで runtime スコープに残る。
+
+## POM のメタデータ (name / description / url / license / developers / scm)
+
+<name>KsSettingsView</name>
+  <description>A settings screen UI library for Android, providing list-style settings screens with built-in cell types for both Android View and Jetpack Compose.</description>
+  <url>https://github.com/kamusoft/KsSettingsView</url>
+  <inceptionYear>2026</inceptionYear>
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://opensource.org/licenses/MIT</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+  <developers>
+    <developer>
+      <id>kamusoft</id>
+      <name>kamusoft</name>
+      <url>https://github.com/kamusoft</url>
+    </developer>
+  </developers>
+  <scm>
+    <connection>scm:git:https://github.com/kamusoft/KsSettingsView.git</connection>
+    <developerConnection>scm:git:ssh://<email>/kamusoft/KsSettingsView.git</developerConnection>
+    <!-- 注: developerConnection の ssh ユーザ@ホスト部は log-sanitize が <email> に置換した。
+         実値は android/kssettingsview/build.gradle.kts の scm ブロックが正。 -->
+    <url>https://github.com/kamusoft/KsSettingsView</url>
+  </scm>
+
+## Gradle Module Metadata (.module) の variant 別依存
+
+[releaseVariantReleaseApiPublication]
+  androidx.compose:compose-bom:2025.11.01
+  androidx.compose.runtime:runtime:(BOM 管理)
+  androidx.compose.ui:ui:(BOM 管理)
+  androidx.compose.foundation:foundation-layout:(BOM 管理)
+  org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1
+  androidx.annotation:annotation:1.9.1
+  androidx.recyclerview:recyclerview:1.3.2
+  org.jetbrains.kotlin:kotlin-stdlib:2.4.10
+  file kssettingsview-0.1.0-SNAPSHOT.aar (607001 bytes)
+[releaseVariantReleaseRuntimePublication]
+  androidx.appcompat:appcompat:1.7.0
+  androidx.constraintlayout:constraintlayout:2.1.4
+  com.google.android.material:material:1.12.0
+  androidx.activity:activity:1.9.3
+  org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1
+  androidx.lifecycle:lifecycle-runtime-ktx:2.8.6
+  androidx.compose.foundation:foundation:(BOM 管理)
+  androidx.compose.material3:material3:(BOM 管理)
+  androidx.compose.ui:ui-viewbinding:(BOM 管理)
+  androidx.compose:compose-bom:2025.11.01
+  androidx.compose.runtime:runtime:(BOM 管理)
+  androidx.compose.ui:ui:(BOM 管理)
+  androidx.compose.foundation:foundation-layout:(BOM 管理)
+  org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1
+  androidx.annotation:annotation:1.9.1
+  androidx.recyclerview:recyclerview:1.3.2
+  org.jetbrains.kotlin:kotlin-stdlib:2.4.10
+  file kssettingsview-0.1.0-SNAPSHOT.aar (607001 bytes)
+[releaseVariantReleaseSourcePublication]
+  file kssettingsview-0.1.0-SNAPSHOT-sources.jar (260761 bytes)
+
+## テスト専用ライブラリの混入検査
+
+$ grep -oiE "junit|robolectric|androidx\.test|ui-test-manifest|ui-test-junit4|customview-poolingcontainer|coroutines-test" <pom> <module>
+(該当行なし = 発行メタデータへの混入なし)
+
+## :kssettingsview-bridge に発行タスクが無いこと
+
+$ ./gradlew :kssettingsview-bridge:tasks --group publishing
+(Publishing tasks グループの出力は空)
+
+$ ./gradlew :kssettingsview-bridge:tasks --all | grep -i publish
+prepareLintJarForPublish
+→ AGP の lint jar 準備タスクのみ。publish / publishToMavenLocal 等の Maven 発行タスクは存在しない。

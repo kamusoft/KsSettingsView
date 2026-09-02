@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Microsoft.Maui;
 
-namespace KsSettingsView.Maui.Internals;
+namespace KsSettingsView.Internals;
 
 /// <summary>値を読み取り専用で表示する Cell の写し。</summary>
 /// <remarks>

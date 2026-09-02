@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
-    KsSettingsView Compose ラッパ — 最小 AndroidManifest
-
-    Android Library として認識させるための最小構成。
--->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" />

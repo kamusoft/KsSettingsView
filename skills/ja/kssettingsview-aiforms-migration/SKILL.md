@@ -25,6 +25,7 @@ KsSettingsView は AiForms.SettingsView の骨格 — `SettingsView` に `Sectio
 | 画面全体のスタイル (`Cell*` 既定値・Header / Footer・行高さ・Section の枠) を移す | [references/api-mapping.md](references/api-mapping.md) |
 | 廃止された機能 (ドラッグ並べ替え・`ScrollToTop`・`UseDescriptionAsValue`・`LongCommand`) の扱いを決める | [references/api-mapping.md](references/api-mapping.md) |
 | Cell ごとの Handler / PropertyMapper のコードと `HandlerCleanUpHelper` の回避策を削除する | [references/api-mapping.md](references/api-mapping.md) |
+| 移行した C# の Cell 構築コードで出るようになった `SwitchCell` / `EntryCell` の CS0104 を直す | [references/api-mapping.md](references/api-mapping.md)、詳細は kssettingsview-maui Skill |
 | KsSettingsView 自体の API を調べる | kssettingsview-maui Skill |
 
 ## 導入
@@ -39,6 +40,8 @@ KsSettingsView は AiForms.SettingsView の骨格 — `SettingsView` に `Sectio
 </ItemGroup>
 ```
 
+参照はこの 1 行だけで、下層の binding パッケージは推移的に届く。パッケージはまだ NuGet.org に上がっていない (公開配信の準備中)。公開までは、リポジトリのチェックアウトから facade プロジェクト `maui/KsSettingsView.Maui/KsSettingsView.Maui.csproj` を `ProjectReference` で参照するか、ローカルで pack した成果物を置いたフィードから restore する。この Skill の以降の内容はどちらの経路でも同じ。
+
 | 要件 | AiForms | KsSettingsView |
 |---|---|---|
 | .NET SDK | 9.0.314 | 10.0.300 |
@@ -46,6 +49,8 @@ KsSettingsView は AiForms.SettingsView の骨格 — `SettingsView` に `Sectio
 | Microsoft.Maui.Controls | 9.0.120 | 10.0.70 |
 | iOS | 14.2 | 16.0 |
 | Android | API 27 | API 29 |
+
+`Microsoft.Maui.Controls` の下限は restore 時に効く: AiForms のプロジェクトが持つ `MauiVersion` は 10.0.70 より低く、そのままだと restore が NU1605 (パッケージのダウングレード) で失敗するので、`MauiVersion` を 10.0.70 以上に上げる。OS の下限はビルド時に効く: パッケージが利用側プロジェクトへ持ち込む検査が、その TFM の `SupportedOSPlatformVersion` が iOS 16.0 / Android API 29 を下回ると `net10.0-ios` / `net10.0-android` のビルドをエラー `KSSV0001` で止める。AiForms の値 (14.2 / 27) はこれに引っかかるので両方を上げる。
 
 Mac Catalyst は対象外になった。Android はホスト Activity の型・テーマに要求を置かない: ライブラリが自前の Material3 テーマを同梱してその中で行を描くため、ホストテーマでは行の見た目が変わらず — ホストテーマ頼みだった AiForms の画面は `SettingsView` のプロパティで整え直すまで見た目が変わり得る — ライト / ダークは端末の夜間モードに追従する。
 
@@ -69,7 +74,7 @@ builder
     .AddKsSettingsView();
 ```
 
-XAML では namespace 宣言が変わり、Section の見出し文字列が `Section.Title` から `Section.HeaderText` へ移る。この例に出てくる Cell 名とプロパティはそのままである。
+XAML では namespace 宣言が変わり、Section の見出し文字列が `Section.Title` から `Section.HeaderText` へ移る。CLR namespace は `KsSettingsView`、アセンブリ (とパッケージ) は `KsSettingsView.Maui` で、`xmlns` の前半と後半が違うのは意図したものである。この例に出てくる Cell 名とプロパティはそのままである。
 
 移行前 (AiForms):
 
@@ -92,7 +97,7 @@ XAML では namespace 宣言が変わり、Section の見出し文字列が `Sec
 ```xml
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:ks="clr-namespace:KsSettingsView.Maui;assembly=KsSettingsView.Maui"
+             xmlns:ks="clr-namespace:KsSettingsView;assembly=KsSettingsView.Maui"
              x:Class="MyApp.SettingsPage">
   <ks:SettingsView>
     <ks:Section HeaderText="General">

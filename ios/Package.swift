@@ -2,7 +2,7 @@
 // KsSettingsView iOS Native — モノレポのビルド入口
 //
 // 本パッケージは KsSettingsView iOS Native ライブラリ群（Core / UI / SwiftUI ラッパなど）の
-// SwiftPM ルートとして配置される。後続の変更提案で `products` / `targets` を順次追加していく。
+// SwiftPM ルートとして配置される。
 
 import PackageDescription
 
@@ -19,21 +19,21 @@ let package = Package(
         .macOS(.v13)
     ],
     products: [
-        // Core: SettingsRoot / Section / Cell 抽象のドメインモデル層（Theme / CellStyle は UI 層）
+        // 公開 product は umbrella 1 本のみ。これ 1 つを依存に追加すれば、
+        // 用途に応じて `KsSettingsViewCore` / `KsSettingsViewUI` / `KsSettingsViewSwiftUI` の
+        // いずれの module も import できる。
+        //
+        // - Core: SettingsRoot / Section / Cell 抽象のドメインモデル層（Theme / CellStyle は UI 層）
+        // - UI: UIKit ベースの UI 基盤（KsSettingsViewController、Cell レジストリ、Renderer、
+        //   Theme / CellStyle 等）
+        // - SwiftUI: SwiftUI ラッパ + DSL（KsSettingsView, SettingsRootBuilder 等）
         .library(
-            name: "KsSettingsViewCore",
-            targets: ["KsSettingsViewCore"]
-        ),
-        // UI: UIKit ベースの UI 基盤（KsSettingsViewController、Cell レジストリ、Renderer、
-        // Theme / CellStyle 等）
-        .library(
-            name: "KsSettingsViewUI",
-            targets: ["KsSettingsViewUI"]
-        ),
-        // SwiftUI: SwiftUI ラッパ + DSL（KsSettingsView, SettingsRootBuilder 等）
-        .library(
-            name: "KsSettingsViewSwiftUI",
-            targets: ["KsSettingsViewSwiftUI"]
+            name: "KsSettingsView",
+            targets: [
+                "KsSettingsViewCore",
+                "KsSettingsViewUI",
+                "KsSettingsViewSwiftUI"
+            ]
         )
         // Bridge (`KsSettingsViewBridge`) は product として公開しない。
         // 利用経路は `ios/binding/` の Xcode project が生成する xcframework 経由のみであり、
@@ -42,6 +42,19 @@ let package = Package(
     ],
     dependencies: [],
     targets: [
+        // テスト支援ターゲット: 3 つの UI 系テストターゲットが共有する待機・レイアウト実行ヘルパ。
+        // product として公開せず、テストターゲットからのみ依存される。XCTest を直接リンクし、
+        // deadline 超過時の失敗をこのターゲット内から発火する。
+        .target(
+            name: "KsSettingsViewTestSupport",
+            path: "Tests/KsSettingsViewTestSupport"
+        ),
+        // テスト支援ターゲット自身のテスト
+        .testTarget(
+            name: "KsSettingsViewTestSupportTests",
+            dependencies: ["KsSettingsViewTestSupport"],
+            path: "Tests/KsSettingsViewTestSupportTests"
+        ),
         // Core ターゲット: UIKit に依存しない純粋データモデル
         .target(
             name: "KsSettingsViewCore",
@@ -62,7 +75,7 @@ let package = Package(
         // UI テストターゲット
         .testTarget(
             name: "KsSettingsViewUITests",
-            dependencies: ["KsSettingsViewUI", "KsSettingsViewCore"],
+            dependencies: ["KsSettingsViewUI", "KsSettingsViewCore", "KsSettingsViewTestSupport"],
             path: "Tests/KsSettingsViewUITests"
         ),
         // SwiftUI ターゲット: UIViewControllerRepresentable + DSL
@@ -74,7 +87,7 @@ let package = Package(
         // SwiftUI テストターゲット
         .testTarget(
             name: "KsSettingsViewSwiftUITests",
-            dependencies: ["KsSettingsViewSwiftUI", "KsSettingsViewUI", "KsSettingsViewCore"],
+            dependencies: ["KsSettingsViewSwiftUI", "KsSettingsViewUI", "KsSettingsViewCore", "KsSettingsViewTestSupport"],
             path: "Tests/KsSettingsViewSwiftUITests"
         ),
         // Bridge ターゲット: `@objc` 互換 DTO と内部所有 Store を持つ interop 境界
@@ -86,7 +99,7 @@ let package = Package(
         // Bridge テストターゲット
         .testTarget(
             name: "KsSettingsViewBridgeTests",
-            dependencies: ["KsSettingsViewBridge", "KsSettingsViewUI", "KsSettingsViewCore"],
+            dependencies: ["KsSettingsViewBridge", "KsSettingsViewUI", "KsSettingsViewCore", "KsSettingsViewTestSupport"],
             path: "Tests/KsSettingsViewBridgeTests"
         )
     ]

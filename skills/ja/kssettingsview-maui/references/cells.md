@@ -62,7 +62,7 @@ private void OnOpenLogTapped(object? sender, EventArgs e)
 
 ## 二値を切り替える
 
-`SwitchCell.On` は既定が TwoWay なので、ユーザーがスイッチを操作するとバインド先へそのまま書き戻される。
+`SwitchCell.On` は既定が TwoWay なので、ユーザーがスイッチを操作するとバインド先へそのまま書き戻される。C# からは `KsSettingsView.SwitchCell` と完全修飾するか using alias を使う — 型名だけでは MAUI の同名型と衝突する ([SKILL.md](../SKILL.md))。
 
 ```xml
 <ks:SwitchCell Title="Push notifications"
@@ -92,7 +92,7 @@ private void OnOpenLogTapped(object? sender, EventArgs e)
 
 ## 行の中でテキストを編集する
 
-`EntryCell` は行そのものが入力欄になるため、`ValueText` はここでは表示専用の枠ではない。`ValueText` が編集対象の文字列そのもので、既定が TwoWay。
+`EntryCell` は行そのものが入力欄になるため、`ValueText` はここでは表示専用の枠ではない。`ValueText` が編集対象の文字列そのもので、既定が TwoWay。C# からは `KsSettingsView.EntryCell` と完全修飾するか using alias を使う — 型名だけでは MAUI の同名型と衝突する ([SKILL.md](../SKILL.md))。
 
 ```xml
 <ks:EntryCell Title="Name"

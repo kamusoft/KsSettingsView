@@ -11,6 +11,7 @@
 #if canImport(UIKit)
 import XCTest
 import UIKit
+import KsSettingsViewTestSupport
 @testable import KsSettingsViewSwiftUI
 @testable import KsSettingsViewCore
 @testable import KsSettingsViewUI
@@ -76,16 +77,28 @@ final class DSLTimePickerHourCycleTests: XCTestCase {
         rootView.layoutIfNeeded()
         let cv = controller.internalCollectionView
         cv.frame = CGRect(origin: .zero, size: size)
-        pump(cv)
+        // window へ載せた直後は行が未生成のため、先頭行が実体化することを初期反映の完了条件とする。
+        awaitNonNil("初期表示の先頭行の実描画", in: cv) {
+            cv.cellForItem(at: IndexPath(item: 0, section: 0))
+        }
         return (controller, cv, window)
     }
 
-    private func pump(_ view: UIView, seconds: TimeInterval = 0.05) {
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
-        RunLoop.current.run(until: Date().addingTimeInterval(seconds))
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
+    /// 先頭行の picker の時制が期待どおりになるまで待つ。
+    private func awaitRenderedIs24Hour(
+        _ cv: UICollectionView,
+        equals expected: Bool,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        awaitEqual(
+            "先頭行の picker の時制 (24 時間制か)",
+            expected: expected,
+            in: cv,
+            file: file,
+            line: line,
+            actual: { self.renderedIs24Hour(cv) }
+        )
     }
 
     /// 先頭 Section の先頭行が実際に提示する picker の時制を返す。
@@ -128,7 +141,7 @@ final class DSLTimePickerHourCycleTests: XCTestCase {
             }
         }
         applyDiffs(DSLDiffCalculator.compute(from: makeTree(before), to: makeTree(after)), to: store)
-        pump(cv)
+        awaitRenderedIs24Hour(cv, equals: false)
 
         XCTAssertEqual(renderedIs24Hour(cv), false, "DSL 再評価の is24Hour 変更が picker へ届いていない")
     }
@@ -154,7 +167,7 @@ final class DSLTimePickerHourCycleTests: XCTestCase {
             }
         }
         applyDiffs(DSLDiffCalculator.compute(from: makeTree(before), to: makeTree(after)), to: store)
-        pump(cv)
+        awaitRenderedIs24Hour(cv, equals: true)
 
         XCTAssertEqual(renderedIs24Hour(cv), true, "DSL 再評価の is24Hour 変更が picker へ届いていない")
     }
@@ -184,7 +197,7 @@ final class DSLTimePickerHourCycleTests: XCTestCase {
             DSLDiffCalculator.compute(from: makeTree(dslBefore), to: makeTree(dslAfter)),
             to: dslStore
         )
-        pump(dslCV)
+        awaitRenderedIs24Hour(dslCV, equals: false)
 
         // Store 経路: 同じ Cell を replaceCell で is24Hour = false へ
         let storeSection = dslBefore[0]
@@ -206,7 +219,7 @@ final class DSLTimePickerHourCycleTests: XCTestCase {
                 is24Hour: false
             )
         )
-        pump(storeCV)
+        awaitRenderedIs24Hour(storeCV, equals: false)
 
         XCTAssertEqual(renderedIs24Hour(dslCV), renderedIs24Hour(storeCV),
                        "picker の時制が Store 経路と DSL 経路で一致しない")

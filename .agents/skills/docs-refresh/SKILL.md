@@ -47,6 +47,8 @@ README 群の追従対象は **manifest の `readmes` 配列が正**。初期生
 
 **可否の判定は起動時 (Step 1) に行う。** 委譲できないと分かった時点で、それ以降の手順 (manifest 検証・差分検出・承認提示・書き込み) へ進まずに停止する。
 
+**サブエージェントは常に器 `ksn-implementer` で起動する** (起動の指定方法は実行環境ごとに異なる — Claude Code では Task ツールの `subagent_type`、codex ではエージェント name を指定して spawn する。以降「器を指定する」はこの意味)。器を指定しない起動はメインのモデルを継承するため、メインをより高階層のモデルで運用しているときに、concepts 本文と en/ja 一式を読み書きする最も重い作業が同じ高コストのモデルで走ってしまう。器を指定すると、その作業は器定義が持つモデル・エフォートで走り、メインの編成から切り離せる (サブエージェントへの文脈隔離自体は器の有無によらず成立する — 器が担うのは編成の切り離しである)。器名は本スキル内に直書きで固定し、外部の編成定義 (Kasane の worker-dispatch や `kasane/config.yaml` の `workers:` 節) は参照しない (起動のたびの読み込みを増やさないため)。器名が変われば本スキルの記述を直す。
+
 ## Input
 
 引数なしで起動できる。任意の引数:
@@ -59,7 +61,21 @@ README 群の追従対象は **manifest の `readmes` 配列が正**。初期生
 
 ### 1. プロジェクトの状態取得 (メインコンテキストで実行)
 
-**最初にサブエージェント委譲機構が使えるかを確認する。** 使えない場合は、以降の手順 (Step 2 以降) へ進まず、何も書き換えないまま実行不能として停止する (「コンテキスト節約方針」)。
+**最初にサブエージェント委譲機構が使えるかを確認する。** 具体的には「器 `ksn-implementer` を指定してサブエージェントを起動できるか (器が実行環境に配置済みか)」を確認する。確認の手段は、利用可能なサブエージェント種別の一覧に `ksn-implementer` があること、または実行環境の器定義ファイルの存在確認 (Claude Code: `~/.claude/agents/ksn-implementer.md` か `.claude/agents/ksn-implementer.md` / codex: `~/.codex/agents/ksn-implementer.toml`) のいずれかでよい (片方が成立すれば配置済みとみなす)。使えない場合は、以降の手順 (Step 2 以降) へ進まず、何も書き換えないまま実行不能として停止する (「コンテキスト節約方針」)。
+
+器が未配置の場合は、次の趣旨を案内して停止する (メインが代わりに書くフォールバックも、器なしのサブエージェント起動もしない):
+
+```
+サブエージェントの器 ksn-implementer がこの環境に配置されていません。
+
+docs-refresh は concepts 本文の読み込みと skills/ の生成をサブエージェントへ委譲する前提で、
+メインが代わりに読んで書くフォールバックを持ちません。
+
+Kasane リポジトリの scripts/deploy.sh (../Kasane/scripts/deploy.sh) を実行して器を配置してから
+再実行してください。
+
+今回は skills/・README 群・manifest のいずれも変更していません。
+```
 
 委譲可否を確認したうえで、並列で次を確認する:
 
@@ -148,28 +164,10 @@ README 群は concepts ハッシュ逆引きの対象外である (`readmes` は
 検査対象の manifest は環境変数 `DOCS_REFRESH_MANIFEST` で差し替えられる (既定はディスクの `skills/.manifest.json`)。Step 3c ではディスクの manifest をそのまま使い、Step 6-① では承認済み判断を反映した予定 manifest を渡す。
 
 ```bash
-python3 - <<'PY'
-import json, os
-M = json.load(open(os.environ.get("DOCS_REFRESH_MANIFEST", "skills/.manifest.json")))
-referenced = {c for srcs in M["targets"].values() for c in srcs}
-excluded = set(M["excluded"])
-actual = set()
-for root, _, files in os.walk("kasane/concepts"):
-    for f in files:
-        if f.endswith(".md") and f not in ("index.md", "log.md", "rules.md"):
-            actual.add(os.path.relpath(os.path.join(root, f), "kasane/concepts"))
-uncovered = sorted(actual - referenced - excluded)
-missing = sorted((referenced | excluded) - actual)
-if uncovered:
-    print("UNCOVERED (未参照かつ未除外 — 配置判断が必要):")
-    print("\n".join("  " + p for p in uncovered))
-if missing:
-    print("DELETED (manifest にあるが実在しない — targets/excluded の整理が必要):")
-    print("\n".join("  " + p for p in missing))
-if not uncovered and not missing:
-    print("concepts coverage OK")
-PY
+python3 .agents/skills/docs-refresh/scripts/concepts-coverage-check.py
 ```
+
+出力の読み方: `UNCOVERED` は未参照かつ未除外の concept (配置判断が必要)、`DELETED` は manifest にあるが実在しない concept (`targets` / `excluded` の整理が必要)。どちらも出なければ `concepts coverage OK`。
 
 #### 3d. コードを正とする機械チェック (1 種)
 
@@ -177,7 +175,7 @@ concepts ハッシュ差分とは独立に、**コードを正**として次の 
 
 | 項目 | 取得元 (コード = 正) | 抽出方法 | 突合先 |
 | --- | --- | --- | --- |
-| ツール最低バージョン | AGP・Kotlin: `android/gradle/libs.versions.toml` (`[versions]` の `agp` / `kotlin`) / Gradle: `android/gradle/wrapper/gradle-wrapper.properties` (`distributionUrl`) / minSdk・compileSdk: `android/ks-settingsview-ui/build.gradle.kts` / Swift tools・iOS Deployment Target: `ios/Package.swift` (`// swift-tools-version:` と `.iOS(.vNN)`) / .NET TFM: `maui/KsSettingsView.Maui/KsSettingsView.Maui.csproj` (`<TargetFrameworks>`) | 各ファイルの該当行を読む | ルート README 群の対応プラットフォーム表・開発環境要件、および該当記載を持つ場合は各 `SKILL.md` の導入節 |
+| ツール最低バージョン | AGP・Kotlin: `android/gradle/libs.versions.toml` (`[versions]` の `agp` / `kotlin`) / Gradle: `android/gradle/wrapper/gradle-wrapper.properties` (`distributionUrl`) / minSdk・compileSdk: `android/kssettingsview/build.gradle.kts` / Swift tools・iOS Deployment Target: `ios/Package.swift` (`// swift-tools-version:` と `.iOS(.vNN)`) / .NET TFM: `maui/KsSettingsView.Maui/KsSettingsView.Maui.csproj` (`<TargetFrameworks>`) | 各ファイルの該当行を読む | ルート README 群の対応プラットフォーム表・開発環境要件、および該当記載を持つ場合は各 `SKILL.md` の導入節 |
 
 > 従前の「モジュール一覧」と「Sample デモ画面一覧」の突合は**行わない**。前者の突合先だったルート README のモジュール表・`android/README.md`・`maui/README.md` と、後者の突合先だった `samples/*/README.md` がいずれも存在しなくなったため (cross/ADR-0023)。Sample の実ソースにデモ画面が増減しても、この手順は要追従リストに何も追加しない。
 
@@ -192,50 +190,10 @@ concepts ハッシュ差分とは独立に、**コードを正**として次の 
 - トークン抽出はバッククォート括りの識別子に限る。ヒューリスティックゆえ誤検出はあり得る — 報告のみの位置づけを変えないこと。既知の誤検出源は2つ: ① core (クロスプラットフォーム) concepts に書かれた**他プラットフォームのトークン** (iOS Skill に対する Android 実装名等)、② concepts が実装解説のために挙げる**内部型・プラットフォーム標準型**。どちらも掲載不要の判断はユーザーが行う (Step 4 提示時に、明白な他プラットフォーム名・内部型はまとめて「候補外」として畳んで提示してよい)
 
 ```bash
-python3 - <<'PY'
-import json, os, re
-from collections import defaultdict
-M = json.load(open(os.environ.get("DOCS_REFRESH_MANIFEST", "skills/.manifest.json")))
-TOKEN = re.compile(r'`([A-Za-z_][A-Za-z0-9_.]*(?:\(\))?)`')
-STOP = {"true", "false", "null", "nil", "None", "self", "this", "var", "val", "let",
-        "public", "internal", "private", "open", "static", "enum", "class", "struct",
-        "interface", "protocol", "data", "case", "import", "async", "await"}
-def looks_api(t):
-    core = t.rstrip("()")
-    if core in STOP or len(core) < 3:
-        return False
-    return "." in core or core[0].isupper() or any(c.isupper() for c in core[1:])
-def body(path):
-    with open(path, encoding="utf-8") as fh:
-        return fh.read()
-skill_files = defaultdict(list)   # skill 名 -> 言語抜き相対パス群
-skill_srcs = defaultdict(set)     # skill 名 -> 源泉 concepts 群
-for rel, srcs in M["targets"].items():
-    skill = rel.split("/")[0]
-    skill_files[skill].append(rel)
-    skill_srcs[skill].update(srcs)
-issues = []
-for skill in sorted(skill_files):
-    hay = "".join(body(f"skills/ja/{rel}") for rel in skill_files[skill]
-                  if os.path.exists(f"skills/ja/{rel}"))
-    missing = defaultdict(set)
-    for src in sorted(skill_srcs[skill]):
-        cpath = os.path.join("kasane/concepts", src)
-        if not os.path.exists(cpath):
-            continue
-        for t in TOKEN.findall(body(cpath)):
-            if not looks_api(t):
-                continue
-            core = t.rstrip("()")
-            # ドット付き完全形は、末尾セグメント (メンバー名) が載っていれば掲載済み扱い
-            if core in hay or ("." in core and core.split(".")[-1] in hay):
-                continue
-            missing[src].add(t)
-    for src, toks in sorted(missing.items()):
-        issues.append(f"  {skill} <- {src}: {', '.join(sorted(toks))}")
-print("\n".join(issues) if issues else "API-name coverage OK")
-PY
+python3 .agents/skills/docs-refresh/scripts/api-coverage-check.py
 ```
+
+出力の読み方: `  <Skill 名> <- <concept パス>: <トークン列>` の行が、その Skill の源泉 concepts に出てくるのに Skill 側 (ja 版で代表) に一度も現れない API 名。何も無ければ `API-name coverage OK`。仕分けの基準 (掲載すべき漏れか、意図的な除外か) は [kasane/handbook/cross/user-skill-api-listing.md](../../../kasane/handbook/cross/user-skill-api-listing.md) に従う。
 
 ### 4. 更新方針の提示 (実行前確認)
 
@@ -278,122 +236,18 @@ skills 追従提案:
 - **Skill 単位**: 1 つの Skill の更新対象ファイル群 (en/ja 両言語をまとめて) を 1 サブエージェントが処理する。`SKILL.md` の能力マップと `references/` のレシピの整合を同一文脈で保つため、同じ Skill の複数ファイルを分割しない
 - **README 単位**: README は Skill に属さないため、対象 README ごと (en/ja ペアがあればペア) に委譲する
 
+**サブエージェントの起動は常に器 `ksn-implementer` の指定付きで行う** (Claude Code: `subagent_type: ksn-implementer` / codex: エージェント name `ksn-implementer` で spawn)。器を指定しない起動はしない (メインのモデルを継承し、編成の切り離しが成立しなくなる。「コンテキスト節約方針」)。器が未配置なら Step 1 で停止しているはずである。
+
 並列実行できる環境では**最大 3 並列**のバッチに分割してバッチ単位で直列実行する。並列実行できない環境でも委譲単位は変えず、1 単位ずつサブエージェントへ委譲して直列実行する。**サブエージェントへの委譲自体ができない環境では、メインが代わりに書くフォールバックを取らずに停止する** (「コンテキスト節約方針」の停止条件。この時点で skills/・README 群・manifest はいずれも未変更)。委譲可否の判定は Step 1 で済ませておく規律であり、ここでの停止は Step 1 で見落とした場合の最終防波堤として置く。
 
-#### 5a. Skill 単位のプロンプトテンプレート
+#### 5a / 5b. プロンプトテンプレート
 
-```
-KsSettingsView プロジェクトの利用者向け Agent Skill の追従更新を行ってください。
+委譲するプロンプトの本文は別ファイルに置く。委譲の直前に該当ファイルを読み、`{{...}}` のプレースホルダを埋めてサブエージェントへ渡す:
 
-## あなたの役割
-知識の正本である kasane/concepts/ の最新状態と実装コードを読み取り、対象 Skill の
-en / ja 両版を「利用者のエージェントが使うための Skill」として最新化する。
+- Skill 単位: [references/prompt-skill.md](references/prompt-skill.md)
+- README 単位: [references/prompt-readme.md](references/prompt-readme.md) — README は Skill に属さず源泉 concepts も持たない (更新の根拠は 3d のコード正チェックと `--all` / `--readme-only` の見直し) ため別テンプレートを使う。`--readme-only` 実行時に委譲するのはこちらだけである
 
-## ドキュメントの位置付け
-- 知識の正本: kasane/concepts/ (責務境界・保証・公開契約) とコード・テスト (API 署名・挙動の一次情報)
-- 利用者向け派生物: skills/{en,ja}/{{skill 名}}/ (本 Skill)
-- concepts の文体 (契約書調・保証/禁止の列挙) をそのまま写さない
-
-## 対象ファイル (en/ja ペア。両方を同一構成で同時に更新すること)
-{{言語ペアに展開した対象ファイルパス一覧}}
-
-## 関連 concepts (すべて読み込むこと)
-{{targets の逆引きで得た concepts ファイルパス一覧}}
-
-## 変更理由
-{{差分検出で得られたもの。例: "core/cells/input-cells.md が更新され、PickerCell の複数選択契約が追記された"}}
-
-## 内容規約 (必須)
-① 構成は「能力マップ + レシピ形式 + 段階開示」に従う (cross/ADR-0022)。
-   SKILL.md = 発火情報 + できること一覧 (能力マップ表) + 導入 + 最小動作コード + references への振り分け。
-   references/ = 「やりたいこと見出し + 完動コード」のレシピ。アーキテクチャ解説など利用に関係しない読み物は載せない。
-② frontmatter は Agent Skills 標準 6 フィールド (name / description / license /
-   metadata、metadata は language / source のみ) の範囲内に収め、en/ja で name を同一にする。
-   metadata.language はパスの言語 (en / ja) と一致させる。
-③ コード例は原則コメントを書かない (説明はレシピの見出しとリード文が担う)。
-   やむを得ない最小限のコメント (省略プレースホルダ等) は英語で統一する
-   (en/ja のコードブロック byte 一致 [6-③] を成立させるための意図的な例外。
-    skills/ のコード例は利用者向け成果物であり、ソースコメント規約の対象外)。
-④ ローカル絶対パス (/Users/... /Volumes/... C:\Users\...) を書かない。
-   個体・個人・秘密を特定する値 (UDID・シリアル・メールアドレス・トークン等) を書かない。
-⑤ 旧 docs/ ファイルおよび openspec への参照を新設しない。
-⑥ API 署名とコード例は concepts の記載に加えて実装コード・テストで最終確認する
-   (利用者がコピーして動くこと)。concepts と実装が矛盾する場合は drift 所見として報告し、
-   独断でどちらの正本も書き換えない。
-⑦ 個数を地の文にハードコードしない (「10 個のプロパティ」等)。数は表・一覧の行数に
-   語らせる。どうしても書く場合は生成時に正本 (concepts・実装) と照合して一致を確認する
-   (地の文の数字は正本が変わっても腐ったまま残る)。
-⑧ 全称表現 (「すべて」「常に」「必ず」、"all" / "always" / "every") で API の挙動を
-   断定しない。実装で全数確認できた場合のみ許可し、例外が1つでもあるなら例外側を明記する。
-
-## 言語の扱い
-- en 版は英語、ja 版は日本語 (技術用語・API 名・型名は原文のまま)。
-- 両版とも kasane/concepts/ (日本語) から直に書き起こす。英語版からの翻訳派生にしない。
-- 見出し階層の並び、コードブロックの数・順序・内容 (byte 一致) を en/ja で揃える。
-
-## 指示
-1. 対象ファイル (en/ja 両版) を読み込む
-2. 関連 concepts を読み込み、必要な API 署名を実装コード・テストで確認する
-3. 差分を反映した新版へ en/ja 同時に編集・保存する
-4. 完了したら、変更要約 (追加/削除/書き換えセクション) と drift 所見をテキストで返す
-```
-
-#### 5b. README 単位のプロンプトテンプレート
-
-README は Skill に属さず、源泉 concepts も持たない (更新の根拠は Step 3d のコード正チェックと `--all` / `--readme-only` の見直し) ため、5a とは別のテンプレートを使う。`--readme-only` 実行時に委譲するのはこのテンプレートだけである。
-
-```
-KsSettingsView プロジェクトの README を、実装コードを正として最新化してください。
-
-## あなたの役割
-リポジトリの実装コード・ビルド構成・Sample ソースを読み取り、対象 README を現状と
-一致した状態に直す。README は利用者と開発者がリポジトリを見て最初に読む入口であり、
-知識の正本ではない。
-
-## 対象ファイル (en/ja ペアがある場合は両方を同一構成で同時に更新すること)
-{{対象 README のパス一覧。<stem>.md と <stem>_ja.md は同一ディレクトリのペアとして扱う}}
-
-## 正となる取得元 (必ずこのファイルを読んで確認すること)
-{{Step 3d の表から、この README に対応する行の取得元パスと抽出方法}}
-
-## 検出された差分
-{{Step 3d で検出した具体的な食い違い。
-  例: "android/gradle/libs.versions.toml の AGP が 8.14.0 になっているが
-       ルート README の対応プラットフォーム表が 8.13.2 のまま"}}
-
-## README 種別ごとの確認事項
-- ルート README.md / README_ja.md: 対応プラットフォーム表の開発環境要件
-  (ツール最低バージョン) が取得元と一致すること。**モジュール一覧・ビルド手順・
-  環境セットアップ手順は README に置かない** — 利用者の入口に純化する
-  (cross/ADR-0023)。取得元に無いこれらの節を新設しないこと
-- skills/README.md / skills/README_ja.md: Skill 一覧が skills/ の実構成と一致すること
-
-## 内容規約 (必須)
-③ コード例は原則コメントを書かない。やむを得ない最小限のコメントは英語で統一する
-   (en/ja ペアのコードブロック byte 一致を成立させるための意図的な例外)。
-④ ローカル絶対パス (/Users/... /Volumes/... C:\Users\...) を書かない。
-   個体・個人・秘密を特定する値 (UDID・シリアル・メールアドレス・トークン等) を書かない。
-⑤ 旧 docs/ ファイルおよび openspec への参照を新設しない。
-⑥ 記載内容は実装コード・ビルド構成で最終確認する。コードと食い違う既存記述を見つけたら
-   README 側を直し、判断に迷う食い違いは drift 所見として報告する
-   (独断でコード・concepts を書き換えない)。
-⑦ 個数を地の文にハードコードしない。数は表・一覧の行数に語らせる。どうしても書く場合は
-   生成時に正本と照合して一致を確認する。
-⑧ 全称表現 (「すべて」「常に」「必ず」、"all" / "always" / "every") で挙動を断定しない。
-   全数確認できた場合のみ許可し、例外があるなら例外側を明記する。
-※ ①(能力マップ + レシピ形式) と ②(Agent Skills frontmatter) は Skill 本体の規約であり
-   README には適用しない。
-
-## 言語の扱い
-- en 版は英語、ja 版は日本語 (技術用語・API 名・型名は原文のまま)。
-- ペアがある場合は見出し階層の並び、コードブロックの数・順序・内容 (byte 一致) を揃える。
-
-## 指示
-1. 対象 README (ペアがあれば両方) を読み込む
-2. 取得元のコード・ビルド構成を読み、正の値を確定する
-3. 差分を反映した新版へ同時に編集・保存する
-4. 完了したら、変更要約と drift 所見をテキストで返す
-```
+どちらのテンプレートも先頭にコンテキストパッケージ節を持つ。器 `ksn-implementer` は「渡されたコンテキストパッケージの読むべきスキルを読み、パッケージなしで起動されたら作業しない」と定められているため、この節を削って渡さない。
 
 各バッチ完了後、メインオーケストレーターが進捗リストの該当ファイルを完了にマークする (サブエージェントには進捗リストを直接更新させない)。
 
@@ -422,27 +276,21 @@ KsSettingsView プロジェクトの README を、実装コードを正として
 
 **Step 6 の検査は、ディスクの `skills/.manifest.json` ではなく「この実行で書き出す予定の manifest」に対して行う。** ディスクの manifest は Step 7 まで旧状態のままであり (`targets` / `excluded` への追記は判断確定後・書き込みは最後)、それを検査入力にすると新規 concept の配置を承認した直後でも 6-① が `UNCOVERED` を出し続けて再修正ループから抜けられないためである。まず Step 4 で承認された配置判断・削除整理を反映した**予定 manifest** を一時ファイルへ書き出し、以降の検査はこれを読む:
 
+承認により確定した判断は JSON ファイルに書き、環境変数 `DOCS_REFRESH_DECISIONS` で渡す (スクリプト本体は書き換えない)。判断が何も無い実行では、この環境変数ごと省略してよい:
+
 ```bash
-python3 - <<'PY' > /tmp/docs-refresh-manifest-planned.json
-import json
-M = json.load(open("skills/.manifest.json"))
-
-# --- ここを、この実行で Step 4 の承認により確定した内容に置き換える ---
-ADD_TARGETS  = {}   # {"<言語抜き Skill 相対パス>": ["<新規 concept パス>", ...]}
-ADD_EXCLUDED = {}   # {"<concept パス>": "<除外理由>"}
-DROP_CONCEPTS = []  # 削除済み concept のパス (targets の値 / excluded から取り除く)
-# ---------------------------------------------------------------
-
-for rel, srcs in ADD_TARGETS.items():
-    M["targets"][rel] = sorted(set(M["targets"].get(rel, [])) | set(srcs))
-M["excluded"].update(ADD_EXCLUDED)
-for c in DROP_CONCEPTS:
-    for rel in M["targets"]:
-        M["targets"][rel] = [x for x in M["targets"][rel] if x != c]
-    M["excluded"].pop(c, None)
-print(json.dumps(M, ensure_ascii=False, indent=2))
-PY
+cat > /tmp/docs-refresh-decisions.json <<'JSON'
+{
+  "addTargets":   {},
+  "addExcluded":  {},
+  "dropConcepts": []
+}
+JSON
+DOCS_REFRESH_DECISIONS=/tmp/docs-refresh-decisions.json \
+  python3 .agents/skills/docs-refresh/scripts/planned-manifest.py > /tmp/docs-refresh-manifest-planned.json
 ```
+
+`addTargets` は `{"<言語抜き Skill 相対パス>": ["<新規 concept パス>", ...]}`、`addExcluded` は `{"<concept パス>": "<除外理由>"}`、`dropConcepts` は削除済み concept のパス一覧 (`targets` の値と `excluded` から取り除く)。
 
 予定 manifest は検査の入力にすぎず、ディスクへの反映は Step 7 で行う (中断時に次回が同じ差分を再検出できる規律は変わらない)。Step 7 で書き出す `targets` / `excluded` は、この予定 manifest と同一内容にする。
 
@@ -451,29 +299,19 @@ PY
 検査対象ファイルの一覧も予定 manifest から導く:
 
 ```bash
-DOCS_REFRESH_MANIFEST=/tmp/docs-refresh-manifest-planned.json python3 - <<'PY' > /tmp/docs-refresh-targets.txt
-import json, os
-M = json.load(open(os.environ.get("DOCS_REFRESH_MANIFEST", "skills/.manifest.json")))
-readme_only = os.environ.get("DOCS_REFRESH_README_ONLY") == "1"
-if not readme_only:
-    for p in M["targets"]:
-        print(f"skills/en/{p}")
-        print(f"skills/ja/{p}")
-for p in M["readmes"]:
-    print(p)
-PY
+DOCS_REFRESH_MANIFEST=/tmp/docs-refresh-manifest-planned.json \
+  python3 .agents/skills/docs-refresh/scripts/targets-list.py > /tmp/docs-refresh-targets.txt
 ```
 
-`--readme-only` 実行時は先頭を `DOCS_REFRESH_MANIFEST=/tmp/docs-refresh-manifest-planned.json DOCS_REFRESH_README_ONLY=1 python3 - <<'PY' …` として起動する (対象一覧は `readmes` のみになる)。
+`targets` を en/ja に展開したものと `readmes` を 1 行 1 パスで書き出す。`--readme-only` 実行時は `DOCS_REFRESH_README_ONLY=1` も併記して起動する (対象一覧は `readmes` のみになる)。
 
 #### 6-① concepts 網羅検査
 
 Step 3c のスクリプトを、上で書き出した**予定 manifest** を入力として再実行し、`UNCOVERED` / `DELETED` が出ないことを確認する (承認された配置判断を反映してなお漏れている concept がないかの再確認):
 
 ```bash
-DOCS_REFRESH_MANIFEST=/tmp/docs-refresh-manifest-planned.json python3 - <<'PY'
-# Step 3c と同一のスクリプト
-PY
+DOCS_REFRESH_MANIFEST=/tmp/docs-refresh-manifest-planned.json \
+  python3 .agents/skills/docs-refresh/scripts/concepts-coverage-check.py
 ```
 
 `--readme-only` 実行時はこの検査を**報告のみ**とする。`--readme-only` は設計上 concept 差分を消費しない (Step 7) ため、Skill 本体に未反映の concept があるのが正常状態であり、`UNCOVERED` / `DELETED` が出ても再修正対象に載せない。完了サマリに「次回の通常実行で処理される」旨を添えて報告する。
@@ -483,143 +321,33 @@ PY
 見出し階層の並びを en/ja で比較する (見出しの文言は言語が違うので比較しない)。検査対象は `targets` の Skill ファイルペアに加え、`readmes` の**言語ペア** — 同一ディレクトリの `<stem>.md` と `<stem>_ja.md` を 1 組とみなす (例: `README.md` ↔ `README_ja.md`、`skills/README.md` ↔ `skills/README_ja.md`)。対になる `_ja` 版が `readmes` に無い README は単独扱いで、この検査の対象外。`--readme-only` 実行時はコマンド行に `DOCS_REFRESH_README_ONLY=1` も付けて起動し、`targets` の Skill ペアを対象から外す (6-③ も同じ):
 
 ```bash
-DOCS_REFRESH_MANIFEST=/tmp/docs-refresh-manifest-planned.json python3 - <<'PY'
-import json, os, re
-M = json.load(open(os.environ.get("DOCS_REFRESH_MANIFEST", "skills/.manifest.json")))
-README_ONLY = os.environ.get("DOCS_REFRESH_README_ONLY") == "1"
-
-def language_pairs(M):
-    """検査対象の (en 側, ja 側, 表示名) を列挙する"""
-    out = [] if README_ONLY else [(f"skills/en/{rel}", f"skills/ja/{rel}", rel) for rel in M["targets"]]
-    readmes = set(M["readmes"])
-    for p in M["readmes"]:
-        if p.endswith("_ja.md"):
-            continue
-        ja = p[:-len(".md")] + "_ja.md"
-        if ja in readmes:
-            out.append((p, ja, p))
-    return out
-
-H = re.compile(r'^(#{1,6})\s', re.M)
-def levels(path):
-    with open(path, encoding="utf-8") as fh:
-        body = re.sub(r'^---\n.*?\n---\n', '', fh.read(), count=1, flags=re.S)
-    body = re.sub(r'^```.*?^```', '', body, flags=re.M | re.S)
-    return [len(m.group(1)) for m in H.finditer(body)]
-issues = []
-for en, ja, label in language_pairs(M):
-    for p in (en, ja):
-        if not os.path.exists(p):
-            issues.append(f"  {p}: MISSING")
-    if not (os.path.exists(en) and os.path.exists(ja)):
-        continue
-    le, lj = levels(en), levels(ja)
-    if le != lj:
-        issues.append(f"  {label}: heading levels differ en={le} ja={lj}")
-print("\n".join(issues) if issues else "en/ja heading structure OK")
-PY
+DOCS_REFRESH_MANIFEST=/tmp/docs-refresh-manifest-planned.json \
+  python3 .agents/skills/docs-refresh/scripts/heading-parity-check.py
 ```
+
+不一致・欠落があれば行が出る。無ければ `en/ja heading structure OK`。
 
 #### 6-③ コードブロックの byte 一致
 
-コード例は言語に依らず同一であること (数・順序・内容)。対象は 6-② と同じく `targets` の Skill ファイルペア + `readmes` の言語ペア (`language_pairs` は 6-② の定義を再掲して使う):
+コード例は言語に依らず同一であること (数・順序・内容)。対象は 6-② と同じく `targets` の Skill ファイルペア + `readmes` の言語ペアで、`--readme-only` の絞り込み方も 6-② と同じ:
 
 ```bash
-DOCS_REFRESH_MANIFEST=/tmp/docs-refresh-manifest-planned.json python3 - <<'PY'
-import json, os, re
-M = json.load(open(os.environ.get("DOCS_REFRESH_MANIFEST", "skills/.manifest.json")))
-README_ONLY = os.environ.get("DOCS_REFRESH_README_ONLY") == "1"
-
-def language_pairs(M):   # 6-② と同一
-    out = [] if README_ONLY else [(f"skills/en/{rel}", f"skills/ja/{rel}", rel) for rel in M["targets"]]
-    readmes = set(M["readmes"])
-    for p in M["readmes"]:
-        if p.endswith("_ja.md"):
-            continue
-        ja = p[:-len(".md")] + "_ja.md"
-        if ja in readmes:
-            out.append((p, ja, p))
-    return out
-
-FENCE = re.compile(r'^(```+)([^\n]*)\n(.*?)^\1\s*$', re.M | re.S)
-def blocks(path):
-    with open(path, encoding="utf-8") as fh:
-        return [(m.group(2).strip(), m.group(3)) for m in FENCE.finditer(fh.read())]
-issues = []
-for en, ja, label in language_pairs(M):
-    if not (os.path.exists(en) and os.path.exists(ja)):
-        continue
-    be, bj = blocks(en), blocks(ja)
-    if len(be) != len(bj):
-        issues.append(f"  {label}: code block count differs en={len(be)} ja={len(bj)}")
-        continue
-    for i, (x, y) in enumerate(zip(be, bj), 1):
-        if x != y:
-            issues.append(f"  {label}: code block #{i} differs (lang or body)")
-print("\n".join(issues) if issues else "code blocks byte-identical")
-PY
+DOCS_REFRESH_MANIFEST=/tmp/docs-refresh-manifest-planned.json \
+  python3 .agents/skills/docs-refresh/scripts/code-block-parity-check.py
 ```
+
+不一致があれば行が出る。無ければ `code blocks byte-identical`。
 
 #### 6-④ frontmatter 検査
 
 `SKILL.md` の frontmatter は Agent Skills 標準 6 フィールド (`name` / `description` / `license` / `metadata`、`metadata` は `language` / `source`) の範囲内。`name` は en/ja 同名、`metadata.language` はパスの言語と一致。これは Skill 専用の検査なので、`--readme-only` 実行時は **N/A** (実行しない):
 
 ```bash
-DOCS_REFRESH_MANIFEST=/tmp/docs-refresh-manifest-planned.json python3 - <<'PY'
-import json, os, re
-ALLOWED_TOP = {"name", "description", "license", "metadata"}
-ALLOWED_META = {"language", "source"}
-M = json.load(open(os.environ.get("DOCS_REFRESH_MANIFEST", "skills/.manifest.json")))
-skills = sorted({rel.split("/")[0] for rel in M["targets"]})
-def front(path):
-    with open(path, encoding="utf-8") as fh:
-        text = fh.read()
-    m = re.match(r'---\n(.*?)\n---\n', text, re.S)
-    if not m:
-        return None
-    top, meta, in_meta = {}, {}, False
-    for line in m.group(1).splitlines():
-        if not line.strip() or line.lstrip().startswith("#"):
-            continue
-        if re.match(r'^\S', line):
-            in_meta = False
-            key, _, val = line.partition(":")
-            top[key.strip()] = val.strip().strip('"')
-            in_meta = key.strip() == "metadata"
-        elif in_meta:
-            key, _, val = line.strip().partition(":")
-            meta[key.strip()] = val.strip().strip('"')
-    return top, meta
-issues = []
-for skill in skills:
-    pair = {}
-    for lang in ("en", "ja"):
-        path = f"skills/{lang}/{skill}/SKILL.md"
-        if not os.path.exists(path):
-            issues.append(f"  {path}: MISSING")
-            continue
-        parsed = front(path)
-        if parsed is None:
-            issues.append(f"  {path}: frontmatter not found")
-            continue
-        top, meta = parsed
-        pair[lang] = top
-        extra = set(top) - ALLOWED_TOP
-        if extra:
-            issues.append(f"  {path}: non-standard field(s) {sorted(extra)}")
-        for req in ("name", "description"):
-            if req not in top:
-                issues.append(f"  {path}: required field '{req}' missing")
-        extra_meta = set(meta) - ALLOWED_META
-        if extra_meta:
-            issues.append(f"  {path}: non-standard metadata field(s) {sorted(extra_meta)}")
-        if meta.get("language") != lang:
-            issues.append(f"  {path}: metadata.language={meta.get('language')!r} != {lang!r}")
-    if "en" in pair and "ja" in pair and pair["en"].get("name") != pair["ja"].get("name"):
-        issues.append(f"  {skill}: name differs en={pair['en'].get('name')!r} ja={pair['ja'].get('name')!r}")
-print("\n".join(issues) if issues else "frontmatter OK")
-PY
+DOCS_REFRESH_MANIFEST=/tmp/docs-refresh-manifest-planned.json \
+  python3 .agents/skills/docs-refresh/scripts/frontmatter-check.py
 ```
+
+違反があれば行が出る。無ければ `frontmatter OK`。
 
 #### 6-⑤ 旧名残 grep
 
@@ -647,30 +375,10 @@ fi
 #### 6-⑥ 内部リンク解決
 
 ```bash
-python3 - <<'PY'
-import os, re
-targets = [l.strip() for l in open("/tmp/docs-refresh-targets.txt") if l.strip()]
-if not targets:
-    print("検査対象が空です (manifest の targets / readmes を確認してから再実行)")
-    raise SystemExit(0)
-issues = []
-for path in targets:
-    if not os.path.exists(path):
-        issues.append(f"  {path}: MISSING")
-        continue
-    with open(path, encoding="utf-8") as fh:
-        content = fh.read()
-    for m in re.finditer(r'\[([^\]]+)\]\(([^)#\s]+)(?:#[^)]*)?\)', content):
-        target = m.group(2)
-        if target.startswith(("http://", "https://", "mailto:", "file://")):
-            continue
-        base = os.path.dirname(path) or "."
-        resolved = os.path.normpath(os.path.join(base, target))
-        if not os.path.exists(resolved):
-            issues.append(f"  {path}: [{m.group(1)}]({target}) -> {resolved} MISSING")
-print("\n".join(issues) if issues else "All internal links resolve")
-PY
+python3 .agents/skills/docs-refresh/scripts/link-resolution-check.py
 ```
+
+未解決の相対リンク・欠落ファイルがあれば行が出る。無ければ `All internal links resolve`。対象一覧 (`/tmp/docs-refresh-targets.txt`) が空のときは検査せずその旨を出す (0 件を適合と誤読しないための空ガード)。
 
 #### 6-⑦ ローカル絶対パス・個体/個人/秘密の検査 (identity-lint)
 
@@ -693,7 +401,7 @@ fi
 
 #### 6-⑧ 配信識別子の表記ゆれ grep
 
-公開識別子の正は [kasane/handbook/cross/public-identifiers.md](../../../kasane/handbook/cross/public-identifiers.md)。ecosystem ごとの表記規則 (SwiftPM は PascalCase、Android namespace は lowercase reverse-DNS、artifactId は kebab-case) を崩した表記を検出する:
+公開識別子の正は [kasane/handbook/cross/public-identifiers.md](../../../kasane/handbook/cross/public-identifiers.md)。ecosystem ごとの表記規則 (SwiftPM は PascalCase、Android namespace は lowercase reverse-DNS、Android の artifact / project 名は lowercase でブランド名の内部にハイフンを入れない) を崩した表記を検出する:
 
 ```bash
 TARGETS=($(cat /tmp/docs-refresh-targets.txt))
@@ -706,7 +414,7 @@ else
 fi
 ```
 
-行が出たら該当ファイルを再修正対象に追加する。Maven `groupId` の記述は ADR-0002 の `jp.kamusoft` と現行 Gradle `group` (`jp.kamusoft.kssettingsview`) の食い違いがあるため、**利用者向けの配布座標として断定的に書かない** (公開が未導入である旨とともに記述する)。
+行が出たら該当ファイルを再修正対象に追加する。Maven の配布座標は ADR-0002 と現行 Gradle `group` がともに `jp.kamusoft` で一致しており、artifactId は `kssettingsview` の 1 本である。ただし Maven Central への公開は未実施のため、**利用者向けの配布座標には公開が未導入である旨を添えて記述する**。
 
 ### 7. manifest の更新
 
@@ -746,6 +454,7 @@ fi
 - **skills/ の構成自体の見直し**(Skill の新設・廃止、references の分割方針の変更) はこのスキルの守備範囲外。ユーザーに変更フローの起票として提案する
 - **en/ja を片方だけ更新しない**。更新は常に言語ペア単位で、同一構成・同時更新 (翻訳ロックステップ)
 - 新規 concept の配置判断 (どの Skill に載せるか / 除外するか) をスキルが独断で決めない。網羅検査の失敗としてユーザーへ提示する
+- **器の指定なしでサブエージェントを起動しない**。サブエージェントは常に器 `ksn-implementer` を指定して起動し (Claude Code: `subagent_type` / codex: エージェント name)、器が未配置なら Step 1 で停止する (器なしの起動はメインのモデルを継承し、編成の切り離しが成立しなくなる)
 - サブエージェントにメイン側の進捗リストを直接更新させない (競合回避。完了報告はテキストで返させる)
 - 廃止概念 (旧 `KsColor` / `KsFont` 等) は「廃止済み」と明示する以外の文脈で復活させない
 - 削除コマンドは `rm` ではなく `trash` を使う (プロジェクト規約)

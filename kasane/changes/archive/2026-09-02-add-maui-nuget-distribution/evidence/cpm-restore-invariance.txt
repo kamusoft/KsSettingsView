@@ -1,0 +1,25 @@
+# 版集約 (CPM) 導入前後の解決版の比較 (2026-09-02)
+
+手順: maui/Directory.Packages.props 導入の前後で 7 プロジェクトを restore し、
+project.assets.json の targets 配下から type=package のエントリ (TFM|パッケージID/版) を
+全件抽出して突き合わせた。
+
+結果: 7 プロジェクトすべてで抽出結果が完全一致 (diff なし)。
+
+| プロジェクト | 解決パッケージ数 | 導入前との差 |
+|---|---|---|
+| KsSettingsView.Maui | 199 | 一致 |
+| KsSettingsView.Maui.Tests | 33 | 一致 |
+| KsSettingsView.MauiHost | 724 | 一致 |
+| KsSettingsView.IntegrationHost.iOS | 2 | 一致 |
+| KsSettingsView.IntegrationHost.Android | 372 | 一致 |
+| KsSettingsView.Binding.Android | 124 | 一致 |
+| KsSettingsView.Binding.iOS | 1 | 一致 |
+
+NU1608 / NU1107: 全プロジェクトで 0 件。
+
+新規に出る警告: NU1507 (中央パッケージ管理でパッケージソースが複数構成されている)。
+作業機の NuGet 構成に nuget.org 以外のソースが 1 件登録されていることが原因で、
+リポジトリの内容には依存しない (単一ソース構成の環境では出ない)。
+
+抽出の全文は手元保管。

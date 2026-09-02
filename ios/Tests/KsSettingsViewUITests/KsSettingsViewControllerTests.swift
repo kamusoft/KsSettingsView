@@ -14,6 +14,29 @@ import UIKit
 
 @MainActor
 final class KsSettingsViewControllerTests: XCTestCase {
+    func test_行タップ通知対応の11種はすべてTapNotifyingRendererとして解決できる() {
+        let renderers: [(String, AnyObject)] = [
+            ("Command", CommandCellView(frame: .zero)),
+            ("Button", ButtonCellView(frame: .zero)),
+            ("Checkbox", CheckboxCellView(frame: .zero)),
+            ("Radio", RadioCellView(frame: .zero)),
+            ("SimpleCheck", SimpleCheckCellView(frame: .zero)),
+            ("Picker", PickerCellView(frame: .zero)),
+            ("NumberPicker", NumberPickerCellView(frame: .zero)),
+            ("TimePicker", TimePickerCellView(frame: .zero)),
+            ("DatePicker", DatePickerCellView(frame: .zero)),
+            ("Entry", EntryCellView(frame: .zero)),
+            ("Custom", CustomCellView(frame: .zero)),
+        ]
+
+        for (name, renderer) in renderers {
+            XCTAssertTrue(
+                renderer is any TapNotifyingRenderer,
+                "\(name)CellView が TapNotifyingRenderer として解決できない"
+            )
+        }
+    }
+
     func test_internal_initで構築したcontrollerはSection数とセル数がsnapshotに反映される() {
         let section1 = Section(
             header: .text("一般"),

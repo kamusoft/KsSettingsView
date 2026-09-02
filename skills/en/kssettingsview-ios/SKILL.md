@@ -1,6 +1,6 @@
 ---
 name: kssettingsview-ios
-description: Build iOS settings screens with KsSettingsView - a SwiftUI declarative DSL (KsSettingsView) or a UIKit host (KsSettingsViewController) over 12 built-in cells (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker), CustomCell rows holding any SwiftUI view, live updates through SettingsRootStore, and Theme / CellStyle styling. Use when adding, changing, or reviewing a settings screen in a Swift app that depends on KsSettingsViewCore, KsSettingsViewUI, or KsSettingsViewSwiftUI.
+description: Build iOS settings screens with KsSettingsView - a SwiftUI declarative DSL (KsSettingsView) or a UIKit host (KsSettingsViewController) over the built-in cells (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker), CustomCell rows holding any SwiftUI view, live updates through SettingsRootStore, and Theme / CellStyle styling. Use when adding, changing, or reviewing a settings screen in a Swift app that depends on KsSettingsViewCore, KsSettingsViewUI, or KsSettingsViewSwiftUI.
 license: MIT
 metadata:
   language: en
@@ -49,7 +49,7 @@ let package = Package(
 )
 ```
 
-You link that one product, but you `import` by module name: it bundles three modules, `KsSettingsViewCore` (settings tree), `KsSettingsViewUI` (cells, `Theme`, `CellStyle`, UIKit host), and `KsSettingsViewSwiftUI` (SwiftUI view and declarative DSL). There are 12 built-in cell types plus `CustomCell`.
+You link that one product, but you `import` by module name: it bundles three modules, `KsSettingsViewCore` (settings tree), `KsSettingsViewUI` (cells, `Theme`, `CellStyle`, UIKit host), and `KsSettingsViewSwiftUI` (SwiftUI view and declarative DSL). The built-in cell types are covered one by one in [references/cells.md](references/cells.md); `CustomCell` and cell types of your own are in [references/custom-cells.md](references/custom-cells.md).
 
 | Requirement | Minimum |
 |---|---|

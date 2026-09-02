@@ -1,5 +1,5 @@
 using System;
-using KsSettingsView.Maui.Internals;
+using KsSettingsView.Internals;
 using Microsoft.Maui;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Handlers;
@@ -12,7 +12,7 @@ using PlatformView = Android.Views.View;
 using PlatformView = System.Object;
 #endif
 
-namespace KsSettingsView.Maui.Handlers;
+namespace KsSettingsView.Handlers;
 
 /// <summary>
 /// <see cref="SettingsView"/> と Native Host を結ぶ Handler。

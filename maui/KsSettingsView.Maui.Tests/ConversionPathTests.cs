@@ -2,14 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using KsSettingsView.Maui.Internals;
-using KsSettingsView.Maui.Tests.Fakes;
-using KsSettingsView.Maui.Tests.Support;
+using KsSettingsView.Internals;
+using KsSettingsView.Tests.Fakes;
+using KsSettingsView.Tests.Support;
 using Microsoft.Maui;
 using Microsoft.Maui.Graphics;
 using NUnit.Framework;
 
-namespace KsSettingsView.Maui.Tests;
+namespace KsSettingsView.Tests;
 
 /// <summary>
 /// コレクションの構造変更が gateway の構造操作へ 1 対 1 で変換され、対応表が

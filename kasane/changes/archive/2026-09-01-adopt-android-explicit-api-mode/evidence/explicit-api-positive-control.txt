@@ -1,0 +1,17 @@
+Explicit API Strict 陽性対照 (2026-09-01)
+
+対象:
+- `ANDROID_HOME=<android-sdk> ./gradlew :kssettingsview:compileDebugKotlin --rerun-tasks --no-build-cache`
+- `ANDROID_HOME=<android-sdk> ./gradlew :kssettingsview:compileReleaseKotlin --rerun-tasks --no-build-cache`
+
+結果:
+- debug: `Visibility must be specified in explicit API mode.` 204 件、`BUILD FAILED`
+- release: `Visibility must be specified in explicit API mode.` 204 件、`BUILD FAILED`
+- `Return type must be specified` は両 variant とも 0 件
+
+抜粋:
+e: android/kssettingsview/src/main/kotlin/jp/kamusoft/kssettingsview/compose/BasicCellDsl.kt:215:1 Visibility must be specified in explicit API mode.
+e: android/kssettingsview/src/main/kotlin/jp/kamusoft/kssettingsview/ui/VisibilityAware.kt:19:5 Visibility must be specified in explicit API mode.
+BUILD FAILED
+
+同じ診断集合が debug / release の両方で得られた。公開宣言の明示後は同じ compilation が成功することを別途確認した。

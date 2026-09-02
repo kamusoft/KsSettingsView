@@ -6,6 +6,7 @@
 #if canImport(UIKit)
 import XCTest
 import UIKit
+import KsSettingsViewTestSupport
 @testable import KsSettingsViewBridge
 @testable import KsSettingsViewUI
 @testable import KsSettingsViewCore
@@ -74,7 +75,7 @@ final class KsBridgeSectionVisibilityTests: XCTestCase {
         let hidden = KsBridgeSection(headerText: "S", footerText: nil, cells: [KsBridgeLabelCell(title: "A")])
         hidden.isVisible = false
         bridge.replaceSection(sectionID: sectionID, newSection: hidden)
-        KsBridgeTestHost.pump(attachment)
+        KsBridgeTestHost.awaitRenderedTitles(attachment, equals: [])
 
         XCTAssertEqual(KsBridgeTestHost.renderedTitles(attachment), [])
     }
@@ -133,7 +134,7 @@ final class KsBridgeSectionVisibilityTests: XCTestCase {
         let hidden = KsBridgeSection(headerText: "S", footerText: nil, cells: [KsBridgeLabelCell(title: "A")])
         hidden.isHeaderVisible = false
         bridge.replaceSection(sectionID: sectionID, newSection: hidden)
-        KsBridgeTestHost.pump(attachment)
+        KsBridgeTestHost.awaitHeaderText(attachment, section: 0, equals: nil)
 
         XCTAssertNil(KsBridgeTestHost.headerText(attachment, section: 0))
         XCTAssertEqual(KsBridgeTestHost.renderedTitles(attachment), [["A"]], "Cell は残る")

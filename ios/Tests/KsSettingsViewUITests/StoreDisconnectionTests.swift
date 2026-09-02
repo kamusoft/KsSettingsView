@@ -7,6 +7,7 @@
 #if canImport(UIKit)
 import XCTest
 import UIKit
+import KsSettingsViewTestSupport
 @testable import KsSettingsViewUI
 @testable import KsSettingsViewCore
 
@@ -27,17 +28,8 @@ final class StoreDisconnectionTests: XCTestCase {
         root.layoutIfNeeded()
         let cv = controller.internalCollectionView
         cv.frame = CGRect(origin: .zero, size: size)
-        pump(cv)
+        awaitInitialRender(controller)
         return (controller, cv, window)
-    }
-
-    /// レイアウトと再構成を確定させる。
-    private func pump(_ view: UIView, seconds: TimeInterval = 0.05) {
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
-        RunLoop.current.run(until: Date().addingTimeInterval(seconds))
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
     }
 
     /// 先頭 Section に実際に表示されている行タイトルを返す。
@@ -70,7 +62,7 @@ final class StoreDisconnectionTests: XCTestCase {
         let cellA = store.root.sections[0].cells[0]
         store.replaceCells([(cellID: KsCellID(cell: cellA), new: LabelCell(id: cellA.id, title: "A-updated"))])
         store.applyTheme(Theme(cellTitleColor: .green))
-        pump(cv)
+        waitForNegativeVerification(in: cv)
 
         XCTAssertEqual(renderedTitles(cv), ["A", "B"], "解除後の構造・内容更新は表示へ届かない")
         XCTAssertEqual(controller.currentTheme, themeBefore, "解除後の Theme 更新は届かない")

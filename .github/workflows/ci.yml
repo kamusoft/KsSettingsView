@@ -1,7 +1,8 @@
 # 検証 CI の入口
 #
-# develop / main を対象とする pull_request と develop への push で、3 platform の検証と
-# lint を起動する。paths による絞り込みは行わず、変更内容に関わらず常に全 job を実行する
+# develop / main を対象とする pull_request と develop への push で、3 platform の検証・
+# 3 platform の消費者検証 (dry-run)・lint を起動する。paths による絞り込みは行わず、
+# 変更内容に関わらず常に全 job を実行する
 # (必須 status check として素通りする経路を作らないため)。
 name: CI
 
@@ -27,7 +28,8 @@ concurrency:
 jobs:
   # 再利用可能 workflow を呼ぶ job の status check 名は
   # 「呼び出し側の job 名 / 呼ばれた側の job 名」になる。branch protection に登録する名前を
-  # 固定するため、両側の job 名を明示する (ここでは ios / verify、android / verify、maui / verify)。
+  # 固定するため、両側の job 名を明示する (ここでは ios / verify、android / verify、
+  # maui / verify、consumer-ios / verify、consumer-android / verify、consumer-maui / verify)。
   ios:
     name: ios
     uses: ./.github/workflows/verify-ios.yml
@@ -39,6 +41,28 @@ jobs:
   maui:
     name: maui
     uses: ./.github/workflows/verify-maui.yml
+
+  # 配布物を利用者と同じ経路で解決できるかの検証。CI 入口からは常に dry-run で呼び、
+  # version は渡さない (platform ごとの開発用既定値を消費者側が使う。単一の version を
+  # 渡すと少なくとも一方のローカル成果物と一致しない)。artifact も渡さないので、
+  # 各 job が自分でフィード準備から行う。publish 成果物を渡す呼び出しは release 側。
+  consumer-ios:
+    name: consumer-ios
+    uses: ./.github/workflows/verify-consumer-ios.yml
+    with:
+      mode: dry-run
+
+  consumer-android:
+    name: consumer-android
+    uses: ./.github/workflows/verify-consumer-android.yml
+    with:
+      mode: dry-run
+
+  consumer-maui:
+    name: consumer-maui
+    uses: ./.github/workflows/verify-consumer-maui.yml
+    with:
+      mode: dry-run
 
   lint:
     name: lint
@@ -102,3 +126,13 @@ jobs:
 
       - name: Comment policy lint
         run: python3 scripts/comment-policy-lint.py
+
+      # 利用者向けドキュメントの最小例と、消費者検証がコンパイルするソースの一致検査。
+      # 片側だけが変わると、ドキュメントの例がビルドされない状態のまま緑になる。
+      - name: README example lint
+        run: python3 scripts/readme-example-lint.py
+
+      # 配信リポジトリ同期スクリプトの安全弁 (破壊的操作前の 4 段検証) の回帰テスト。
+      # bash と git しか使わないので macOS ランナーを起こさずこの job で回す。
+      - name: SPM snapshot sync script test
+        run: scripts/spm-snapshot/sync-snapshot-test.sh

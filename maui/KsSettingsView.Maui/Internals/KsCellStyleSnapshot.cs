@@ -1,4 +1,4 @@
-namespace KsSettingsView.Maui.Internals;
+namespace KsSettingsView.Internals;
 
 /// <summary>
 /// Cell 個別のスタイル上書きを interop 境界へ運ぶために写し取った値。

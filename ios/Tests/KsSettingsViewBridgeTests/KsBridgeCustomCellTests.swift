@@ -7,6 +7,7 @@
 #if canImport(UIKit)
 import XCTest
 import UIKit
+import KsSettingsViewTestSupport
 @testable import KsSettingsViewBridge
 @testable import KsSettingsViewUI
 @testable import KsSettingsViewCore
@@ -203,7 +204,7 @@ final class KsBridgeCustomCellTests: XCTestCase {
             KsBridgeCellUpdate(cellID: dto.cellID, cell: update),
             KsBridgeCellUpdate(cellID: KsBridgeFixture.unusedIdentifier(), cell: KsBridgeLabelCell(title: "X")),
         ])
-        KsBridgeTestHost.pump(attachment)
+        awaitEmbeddedProbe(attachment, is: second, "バッチ更新後の行の内容の入れ替え")
 
         XCTAssertTrue(embeddedProbe(attachment) === second, "バッチ更新でも輸送した view が行に表示される")
     }
@@ -253,7 +254,13 @@ final class KsBridgeCustomCellTests: XCTestCase {
         update.hasTapHandler = true
         update.isEnabled = false
         bridge.replaceCell(cellID: dto.cellID, newCell: update)
-        KsBridgeTestHost.pump(attachment)
+        // 更新前は行タップ動作が設定されているため、それが外れることが再バインドの遷移証拠になる。
+        awaitCondition(
+            "無効化した CustomCell の再バインド (行タップ動作の解除)",
+            in: attachment.collectionView,
+            actual: { "tapHandler \(self.customCellView(attachment)?.tapHandler == nil ? "nil" : "設定あり")" },
+            until: { self.customCellView(attachment)?.tapHandler == nil }
+        )
 
         XCTAssertNil(
             customCellView(attachment)?.tapHandler,
@@ -288,7 +295,7 @@ final class KsBridgeCustomCellTests: XCTestCase {
         update.view = second
         update.contentToken = "token-2"
         bridge.replaceCell(cellID: dto.cellID, newCell: update)
-        KsBridgeTestHost.pump(attachment)
+        awaitEmbeddedProbe(attachment, is: second, "トークン変更による行の内容の入れ替え")
 
         XCTAssertTrue(embeddedProbe(attachment) === second, "トークン変更で行の内容が新しい view になる")
         XCTAssertEqual(second.attachCount, 1, "新しい view の埋め込みは 1 回だけ起きる")
@@ -306,11 +313,20 @@ final class KsBridgeCustomCellTests: XCTestCase {
         let bridge = KsBridgeFixture.withCells([dto])
         let attachment = KsBridgeTestHost.attach(bridge)
 
+        let attachBefore = probe.attachCount
+
         let update = KsBridgeCustomCell(title: "")
         update.view = probe
         update.contentToken = "token-2"
         bridge.replaceCell(cellID: dto.cellID, newCell: update)
-        KsBridgeTestHost.pump(attachment)
+        // 同一 view のため埋め込み先の変化は見えない。トークン変更で内容が作り直され、
+        // 同じ view が取り付け直されることを遷移証拠にする。
+        awaitCondition(
+            "トークン変更による同一 view の取り付け直し",
+            in: attachment.collectionView,
+            actual: { "取り付け回数 \(probe.attachCount) (更新前 \(attachBefore))" },
+            until: { probe.attachCount > attachBefore }
+        )
 
         XCTAssertTrue(embeddedProbe(attachment) === probe)
         XCTAssertEqual(counter.value, 0)
@@ -353,8 +369,22 @@ final class KsBridgeCustomCellTests: XCTestCase {
         XCTAssertGreaterThan(maxOffset, 0, "前提: 画面外へスクロールできる長さの list になっていない")
 
         collectionView.contentOffset = CGPoint(x: 0, y: maxOffset)
-        KsBridgeTestHost.pump(attachment, seconds: 0.3)
-        KsBridgeTestHost.pump(attachment, seconds: 0.3)
+        // 画面外へ出た行の回収と、その内容の取り外しは次のレイアウト周回で確定するため、
+        // 回収が済んで内容がどの表示中の行にも残っていない状態そのものを待つ。
+        let isRecycled = {
+            collectionView.cellForItem(at: IndexPath(item: 0, section: 0)) == nil
+                && !collectionView.indexPathsForVisibleItems.contains { indexPath in
+                    collectionView.cellForItem(at: indexPath).map { probe.isDescendant(of: $0) } ?? false
+                }
+        }
+        awaitCondition(
+            "先頭行が画面外へ出て再利用され、内容が表示中の行から外れる",
+            in: collectionView,
+            actual: {
+                "先頭行 \(KsBridgeTestHost.describe(collectionView.cellForItem(at: IndexPath(item: 0, section: 0))))"
+            },
+            until: isRecycled
+        )
         XCTAssertNil(
             collectionView.cellForItem(at: IndexPath(item: 0, section: 0)),
             "前提: 先頭行が画面外へ出ていない"
@@ -368,7 +398,7 @@ final class KsBridgeCustomCellTests: XCTestCase {
         }
 
         collectionView.contentOffset = .zero
-        KsBridgeTestHost.pump(attachment, seconds: 0.3)
+        awaitEmbeddedProbe(attachment, is: probe, "スクロール復帰後の先頭行への再表示")
 
         XCTAssertTrue(embeddedProbe(attachment) === probe, "再利用後の行に同一 view が再表示される")
         XCTAssertEqual(counter.value, 0, "リサイクルで view が破棄されてはいけない")
@@ -438,7 +468,13 @@ final class KsBridgeCustomCellTests: XCTestCase {
         update.contentToken = "token-1"
         update.hasTapHandler = true
         bridge.replaceCell(cellID: dto.cellID, newCell: update)
-        KsBridgeTestHost.pump(attachment)
+        // 更新前は購読なしで行タップ動作を持たないため、その設定が再バインドの遷移証拠になる。
+        awaitCondition(
+            "タップ購読ありへの再発行が行へ届く",
+            in: attachment.collectionView,
+            actual: { "tapHandler \(self.customCellView(attachment)?.tapHandler == nil ? "nil" : "設定あり")" },
+            until: { self.customCellView(attachment)?.tapHandler != nil }
+        )
 
         attachment.controller.collectionView(
             attachment.collectionView,
@@ -461,6 +497,26 @@ final class KsBridgeCustomCellTests: XCTestCase {
         return attachment.collectionView.cellForItem(
             at: IndexPath(item: item, section: section)
         ) as? CustomCellView
+    }
+
+    /// 指定行の内容が期待の観測用 view になるまで待つ。
+    private func awaitEmbeddedProbe(
+        _ attachment: KsBridgeTestHost.Attachment,
+        is expected: ProbeContentView,
+        _ description: String,
+        section: Int = 0,
+        item: Int = 0,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        awaitCondition(
+            description,
+            in: attachment.collectionView,
+            actual: { KsBridgeTestHost.describe(self.embeddedProbe(attachment, section: section, item: item)) },
+            file: file,
+            line: line,
+            until: { self.embeddedProbe(attachment, section: section, item: item) === expected }
+        )
     }
 
     /// 指定行に実描画されている観測用 view を返す。

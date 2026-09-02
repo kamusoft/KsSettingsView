@@ -3,7 +3,7 @@ using System.Collections;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace KsSettingsView.Maui.Tests.Support;
+namespace KsSettingsView.Tests.Support;
 
 /// <summary>PickerCell の object 候補を検証するためのモデル群。</summary>
 internal static class PickerFixtures

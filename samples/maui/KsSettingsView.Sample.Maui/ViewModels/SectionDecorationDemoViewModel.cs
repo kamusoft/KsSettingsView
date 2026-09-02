@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using KsSettingsView.Maui;
+using KsSettingsView;
 
 namespace KsSettingsView.Sample.Maui.ViewModels;
 

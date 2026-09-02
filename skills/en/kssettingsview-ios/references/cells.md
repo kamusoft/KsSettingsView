@@ -131,7 +131,7 @@ EntryCell(
 )
 ```
 
-For a password field, set `isPassword: true`; for a numeric field, pass `keyboardType: .numberPad`. `placeholderColor` overrides the placeholder text color - left out, the OS placeholder color is used and adapts to dark mode on its own. The screen-wide default is `Theme.cellPlaceholderColor` - see [styling.md](styling.md). `textAlignment` (a `CellTitleAlignment`, default `.end`) aligns the text inside the field. Instead of the binding there is also a callback form, which takes the current `text` as a plain value plus `onTextChanged` - use it when you own the state yourself or drive the tree from a store.
+For a password field, set `isPassword: true`; for a numeric field, pass `keyboardType: .numberPad`. `placeholderColor` overrides the placeholder text color - left out, the OS placeholder color is used and adapts to dark mode on its own. The screen-wide default is `Theme.cellPlaceholderColor` - see [styling.md](styling.md). `textAlignment` (a `CellTitleAlignment`, default `.end`) aligns the text inside the field. Instead of the binding there is also a callback form, which takes the current `text` as a plain value plus `onTextChanged` - use it when you own the state yourself or drive the tree from a store. In either form the field keeps what the user has typed: a row that does not feed the callback back into `text` is not rolled back by a later redraw, because the row is drawn from the latest cell value at draw time.
 
 ## Choose one item from a list
 

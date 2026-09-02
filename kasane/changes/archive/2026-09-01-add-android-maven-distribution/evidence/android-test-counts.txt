@@ -1,0 +1,40 @@
+# Android テスト実行件数の統合前後比較 (2026-09-01)
+
+コマンド: cd android && ./gradlew test --rerun-tasks
+件数の集計元: <module>/build/test-results/test{Debug,Release}UnitTest/TEST-*.xml の tests / failures 属性
+
+## 統合前 (旧 4 module)
+
+module                     task                  tests  failures
+ks-settingsview-core       testDebugUnitTest        80         0
+ks-settingsview-core       testReleaseUnitTest      80         0
+ks-settingsview-ui         testDebugUnitTest       969         0
+ks-settingsview-ui         testReleaseUnitTest     969         0
+ks-settingsview-compose    testDebugUnitTest       134         0
+ks-settingsview-compose    testReleaseUnitTest     134         0
+ks-settingsview-bridge     testDebugUnitTest       167         0
+ks-settingsview-bridge     testReleaseUnitTest     167         0
+合計                                              2700         0
+
+BUILD SUCCESSFUL in 2m 51s
+
+## 統合後 (2 module)
+
+module                     task                  tests  failures
+kssettingsview             testDebugUnitTest      1183         0
+kssettingsview             testReleaseUnitTest    1183         0
+kssettingsview-bridge      testDebugUnitTest       167         0
+kssettingsview-bridge      testReleaseUnitTest     167         0
+合計                                              2700         0
+
+BUILD SUCCESSFUL in 2m 40s
+
+## 一致の確認
+
+統合 module 1 variant あたり 1183 件 = core 80 + ui 969 + compose 134。
+bridge は 167 件で不変。合計は統合前後とも 2700 件で一致し、失敗 0 件。
+
+JUnit Platform 上で Jupiter (旧 core 由来の JUnit 5) と junit-vintage-engine
+(旧 ui / compose 由来の JUnit 4 + Robolectric) が同居して全件実行されている。
+テストコードの変更は R クラスの明示 import 1 行 (DateCalendarRecreationTest) と
+コメント文言の追随のみで、テストの内容・件数に影響する変更はない。

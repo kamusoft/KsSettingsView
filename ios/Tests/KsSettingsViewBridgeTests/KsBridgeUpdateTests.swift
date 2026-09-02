@@ -7,6 +7,7 @@
 import XCTest
 import UIKit
 import Combine
+import KsSettingsViewTestSupport
 @testable import KsSettingsViewBridge
 @testable import KsSettingsViewUI
 @testable import KsSettingsViewCore
@@ -22,7 +23,7 @@ final class KsBridgeUpdateTests: XCTestCase {
         let inserted = KsBridgeLabelCell(title: "A2")
         let insertedID = fixture.bridge.insertCell(inserted, sectionID: fixture.section1.sectionID, at: 1)
         fixture.bridge.removeCell(cellID: fixture.cellC.cellID)
-        KsBridgeTestHost.pump(attachment)
+        KsBridgeTestHost.awaitRenderedTitles(attachment, equals: [["A", "A2", "B"], []])
 
         XCTAssertEqual(insertedID, inserted.cellID)
         XCTAssertEqual(KsBridgeTestHost.renderedTitles(attachment), [["A", "A2", "B"], []])
@@ -37,15 +38,15 @@ final class KsBridgeUpdateTests: XCTestCase {
         newSection.addCell(KsBridgeLabelCell(title: "D"))
         let insertedID = fixture.bridge.insertSection(newSection, at: 0)
         XCTAssertEqual(insertedID, newSection.sectionID)
-        KsBridgeTestHost.pump(attachment)
+        KsBridgeTestHost.awaitRenderedTitles(attachment, equals: [["D"], ["A", "B"], ["C"]])
         XCTAssertEqual(KsBridgeTestHost.renderedTitles(attachment), [["D"], ["A", "B"], ["C"]])
 
         fixture.bridge.moveSection(from: 0, to: 2)
-        KsBridgeTestHost.pump(attachment)
+        KsBridgeTestHost.awaitRenderedTitles(attachment, equals: [["A", "B"], ["C"], ["D"]])
         XCTAssertEqual(KsBridgeTestHost.renderedTitles(attachment), [["A", "B"], ["C"], ["D"]])
 
         fixture.bridge.removeSection(sectionID: fixture.section2.sectionID)
-        KsBridgeTestHost.pump(attachment)
+        KsBridgeTestHost.awaitRenderedTitles(attachment, equals: [["A", "B"], ["D"]])
         XCTAssertEqual(KsBridgeTestHost.renderedTitles(attachment), [["A", "B"], ["D"]])
     }
 
@@ -57,7 +58,7 @@ final class KsBridgeUpdateTests: XCTestCase {
         let replacement = KsBridgeSection(headerText: "S1-new", footerText: nil)
         replacement.addCell(KsBridgeLabelCell(title: "Z"))
         fixture.bridge.replaceSection(sectionID: fixture.section1.sectionID, newSection: replacement)
-        KsBridgeTestHost.pump(attachment)
+        KsBridgeTestHost.awaitRenderedTitles(attachment, equals: [["Z"], ["C"]])
 
         XCTAssertEqual(KsBridgeTestHost.renderedTitles(attachment), [["Z"], ["C"]])
         XCTAssertEqual(
@@ -96,7 +97,7 @@ final class KsBridgeUpdateTests: XCTestCase {
         let appendedID = try XCTUnwrap(
             fixture.bridge.insertCell(appended, sectionID: replacedSectionID, at: 99)
         )
-        KsBridgeTestHost.pump(attachment)
+        KsBridgeTestHost.awaitRenderedTitles(attachment, equals: [["Z", "Z2"], ["C"]])
         XCTAssertEqual(
             KsBridgeTestHost.renderedTitles(attachment),
             [["Z", "Z2"], ["C"]],
@@ -107,7 +108,7 @@ final class KsBridgeUpdateTests: XCTestCase {
             fixture.bridge.replaceCell(cellID: appendedID, newCell: KsBridgeLabelCell(title: "Z3"))
         )
         XCTAssertEqual(replacedCellID, appendedID, "戻り値は対象の cellID")
-        KsBridgeTestHost.pump(attachment)
+        KsBridgeTestHost.awaitRenderedTitles(attachment, equals: [["Z", "Z3"], ["C"]])
         XCTAssertEqual(
             KsBridgeTestHost.renderedTitles(attachment),
             [["Z", "Z3"], ["C"]],
@@ -150,7 +151,7 @@ final class KsBridgeUpdateTests: XCTestCase {
                 newCell: KsBridgeLabelCell(title: "X")
             )
         )
-        KsBridgeTestHost.pump(attachment)
+        waitForNegativeVerification(in: attachment.collectionView)
 
         XCTAssertEqual(KsBridgeTestHost.renderedTitles(attachment), [["A", "B"], ["C"]])
     }
@@ -167,7 +168,7 @@ final class KsBridgeUpdateTests: XCTestCase {
             cellID: fixture.cellA.cellID,
             newCell: KsBridgeLabelCell(title: "A2")
         )
-        KsBridgeTestHost.pump(attachment)
+        KsBridgeTestHost.awaitRenderedTitles(attachment, equals: [["A2", "B"], ["C"]])
 
         XCTAssertEqual(KsBridgeTestHost.renderedTitles(attachment), [["A2", "B"], ["C"]])
         XCTAssertEqual(
@@ -195,7 +196,7 @@ final class KsBridgeUpdateTests: XCTestCase {
             KsBridgeCellUpdate(cellID: fixture.cellA.cellID, cell: KsBridgeLabelCell(title: "A2")),
             KsBridgeCellUpdate(cellID: fixture.cellC.cellID, cell: KsBridgeLabelCell(title: "C2"))
         ])
-        KsBridgeTestHost.pump(attachment)
+        KsBridgeTestHost.awaitRenderedTitles(attachment, equals: [["A2", "B"], ["C2"]])
 
         XCTAssertEqual(batches.count, 1, "1 回のバッチとして配信される")
         XCTAssertEqual(batches.first?.count, 2)
@@ -226,7 +227,7 @@ final class KsBridgeUpdateTests: XCTestCase {
                 cell: KsBridgeLabelCell(title: "Y")
             )
         ])
-        KsBridgeTestHost.pump(attachment)
+        waitForNegativeVerification(in: attachment.collectionView)
 
         XCTAssertEqual(batches.count, 0)
         XCTAssertEqual(KsBridgeTestHost.renderedTitles(attachment), [["A", "B"], ["C"]])
@@ -238,7 +239,7 @@ final class KsBridgeUpdateTests: XCTestCase {
         let attachment = KsBridgeTestHost.attach(fixture.bridge)
 
         fixture.bridge.moveCell(cellID: fixture.cellA.cellID, to: 1)
-        KsBridgeTestHost.pump(attachment)
+        KsBridgeTestHost.awaitRenderedTitles(attachment, equals: [["B", "A"], ["C"]])
 
         XCTAssertEqual(KsBridgeTestHost.renderedTitles(attachment), [["B", "A"], ["C"]])
     }
@@ -258,7 +259,18 @@ final class KsBridgeUpdateTests: XCTestCase {
             sectionID: fixture.section1.sectionID,
             text: "footer"
         )
-        KsBridgeTestHost.pump(attachment)
+        awaitCondition(
+            "section 0 の header / footer テキスト更新の反映 (期待値: S1-renamed / footer)",
+            in: attachment.collectionView,
+            actual: {
+                "header \(String(describing: KsBridgeTestHost.headerText(attachment, section: 0))) / "
+                    + "footer \(String(describing: KsBridgeTestHost.footerText(attachment, section: 0)))"
+            },
+            until: {
+                KsBridgeTestHost.headerText(attachment, section: 0) == "S1-renamed"
+                    && KsBridgeTestHost.footerText(attachment, section: 0) == "footer"
+            }
+        )
 
         XCTAssertEqual(KsBridgeTestHost.headerText(attachment, section: 0), "S1-renamed")
         XCTAssertEqual(KsBridgeTestHost.footerText(attachment, section: 0), "footer")
@@ -268,7 +280,7 @@ final class KsBridgeUpdateTests: XCTestCase {
             sectionID: fixture.section1.sectionID,
             text: nil
         )
-        KsBridgeTestHost.pump(attachment)
+        KsBridgeTestHost.awaitHeaderText(attachment, section: 0, equals: nil)
 
         XCTAssertNil(KsBridgeTestHost.headerText(attachment, section: 0),
                      "clear 後は accessory が指定されていない場合と同じ表示になる")
@@ -287,7 +299,7 @@ final class KsBridgeUpdateTests: XCTestCase {
         let unusedID = KsBridgeFixture.unusedIdentifier()
         fixture.bridge.updateAccessory(target: .sectionHeader, sectionID: unusedID, text: "X")
         fixture.bridge.updateAccessory(target: .sectionFooter, sectionID: unusedID, text: "Y")
-        KsBridgeTestHost.pump(attachment)
+        waitForNegativeVerification(in: attachment.collectionView)
 
         XCTAssertEqual(KsBridgeTestHost.renderedTitles(attachment), [["A", "B"], ["C"]])
         XCTAssertEqual(KsBridgeTestHost.headerText(attachment, section: 0), "S1")
@@ -300,7 +312,7 @@ final class KsBridgeUpdateTests: XCTestCase {
         )
 
         fixture.bridge.replaceCell(cellID: fixture.cellA.cellID, newCell: KsBridgeLabelCell(title: "A2"))
-        KsBridgeTestHost.pump(attachment)
+        KsBridgeTestHost.awaitRenderedTitles(attachment, equals: [["A2", "B"], ["C"]])
 
         XCTAssertEqual(
             KsBridgeTestHost.renderedTitles(attachment),
@@ -314,9 +326,10 @@ final class KsBridgeUpdateTests: XCTestCase {
         let fixture = KsBridgeFixture.standard()
         let attachment = KsBridgeTestHost.attach(fixture.bridge)
 
+        // Root accessory は Store の Diff 購読が同期に届いて Controller のプロパティへ入るため、
+        // ここで検証する状態に非同期の反映は挟まらない。
         fixture.bridge.updateAccessory(target: .rootHeader, sectionID: nil, text: "ROOT-H")
         fixture.bridge.updateAccessory(target: .rootFooter, sectionID: nil, text: "ROOT-F")
-        KsBridgeTestHost.pump(attachment)
 
         XCTAssertEqual(attachment.controller.rootHeader, .text("ROOT-H"))
         XCTAssertEqual(attachment.controller.rootFooter, .text("ROOT-F"))

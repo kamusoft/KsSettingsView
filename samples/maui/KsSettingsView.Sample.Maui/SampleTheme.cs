@@ -1,4 +1,4 @@
-using KsSettingsView.Maui;
+using KsSettingsView;
 using Microsoft.Maui.Graphics;
 
 namespace KsSettingsView.Sample.Maui;
@@ -65,7 +65,7 @@ public static class SampleTheme
     /// <summary>ButtonCell「登録」のタイトル色 (#0088FF)。</summary>
     public static readonly Color DemoTitleBlue = Color.FromArgb("#0088FF");
 
-    /// <summary>placeholder 色デモ行の <see cref="KsSettingsView.Maui.EntryCell.PlaceholderColor"/> (#D6885A)。</summary>
+    /// <summary>placeholder 色デモ行の <see cref="KsSettingsView.EntryCell.PlaceholderColor"/> (#D6885A)。</summary>
     public static readonly Color DemoPlaceholderOrange = Color.FromArgb("#D6885A");
 
     /// <summary>ピル (行タップカウンタ / ダミー行の連番) の背景 (#FAF3D9)。</summary>

@@ -1,6 +1,6 @@
 ---
 name: kssettingsview-maui
-description: KsSettingsView で .NET MAUI の設定画面 (settings screen) を作る - XAML / C# の公開 API (SettingsView, Section, CellBase) が iOS / Android の Native 設定 list を描画し、組み込み 12 種の Cell (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker) と任意の MAUI View を置ける CustomCell、ユーザー操作の双方向バインド (two-way binding)、ItemsSource / ItemTemplate、Header / Footer への View 配置、Classic / Modern の list 外観を扱う。KsSettingsView.Maui を参照する .NET MAUI アプリで設定ページを追加・変更・レビューするときに使う。
+description: KsSettingsView で .NET MAUI の設定画面 (settings screen) を作る - XAML / C# の公開 API (SettingsView, Section, CellBase) が iOS / Android の Native 設定 list を描画し、組み込みの Cell (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker) と任意の MAUI View を置ける CustomCell、ユーザー操作の双方向バインド (two-way binding)、ItemsSource / ItemTemplate、Header / Footer への View 配置、Classic / Modern の list 外観を扱う。KsSettingsView.Maui を参照する .NET MAUI アプリで設定ページを追加・変更・レビューするときに使う。
 license: MIT
 metadata:
   language: ja
@@ -37,10 +37,10 @@ KsSettingsView は、iOS の設定アプリのようなリスト形式の設定�
 </ItemGroup>
 ```
 
-足す参照はこの 1 本だけでよく、下層の Binding 層は推移参照で入る。そのうえで起動時に 1 度だけ登録する。登録される Handler は 1 件だけで、Cell 種別ごとに足す Handler はない。
+足す参照はこの 1 本だけでよく、下層の Binding 層は推移参照で入る。パッケージはまだ NuGet.org に上がっていない (公開配信の準備中)。公開までは、リポジトリのチェックアウトから facade プロジェクト `maui/KsSettingsView.Maui/KsSettingsView.Maui.csproj` を `ProjectReference` で参照するか (Sample アプリも同じ形)、ローカルで pack した成果物を置いたフィードから restore する。この Skill の以降の内容はどちらの経路でも同じ。そのうえで起動時に 1 度だけ登録する。登録される Handler は 1 件だけで、Cell 種別ごとに足す Handler はない。
 
 ```csharp
-using KsSettingsView.Maui;
+using KsSettingsView;
 using Microsoft.Maui.Hosting;
 
 public static class MauiProgram
@@ -68,6 +68,35 @@ public static class MauiProgram
 | iOS | 16.0 |
 | Android | API 29 |
 
+`Microsoft.Maui.Controls` の下限は restore 時に効く: .NET 10 のプロジェクトテンプレートが `MauiVersion` に書く版は 10.0.70 より低く (SDK 10.0.300 時点で 10.0.20)、そのままだと restore が NU1605 (パッケージのダウングレード) で失敗するので、`MauiVersion` は 10.0.70 以上にする。OS の下限はビルド時に効く: パッケージが利用側プロジェクトへ持ち込む検査が、その TFM の `SupportedOSPlatformVersion` が iOS 16.0 / Android API 29 を下回ると `net10.0-ios` / `net10.0-android` のビルドをエラー `KSSV0001` で止める。Android は未設定でも SDK 既定値が下限を下回るため同じく止まるので、両方の値を明示的に宣言しておく。
+
+```xml
+<PropertyGroup>
+  <MauiVersion>10.0.70</MauiVersion>
+</PropertyGroup>
+
+<PropertyGroup Condition=" $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios' ">
+  <SupportedOSPlatformVersion>16.0</SupportedOSPlatformVersion>
+</PropertyGroup>
+
+<PropertyGroup Condition=" $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android' ">
+  <SupportedOSPlatformVersion>29</SupportedOSPlatformVersion>
+</PropertyGroup>
+```
+
+### MAUI 本体の Cell との名前衝突
+
+`SwitchCell` と `EntryCell` は `Microsoft.Maui.Controls` にも同名の型があり、ライブラリの公開型のうち同名になるのはこの 2 型。XAML は `ks:` prefix が名前空間を示すので影響しない。C# では、`using KsSettingsView;` と MAUI の暗黙 using が同居するファイルで型名だけを書くと解決できず、コンパイラが CS0104 (あいまい参照) を報告する。完全修飾 (`KsSettingsView.SwitchCell`) で書くか、そのファイルに using alias を宣言する。
+
+```csharp
+using KsSettingsView;
+using SwitchCell = KsSettingsView.SwitchCell;
+
+Section account = new() { HeaderText = "Account" };
+account.Cells.Add(new SwitchCell { Title = "Push notifications", On = true });
+account.Cells.Add(new KsSettingsView.EntryCell { Title = "Name", Placeholder = "Taro Yamada" });
+```
+
 ### Android のテーマ
 
 Android の行はライブラリが同梱する Material3 テーマの中で描画されるので、ホストアプリ側に用意するものはない — 最小テーマの素の `ComponentActivity` を含め、どの Activity 型・XML テーマでも動く。裏返すと隔離でもあり、ホストテーマの色 (dynamic color を含む) はライブラリの行には届かないため、見た目の調整は `SettingsView` のスタイル系プロパティで行う ([references/styling.md](references/styling.md))。ライト / ダークは端末の夜間モードとアプリ自身の uiMode 制御に従い、ホストテーマでは決まらない。
@@ -77,7 +106,7 @@ Android の行はライブラリが同梱する Material3 テーマの中で描�
 ```xml
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:ks="clr-namespace:KsSettingsView.Maui;assembly=KsSettingsView.Maui"
+             xmlns:ks="clr-namespace:KsSettingsView;assembly=KsSettingsView.Maui"
              x:Class="MyApp.SettingsPage">
   <ks:SettingsView>
     <ks:Section HeaderText="General">

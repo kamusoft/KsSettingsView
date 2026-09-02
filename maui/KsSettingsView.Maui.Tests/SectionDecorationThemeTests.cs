@@ -1,12 +1,12 @@
 using System.Linq;
-using KsSettingsView.Maui.Internals;
-using KsSettingsView.Maui.Tests.Fakes;
+using KsSettingsView.Internals;
+using KsSettingsView.Tests.Fakes;
 using Microsoft.Maui;
 using Microsoft.Maui.Controls.Xaml;
 using Microsoft.Maui.Graphics;
 using NUnit.Framework;
 
-namespace KsSettingsView.Maui.Tests;
+namespace KsSettingsView.Tests;
 
 /// <summary>
 /// Section 装飾の 4 属性が既定スタイルの写しへ載り、値の検証を挟まず素通しされることを確認する。
@@ -168,7 +168,7 @@ public class SectionDecorationThemeTests
         const string xaml = """
             <ks:SettingsView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
                              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-                             xmlns:ks="clr-namespace:KsSettingsView.Maui;assembly=KsSettingsView.Maui"
+                             xmlns:ks="clr-namespace:KsSettingsView;assembly=KsSettingsView.Maui"
                              SectionMargin="16,22,16,0" />
             """;
 

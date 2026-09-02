@@ -7,8 +7,11 @@
 #
 # 前提:
 #   - Xcode のバージョンは .NET for iOS workload が要求するものに合わせる (DEVELOPER_DIR で指定)。
-#   - Xcode project は KsSettingsViewBridge / KsSettingsViewUI / KsSettingsViewCore を
-#     ひとつの静的ライブラリへまとめる (MACH_O_TYPE = staticlib)。
+#   - Xcode project は KsSettingsViewBridge と、依存する SwiftPM product `KsSettingsView`
+#     (Core / UI / SwiftUI の 3 module) をひとつの静的ライブラリへまとめる
+#     (MACH_O_TYPE = staticlib)。Bridge が参照しない module のコードも静的ライブラリには含まれる。
+#     ただし force_load を指定しないでリンクする限り、参照されないメンバーは最終アプリの
+#     バイナリには取り込まれない (影響は配布物のサイズとビルド時間に留まる)。
 #   - 静的ライブラリなので署名は不要。archive では署名関連の設定を無効化して、
 #     署名環境の有無に結果が左右されないようにしている。
 

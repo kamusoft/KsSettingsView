@@ -126,6 +126,8 @@ LabelCell(
 | `accentColor` | `UIColor?` |
 | `placeholderColor` | `UIColor?` |
 
+同名の Theme フィールドより先まで fallback する系統が 2 つある。`valueTextColor` / `valueTextFont` は `Theme.cellValueTextColor` / `cellValueTextFont` の次に title の色 / フォントを経て UIKit 既定に至る — `EntryCell` の入力中テキストもこの valueText の規則に従う。`hintTextColor` は `Theme.cellHintTextColor` の次に `Theme.cellAccentColor` へ落ちるため、何も指定しないヒントはアクセント色で描かれる。
+
 ## Cell に style modifier を連ねる
 
 宣言ツリーでは同じ上書きを、Cell の copy を返す modifier として書ける。連鎖しても、それまでに指定した値と Cell の identity は維持される。
@@ -221,7 +223,7 @@ ksSection {
 .sectionFooter("Also check the system settings.")
 ```
 
-View 形式の Header は中身で比較されないため、クロージャの中を変えただけでは model の変更として検出されない。それでも差し替えたいときは Store でツリーを所有し、`store.updateAccessory(target:accessory:)` で明示的に送る (この API は常に更新を発行する)。中身の計測結果だけが変わった場合は `store.invalidateAccessoryMeasurement(target:)` を呼ぶとその領域だけ測り直される。
+View 形式の Header は中身で比較されないため、クロージャの中を変えただけでは model の変更として検出されない。それでも差し替えたいときは Store でツリーを所有し、`store.updateAccessory(target:accessory:)` で明示的に送る (この API は中身を比較せずに更新を発行する。Store に無い `sectionID` を指す Section target は no-op、Root target は無条件に発行される)。中身の計測結果だけが変わった場合は `store.invalidateAccessoryMeasurement(target:)` を呼ぶとその領域だけ測り直される。
 
 ## Store や UIKit から Header に View を載せる
 

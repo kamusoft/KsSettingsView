@@ -1,7 +1,7 @@
 using System;
 using Microsoft.Maui.Dispatching;
 
-namespace KsSettingsView.Maui.Internals;
+namespace KsSettingsView.Internals;
 
 /// <summary>
 /// MAUI の <see cref="IDispatcher"/> を <see cref="IKsDispatcher"/> として使うためのアダプタ。

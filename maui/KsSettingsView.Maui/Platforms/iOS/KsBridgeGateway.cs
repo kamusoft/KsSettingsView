@@ -4,7 +4,7 @@ using Foundation;
 using KsSettingsView.Bridge;
 using UIKit;
 
-namespace KsSettingsView.Maui.Internals;
+namespace KsSettingsView.Internals;
 
 /// <summary>
 /// iOS の Native Bridge を操作する gateway。

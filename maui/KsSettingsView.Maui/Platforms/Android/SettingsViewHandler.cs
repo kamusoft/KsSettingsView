@@ -1,12 +1,12 @@
 using System;
-using KsSettingsView.Maui.Internals;
+using KsSettingsView.Internals;
 using Microsoft.Maui;
 using Microsoft.Maui.Graphics;
 using Microsoft.Maui.Platform;
 using AndroidView = Android.Views.View;
 using MeasureSpecMode = Android.Views.MeasureSpecMode;
 
-namespace KsSettingsView.Maui.Handlers;
+namespace KsSettingsView.Handlers;
 
 /// <summary>
 /// Android の <see cref="SettingsViewHandler"/> の実体。

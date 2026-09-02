@@ -131,7 +131,7 @@ EntryCell(
 )
 ```
 
-パスワード入力なら `isPassword: true`、数値入力なら `keyboardType: .numberPad` を渡す。`placeholderColor` は placeholder の文字色を上書きする — 未指定なら OS 既定の placeholder 色のままで、ダークモードにも自動追従する。画面全体の既定は `Theme.cellPlaceholderColor` — [styling.md](styling.md) を参照。`textAlignment` (`CellTitleAlignment`、既定 `.end`) は入力欄内の文字寄せを決める。Binding の代わりに、現在の `text` を値として渡して `onTextChanged` callback で受ける形もある — 状態を自分で管理する画面や Store でツリーを操作する構成で使う。
+パスワード入力なら `isPassword: true`、数値入力なら `keyboardType: .numberPad` を渡す。`placeholderColor` は placeholder の文字色を上書きする — 未指定なら OS 既定の placeholder 色のままで、ダークモードにも自動追従する。画面全体の既定は `Theme.cellPlaceholderColor` — [styling.md](styling.md) を参照。`textAlignment` (`CellTitleAlignment`、既定 `.end`) は入力欄内の文字寄せを決める。Binding の代わりに、現在の `text` を値として渡して `onTextChanged` callback で受ける形もある — 状態を自分で管理する画面や Store でツリーを操作する構成で使う。どちらの形でも入力欄は利用者が打った文字をそのまま保つ。callback を受けても `text` を更新しない構成で、後続の再描画が入力中の値を巻き戻すことはない (行は描画時点の最新の Cell 値から描かれる)。
 
 ## リストから 1 つ選ばせる
 

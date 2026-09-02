@@ -126,6 +126,8 @@ LabelCell(
 | `accentColor` | `UIColor?` |
 | `placeholderColor` | `UIColor?` |
 
+Two groups fall back further than the theme field of the same name. `valueTextColor` / `valueTextFont` resolve through `Theme.cellValueTextColor` / `cellValueTextFont` and then the title color / font before the UIKit default - the text typed into an `EntryCell` follows this valueText rule too. `hintTextColor` resolves through `Theme.cellHintTextColor` and then `Theme.cellAccentColor`, so an unstyled hint is drawn in the accent color.
+
 ## Chain style modifiers on a cell
 
 In the declarative tree the same overrides are available as modifiers returning a copy of the cell. Chaining preserves the values set earlier and the cell identity.
@@ -221,7 +223,7 @@ ksSection {
 .sectionFooter("Also check the system settings.")
 ```
 
-A view header is not compared by its contents, so changing what is inside the closure is not detected as a model change on its own. To push a new one anyway, own the tree with a store and send it explicitly with `store.updateAccessory(target:accessory:)`, which always emits its update. When only the measured height of the header changed, call `store.invalidateAccessoryMeasurement(target:)` to have that area measured again.
+A view header is not compared by its contents, so changing what is inside the closure is not detected as a model change on its own. To push a new one anyway, own the tree with a store and send it explicitly with `store.updateAccessory(target:accessory:)`, which emits its update without comparing contents (a section target whose `sectionID` is not in the store is a no-op; root targets are emitted unconditionally). When only the measured height of the header changed, call `store.invalidateAccessoryMeasurement(target:)` to have that area measured again.
 
 ## Put a view into a header from the store or UIKit
 

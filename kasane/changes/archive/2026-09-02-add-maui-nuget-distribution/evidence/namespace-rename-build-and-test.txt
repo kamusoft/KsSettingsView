@@ -1,0 +1,65 @@
+名前空間改名 (tasks 1.1-1.5) のビルド・テスト・検証ホスト起動の抜粋
+採取日: 2026-09-02 / 全文は手元保管 (抜粋のみをここに残す)
+
+## 改名前のテスト (baseline)
+$ dotnet test maui/KsSettingsView.Maui.Tests/KsSettingsView.Maui.Tests.csproj
+成功!   -失敗:     0、合格:   516、スキップ:     0、合計:   516、期間: 348 ms - KsSettingsView.Maui.Tests.dll (net10.0)
+
+## 改名後のテスト
+$ dotnet test maui/KsSettingsView.Maui.Tests/KsSettingsView.Maui.Tests.csproj
+成功!   -失敗:     0、合格:   516、スキップ:     0、合計:   516、期間: 1 s - KsSettingsView.Maui.Tests.dll (net10.0)
+
+## 改名後の facade ビルド (3 TFM)
+$ dotnet build maui/KsSettingsView.Maui/KsSettingsView.Maui.csproj -f net10.0 -c Debug
+  ビルドに成功しました。0 個の警告 / 0 エラー
+$ dotnet build maui/KsSettingsView.Maui/KsSettingsView.Maui.csproj -f net10.0-android -c Debug
+  ビルドに成功しました。0 個の警告 / 0 エラー
+$ dotnet build maui/KsSettingsView.Maui/KsSettingsView.Maui.csproj -f net10.0-ios -c Debug
+  ビルドに成功しました。0 個の警告 / 0 エラー
+
+## 利用側のビルド (いずれも 0 警告 / 0 エラー)
+maui/tests/KsSettingsView.MauiHost           net10.0-android / net10.0-ios
+samples/maui/KsSettingsView.Sample.Maui      net10.0-android / net10.0-ios
+maui/tests/KsSettingsView.IntegrationHost.Android
+maui/tests/KsSettingsView.IntegrationHost.iOS
+
+## 残存宣言の確認 (検索軸 2 本)
+軸 1: 行単位の grep — namespace / using 宣言に KsSettingsView.Maui* が残っていないこと
+$ git ls-files maui samples/maui | xargs grep -Hn -E '^\s*(namespace|using|global using)\b.*Maui' | grep -v 'Microsoft\.Maui'
+  → 0 件
+
+軸 2: ファイル全体テキストに対する走査 (語間の改行・コメント記号を許す) — 検出された
+KsSettingsView.Maui は全件が正当な残存 (アセンブリ名 / InternalsVisibleTo / csproj と slnx の
+プロジェクトパス / XAML の assembly= 属性 / MauiHost 自身の名前空間 KsSettingsView.MauiHost /
+プロジェクト名を指すコメント) で、名前空間としての参照は 0 件。2 軸は同じ結論に収束。
+
+## MauiHost の起動確認 (handbook maui/integration-host-verification.md の 5 手順)
+iOS Simulator (iPhone 17 Pro, udid=<uuid>) / Android Emulator (serial=<android-serial>, API 35)
+
+| 手順 | 期待 | iOS | Android |
+|---|---|---|---|
+| 1 設定画面を開く | テーマ ValueText =「ライト」 | OK | OK |
+| 2 ValueText を更新 | 「更新 1」 | OK | OK |
+| 3-4 離脱中に更新 → 再訪問 | 「更新 2」のまま | OK | OK |
+| 5 離脱中に Cell 追加 → 再訪問 | 「追加 1」Cell が表示 | OK | OK |
+
+再訪問後の最終状態は evidence/mauihost-ios-revisit-restored.png と
+evidence/mauihost-android-revisit-restored.png に残す。
+
+## IntegrationHost をビルド成功までで判定した根拠
+handbook maui/integration-host-verification.md の完了条件は固定シナリオの表示確認を含むが、
+IntegrationHost.Android / IntegrationHost.iOS についてはビルド成功までを確認し、
+起動と表示確認は MauiHost (上表、両 OS) で代表させた。判定根拠は次の 3 点:
+
+1. IntegrationHost が直接使う binding 層の名前空間 KsSettingsView.Bridge は改名対象外である。
+   本変更で binding 2 プロジェクトに入った差分は csproj だけ (CPM への版移動と pack メタデータ) で、
+   maui/macios/KsSettingsView.Binding.iOS/ApiDefinition.cs (namespace KsSettingsView.Bridge) と
+   maui/android/KsSettingsView.Binding.Android/Transforms/Metadata.xml は無変更。
+2. 版集約の前後で対象 7 プロジェクトの解決パッケージが完全一致することを確認済み
+   (evidence/cpm-restore-invariance.txt)。binding が引き込む AndroidX / Kotlin / Compose の
+   実体は変わっていない。
+3. 本変更で新たに加えた pack 設定と buildTransitive のガードは、いずれもビルド時にのみ働き、
+   実行時に通るコード経路を持たない。
+
+以上より binding 層の実行時挙動が変わる経路が無く、facade を通る end-to-end 疎通は
+MauiHost の固定シナリオで足りると判断した。

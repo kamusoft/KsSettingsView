@@ -6,7 +6,7 @@ applies-when:
   tasks: [docs-refresh の API 名網羅検査の仕分け]
 title: 利用者向け Skill の API 掲載基準
 description: skills/ (利用者向け Agent Skills) に公開 API をどこまで載せるか — 「簡潔でも網羅」の方針と意図的な掲載除外の基準・現行除外リスト
-timestamp: 2026-08-29
+timestamp: 2026-09-01
 ---
 
 # 利用者向け Skill の API 掲載基準
@@ -37,13 +37,17 @@ timestamp: 2026-08-29
 | iOS | `KsSettingsViewController.disconnectStore()`、`SettingsRootStore.preview`、`KsCellRegistry.resolveRendererType()` / `removeAll()`、`SettingsRootBuilder` / `KsSectionBuilder` の型名 (DSL の記法自体は掲載し、scope 型の名前だけ除外する)、`rootHeaderElementKind` / `rootFooterElementKind` | 低頻度の細部 |
 | iOS | `EffectiveStyle` | 可視性引き下げ候補 (changes: ios-effectivestyle-visibility) |
 | iOS | `KsSettingsViewBridge` 配下一式 | 内部層 |
-| Android | `KsSettingsView.unbind`、`SettingsRootStore.preview`、`KsCellRegistry.viewTypeOf` / `isRegistered` / `registerBasicCells` / `registerInputCells` / `registerCustomCell`、`CustomCellEmptyContent`、`SettingsRootDsl` / `SectionScope` の型名 (iOS と同じく DSL の記法は掲載し、scope 型の名前だけ除外する)、`DSLIconModifiableCell.withDSLIcon` | 低頻度の細部 (Registry 補助は可視性引き下げ候補を兼ねる) |
-| Android | `ks-settingsview-bridge` 配下一式 | 内部層 |
+| Android | `KsSettingsView.unbind`、`KsCellRegistry.registerBasicCells` / `registerInputCells` / `registerCustomCell`、`CustomCellEmptyContent`、`SettingsRootDsl` / `SectionScope` の型名 (iOS と同じく DSL の記法は掲載し、scope 型の名前だけ除外する)、`DSLIconModifiableCell.withDSLIcon` | 低頻度の細部 |
+| Android | `kssettingsview-bridge` 配下一式 | 内部層 |
 | MAUI | `FooProperty` (BindableProperty フィールド) の個別列挙 | 機械的に導出できる名前 (「各 bindable プロパティは対応する `FooProperty` を持つ」の規約1行で代替) |
 | MAUI | `MauiAppBuilderExtensions` の型名 (`AddKsSettingsView()` は掲載) | 低頻度の細部 |
 | MAUI | `SettingsViewHandler`、`Internals/` 配下、`KsSettingsView.Binding.*` | 内部層 |
 
 リストの更新は、3e 報告に対するオーナー判断 (掲載 / 除外) が確定したときに行う。3e はこの表を参照しないため、表を更新しても報告される名前は変わらない — 変わるのは仕分けの速さで、表にある名前は「判断済みの除外」として即座に落とせる。同じ名前を毎回オーナーに問い直している状態が、この表の更新漏れである。
+
+## コード例のコメント
+
+skills/ 配下のコード例はソースコメント規約 (comment-policy.md) の対象外とし、独自の決まりに従う: **原則コメントを書かず、やむを得ない最小限のコメントは英語で統一する** (利用者向け成果物であり、閲覧者の言語を仮定しないため)。
 
 ## してはいけないこと
 

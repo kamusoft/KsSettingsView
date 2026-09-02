@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using KsSettingsView.Maui.Internals;
-using KsSettingsView.Maui.Tests.Fakes;
-using KsSettingsView.Maui.Tests.Support;
+using KsSettingsView.Internals;
+using KsSettingsView.Tests.Fakes;
+using KsSettingsView.Tests.Support;
 using Microsoft.Maui.Controls;
 using NUnit.Framework;
 
-namespace KsSettingsView.Maui.Tests;
+namespace KsSettingsView.Tests;
 
 /// <summary>
 /// Root / Section の header・footer に置いた View が accessory の更新へ変換されることを確認する。

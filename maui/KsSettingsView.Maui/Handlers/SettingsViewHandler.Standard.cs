@@ -1,4 +1,4 @@
-namespace KsSettingsView.Maui.Handlers;
+namespace KsSettingsView.Handlers;
 
 /// <summary>
 /// platform を持たない TFM 向けの <see cref="SettingsViewHandler"/> の実体。

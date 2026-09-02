@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using KsSettingsView.Maui.Internals;
+using KsSettingsView.Internals;
 
-namespace KsSettingsView.Maui.Tests.Fakes;
+namespace KsSettingsView.Tests.Fakes;
 
 /// <summary>
 /// 予約された処理を任意の時点で実行できるテスト用の dispatcher。

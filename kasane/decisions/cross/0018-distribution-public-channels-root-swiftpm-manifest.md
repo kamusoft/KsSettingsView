@@ -1,7 +1,7 @@
 ---
 id: 0018
 title: 配布は公開レジストリの標準チャネルのみとし、SwiftPM は配信リポジトリで配る
-status: proposed
+status: accepted
 date: 2026-08-21
 ---
 
@@ -24,6 +24,16 @@ SwiftPM の git 配布はリポジトリルート直下の Package.swift しか�
 | Native iOS | SwiftPM (公開 git リポジトリ + semver tag)。package `KsSettingsView`、product は umbrella の `KsSettingsView` 1 本 |
 | Native Android | Maven Central (`jp.kamusoft:ks-settingsview-*`、cross/ADR-0002) |
 | .NET MAUI | NuGet.org |
+
+(2026-09-01 追記) 表の Native Android の座標は、Android の module 統合により
+`jp.kamusoft:kssettingsview` の単一 artifact になった (android/ADR-0016)。groupId は
+cross/ADR-0002 の `jp.kamusoft` のままで、artifactId が `ks-settingsview-*` の 3 本から
+`kssettingsview` 1 本に変わった。interop Bridge は Maven に公開しない。
+
+(2026-09-02 追記) 表の .NET MAUI の NuGet.org へ出す座標は、facade の
+`KsSettingsView.Maui` と binding 2 件の `KsSettingsView.Binding.iOS` /
+`KsSettingsView.Binding.Android` の 3 件である (maui/ADR-0025)。利用者が書くのは facade の
+1 件だけで、binding は platform TFM の依存として推移的に届く。
 
 GitHub Packages 等の private / 認証付きフィードは提供しない。SwiftPM が git を直接解決する都合上、リポジトリは public に切り替える (切り替えのタイミングは配信 CI の整備と合わせて決める)。
 
@@ -68,6 +78,11 @@ cross/ADR-0001 (リポジトリルートに共通ビルドファイルを置か�
 - 負: 利用者が `Package.swift` に書く identity は製品名そのものではなく `KsSettingsView-SPM` になる (Xcode の Package Dependencies 一覧の表示は `KsSettingsView`)。
 - 負: 消費者検証の publish 前 dry-run は配信リポジトリの prerelease tag か `path:` 参照で行う必要がある。
 - 負: 公開レジストリに出したものは取り下げにくい (NuGet.org は unlist のみ、Maven Central は原則削除不可)。
+- 負 (2026-09-01 実装結果): umbrella product をリンクする staticlib archive では、参照しない module のオブジェクトも dead-strip されず成果物に入る。MAUI binding の xcframework に `KsSettingsViewSwiftUI` 由来シンボル 642 件が混入することを実測し、受容した (除外が必要になったら別の変更で検討)。
+- 中立 (2026-09-01 実装結果): product 一本化により Xcode 生成 scheme は package と同名の `KsSettingsView` 1 本になり、検証 CI・規約が参照する scheme 名も連動して変わる。
 
 出典: kasane/roadmaps/package-distribution/exploration.md (A・C) / kasane/roadmaps/package-distribution/phases/phase-2-public-readiness/history.md (2026-08-21: SwiftPM の配信形) / ../KsDialogs/kasane/decisions/cross/0008-distribution-model-standard-channels.md (翻案元)
 出典 (2026-08-29 配信リポジトリ名の確定): kasane/roadmaps/package-distribution/phases/phase-9-docs/history.md (2026-08-29「SwiftPM 配信リポジトリの名前」)
+出典 (2026-09-01 実装結果の追記と accepted 昇格): kasane/changes/archive/2026-09-01-add-spm-distribution/deviation.md / 同 review-001.md
+出典 (2026-09-01 Android 座標の統合の追記): kasane/decisions/android/0016-single-module-single-maven-artifact.md / kasane/roadmaps/package-distribution/phases/phase-5-android-packaging/history.md
+出典 (2026-09-02 MAUI の Package ID の追記): kasane/decisions/maui/0025-nuget-three-package-root-namespace.md / kasane/roadmaps/package-distribution/phases/phase-6-maui-packaging/history.md

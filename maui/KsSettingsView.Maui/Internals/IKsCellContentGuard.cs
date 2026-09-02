@@ -1,6 +1,6 @@
 using Microsoft.Maui.Controls;
 
-namespace KsSettingsView.Maui.Internals;
+namespace KsSettingsView.Internals;
 
 /// <summary>
 /// CustomCell の内容に置く View の可否を、置き場所を知っている側へ尋ねる口。

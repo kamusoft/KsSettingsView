@@ -1,0 +1,37 @@
+# Android Sample の composite build 置換の実効確認 (2026-09-01)
+
+## ビルド成功
+
+$ cd samples/android && ./gradlew :app:assembleDebug
+BUILD SUCCESSFUL in 56s
+59 actionable tasks: 42 executed, 17 up-to-date
+
+## 公開座標 → 本体 project への置換
+
+$ cd samples/android && ./gradlew :app:dependencies --configuration debugCompileClasspath
++--- jp.kamusoft:kssettingsview:0.1.0-SNAPSHOT -> project :android:kssettingsview
+
+依存 1 行 (`jp.kamusoft:kssettingsview`) が本体 project へ置換されている。
+置換が発火しなかった場合は公開版が存在しないため必ず解決エラーになる。
+
+## 本体ソースの変更が Sample の再ビルドへ反映されること
+
+android/kssettingsview の LabelCell.kt に一時的な 1 行を追加してから再ビルドすると、
+本体の Kotlin コンパイルが再実行される (aar ではなく source から組んでいる証跡)。
+
+$ cd samples/android && ./gradlew :app:assembleDebug
+> Task :android:kssettingsview:compileDebugLibraryResources UP-TO-DATE
+> Task :android:kssettingsview:compileDebugKotlin
+> Task :android:kssettingsview:compileDebugJavaWithJavac NO-SOURCE
+> Task :app:compileDebugKotlin UP-TO-DATE
+BUILD SUCCESSFUL in 2s
+
+一時的な追加行を取り消して再ビルドすると、同じく本体の Kotlin コンパイルが再実行される。
+
+$ cd samples/android && ./gradlew :app:assembleDebug
+> Task :android:kssettingsview:compileDebugKotlin
+> Task :app:packageDebug UP-TO-DATE
+BUILD SUCCESSFUL in 1s
+
+(`:app:compileDebugKotlin` が UP-TO-DATE なのは、変更が公開 ABI を変えないときに
+ Gradle の compile avoidance が働くためで、置換が効いていないことを意味しない。)

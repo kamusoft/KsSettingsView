@@ -2,12 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using KsSettingsView.Maui.Tests.Fakes;
-using KsSettingsView.Maui.Tests.Support;
+using KsSettingsView.Tests.Fakes;
+using KsSettingsView.Tests.Support;
 using Microsoft.Maui.Controls;
 using NUnit.Framework;
 
-namespace KsSettingsView.Maui.Tests;
+namespace KsSettingsView.Tests;
 
 /// <summary>
 /// ItemsSource / ItemTemplate / TemplateStartIndex による生成と、items の変更の追随を確認する。

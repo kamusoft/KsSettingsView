@@ -7,8 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		KSVB0001000000000000001 /* KsSettingsViewCore in Frameworks */ = {isa = PBXBuildFile; productRef = KSVB0002000000000000001 /* KsSettingsViewCore */; };
-		KSVB0003000000000000001 /* KsSettingsViewUI in Frameworks */ = {isa = PBXBuildFile; productRef = KSVB0004000000000000001 /* KsSettingsViewUI */; };
+		KSVB0001000000000000001 /* KsSettingsView in Frameworks */ = {isa = PBXBuildFile; productRef = KSVB0002000000000000001 /* KsSettingsView */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -28,8 +27,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				KSVB0001000000000000001 /* KsSettingsViewCore in Frameworks */,
-				KSVB0003000000000000001 /* KsSettingsViewUI in Frameworks */,
+				KSVB0001000000000000001 /* KsSettingsView in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -71,8 +69,7 @@
 			);
 			name = KsSettingsViewBridge;
 			packageProductDependencies = (
-				KSVB0002000000000000001 /* KsSettingsViewCore */,
-				KSVB0004000000000000001 /* KsSettingsViewUI */,
+				KSVB0002000000000000001 /* KsSettingsView */,
 			);
 			productName = KsSettingsViewBridge;
 			productReference = KSVB0005000000000000001 /* KsSettingsViewBridge.framework */;
@@ -263,13 +260,9 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		KSVB0002000000000000001 /* KsSettingsViewCore */ = {
+		KSVB0002000000000000001 /* KsSettingsView */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = KsSettingsViewCore;
-		};
-		KSVB0004000000000000001 /* KsSettingsViewUI */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = KsSettingsViewUI;
+			productName = KsSettingsView;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

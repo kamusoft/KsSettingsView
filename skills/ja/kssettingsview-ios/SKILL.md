@@ -1,6 +1,6 @@
 ---
 name: kssettingsview-ios
-description: KsSettingsView で iOS の設定画面 (settings screen) を作る - SwiftUI の宣言的 DSL (KsSettingsView) または UIKit ホスト (KsSettingsViewController) で、組み込み 12 種の Cell (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker)、任意の SwiftUI View を行 (row) として表示する CustomCell、SettingsRootStore による表示中の更新、Theme / CellStyle のスタイル指定を扱う。KsSettingsViewCore / KsSettingsViewUI / KsSettingsViewSwiftUI に依存する Swift アプリで設定画面を追加・変更・レビューするときに使う。
+description: KsSettingsView で iOS の設定画面 (settings screen) を作る - SwiftUI の宣言的 DSL (KsSettingsView) または UIKit ホスト (KsSettingsViewController) で、組み込みの Cell (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker)、任意の SwiftUI View を行 (row) として表示する CustomCell、SettingsRootStore による表示中の更新、Theme / CellStyle のスタイル指定を扱う。KsSettingsViewCore / KsSettingsViewUI / KsSettingsViewSwiftUI に依存する Swift アプリで設定画面を追加・変更・レビューするときに使う。
 license: MIT
 metadata:
   language: ja
@@ -49,7 +49,7 @@ let package = Package(
 )
 ```
 
-リンクするのはこの 1 product だが、`import` はモジュール名で書く。含まれるモジュールは 3 つ: `KsSettingsViewCore` (設定ツリー)、`KsSettingsViewUI` (Cell・`Theme`・`CellStyle`・UIKit ホスト)、`KsSettingsViewSwiftUI` (SwiftUI View と宣言的 DSL)。Cell の種類は組み込み 12 種 + `CustomCell`。
+リンクするのはこの 1 product だが、`import` はモジュール名で書く。含まれるモジュールは 3 つ: `KsSettingsViewCore` (設定ツリー)、`KsSettingsViewUI` (Cell・`Theme`・`CellStyle`・UIKit ホスト)、`KsSettingsViewSwiftUI` (SwiftUI View と宣言的 DSL)。組み込みの Cell は [references/cells.md](references/cells.md) で 1 種ずつ扱い、`CustomCell` と独自 Cell 型は [references/custom-cells.md](references/custom-cells.md) で扱う。
 
 | 要件 | 最低バージョン |
 |---|---|

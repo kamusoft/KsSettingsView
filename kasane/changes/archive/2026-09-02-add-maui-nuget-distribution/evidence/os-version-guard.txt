@@ -1,0 +1,42 @@
+# 最低 OS 版ガードと宣言元の一致 (2026-09-02)
+
+## SupportedOSPlatformVersion の評価値
+
+dotnet msbuild -getProperty:SupportedOSPlatformVersion -p:TargetFramework=<tfm>
+
+  KsSettingsView.Maui              [net10.0-android] => 29.0
+  KsSettingsView.Maui              [net10.0-ios]     => 16.0
+  KsSettingsView.Binding.Android   [net10.0-android] => 29.0
+  KsSettingsView.Binding.iOS       [net10.0-ios]     => 16.0
+  KsSettingsView.MauiHost          [net10.0-android] => 29.0
+  KsSettingsView.MauiHost          [net10.0-ios]     => 16.0
+  KsSettingsView.IntegrationHost.Android [net10.0-android] => 29.0
+  KsSettingsView.IntegrationHost.iOS     [net10.0-ios]     => 16.0
+
+Android は SDK が 29 を 29.0 に正規化した値。csproj 側に数値の直書きは残っていない
+(すべて $(KsSettingsViewMinAndroidApi) / $(KsSettingsViewMinIOSVersion) 参照)。
+
+## 検証ホストのビルド (ガード由来の診断なし)
+
+  MauiHost net10.0-android           : ビルド成功 / KSSV0001 なし
+  MauiHost net10.0-ios               : ビルド成功 / KSSV0001 なし
+  IntegrationHost.Android            : ビルド成功 / KSSV0001 なし
+  IntegrationHost.iOS                : ビルド成功 / KSSV0001 なし
+
+## 要件未満での発火 (リポジトリ内での確認)
+
+facade を -p:SupportedOSPlatformVersion で上書きしてビルド:
+
+  net10.0-ios -p:SupportedOSPlatformVersion=15.0
+    error KSSV0001: KsSettingsView requires SupportedOSPlatformVersion 16.0 or later for
+    net10.0-ios (minimum supported: Android API 29, iOS 16.0), but the current value is '15.0'.
+    Add <SupportedOSPlatformVersion>16.0</SupportedOSPlatformVersion> to a PropertyGroup for
+    this target framework in your project file.
+
+  net10.0-android -p:SupportedOSPlatformVersion=21
+    error KSSV0001: ... requires SupportedOSPlatformVersion 29 or later for net10.0-android ...
+    but the current value is '21'.
+
+  net10.0 (非 platform TFM) : KSSV0001 は 0 件
+
+利用者アプリ・複数 TFM プロジェクトでの確認は消費者検証の範囲。

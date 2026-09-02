@@ -1,4 +1,4 @@
-namespace KsSettingsView.Maui.Internals;
+namespace KsSettingsView.Internals;
 
 /// <summary>
 /// 画面全体の既定スタイルを interop 境界へ運ぶために写し取った値。

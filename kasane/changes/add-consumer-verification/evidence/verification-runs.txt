@@ -1,0 +1,431 @@
+tasks 5.1〜5.5: 消費者検証の実機確認 (dry-run / 負ケース / version / smoke 参照先 / TFM)
+実施日: 2026-09-02
+
+実行ログの抜粋。全文は作業スクラッチ (手元保管) に残し、判定に要る行だけを転記した。
+一時作業ディレクトリのパスは <WORK>、ホームディレクトリは <HOME> に置換している。
+
+================================================================
+1. 3 platform の dry-run (引数なし)
+================================================================
+$ ./verification/ios/build-consumer.sh                             (exit 0)
+$ ANDROID_HOME=<Android SDK> ./verification/android/build-consumer.sh   (exit 0)
+$ ./verification/maui/build-consumer.sh                            (exit 0)
+
+iOS:
+  platform=ios mode=dry-run version=(なし)
+      dependencies: [
+          .package(path: "<WORK>/kssettingsview-verification/ios/KsSettingsView-SPM")
+      ]
+  ==== 依存グラフ ====
+  └── kssettingsview-spm<<WORK>/kssettingsview-verification/ios/KsSettingsView-SPM@unspecified>(traits: default)
+  Resolved source packages:
+    KsSettingsView: <WORK>/kssettingsview-verification/ios/KsSettingsView-SPM @ local
+  ** BUILD SUCCEEDED **
+  ==== Package.resolved ====
+  dry-run の依存は path 参照だけで version constraint を持たないため、Package.resolved は生成されない
+
+  初回の実行では最小例のコンパイルで警告 1 件が出た (エラーなし、ビルドは成功):
+    SettingsScreen.swift:16:39: warning: main actor-isolated property 'notifications'
+    can not be mutated from a Sendable closure
+  => 「ビルド警告は失敗にしない」ことはこの実行で確認できている。警告そのものは
+     既知として残す (下記 11。オーナー判断: 例は Sample と同じ素直な形を保ち、
+     実害が無いため API 側の起票もしない)。
+
+Android:
+  platform=android mode=dry-run version=0.1.0-SNAPSHOT
+  BUILD SUCCESSFUL in 7s / 49 actionable tasks
+  ==== releaseRuntimeClasspath の jp.kamusoft 行 ====
+  +--- jp.kamusoft:kssettingsview:0.1.0-SNAPSHOT
+
+MAUI:
+  platform=maui mode=dry-run version=0.0.0-dev
+  ==== 解決版と取得元 ====
+  KsSettingsView.Maui             0.0.0-dev  <- <WORK>/kssettingsview-verification/maui/feed
+  KsSettingsView.Binding.iOS      0.0.0-dev  <- <WORK>/kssettingsview-verification/maui/feed
+  KsSettingsView.Binding.Android  0.0.0-dev  <- <WORK>/kssettingsview-verification/maui/feed
+  facade と binding 2 件が 0.0.0-dev で一致し、取得元も参照先と一致する
+  net10.0-android: warning XA4301 × 4 / ビルドに成功しました。0 エラー
+  net10.0-ios (iossimulator-arm64): ビルドに成功しました。0 個の警告 / 0 エラー
+
+  => 取得元はいずれもローカル参照先。XA4301 が出ても成功で終わる。
+
+--- 副作用の比較 (実行前 / 実行後) -------------------------------
+配信リポジトリ (SPM) の tag 一覧:
+  $ git ls-remote --tags https://github.com/kamusoft/KsSettingsView-SPM.git
+  実行前: 0 行 / 実行後: 0 行 (diff なし = 同一)
+
+nuget.org の KsSettingsView.* 一覧 (検索 API の GET):
+  https://azuresearch-usnc.nuget.org/query?q=KsSettingsView&prerelease=true&semVerLevel=2.0.0
+  実行前: totalHits 0 / data 空
+  実行後: totalHits 0 / data 空
+
+Maven Central の jp.kamusoft 一覧 (検索 API の GET):
+  https://search.maven.org/solrsearch/select?q=g:jp.kamusoft&rows=20&wt=json
+  実行前: numFound 0 / 実行後: numFound 0
+
+Central Portal の deployments 一覧は認証が必要で、認証情報を用いない読み取りでは取得できない。
+この経路については、消費者検証 workflow 3 本が `permissions: contents: read` のみを宣言し、
+`secrets:` を一切受け取らない構成であること (書き込み手段が存在しないこと) を根拠とする。
+publish に要る資格情報は消費者検証の job に渡らないため、Central への deployment は起こり得ない。
+
+================================================================
+2. 負ケース (a): ローカル参照先に無い version
+================================================================
+iOS — 参照先に配布物が無いスナップショットディレクトリを渡す:
+$ ./verification/ios/build-consumer.sh --reference <WORK>/negios/KsSettingsView-SPM   (exit 1)
+  error: the package manifest at '<WORK>/negios/KsSettingsView-SPM/Package.swift'
+  cannot be accessed (... doesn't exist in file system)
+
+Android — mavenLocal に無い version を要求する:
+$ ./verification/android/build-consumer.sh --reference <HOME>/.m2/repository --version 9.9.9-absent
+                                                                              (exit 1)
+  > Could not find jp.kamusoft:kssettingsview:9.9.9-absent.
+    Searched in the following locations:
+      - file:<HOME>/.m2/repository/jp/kamusoft/kssettingsview/9.9.9-absent/kssettingsview-9.9.9-absent.pom
+  => 検索先は参照先 1 つだけで、mavenCentral / google への問い合わせは行われない
+     (exclusiveContent による排他割り当てが効いている)。
+
+MAUI — ユーザーキャッシュに同じ version があり、フィードには無い version を要求する:
+  前提: <HOME>/.nuget/packages に kssettingsview.maui / .binding.ios / .binding.android の
+        0.0.1-poc が展開済み。
+$ ./verification/maui/build-consumer.sh --reference <WORK>/emptyfeed --version 0.0.1-poc   (exit 1)
+  error NU1101: パッケージ KsSettingsView.Maui が見つかりません。ソース kssettingsview-local には、
+  この ID のパッケージが存在しません。PackageSourceMapping が有効になっています。
+  次のソースは考慮されませんでした: <dotnet>/library-packs, nuget.org。
+  => 空の RestorePackagesPath と packageSourceMapping により、ユーザーキャッシュの
+     0.0.1-poc にも nuget.org にもフォールバックしない。
+
+================================================================
+3. 負ケース (b): binding だけ別 version
+================================================================
+facade 0.0.0-dev と binding 2 件 0.0.1-dev だけを置いたフォルダフィードを作り、
+0.0.0-dev を要求する。
+
+$ ./verification/maui/build-consumer.sh --reference <WORK>/mixfeed --version 0.0.0-dev   (exit 1)
+  warning NU1603: KsSettingsView.Maui 0.0.0-dev は KsSettingsView.Binding.Android (>= 0.0.0-dev)
+  によって異なりますが、... 代わりに KsSettingsView.Binding.Android 0.0.1-dev が解決されました。
+  (iOS 側も同文)
+  エラー: KsSettingsView.Binding.iOS の解決版が要求と異なる: 要求 0.0.0-dev / 解決 0.0.1-dev
+  エラー: KsSettingsView.Binding.Android の解決版が要求と異なる: 要求 0.0.0-dev / 解決 0.0.1-dev
+  ==== 解決版と取得元 ====
+  KsSettingsView.Maui             0.0.0-dev  <- <WORK>/mixfeed
+  KsSettingsView.Binding.iOS      0.0.1-dev  <- <WORK>/mixfeed
+  KsSettingsView.Binding.Android  0.0.1-dev  <- <WORK>/mixfeed
+
+  => facade と binding それぞれの解決版が出力で確認でき、検査が失敗として報告される。
+     この形は NU1605 / NU1608 / NU1107 のいずれにも当たらない (NU1603 は警告のまま) ため、
+     版一致検査が無ければ素通りする。
+
+================================================================
+4. 負ケース (c): README 最小例の片側変更
+================================================================
+README.md の iOS 例だけを 1 文字変更した状態で lint を実行し、その後 README を復元した。
+
+$ python3 scripts/readme-example-lint.py                                        (exit 1)
+  エラー: README.md の最小例と一致しない:
+    verification/ios/Sources/VerificationApp/SettingsScreen.swift (README 548 文字 / ソース 547 文字)
+  README の最小例と消費者検証のソースが 1 件一致しない
+
+復元後:
+$ python3 scripts/readme-example-lint.py                                        (exit 0)
+  README の最小例 4 件が消費者検証のソースと一致する
+$ python3 scripts/readme-example-lint.py --selftest                             (exit 0)
+
+================================================================
+5. 負ケース (d): 不正な mode / smoke の version 省略
+================================================================
+3 platform の prepare-feed.sh / build-consumer.sh の 4 通り × 3 platform、すべて exit 1。
+フィード準備・依存解決に入る前に終了する。
+
+  build(mode 不正)=1  build(smoke, version 無)=1  prepare(mode 不正)=1  prepare(smoke, version 無)=1
+    (ios / android / maui とも同じ)
+
+  エラー: mode は dry-run か smoke のいずれかです: nope
+  エラー: smoke では --version が必須です
+
+CI 側も同じ検査を workflow の最初のステップ (Validate inputs) で行い、checkout より前に落とす。
+
+================================================================
+6. version 文字列の流れ (0.1.0-rc.1)
+================================================================
+iOS (smoke の生成物):
+$ ./verification/ios/build-consumer.sh --mode smoke --version 0.1.0-rc.1
+      .package(url: "https://github.com/kamusoft/KsSettingsView-SPM", exact: "0.1.0-rc.1")
+  (解決自体は配布物が未公開のため失敗する: no versions of 'kssettingsview-spm' match 0.1.0-rc.1)
+
+Android (発行座標と解決座標):
+`android/build.gradle.kts` の version 注入 (`-Pversion=` があればそれを優先する) と、
+`android/kssettingsview/build.gradle.kts` の署名の任意化 (署名鍵が渡されていなければ Sign タスクを
+skip する) を本 change 内で適用済み (いずれも deviation.md に記録あり)。
+
+$ ANDROID_HOME=<Android SDK> ./verification/android/prepare-feed.sh --version 0.1.0-rc.1
+                                                                                (exit 0)
+  BUILD SUCCESSFUL
+  発行された成果物 (<HOME>/.m2/repository/jp/kamusoft/kssettingsview/0.1.0-rc.1/):
+    kssettingsview-0.1.0-rc.1.aar / .pom / .module / -sources.jar / -javadoc.jar
+  (.asc は無い = 署名鍵の無い環境で未署名のまま発行できている)
+  => 発行後の座標検査 (要求 version のディレクトリが存在すること) も rc 版で通り、
+     参照先のパスを標準出力の最終行に返している。
+
+$ ANDROID_HOME=<Android SDK> ./verification/android/build-consumer.sh \
+      --version 0.1.0-rc.1 --reference <HOME>/.m2/repository                    (exit 0)
+  platform=android mode=dry-run version=0.1.0-rc.1
+  BUILD SUCCESSFUL
+  ==== releaseRuntimeClasspath の jp.kamusoft 行 ====
+  +--- jp.kamusoft:kssettingsview:0.1.0-rc.1
+
+MAUI (dry-run、pack から通し。project.assets.json の解決版):
+$ ./verification/maui/build-consumer.sh --version 0.1.0-rc.1                    (exit 0)
+  KsSettingsView.Maui             0.1.0-rc.1  <- <WORK>/rcmaui/feed
+  KsSettingsView.Binding.iOS      0.1.0-rc.1  <- <WORK>/rcmaui/feed
+  KsSettingsView.Binding.Android  0.1.0-rc.1  <- <WORK>/rcmaui/feed
+  net10.0-android / net10.0-ios とも Release ビルド成功
+  project.assets.json の targets:
+  net10.0-android      KsSettingsView.Binding.Android/0.1.0-rc.1
+  net10.0-android      KsSettingsView.Maui/0.1.0-rc.1
+  net10.0-ios          KsSettingsView.Binding.iOS/0.1.0-rc.1
+  net10.0-ios          KsSettingsView.Maui/0.1.0-rc.1
+  (libraries 節も同じ 3 件が 0.1.0-rc.1)
+
+=> iOS のテンプレート生成結果・Android の発行座標と解決座標・MAUI の assets.json の
+   いずれにも同一の文字列 `0.1.0-rc.1` が流れる。
+
+実測後、mavenLocal の `0.1.0-rc.1` / `0.2.0-SNAPSHOT` と rc 版のフォルダフィードは削除した
+(負ケース (a) が「ローカル参照先に無い version」を前提にするため、実測の残骸を残さない)。
+
+================================================================
+7. smoke の参照先が公開レジストリを指すこと
+================================================================
+いずれも生成物・解決の検索先で確認する。配布物が未公開のため解決成功は実証しない
+(Scenario「公開レジストリからの解決」は phase-8 の初回リリースで行う)。
+
+iOS: 生成した Package.swift の依存が
+     `.package(url: "https://github.com/kamusoft/KsSettingsView-SPM", exact: "0.1.0-rc.1")` の 1 行のみ。
+     path 参照 (ローカル参照先) を含まない。
+
+Android: 検索先が Maven Central だけになる。
+  > Could not find jp.kamusoft:kssettingsview:0.1.0-rc.1.
+    Searched in the following locations:
+      - https://repo.maven.apache.org/maven2/jp/kamusoft/kssettingsview/0.1.0-rc.1/kssettingsview-0.1.0-rc.1.pom
+  => mavenLocal は検索されない (smoke では exclusiveContent が mavenCentral 側へ割り当たる)。
+
+MAUI: nuget.smoke.config は packageSources に nuget.org だけを列挙し (`<clear />` 済み)、
+      packageSourceMapping で `*` を nuget.org に写像する。ローカルフィードの記述を持たない。
+$ ./verification/maui/build-consumer.sh --mode smoke --version 0.1.0-rc.1        (exit 1)
+  error NU1101: パッケージ KsSettingsView.Maui が見つかりません。ソース nuget.org には、
+  この ID のパッケージが存在しません。
+  => 参照先は nuget.org のみ。
+
+================================================================
+8. API 版付き TFM の解決要件 (docs-refresh 依頼への材料)
+================================================================
+配布物 KsSettingsView.Maui 0.0.0-dev が持つ lib フォルダ:
+  lib/net10.0-android36.0/ , lib/net10.0-ios26.0/ , lib/net10.0/
+
+(a) 消費者の TFM が API 版なし (`net10.0-android;net10.0-ios`) の場合 — 上記 1 の restore:
+    net10.0-android | KsSettingsView.Maui        <- lib/net10.0-android36.0/KsSettingsView.Maui.dll
+    net10.0-android | KsSettingsView.Binding.Android <- lib/net10.0-android36.0/...
+    net10.0-ios     | KsSettingsView.Maui        <- lib/net10.0-ios26.0/KsSettingsView.Maui.dll
+    net10.0-ios     | KsSettingsView.Binding.iOS <- lib/net10.0-ios26.0/...
+    => platform 別アセットが選ばれ、binding 2 件が依存グラフに入る。
+
+(b) 消費者の TFM に古い API 版を固定した場合
+    (`-p:TargetFrameworks=net10.0-android35.0;net10.0-ios18.0` で restore):
+$ dotnet restore VerificationApp.csproj ... -p:TargetFrameworks=net10.0-android35.0;net10.0-ios18.0
+                                                                                (exit 0、警告なし)
+    net10.0-android35.0 | KsSettingsView.Maui <- lib/net10.0/KsSettingsView.Maui.dll
+    net10.0-ios18.0     | KsSettingsView.Maui <- lib/net10.0/KsSettingsView.Maui.dll
+    (KsSettingsView.Binding.iOS / .Android は依存グラフに現れない)
+
+    => restore は成功するが、platform 中立の lib/net10.0 へ静かにフォールバックし、
+       native 実装を持つ binding 2 件が入らない。NuGet の警告は出ない。
+       利用者が TFM に API 版を明示する場合は android 36.0 / ios 26.0 以上が要る。
+       これを下回ると、ビルドは通るのに実行時の native 実装が欠ける構成になる。
+
+================================================================
+9. CI 定義の手元検査 (workflow は手元で実行できない)
+================================================================
+actionlint はこの環境に無い。代わりに次を確認した。
+
+- YAML として読み込めること (python の yaml.safe_load、4 ファイル)
+- ci.yml の job 名が ios / android / maui / consumer-ios / consumer-android / consumer-maui / lint の
+  7 つで、消費者 3 job が呼ぶ再利用可能 workflow の job 名が verify であること
+  (status check 名 `consumer-<platform> / verify` が確定する)
+- ci.yml が渡す `with:` (mode: dry-run) が、呼ばれる側の workflow_call inputs
+  (mode 必須 / version 既定 空 / artifact 既定 空) に収まること
+- 各 workflow の run ブロックが bash の構文検査 (bash -n) を通ること
+- run ブロックが呼ぶスクリプトの引数 (--mode / --version / --reference / --work) が
+  verification/lib/verification-args.sh の解釈と一致すること
+- 消費者検証 3 本が `permissions: contents: read` のみを宣言し、`secrets:` を持たないこと
+
+================================================================
+10. 既存 lint の通過 (本作業後)
+================================================================
+$ python3 scripts/local-path-lint.py                                            (exit 0)
+$ python3 scripts/identity-lint.py                                              (exit 0)
+$ python3 scripts/comment-policy-lint.py                                        (exit 0)
+$ python3 scripts/readme-example-lint.py                                        (exit 0)
+$ scripts/spm-snapshot/sync-snapshot-test.sh                                    (exit 0)
+
+================================================================
+11. 利用者向けドキュメントの iOS 最小例の並行性警告 (既知・未対応)
+================================================================
+`SwitchCell` の `onValueChanged` は `(@Sendable (Bool) -> Void)?` として公開されており
+(`ios/Sources/KsSettingsViewUI/SwitchCell.swift:37`)、SwiftUI の `@State` を直接書き換える
+書き方は main actor 分離の警告になる。呼び出し元は `@MainActor` の Cell View の
+`@objc` ハンドラ (`ios/Sources/KsSettingsViewUI/SwitchCellView.swift:13-14,67-68`) なので、
+実行時は必ず main actor 上で呼ばれ、実害は無い。
+
+一度 `MainActor.assumeIsolated { notifications = value }` に書き換えて警告 0 件になることを
+確認したが、利用者に見せる例は samples/ios と同じ素直な `{ notifications = $0 }` を保つ
+(オーナー判断 2026-09-02) として元に戻した。README.md と
+verification/ios/Sources/VerificationApp/SettingsScreen.swift は変更前の形のまま。
+警告の根本原因 (公開 API の `@Sendable` 宣言) は実害が無いため起票しない。
+
+戻した後の確認:
+$ ./verification/ios/build-consumer.sh                                          (exit 0)
+  warning 1 件 (上記の main actor 分離) / ** BUILD SUCCEEDED **
+$ python3 scripts/readme-example-lint.py                                        (exit 0)
+$ python3 scripts/readme-example-lint.py --selftest                             (exit 0)
+
+================================================================
+12. レビュー 1 周目の修正後確認
+================================================================
+実施日: 2026-09-02
+
+--- Android SDK ロケーションの解決 (Major-1) ---------------------
+消費者検証のスクリプトが、ANDROID_HOME / ANDROID_SDK_ROOT のどちらも無ければ
+android/local.properties の sdk.dir を読んで ANDROID_HOME として export する。
+
+$ env -u ANDROID_HOME -u ANDROID_SDK_ROOT ./verification/android/build-consumer.sh
+                                                                                (exit 0)
+  platform=android mode=dry-run version=0.1.0-SNAPSHOT
+  ANDROID_HOME を <REPO>/android/local.properties の sdk.dir から解決しました
+  BUILD SUCCESSFUL
+  ==== releaseRuntimeClasspath の jp.kamusoft 行 ====
+  +--- jp.kamusoft:kssettingsview:0.1.0-SNAPSHOT
+
+$ ANDROID_HOME=<Android SDK> ./verification/android/build-consumer.sh            (exit 0)
+  (解決メッセージは出ず、与えられた ANDROID_HOME をそのまま使う。結果は同じ)
+
+解決関数の分岐を隔離して確認 (REPO_ROOT を差し替えた呼び出し):
+  環境変数なし・local.properties なし   -> exit 1
+    「Android SDK の場所が分かりません。ANDROID_HOME か ANDROID_SDK_ROOT を設定するか、
+      <path>/android/local.properties に sdk.dir を書いてください」
+  ANDROID_SDK_ROOT だけ設定             -> exit 0 (その値を ANDROID_HOME にする)
+  sdk.dir が実在しないパス              -> exit 1「sdk.dir が指すディレクトリがありません」
+
+--- mavenLocal の位置 (Minor) ------------------------------------
+~/.m2/settings.xml の localRepository があればそれ、無ければ ~/.m2/repository。
+  settings.xml なし (この環境)          -> <HOME>/.m2/repository
+  localRepository を書いた settings.xml -> その値 (/tmp/custom-m2-repo で確認)
+
+--- 依存ツリー取得の失敗判定 (Suggestion) ------------------------
+出力をファイルへ取り、Gradle の終了コードと grep の結果を分けて判定する形に変えた。
+Gradle が落ちる状況は正常系の実行では作れないため、同じ制御構造を隔離して確認した。
+  Gradle が非 0 で終了 -> 部分出力を stderr に出したうえで
+                          「依存ツリーの取得に失敗しました (:app:dependencies)」で exit 1
+  Gradle 成功・行なし   -> 「依存ツリーに jp.kamusoft の行がありません」で exit 1
+
+--- README 一致 lint の重複検出 (Minor) --------------------------
+$ python3 scripts/readme-example-lint.py                                        (exit 0)
+$ python3 scripts/readme-example-lint.py --selftest                             (exit 0)
+  追加した負ケース:
+    OK   同じ見出し・言語の重複で exit 1
+    OK   重複した候補数が出力される
+      (「該当のコードブロックが 2 件ある (1 件だけであるべき)」)
+
+--- 本体 Android の version 解決 (メッセージ修正の回帰) ----------
+$ (android/) ./gradlew -q :kssettingsview:properties
+  group: jp.kamusoft / version: 0.1.0-SNAPSHOT
+$ (android/) ./gradlew -q -Pversion=0.1.0-rc.1 :kssettingsview:properties
+  group: jp.kamusoft / version: 0.1.0-rc.1
+
+$ (android/) ./gradlew --console=plain --rerun-tasks test                       (exit 0)
+  BUILD SUCCESSFUL in 2m 55s / 124 actionable tasks: 124 executed
+  testDebugUnitTest 1350 件 + testReleaseUnitTest 1350 件 = 2700 件 / 失敗 0 件
+
+--- lint と構文検査 ----------------------------------------------
+$ python3 scripts/local-path-lint.py                                            (exit 0)
+$ python3 scripts/identity-lint.py                                              (exit 0)
+$ python3 scripts/comment-policy-lint.py   合計: 0 ファイル / 禁止 0 件 (728 ファイル) (exit 0)
+$ python3 scripts/readme-example-lint.py [--selftest]                           (exit 0)
+$ bash -n (verification 配下の shell 8 本)                                       すべて OK
+
+iOS / MAUI の消費者ビルドはコメントの変更のみで挙動に影響しないため再実行していない。
+
+================================================================
+13. smoke + artifact の拒否
+================================================================
+実施日: 2026-09-02
+
+smoke の参照先は公開レジストリで、準備済みの配布物 (スクリプトの --reference / workflow の
+artifact 入力) を差し込む余地がない。黙って無視すると「渡した配布物を検証した」と誤解される
+ため、組み合わせ自体を早期に拒む形にした (オーナー判断)。
+
+--- スクリプト (3 platform 共通の引数解釈) -----------------------
+$ ./verification/<platform>/build-consumer.sh \
+      --mode smoke --version 0.1.0-rc.1 --reference <既存ディレクトリ>          (exit 1)
+  エラー: smoke では --reference を指定できません
+          (参照先は公開レジストリで、準備済みの配布物は使いません)
+
+  ios / android / maui とも exit 1。prepare-feed.sh に同じ組み合わせを与えた場合も exit 1。
+  出力はこのエラー 1 行だけで、引数解釈の最後に出る「platform=... mode=... version=...」の
+  行も現れない = フィード準備にも依存解決にも入っていない。
+
+既存の負ケースの回帰 (3 platform とも exit 1 のまま):
+  build-consumer.sh --mode nope        -> 1
+  build-consumer.sh --mode smoke       -> 1 (version 省略)
+
+--- workflow (入力検査ステップ) ----------------------------------
+消費者検証 3 本の Validate inputs (checkout より前、download-artifact より前) に、
+mode が smoke かつ artifact が空でない場合を ::error:: つきで落とす分岐を足した。
+検査の順序は mode の許可値 -> smoke の version 必須 -> smoke + artifact の禁止。
+
+--- 確認 --------------------------------------------------------
+$ env -u ANDROID_HOME -u ANDROID_SDK_ROOT ./verification/android/build-consumer.sh
+                                                                                (exit 0)
+  +--- jp.kamusoft:kssettingsview:0.1.0-SNAPSHOT   (引数なし dry-run の回帰なし)
+$ python3 scripts/local-path-lint.py / identity-lint.py / comment-policy-lint.py (すべて exit 0)
+$ python3 scripts/readme-example-lint.py [--selftest]                           (exit 0)
+$ bash -n (verification 配下の shell 8 本)                                       すべて OK
+$ 4 workflow の YAML ロードと run ブロックの bash -n                             すべて OK
+
+
+================================================================
+14. レビュー 2 周目後の小修正の確認 (指揮側で実施)
+================================================================
+review-002 の Suggestion 1〜3 (config.yaml の allow コメント / usage の --work 注記 /
+localRepository の ${user.home} 補間) を直した後の確認。
+
+$ ./verification/android/build-consumer.sh                                      (exit 0)
+  BUILD SUCCESSFUL
+  +--- jp.kamusoft:kssettingsview:0.1.0-SNAPSHOT
+$ bash -n verification/android/prepare-feed.sh verification/lib/verification-args.sh   OK
+$ python3 scripts/identity-lint.py / local-path-lint.py                          exit 0
+$ python3 -c '<${user.home}/custom/repo を補間>'  →  <HOME>/custom/repo
+
+================================================================
+15. tasks 5.7 (CI 側): artifact 入力を与えた呼び出し
+================================================================
+draft PR (#2) のブランチに一時 workflow (tmp-consumer-artifact-check.yml、確認後に削除) を載せ、
+prepare job で Android のフィード準備 → mavenLocal の jp/ 配下を artifact `consumer-android-feed`
+として upload → verify-consumer-android.yml を mode=dry-run + artifact 指定で呼んだ。
+run: https://github.com/kamusoft/KsSettingsView/actions/runs/33632320326
+
+  prepare                    success  (12:51:50 -> 12:54:00)
+  consumer-android / verify  success  (12:54:02 -> 12:56:56)
+
+consumer-android / verify の step 列:
+  Validate inputs / Checkout / Setup JDK / Cache Gradle dependencies / Show toolchain /
+  Download prepared distribution / Verify consumer   — すべて success
+ログ抜粋:
+  Downloading single artifact
+  Total of 1 artifact(s) downloaded
+  args+=(--reference "${RUNNER_TEMP}/reference")
+  BUILD SUCCESSFUL in 2m 41s
+  +--- jp.kamusoft:kssettingsview:0.1.0-SNAPSHOT
+ログに publishToMavenLocal / prepare-feed の実行は無く、フィード準備は再実行されていない。
+
+備考: workflow_dispatch は既定ブランチにファイルが無いと起動できないため、一時 workflow は
+確認用ブランチへの push をトリガーにした。

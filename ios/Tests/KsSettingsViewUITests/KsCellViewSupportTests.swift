@@ -15,11 +15,101 @@
 #if canImport(UIKit)
 import XCTest
 import UIKit
+import KsSettingsViewTestSupport
 @testable import KsSettingsViewUI
 @testable import KsSettingsViewCore
 
 @MainActor
 final class KsCellViewSupportTests: XCTestCase {
+    private static let viewSize = CGSize(width: 375, height: 700)
+
+    private func host(
+        cell: LabelCell,
+        theme: Theme
+    ) -> (KsSettingsViewController, UICollectionView, UIWindow) {
+        let root = SettingsRoot(sections: [Section(cells: [cell])])
+        let controller = KsSettingsViewController(root: root, theme: theme, style: .classic)
+        let window = UIWindow(frame: CGRect(origin: .zero, size: Self.viewSize))
+        window.rootViewController = controller
+        window.makeKeyAndVisible()
+        controller.loadViewIfNeeded()
+        controller.view.frame = CGRect(origin: .zero, size: Self.viewSize)
+        controller.view.layoutIfNeeded()
+        let collectionView = controller.internalCollectionView
+        collectionView.frame = CGRect(origin: .zero, size: Self.viewSize)
+        awaitInitialRender(controller)
+        return (controller, collectionView, window)
+    }
+
+    /// 指定 Cell の背景色が期待値へ収束するまで待つ。
+    ///
+    /// UIColor の一致は色空間の差を吸収する `isEqual` で判定するため、Equatable 前提の
+    /// `awaitEqual` ではなく `awaitCondition` に述語を渡す。
+    private func awaitBackgroundColor(
+        _ description: String,
+        expected: UIColor,
+        of cell: UICollectionViewCell,
+        in collectionView: UICollectionView,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        awaitCondition(
+            "\(description) (期待値: \(expected))",
+            in: collectionView,
+            actual: { "背景色 \(String(describing: cell.backgroundConfiguration?.backgroundColor))" },
+            file: file,
+            line: line,
+            until: { cell.backgroundConfiguration?.backgroundColor?.isEqual(expected) ?? false }
+        )
+    }
+
+    func test_押下中は選択色になり解除後は平常時の実効背景色へ戻る() {
+        let selectedColor = UIColor.magenta
+        let normalColor = UIColor.yellow
+        let model = LabelCell(
+            style: CellStyle(backgroundColor: normalColor),
+            title: "A"
+        )
+        let (_, collectionView, window) = host(
+            cell: model,
+            theme: Theme(selectedColor: selectedColor)
+        )
+        defer { window.isHidden = true }
+        guard let cell = collectionView.cellForItem(at: IndexPath(item: 0, section: 0)) else {
+            return XCTFail("先頭 Cell を取得できない")
+        }
+
+        cell.isHighlighted = true
+        awaitBackgroundColor("押下中の背景が選択色になる", expected: selectedColor, of: cell, in: collectionView)
+
+        cell.isHighlighted = false
+        awaitBackgroundColor("解除後の背景が平常時の実効背景色へ戻る", expected: normalColor, of: cell, in: collectionView)
+    }
+
+    func test_無効Cellは押下しても選択色を塗らない() {
+        let selectedColor = UIColor.magenta
+        let normalColor = UIColor.yellow
+        let model = LabelCell(
+            style: CellStyle(backgroundColor: normalColor),
+            title: "A",
+            isEnabled: false
+        )
+        let (_, collectionView, window) = host(
+            cell: model,
+            theme: Theme(selectedColor: selectedColor)
+        )
+        defer { window.isHidden = true }
+        guard let cell = collectionView.cellForItem(at: IndexPath(item: 0, section: 0)) else {
+            return XCTFail("先頭 Cell を取得できない")
+        }
+
+        var sentinelBackground = cell.backgroundConfiguration ?? UIBackgroundConfiguration.clear()
+        sentinelBackground.backgroundColor = .cyan
+        cell.backgroundConfiguration = sentinelBackground
+        cell.isHighlighted = true
+
+        awaitBackgroundColor("無効 Cell の背景が平常時の実効背景色のまま再適用される", expected: normalColor, of: cell, in: collectionView)
+    }
 
     /// `applyEffectiveHeight` を呼ぶと `lastHeight` / `lastIsFixedHeight` が記録され、
     /// 続く `adjustedLayoutAttributes` で intrinsic（proposed）が `effectiveCellHeight` 未満なら

@@ -6,6 +6,7 @@
 #if canImport(UIKit)
 import XCTest
 import UIKit
+import KsSettingsViewTestSupport
 @testable import KsSettingsViewBridge
 @testable import KsSettingsViewUI
 @testable import KsSettingsViewCore
@@ -39,7 +40,7 @@ final class KsBridgeLifecycleTests: XCTestCase {
         let theme = KsBridgeTheme()
         theme.backgroundColor = NSNumber(value: Int32(bitPattern: 0xFF00FF00))
         fixture.bridge.setTheme(theme)
-        KsBridgeTestHost.pump(attachment)
+        waitForNegativeVerification(in: attachment.collectionView)
 
         XCTAssertEqual(KsBridgeTestHost.renderedTitles(attachment), before)
         XCTAssertEqual(fixture.bridge.store.theme, themeBefore)

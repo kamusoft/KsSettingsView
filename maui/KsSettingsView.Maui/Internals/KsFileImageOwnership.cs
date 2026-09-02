@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 
-namespace KsSettingsView.Maui.Internals;
+namespace KsSettingsView.Internals;
 
 /// <summary>
 /// ファイル指定から解決した画像を facade が後片付けしてよいか (所有しているか) の分類。

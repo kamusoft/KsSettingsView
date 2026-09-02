@@ -1,6 +1,6 @@
 using System;
 
-namespace KsSettingsView.Maui.Internals;
+namespace KsSettingsView.Internals;
 
 /// <summary>
 /// 内容更新のバッチ配信を予約する実行口。

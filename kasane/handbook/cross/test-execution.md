@@ -5,7 +5,7 @@ applies-when:
   tasks: [テスト実行, テスト結果の報告]
 title: テスト実行規約
 description: iOS / Android / MAUI のテストの正しい実行コマンドと、黙って検証にならない範囲 (macOS 上の swift test で失われるテスト・Robolectric の描画検証限界・MAUI facade テストが触らない platform TFM)。収束を待つアサーションの書き方は platform 共通
-timestamp: 2026-08-31
+timestamp: 2026-09-01
 ---
 
 # テスト実行規約
@@ -27,6 +27,7 @@ iOS / Android / MAUI の 3 platform を記載する。いずれも実際に実�
 - deadline 超過時は黙って戻らず、その時点の実測値をメッセージに載せて `fail()` で落とす。黙って戻る待機は収束前の状態を検証したことにされ、「実装が壊れた」と「待機が足りない」も区別できなくなる
 
 この誤りは CPU が競合したときだけ落ちるため、手元では常に緑で、並列実行や CI の混雑時に間欠的に落ちる flaky として表面化する。**手元で通ることは、この形で書けている根拠にならない。** 各 platform で何が非同期に反映されるかは以下の節に示す。
+**例外は負の検証だけ** — 「何も起きないこと」を確かめるアサーション (未知 ID や範囲外指定の更新が表示に影響しないことの確認、dispose・購読解除・Host 解放の後に更新が届かないことの確認) には、待つべき遷移が存在しない。この用途に限り、意図を明示した固定時間待機を使う ([cross/ADR-0027](../../decisions/cross/0027-negative-verification-fixed-wait-exception.md))。**呼び出し名から「不変性を確かめるための待機」と判別できる形にする** — 名前で区別できないと、後から読む人がその固定待機を「条件ベース化の直し漏れ」と見分けられない。収束待ちの用途にこの待機を使ってはならない。
 
 この節は、同じ誤りが 3 つの変更で platform をまたいで再発したことを受けて platform 共通へ引き上げた (出典: clarify-host-attach-order-contract / fix-compose-dsl-double-update-flaky-test / add-verification-ci)。当初は Android の `AsyncListDiffer` を入口に書かれており、iOS のテストを書くときに読まれなかった。
 
@@ -36,13 +37,15 @@ iOS / Android / MAUI の 3 platform を記載する。いずれも実際に実�
 
 ```
 cd ios
-xcodebuild test -scheme KsSettingsView-Package -destination 'platform=iOS Simulator,name=<機種名>'
+xcodebuild test -scheme KsSettingsView -destination 'platform=iOS Simulator,name=<機種名>'
 ```
 
 - Swift Package のルートは `ios/` であり、**リポジトリルートで実行すると `does not contain an Xcode project` で失敗する**
-- scheme は `KsSettingsView-Package` (パッケージ全体) を使う。個別ターゲットの scheme (`KsSettingsViewCore` / `KsSettingsViewUI` / `KsSettingsViewSwiftUI`) もあるが、全件検証にはパッケージ全体の scheme を使う
+- scheme は `KsSettingsView` を使う。公開 product は umbrella 1 本のみで、Xcode が自動生成する scheme もこれ 1 つであり、パッケージの全テストターゲットを含む
 - `<機種名>` は手元で利用可能な Simulator の機種名に置き換える。一覧は `xcrun simctl list devices available` で得られる
-- 実行件数は `xcodebuild` 出力末尾の `Executed N tests, with M failures` で確認する
+- 実行件数は `xcodebuild` 出力の `Executed N tests, with M failures` で確認する
+- **出力末尾の 1 行だけを見ない** — この行はテストバンドル単位の集計であり、バンドルが複数あるパッケージでは最後に実行されたバンドルの値しか映らない
+- 全体件数は**バンドル集計行** (`Test Suite '<名>.xctest' passed/failed` の直後の `Executed` 行) だけを拾って合算する。クラス・スイート単位の `Executed` 行まで含めると多重集計になる
 
 ### `swift test` では検証にならない
 
@@ -68,7 +71,7 @@ xcodebuild test -scheme KsSettingsView-Package -destination 'platform=iOS Simula
 
 ```
 cd ios
-xcodebuild test -scheme KsSettingsView-Package -destination 'platform=iOS Simulator,name=<機種名>' -only-testing:KsSettingsViewCoreTests
+xcodebuild test -scheme KsSettingsView -destination 'platform=iOS Simulator,name=<機種名>' -only-testing:KsSettingsViewCoreTests
 ```
 
 こうすればガードの穴を作らずに実行範囲だけを狭められる。ただし**完了判定には絞り込みなしの全件実行を使う**。
@@ -79,7 +82,15 @@ xcodebuild test -scheme KsSettingsView-Package -destination 'platform=iOS Simula
 
 このため RunLoop を固定秒数まわす待機 (`RunLoop.current.run(until:)` を秒数指定で呼ぶ形) は、「収束を待つアサーション」の 1 つ目と 3 つ目の条件を満たさない。指定時間が経てば収束していなくても戻り、戻ったことと収束したことが区別できない。実行機が混んでいると収束前に assert へ進んで落ちる。
 
-適用実例: `KsBridgeTestHost.pump(_:seconds:)` を使う待機は条件ベースへ作り替える対象である (change `fix-ios-test-pump-condition-wait`)。
+適用実例: iOS テストの待機は用途別に 3 つへ分離済みで、共有ターゲット `KsSettingsViewTestSupport` が単一の定義を持ち、3 つのテストターゲットが依存する:
+
+| 用途 | 使うもの |
+|---|---|
+| 非同期反映の収束待ち | 条件ベース待機 (述語 + 実時間 deadline + ループ内で RunLoop を短く回す + 超過時は実測値付き fail) |
+| レイアウトの確定だけが要る | 待機なしのレイアウト実行 |
+| 負の検証 (no-op・不達の確認) | 意図明示の固定待機 (cross/ADR-0027) |
+
+固定秒数で RunLoop をまわす待機は、3 つ目 (負の検証) 以外に定義・呼び出しとも `ios/Tests/` に存在しない。新しいテストを書くときも、収束を待つ場面で固定秒数の待機を持ち込まない。
 
 ### `swift test` を案内している文書は無い
 
@@ -94,15 +105,15 @@ cd android
 ./gradlew test
 ```
 
-- Gradle ビルドルートは `android/`。テストは Robolectric を含む JVM 単体テストで、debug / release の両 variant が実行される (2026-08-21 実測: 1261 件 × 2 = 2522 件。件数は変動する)。instrumented test (`androidTest/`) は現状存在しない
+- Gradle ビルドルートは `android/`。テストは Robolectric を含む JVM 単体テストで、debug / release の両 variant が実行される (2026-09-01 実測: 1350 件 × 2 = 2700 件。件数は変動する)。instrumented test (`androidTest/`) は現状存在しない
 - Gradle は up-to-date なテストタスクをスキップするため、**差分なしの再実行は「テスト 0 件で BUILD SUCCESSFUL」になり得る**。全件を確実に回し直して件数を確認するときは `--rerun-tasks` を付ける
 - 実行件数はコンソールに出ない。各モジュールの `build/test-results/testDebugUnitTest/TEST-*.xml` (release は `testReleaseUnitTest/`) の `tests` / `failures` 属性の合計、または `build/reports/tests/testDebugUnitTest/index.html` で確認する。**ディレクトリ名は variant 名 (`debug` / `release`) ではなくタスク名**であり、`debugUnitTest` 等と読み替えると集計対象が 0 件になる
-- 反復中に絞り込むときは `./gradlew :ks-settingsview-ui:testDebugUnitTest --tests '<クラス名のパターン>'` を使えるが、**完了判定には絞り込みなしの全件実行を使う** (iOS と同じ規律)
+- 反復中に絞り込むときは `./gradlew :kssettingsview:testDebugUnitTest --tests '<クラス名のパターン>'` を使えるが、**完了判定には絞り込みなしの全件実行を使う** (iOS と同じ規律)
 - Gradle を動かす JDK は `JAVA_HOME` で選ぶ (JDK 17 / 21 / 25 で実測済み)。成果物のターゲットが Java 17 のため、どの JDK で動かす場合も JDK 17 がローカルにインストールされている必要がある ([Android ビルドツールチェーンの契約](../../concepts/android/architecture/build-toolchain.md))
 
 ### Robolectric で「検証したつもり」になる描画系アサーション
 
-Robolectric の既定 (legacy graphics モード) では一部の描画処理が実行されず、描画結果を見るアサーションが空振りする。実測で確認済みの 2 点 (適用実例: `android/ks-settingsview-ui/src/test/kotlin/jp/kamusoft/kssettingsview/ui/CellRowWidthAllocationTest.kt`):
+Robolectric の既定 (legacy graphics モード) では一部の描画処理が実行されず、描画結果を見るアサーションが空振りする。実測で確認済みの 2 点 (適用実例: `android/kssettingsview/src/test/kotlin/jp/kamusoft/kssettingsview/ui/CellRowWidthAllocationTest.kt`):
 
 - **実 ellipsize**: legacy graphics では `TextUtils.ellipsize` が動作せず、`Layout.getEllipsisCount` が**常に 0 を返す**。末尾省略の発生を検証するテストにはクラスへ `@GraphicsMode(GraphicsMode.Mode.NATIVE)` が必要 (実 Skia を動かすため Robolectric nativeruntime の取得を伴い、起動コストと CI の環境依存が増える)
 - **singleLine な TextView の実描画位置**: `isSingleLine = true` の TextView は内部 `Layout` の幅が `VERY_WIDE` (約 100 万 px) になり、`Layout` 座標は View 座標と一致しない。実描画位置は `viewTreeObserver.dispatchOnPreDraw()` で `TextView.bringTextIntoView()` の `scrollX` 補正を発火させてから `layout.getLineLeft(0) - scrollX` で測る。`root.draw(Canvas)` を呼ぶだけでは補正が入らない。得られる値は **content box (padding を除いた領域) の左端起点**であり、この経路は実機で毎フレーム描画前に走る補正そのものなので Robolectric 固有の抜け道ではない
@@ -111,7 +122,7 @@ Robolectric の既定 (legacy graphics モード) では一部の描画処理が
 
 `RecyclerView` の `ListAdapter` (`AsyncListDiffer`) は差分計算を**バックグラウンドスレッド**で行い、結果を main looper へ post して `currentList` / `itemCount` を更新する。post 前は main looper のキューが空であり、`shadowOf(Looper.getMainLooper()).idle()` も Compose の `waitForIdle()` も**即座に戻る**。idle 系の呼び出しを何度重ねても差分計算の完了は待てない。
 
-待機は「収束を待つアサーション」の 3 条件で書く。全モジュール並列実行 (`android/gradle.properties` の `org.gradle.parallel=true`) で CPU が競合したときだけ落ちるため、単体実行では気づけない。適用実例: `ks-settingsview-compose` の `KsSettingsViewComposeTest.waitForAdapterItemCount` / `DSLAccessoryVisibilityRenderingTest.awaitRows`、`ks-settingsview-ui` の `KsSettingsViewTestSupport.awaitConvergence`。
+待機は「収束を待つアサーション」の 3 条件で書く。全モジュール並列実行 (`android/gradle.properties` の `org.gradle.parallel=true`) で CPU が競合したときだけ落ちるため、単体実行では気づけない。適用実例: `jp.kamusoft.kssettingsview.compose` の `KsSettingsViewComposeTest.waitForAdapterItemCount` / `DSLAccessoryVisibilityRenderingTest.awaitRows`、`jp.kamusoft.kssettingsview.ui` の `KsSettingsViewTestSupport.awaitConvergence`。
 
 ## MAUI
 

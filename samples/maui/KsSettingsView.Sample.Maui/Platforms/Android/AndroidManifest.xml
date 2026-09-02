@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
   <!--
-    application にテーマを指定しない MAUI テンプレート既定の形。ks-settingsview-ui は
+    application にテーマを指定しない MAUI テンプレート既定の形。KsSettingsView は
     ライブラリ側で自前のテーマをかぶせて描画するため、ホストのテーマ種別を問わない (android/ADR-0020)。
   -->
   <application android:allowBackup="true"

@@ -1,21 +1,27 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    KsSettingsView の Android Bridge (`ks-settingsview-bridge`) を .NET から呼び出すための binding。
-    Bridge モジュールの aar を束縛し、Bridge が実行時に必要とする Core / UI モジュールの aar を
-    同梱する。
+    KsSettingsView の Android Bridge (`kssettingsview-bridge`) を .NET から呼び出すための binding。
+    Bridge モジュールの aar を束縛し、Bridge が実行時に必要とする本体モジュール
+    (`kssettingsview`) の aar を同梱する。
 
     この assembly は interop の輸送層であり、利用者向けの公開契約ではない (maui/ADR-0004)。
   -->
   <PropertyGroup>
     <TargetFramework>net10.0-android</TargetFramework>
-    <!-- Android モジュールの minSdk に合わせる -->
-    <SupportedOSPlatformVersion>29</SupportedOSPlatformVersion>
+    <!-- Android モジュールの minSdk に合わせる (要件の数値は buildTransitive の props が宣言元) -->
+    <SupportedOSPlatformVersion>$(KsSettingsViewMinAndroidApi)</SupportedOSPlatformVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <IsTrimmable>true</IsTrimmable>
     <RootNamespace>KsSettingsView.Bridge</RootNamespace>
     <AssemblyName>KsSettingsView.Binding.Android</AssemblyName>
+  </PropertyGroup>
+
+  <!-- PackageId はアセンブリ名の既定に任せる -->
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <Description>Android native bridge binding for KsSettingsView.Maui. Referenced transitively by KsSettingsView.Maui; do not reference this package directly.</Description>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -24,82 +30,33 @@
   </PropertyGroup>
 
   <!--
-    束縛対象は Bridge モジュールだけにする。Core / UI は Bridge の実行時依存であり、
+    束縛対象は Bridge モジュールだけにする。本体は Bridge の実行時依存であり、
     公開 API に型が現れないため同梱するだけで束縛しない。
   -->
   <ItemGroup>
-    <AndroidLibrary Include="$(KsAndroidRoot)ks-settingsview-bridge/build/outputs/aar/ks-settingsview-bridge-release.aar" Bind="true" />
-    <AndroidLibrary Include="$(KsAndroidRoot)ks-settingsview-core/build/outputs/aar/ks-settingsview-core-release.aar" Bind="false" />
-    <AndroidLibrary Include="$(KsAndroidRoot)ks-settingsview-ui/build/outputs/aar/ks-settingsview-ui-release.aar" Bind="false" />
+    <AndroidLibrary Include="$(KsAndroidRoot)kssettingsview-bridge/build/outputs/aar/kssettingsview-bridge-release.aar" Bind="true" />
+    <AndroidLibrary Include="$(KsAndroidRoot)kssettingsview/build/outputs/aar/kssettingsview-release.aar" Bind="false" />
   </ItemGroup>
 
   <!--
-    Core / UI / Bridge が Gradle 側で implementation 依存として宣言しているライブラリ。
-    aar には同梱されないため、消費側アプリへ届くよう binding 側の依存として並べる。
+    本体 / Bridge が Gradle 側で implementation 依存として宣言しているライブラリと、
+    LiveData family の版を揃えるための明示参照。版とその選定理由は Directory.Packages.props にある。
   -->
   <ItemGroup>
-    <PackageReference Include="Xamarin.Kotlin.StdLib" Version="2.4.0.1" />
-    <PackageReference Include="Xamarin.KotlinX.Coroutines.Android" Version="1.11.0.1" />
-    <PackageReference Include="Xamarin.AndroidX.Annotation" Version="1.10.0.1" />
-    <PackageReference Include="Xamarin.AndroidX.AppCompat" Version="1.7.1.4" />
-    <PackageReference Include="Xamarin.AndroidX.ConstraintLayout" Version="2.2.1.6" />
-    <PackageReference Include="Xamarin.AndroidX.Lifecycle.Runtime.Ktx" Version="2.11.0.1" />
-    <PackageReference Include="Xamarin.AndroidX.RecyclerView" Version="1.4.0.6" />
-    <!--
-      Material は Gradle 側モジュールが依存する 1.12.x に合わせる (MAUI 本体の要求版とも一致する)。
-      Material 1.13 以降の aar は R.txt が自モジュール宣言分に限られる。この R.txt から Java の
-      `com.google.android.material.R` を生成する .NET Android では、他ライブラリが宣言した
-      リソースを material の R 経由で参照しているとフィールドが欠落し、実行時 NoSuchFieldError に
-      なる。版を上げる際は、Android モジュール側の `com.google.android.material.R` 参照が
-      material 自身の宣言だけで済んでいるかを確認すること (android/ADR-0013)。
-    -->
-    <PackageReference Include="Xamarin.Google.Android.Material" Version="1.12.0.5" />
-    <!--
-      Compose は Gradle 側モジュールの版 (android/gradle/libs.versions.toml の compose BOM) で
-      コンパイルされ、実行時はここで解決される NuGet の版で動く。両者が離れると、
-      ライブラリが呼ぶ API と実行時に居る実装が食い違う。
-      とくにカレンダー選択面が使う Compose Material3 の DatePicker は experimental API で
-      シグネチャと内部構成が版間で動くため、版ズレに敏感 (material3 1.4.0 では DatePicker の
-      シグネチャが変わり、実行時に NoSuchMethodError で落ちる)。
-
-      整合は「NuGet を Gradle に合わせる」向きでは取れない。NuGet 側は compose 1.11 系より
-      下げられないためである。androidx compose 1.9.0 で `androidx.compose.runtime` の
-      アノテーション群が runtime-annotation へ分離され、compose runtime は自分と同版の
-      runtime-annotation を狭い範囲で要求するようになった。一方 MAUI が要求する
-      AndroidX Activity 1.13 → NavigationEvent → compose runtime-annotation 1.11 が
-      消費側アプリへ必ず入る。したがって compose 1.8 以前では
-      `androidx.compose.runtime.Immutable` 等が dex で二重定義になり D8 が落ち、
-      compose 1.9〜1.10 では runtime-annotation の版が解決不能 (NU1107) になる。
-      そこで Gradle 側の compose BOM を NuGet に合わせて 2025.11.01
-      (= compose 1.11.4 / material3 1.4.0) とし、下の参照と一致させている。
-
-      Xamarin.AndroidX.* の版は「androidx の版 + 独自リビジョン」。対応する androidx の版は
-      各パッケージの nuspec tags の `artifact_versioned` で確認できる
-      (例: Xamarin.AndroidX.Compose.Material3 1.4.0.3 →
-       artifact_versioned=androidx.compose.material3:material3:1.4.0)。
-
-      版を上げる際は次の 2 点を確認すること。
-        (1) DatePicker 系 API のシグネチャが Gradle 側の版と互換であること
-            (= Material3 の androidx 版が Gradle 側 compose BOM の material3 と一致すること)。
-        (2) DateCalendarDialog のカレンダー表示が壊れていないこと。DatePicker を縦スクロールの
-            内側 (高さ上限のない制約) に置く構成で、Material3 内部が年選択ペインと月グリッドへ
-            requiredHeight で固定高さを与えていることに依存している。内部構成が変わると
-            年選択やランドスケープの表示が崩れる。
-    -->
-    <PackageReference Include="Xamarin.AndroidX.Compose.Foundation" Version="1.11.4" />
-    <PackageReference Include="Xamarin.AndroidX.Compose.Material3" Version="1.4.0.3" />
-    <PackageReference Include="Xamarin.AndroidX.Compose.Runtime" Version="1.11.4" />
-    <PackageReference Include="Xamarin.AndroidX.Compose.UI" Version="1.11.4" />
-    <PackageReference Include="Xamarin.AndroidX.Compose.UI.ViewBinding" Version="1.11.4" />
-  </ItemGroup>
-
-  <!--
-    AndroidX Lifecycle の LiveData family は、MAUI 本体が要求する版と binding 側の
-    AndroidX 連鎖が要求する版が食い違う。上位版をここで明示して family の版を揃え、
-    利用側アプリにバージョンピンを書かせない (maui/ADR-0010)。
-  -->
-  <ItemGroup>
-    <PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData" Version="2.11.0.1" />
+    <PackageReference Include="Xamarin.Kotlin.StdLib" />
+    <PackageReference Include="Xamarin.KotlinX.Coroutines.Android" />
+    <PackageReference Include="Xamarin.AndroidX.Annotation" />
+    <PackageReference Include="Xamarin.AndroidX.AppCompat" />
+    <PackageReference Include="Xamarin.AndroidX.ConstraintLayout" />
+    <PackageReference Include="Xamarin.AndroidX.Lifecycle.Runtime.Ktx" />
+    <PackageReference Include="Xamarin.AndroidX.RecyclerView" />
+    <PackageReference Include="Xamarin.Google.Android.Material" />
+    <PackageReference Include="Xamarin.AndroidX.Compose.Foundation" />
+    <PackageReference Include="Xamarin.AndroidX.Compose.Material3" />
+    <PackageReference Include="Xamarin.AndroidX.Compose.Runtime" />
+    <PackageReference Include="Xamarin.AndroidX.Compose.UI" />
+    <PackageReference Include="Xamarin.AndroidX.Compose.UI.ViewBinding" />
+    <PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData" />
   </ItemGroup>
 
   <!-- Java パッケージ名から .NET namespace への変換など、生成コードの調整 -->
@@ -109,17 +66,15 @@
 
   <!-- 束縛対象と同梱対象の aar を再生成するかの判定に使う入力 -->
   <ItemGroup>
-    <KsAndroidModuleSource Include="$(KsAndroidRoot)ks-settingsview-core/src/main/**/*" />
-    <KsAndroidModuleSource Include="$(KsAndroidRoot)ks-settingsview-ui/src/main/**/*" />
-    <KsAndroidModuleSource Include="$(KsAndroidRoot)ks-settingsview-bridge/src/main/**/*" />
+    <KsAndroidModuleSource Include="$(KsAndroidRoot)kssettingsview/src/main/**/*" />
+    <KsAndroidModuleSource Include="$(KsAndroidRoot)kssettingsview-bridge/src/main/**/*" />
     <KsAndroidModuleSource Include="$(KsAndroidRoot)*.kts" />
     <KsAndroidModuleSource Include="$(KsAndroidRoot)gradle.properties" />
     <!-- バージョンカタログと wrapper 設定はビルドスクリプト本体と同じく aar の内容を決める入力 -->
     <KsAndroidModuleSource Include="$(KsAndroidRoot)gradle/libs.versions.toml" />
     <KsAndroidModuleSource Include="$(KsAndroidRoot)gradle/wrapper/gradle-wrapper.properties" />
-    <KsAndroidModuleSource Include="$(KsAndroidRoot)ks-settingsview-core/build.gradle.kts" />
-    <KsAndroidModuleSource Include="$(KsAndroidRoot)ks-settingsview-ui/build.gradle.kts" />
-    <KsAndroidModuleSource Include="$(KsAndroidRoot)ks-settingsview-bridge/build.gradle.kts" />
+    <KsAndroidModuleSource Include="$(KsAndroidRoot)kssettingsview/build.gradle.kts" />
+    <KsAndroidModuleSource Include="$(KsAndroidRoot)kssettingsview-bridge/build.gradle.kts" />
   </ItemGroup>
 
   <!--
@@ -133,7 +88,7 @@
       BeforeTargets="_CategorizeAndroidLibraries;_ResolveLibraryProjectImports"
       Inputs="@(KsAndroidModuleSource)"
       Outputs="@(AndroidLibrary)">
-    <Exec Command="./gradlew --console=plain :ks-settingsview-core:assembleRelease :ks-settingsview-ui:assembleRelease :ks-settingsview-bridge:assembleRelease"
+    <Exec Command="./gradlew --console=plain :kssettingsview:assembleRelease :kssettingsview-bridge:assembleRelease"
         WorkingDirectory="$(KsAndroidRoot)"
         EnvironmentVariables="JAVA_HOME=$(JavaSdkDirectory);ANDROID_HOME=$(AndroidSdkDirectory)" />
   </Target>

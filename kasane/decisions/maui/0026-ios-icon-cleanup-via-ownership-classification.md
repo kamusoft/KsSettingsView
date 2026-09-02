@@ -39,5 +39,7 @@ iOS の file 経路のフォールバック `UIImage.FromBundle` (asset catalog 
 - 正: `KsFileImageOwnership` は net10.0 純ロジック (maui/ADR-0009 のテスト戦略) で、ミューテーションで 6〜13 件の検出力を実測済み
 - 負: ファイルから起こした facade 所有画像でも、同名の資産があると分類の引き直しが名前付き画像キャッシュへの常駐を1件増やし得る (UIKit 管理でメモリ逼迫時に purge される)。表示破壊の可能性と引き換えに受け入れた
 - 負: iOS resolver の配線1行 (`cacheOwned ? null : result`) は net10.0 テストの射程外で、実行時証跡のみで守られている (将来 iOS platform テスト基盤を持つ場合の最初の対象候補)
+- 負 (2026-09-02 判明): 照合キーを「ディレクトリと拡張子を落とした名前」に揃える分類は、MAUI の `ImageSourceExtensions.GetPlatformImage` が 10.0.60 以降でそう引くという内部挙動に依存する (10.0.30 以前は生のファイル名で引く。10.0.40 / 10.0.50 は未確認)。facade が要求する `Microsoft.Maui.Controls` 10.0.70 (`maui/Directory.Packages.props` の宣言元) がこの前提を保証しており、要求版を 10.0.60 未満へ下げる決定は本 ADR の安全側不変条件を崩す
 
 出典: kasane/changes/archive/2026-08-25-investigate-maui-icon-lease-sharing/exploration.md (調査結果・probe 実測・決定事項) / kasane/changes/archive/2026-08-25-investigate-maui-icon-lease-sharing/deviation.md ([設計判断] 項) / kasane/changes/archive/2026-08-25-investigate-maui-icon-lease-sharing/review-004.md
+出典 (2026-09-02 MAUI 要求版への依存の追記): kasane/roadmaps/package-distribution/phases/phase-6-maui-packaging/history.md (2026-09-02: facade が要求する MAUI 本体の最低版) / kasane/changes/archive/2026-09-02-add-maui-nuget-distribution/design.md (Decision 7)

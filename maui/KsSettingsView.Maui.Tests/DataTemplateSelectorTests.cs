@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using KsSettingsView.Maui.Tests.Fakes;
+using KsSettingsView.Tests.Fakes;
 using Microsoft.Maui.Controls;
 using NUnit.Framework;
 
-namespace KsSettingsView.Maui.Tests;
+namespace KsSettingsView.Tests;
 
 /// <summary>
 /// ItemTemplate にテンプレートの出し分けが設定されたとき、item ごとに実テンプレートが選び直されて

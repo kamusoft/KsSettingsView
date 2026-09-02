@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using KsSettingsView.Maui.Tests.Fakes;
+using KsSettingsView.Tests.Fakes;
 using Microsoft.Maui.Controls;
 using NUnit.Framework;
 
-namespace KsSettingsView.Maui.Tests;
+namespace KsSettingsView.Tests;
 
 /// <summary>
 /// 複数のリースが同一の platform 画像インスタンスを包んだとき、片方の破棄がもう片方の表示を

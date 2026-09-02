@@ -1,9 +1,9 @@
 using System;
 using System.Windows.Input;
-using KsSettingsView.Maui.Internals;
+using KsSettingsView.Internals;
 using Microsoft.Maui.Controls;
 
-namespace KsSettingsView.Maui;
+namespace KsSettingsView;
 
 /// <summary>
 /// タップで処理を実行する Cell。

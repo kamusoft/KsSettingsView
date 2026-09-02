@@ -1,6 +1,6 @@
 ---
 name: kssettingsview-android
-description: KsSettingsView で Android の設定画面 (settings screen) を作る - Jetpack Compose の宣言的 DSL または XML の View ホスト (KsSettingsView という View) で、組み込み 12 種の Cell (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker) に加えて任意の Composable を行 (row) として表示する CustomCell、SettingsRootStore による表示中の更新、Theme / CellStyle のスタイル指定を扱う。jp.kamusoft:kssettingsview に依存する、または jp.kamusoft.kssettingsview.core / .ui / .compose を import する Kotlin アプリで設定画面を追加・変更・レビューするときに使う。
+description: KsSettingsView で Android の設定画面 (settings screen) を作る - Jetpack Compose の宣言的 DSL または XML の View ホスト (KsSettingsView という View) で、組み込みの Cell (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker) に加えて任意の Composable を行 (row) として表示する CustomCell、SettingsRootStore による表示中の更新、Theme / CellStyle のスタイル指定を扱う。jp.kamusoft:kssettingsview に依存する、または jp.kamusoft.kssettingsview.core / .ui / .compose を import する Kotlin アプリで設定画面を追加・変更・レビューするときに使う。
 license: MIT
 metadata:
   language: ja
@@ -37,6 +37,8 @@ dependencies {
 }
 ```
 
+Maven Central への初回公開はまだ行われていないため、執筆時点ではこの座標は公開リポジトリから解決できない。`0.1.0` は初回リリースの版を表す。公開までの間は、`android/` の Gradle ビルドで `./gradlew publishToMavenLocal` を実行して artifact を作り (版は `0.1.0-SNAPSHOT` になる)、`mavenLocal()` 経由で取り込める。artifact は Compose runtime / ui / foundation-layout・kotlinx-coroutines-core・androidx.annotation・RecyclerView を `api` 依存として宣言しているので、公開 API に対するコンパイルはこの 1 行で足りる。
+
 ### バージョン
 
 以下はアプリモジュール自身が満たす必要のあるもの。
@@ -47,9 +49,9 @@ dependencies {
 | compileSdk | 35 |
 | Java / Kotlin の JVM target | 17 |
 | Kotlin | 2.4.10 |
-| Compose BOM | 2024.10.01 |
+| Compose BOM | 2025.11.01 |
 
-ライブラリ自身は Gradle 9.5.0 と Android Gradle Plugin 8.13.2 でビルドされている。これらはライブラリ側のツールチェーンであり、利用者のビルドへの要件ではない。
+ライブラリ自身は Gradle 9.5.0 と Android Gradle Plugin 8.13.2 でビルドされている。これらはライブラリ側のツールチェーンであり、利用者のビルドへの要件ではない。Compose BOM の行は artifact がコンパイルされた版で、推移的に引き込まれる Compose ライブラリの下限もこれに追従する。
 
 ライブラリは利用アプリ側に前提を置かない。すべてを自前で同梱する Material3 派生テーマでラップした Context の中に描くため、XML テーマは何でもよく (最小構成のテーマ・AppCompat 系・MAUI テンプレート既定のいずれでも)、Activity も何でもよい (`ComponentActivity` を含む)。時刻・日付のピッカーもどの構成でも開く。この自己完結には知っておくべき帰結が 2 つある:
 

@@ -1,4 +1,4 @@
-namespace KsSettingsView.Maui;
+namespace KsSettingsView;
 
 /// <summary>
 /// <see cref="SettingsView"/> の見た目スタイル (maui/ADR-0023)。

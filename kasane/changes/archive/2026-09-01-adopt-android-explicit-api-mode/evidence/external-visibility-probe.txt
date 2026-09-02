@@ -1,0 +1,20 @@
+外部 visibility probe (2026-09-01)
+
+独立 build の `samples/android` に一時 Kotlin source を置き、各 probe を `:app:compileDebugKotlin --rerun-tasks --no-build-cache` で実行した。一時 source は全 probe 後に `trash` で除去した。
+
+正の probe:
+- `KsCellRegistry.register` / `strictMode` / `CELL_VIEW_TYPE_MIN`
+- `registerBasicCells` / `registerInputCells` / `registerCustomCell`
+- `CellViewHolder` の外部 subclass
+- `SettingsRootStore(SettingsRoot(), Theme())`
+- 結果: `BUILD SUCCESSFUL`
+
+負の probe:
+e: samples/android/app/src/main/kotlin/jp/kamusoft/kssettingsview/samples/android/ExplicitApiVisibilityProbe.kt:28:20 Cannot access 'fun viewTypeOf(cell: Cell): Int': it is internal in 'jp.kamusoft.kssettingsview.ui.KsCellRegistry'.
+BUILD FAILED
+
+e: samples/android/app/src/main/kotlin/jp/kamusoft/kssettingsview/samples/android/ExplicitApiVisibilityProbe.kt:28:20 Cannot access 'fun isRegistered(cellClass: KClass<out Cell>): Boolean': it is internal in 'jp.kamusoft.kssettingsview.ui.KsCellRegistry'.
+BUILD FAILED
+
+e: samples/android/app/src/main/kotlin/jp/kamusoft/kssettingsview/samples/android/ExplicitApiVisibilityProbe.kt:28:23 Cannot access 'fun preview(root: SettingsRoot, theme: Theme = ...): SettingsRootStore': it is internal in 'jp.kamusoft.kssettingsview.ui.SettingsRootStore.Companion'.
+BUILD FAILED

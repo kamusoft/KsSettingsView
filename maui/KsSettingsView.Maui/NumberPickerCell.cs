@@ -1,8 +1,8 @@
-using KsSettingsView.Maui.Internals;
+using KsSettingsView.Internals;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
 
-namespace KsSettingsView.Maui;
+namespace KsSettingsView;
 
 /// <summary>一定の刻みで数値を選ぶ Cell。</summary>
 public class NumberPickerCell : CellBase

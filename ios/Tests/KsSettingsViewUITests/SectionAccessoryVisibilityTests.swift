@@ -11,6 +11,7 @@
 #if canImport(UIKit)
 import XCTest
 import UIKit
+import KsSettingsViewTestSupport
 @testable import KsSettingsViewUI
 @testable import KsSettingsViewCore
 
@@ -33,17 +34,8 @@ final class SectionAccessoryVisibilityTests: XCTestCase {
         rootView.layoutIfNeeded()
         let cv = controller.internalCollectionView
         cv.frame = CGRect(origin: .zero, size: size)
-        pump(cv)
+        awaitInitialRender(controller)
         return (controller, cv, window)
-    }
-
-    /// レイアウトと再構成を確定させる。
-    private func pump(_ view: UIView, seconds: TimeInterval = 0.05) {
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
-        RunLoop.current.run(until: Date().addingTimeInterval(seconds))
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
     }
 
     /// layout が当該 Section の Header 領域を持つか。
@@ -188,7 +180,12 @@ final class SectionAccessoryVisibilityTests: XCTestCase {
             cells: section.cells,
             isHeaderVisible: false
         ))
-        pump(cv)
+        awaitCondition(
+            "Header トグル false が Header 領域へ届く",
+            in: cv,
+            actual: { "Header 領域 \(hasHeaderArea(cv, section: 0))" },
+            until: { !hasHeaderArea(cv, section: 0) }
+        )
 
         // THEN: Header 領域が消える
         XCTAssertFalse(hasHeaderArea(cv, section: 0),
@@ -203,7 +200,12 @@ final class SectionAccessoryVisibilityTests: XCTestCase {
             cells: section.cells,
             isHeaderVisible: true
         ))
-        pump(cv)
+        awaitCondition(
+            "Header トグル true が Header 領域へ届く",
+            in: cv,
+            actual: { "Header 領域 \(hasHeaderArea(cv, section: 0))" },
+            until: { hasHeaderArea(cv, section: 0) }
+        )
 
         // THEN: 再表示される
         XCTAssertTrue(hasHeaderArea(cv, section: 0),
@@ -230,7 +232,12 @@ final class SectionAccessoryVisibilityTests: XCTestCase {
             id: sectionID, header: .text("一般"), footer: .text("補足"), cells: cells,
             isFooterVisible: false
         ))
-        pump(cv)
+        awaitCondition(
+            "Footer トグル false が Footer 領域へ届く",
+            in: cv,
+            actual: { "Footer 領域 \(hasFooterArea(cv, section: 0))" },
+            until: { !hasFooterArea(cv, section: 0) }
+        )
         XCTAssertFalse(hasFooterArea(cv, section: 0),
                        "replaceSection のトグル false が Footer 表示へ届いていない")
         XCTAssertTrue(hasHeaderArea(cv, section: 0), "Header 領域まで消えている")
@@ -239,7 +246,12 @@ final class SectionAccessoryVisibilityTests: XCTestCase {
             id: sectionID, header: .text("一般"), footer: .text("補足"), cells: cells,
             isFooterVisible: true
         ))
-        pump(cv)
+        awaitCondition(
+            "Footer トグル true が Footer 領域へ届く",
+            in: cv,
+            actual: { "Footer 領域 \(hasFooterArea(cv, section: 0))" },
+            until: { hasFooterArea(cv, section: 0) }
+        )
         XCTAssertTrue(hasFooterArea(cv, section: 0),
                       "replaceSection のトグル true が Footer 表示へ届いていない")
         XCTAssertEqual(visibleFooterText(cv, section: 0), "補足")
@@ -267,7 +279,7 @@ final class SectionAccessoryVisibilityTests: XCTestCase {
             target: .sectionHeader(sectionID: sectionID),
             accessory: .section(.text("新ヘッダ"))
         )
-        pump(cv)
+        waitForNegativeVerification(in: cv)
         XCTAssertFalse(hasHeaderArea(cv, section: 0),
                        "非表示中の内容更新で Header が表示されてしまっている")
 
@@ -275,7 +287,17 @@ final class SectionAccessoryVisibilityTests: XCTestCase {
             id: sectionID, header: store.root.sections[0].header, cells: cells,
             isHeaderVisible: true
         ))
-        pump(cv)
+        awaitCondition(
+            "再表示した Header に更新後の text が出る",
+            in: cv,
+            actual: {
+                "Header 領域 \(hasHeaderArea(cv, section: 0)) / "
+                    + "text \(String(describing: visibleHeaderText(cv, section: 0)))"
+            },
+            until: {
+                hasHeaderArea(cv, section: 0) && visibleHeaderText(cv, section: 0) == "新ヘッダ"
+            }
+        )
 
         // THEN: 更新後の text で表示される
         XCTAssertTrue(hasHeaderArea(cv, section: 0))
@@ -483,7 +505,12 @@ final class SectionAccessoryVisibilityTests: XCTestCase {
         XCTAssertFalse(hasHeaderArea(cv, section: 0), "前提: 初期表示で Header が隠れていない")
 
         store.insertCell(LabelCell(title: "B"), in: sectionID, at: 1)
-        pump(cv)
+        awaitEqual(
+            "Cell 挿入が行数へ反映される",
+            expected: 2,
+            in: cv,
+            actual: { cv.numberOfItems(inSection: 0) }
+        )
 
         XCTAssertEqual(cv.numberOfItems(inSection: 0), 2, "前提: Cell が挿入されていない")
         XCTAssertFalse(hasHeaderArea(cv, section: 0),

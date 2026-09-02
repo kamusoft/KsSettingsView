@@ -1,6 +1,6 @@
 using System;
 
-namespace KsSettingsView.Maui.Internals;
+namespace KsSettingsView.Internals;
 
 /// <summary>
 /// 実体化した accessory View の platform 実体と、その後片付けの口を一体で持つ器。

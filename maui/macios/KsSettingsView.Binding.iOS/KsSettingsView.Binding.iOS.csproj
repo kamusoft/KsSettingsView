@@ -9,14 +9,21 @@
   -->
   <PropertyGroup>
     <TargetFramework>net10.0-ios</TargetFramework>
-    <!-- Bridge が依存する KsSettingsViewUI は UIHostingConfiguration を使うため iOS 16 以上が必要 -->
-    <SupportedOSPlatformVersion>16.0</SupportedOSPlatformVersion>
+    <!-- Bridge が依存する KsSettingsViewUI は UIHostingConfiguration を使うため iOS 16 以上が必要
+         (要件の数値は buildTransitive の props が宣言元) -->
+    <SupportedOSPlatformVersion>$(KsSettingsViewMinIOSVersion)</SupportedOSPlatformVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>true</ImplicitUsings>
     <IsBindingProject>true</IsBindingProject>
     <IsTrimmable>true</IsTrimmable>
     <RootNamespace>KsSettingsView.Bridge</RootNamespace>
     <AssemblyName>KsSettingsView.Binding.iOS</AssemblyName>
+  </PropertyGroup>
+
+  <!-- PackageId はアセンブリ名の既定に任せる -->
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <Description>iOS native bridge binding for KsSettingsView.Maui. Referenced transitively by KsSettingsView.Maui; do not reference this package directly.</Description>
   </PropertyGroup>
 
   <ItemGroup>
@@ -67,8 +74,9 @@
 
     SDK の既定は xcodeproj のあるディレクトリ配下しか走査しないが、Xcode target が取り込む
     Swift の実体は ios/Sources にあるため、そのままでは Swift を直しても native が再ビルドされない。
-    追加するのは Xcode target が実際にビルドする 3 つだけで、target の依存 (同期グループと
-    package product) を増やしたらここも足す。
+    追加するのは Xcode target が実際にビルドする source ターゲットだけで、target の依存
+    (同期グループと package product) を増やしたらここも足す。umbrella product `KsSettingsView`
+    は Core / UI / SwiftUI の 3 module を束ねるため、Bridge と合わせて 4 つが入力になる。
     逆に、xcframework をスクリプトから単体生成したときの出力 (ios/binding/build 配下) が残って
     いると、生成物が入力として拾われて無意味な再ビルドを招くので除外する。
 
@@ -83,6 +91,7 @@
       <_XcbInputs Include="$([MSBuild]::NormalizeDirectory('$(KsBridgeSwiftRoot)Sources/KsSettingsViewBridge'))**/*.swift" />
       <_XcbInputs Include="$([MSBuild]::NormalizeDirectory('$(KsBridgeSwiftRoot)Sources/KsSettingsViewCore'))**/*.swift" />
       <_XcbInputs Include="$([MSBuild]::NormalizeDirectory('$(KsBridgeSwiftRoot)Sources/KsSettingsViewUI'))**/*.swift" />
+      <_XcbInputs Include="$([MSBuild]::NormalizeDirectory('$(KsBridgeSwiftRoot)Sources/KsSettingsViewSwiftUI'))**/*.swift" />
       <_XcbInputs Include="$([MSBuild]::NormalizePath('$(KsBridgeSwiftRoot)Package.swift'))" />
     </ItemGroup>
   </Target>

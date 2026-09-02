@@ -1,6 +1,6 @@
 using System.Collections.Specialized;
 
-namespace KsSettingsView.Maui.Internals;
+namespace KsSettingsView.Internals;
 
 /// <summary>
 /// コレクションの変更通知を弱参照購読から受け取る観測者。

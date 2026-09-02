@@ -9,7 +9,7 @@ using MeasureSpec = Android.Views.View.MeasureSpec;
 using MeasureSpecMode = Android.Views.MeasureSpecMode;
 using ViewGroup = Android.Views.ViewGroup;
 
-namespace KsSettingsView.Maui.Internals;
+namespace KsSettingsView.Internals;
 
 /// <summary>
 /// accessory の View を包み、自分で計測・配置を行う platform view。

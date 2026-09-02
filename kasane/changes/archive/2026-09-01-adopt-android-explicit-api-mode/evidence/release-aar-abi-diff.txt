@@ -1,0 +1,30 @@
+release AAR 公開 ABI 比較 (2026-09-01)
+
+手順:
+1. 変更前後で `:kssettingsview:assembleRelease --no-build-cache` を実行した。
+2. AAR の `classes.jar` にある全 class を列挙し、同一 classpath で `javap -public` を実行した。
+3. `Compiled from` 行と行末空白を除去し、class 名順に正規化して比較した。
+
+集計:
+- 変更前: 270 class / 2,849 行
+- 変更後: 270 class / 2,849 行
+- 差分: 指定 3 API の internal 化に伴う JVM 名の変更のみ
+- その他の公開宣言の増減: 0 件
+
+保証範囲:
+- `javap -public` の比較は JVM 上の public member 単位の変化を観測する。Kotlin の `internal class` / `internal object` は JVM 上で public class のままになるため、型単位の可視性引き下げはこの比較だけでは検出できない
+- 型単位の誤った internal 化がないことは production source の変更差分を別途全走査し、`internal` の追加が指定 3 関数だけで、`internal class` / `internal object` の追加が 0 件であることにより確認した
+
+差分抜粋:
+ public final class jp.kamusoft.kssettingsview.ui.KsCellRegistry {
+-  public final int viewTypeOf(jp.kamusoft.kssettingsview.core.Cell);
++  public final int viewTypeOf$jp_kamusoft_kssettingsview_release(jp.kamusoft.kssettingsview.core.Cell);
+-  public final boolean isRegistered(kotlin.reflect.KClass<? extends jp.kamusoft.kssettingsview.core.Cell>);
++  public final boolean isRegistered$jp_kamusoft_kssettingsview_release(kotlin.reflect.KClass<? extends jp.kamusoft.kssettingsview.core.Cell>);
+ }
+ public final class jp.kamusoft.kssettingsview.ui.SettingsRootStore$Companion {
+-  public final jp.kamusoft.kssettingsview.ui.SettingsRootStore preview(jp.kamusoft.kssettingsview.core.SettingsRoot, jp.kamusoft.kssettingsview.ui.Theme);
+-  public static jp.kamusoft.kssettingsview.ui.SettingsRootStore preview$default(jp.kamusoft.kssettingsview.ui.SettingsRootStore$Companion, jp.kamusoft.kssettingsview.core.SettingsRoot, jp.kamusoft.kssettingsview.ui.Theme, int, java.lang.Object);
++  public final jp.kamusoft.kssettingsview.ui.SettingsRootStore preview$jp_kamusoft_kssettingsview_release(jp.kamusoft.kssettingsview.core.SettingsRoot, jp.kamusoft.kssettingsview.ui.Theme);
++  public static jp.kamusoft.kssettingsview.ui.SettingsRootStore preview$jp_kamusoft_kssettingsview_release$default(jp.kamusoft.kssettingsview.ui.SettingsRootStore$Companion, jp.kamusoft.kssettingsview.core.SettingsRoot, jp.kamusoft.kssettingsview.ui.Theme, int, java.lang.Object);
+ }

@@ -7,6 +7,7 @@
 #if canImport(UIKit)
 import XCTest
 import UIKit
+import KsSettingsViewTestSupport
 @testable import KsSettingsViewSwiftUI
 @testable import KsSettingsViewCore
 @testable import KsSettingsViewUI
@@ -43,16 +44,44 @@ final class DSLAccessoryVisibilityTests: XCTestCase {
         rootView.layoutIfNeeded()
         let cv = controller.internalCollectionView
         cv.frame = CGRect(origin: .zero, size: size)
-        pump(cv)
+        layoutNow(cv)
         return (controller, cv, window)
     }
 
-    private func pump(_ view: UIView, seconds: TimeInterval = 0.05) {
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
-        RunLoop.current.run(until: Date().addingTimeInterval(seconds))
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
+    /// Header 領域の有無が期待どおりになるまで待つ。
+    private func awaitHeaderArea(
+        _ cv: UICollectionView,
+        section: Int,
+        equals expected: Bool,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        awaitEqual(
+            "section \(section) の Header 領域の有無",
+            expected: expected,
+            in: cv,
+            file: file,
+            line: line,
+            actual: { self.hasHeaderArea(cv, section: section) }
+        )
+    }
+
+    /// Footer 領域の有無が期待どおりになるまで待つ。
+    private func awaitFooterArea(
+        _ cv: UICollectionView,
+        section: Int,
+        equals expected: Bool,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        awaitEqual(
+            "section \(section) の Footer 領域の有無",
+            expected: expected,
+            in: cv,
+            file: file,
+            line: line,
+            actual: { self.hasFooterArea(cv, section: section) }
+        )
     }
 
     private func hasHeaderArea(_ cv: UICollectionView, section: Int) -> Bool {
@@ -302,7 +331,7 @@ final class DSLAccessoryVisibilityTests: XCTestCase {
             DSLDiffCalculator.compute(from: makeTree(first), to: makeTree(second)),
             to: store
         )
-        pump(cv)
+        awaitHeaderArea(cv, section: 0, equals: false)
         XCTAssertFalse(hasHeaderArea(cv, section: 0), "DSL 再評価のトグル false が表示へ届いていない")
 
         // WHEN: 再評価でトグルが true に戻る
@@ -313,7 +342,7 @@ final class DSLAccessoryVisibilityTests: XCTestCase {
             DSLDiffCalculator.compute(from: makeTree(second), to: makeTree(third)),
             to: store
         )
-        pump(cv)
+        awaitHeaderArea(cv, section: 0, equals: true)
         XCTAssertTrue(hasHeaderArea(cv, section: 0), "DSL 再評価のトグル true が表示へ届いていない")
     }
 
@@ -338,7 +367,7 @@ final class DSLAccessoryVisibilityTests: XCTestCase {
             DSLDiffCalculator.compute(from: makeTree(dslBefore), to: makeTree(dslAfter)),
             to: dslStore
         )
-        pump(dslCV)
+        awaitHeaderArea(dslCV, section: 0, equals: false)
 
         // Store 経路: 同じ Section を replaceSection で isHeaderVisible = false へ
         let storeSection = dslBefore[0]
@@ -355,7 +384,7 @@ final class DSLAccessoryVisibilityTests: XCTestCase {
             cells: storeSection.cells,
             isHeaderVisible: false
         ))
-        pump(storeCV)
+        awaitHeaderArea(storeCV, section: 0, equals: false)
 
         // THEN: 両経路の表示結果が一致する
         XCTAssertEqual(hasHeaderArea(dslCV, section: 0), hasHeaderArea(storeCV, section: 0),
@@ -384,7 +413,7 @@ final class DSLAccessoryVisibilityTests: XCTestCase {
             DSLDiffCalculator.compute(from: makeTree(dslBefore), to: makeTree(dslAfter)),
             to: dslStore
         )
-        pump(dslCV)
+        awaitFooterArea(dslCV, section: 0, equals: false)
 
         let storeSection = dslBefore[0]
         let storeStore = SettingsRootStore(initialRoot: SettingsRoot(sections: [storeSection]))
@@ -400,7 +429,7 @@ final class DSLAccessoryVisibilityTests: XCTestCase {
             cells: storeSection.cells,
             isFooterVisible: false
         ))
-        pump(storeCV)
+        awaitFooterArea(storeCV, section: 0, equals: false)
 
         XCTAssertEqual(hasFooterArea(dslCV, section: 0), hasFooterArea(storeCV, section: 0),
                        "Footer 領域の有無が Store 経路と DSL 経路で一致しない")

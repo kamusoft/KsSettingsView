@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace KsSettingsView.Maui.Internals;
+namespace KsSettingsView.Internals;
 
 /// <summary>
 /// facade から Native Bridge を操作する境界 (maui/ADR-0009)。

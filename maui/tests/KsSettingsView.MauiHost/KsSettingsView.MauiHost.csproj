@@ -21,11 +21,11 @@
   </PropertyGroup>
 
   <PropertyGroup Condition=" $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios' ">
-    <SupportedOSPlatformVersion>16.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion>$(KsSettingsViewMinIOSVersion)</SupportedOSPlatformVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition=" $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android' ">
-    <SupportedOSPlatformVersion>29</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion>$(KsSettingsViewMinAndroidApi)</SupportedOSPlatformVersion>
   </PropertyGroup>
 
   <!--
@@ -33,7 +33,7 @@
     未宣言だと SDK 暗黙参照 (バンドル版) が KsSettingsView.Maui のピンと衝突して NU1605 になる
   -->
   <ItemGroup>
-    <PackageReference Include="Microsoft.Maui.Controls" Version="10.0.70" />
+    <PackageReference Include="Microsoft.Maui.Controls" />
   </ItemGroup>
 
   <ItemGroup>

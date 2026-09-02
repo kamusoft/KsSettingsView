@@ -31,18 +31,20 @@ final class MemoryLeakTests: XCTestCase {
         XCTAssertNil(weakController, "Controller がスコープを抜けても解放されていない（メモリリーク）")
     }
 
-    func test_Store経由でもControllerがdeinitされStore購読が解除される() {
+    func test_Store経由でもControllerがdeinitされ解放後もStoreを操作できる() {
         weak var weakController: KsSettingsViewController?
         // Store は長命想定でテスト用に外で保持する
-        let store = SettingsRootStore(initialRoot: SettingsRoot(sections: [
-            Section(header: .text("S"), cells: [LabelCell(title: "A")])
-        ]))
+        let initialCell = LabelCell(title: "A")
+        let insertedCell = LabelCell(title: "B")
+        let section = Section(header: .text("S"), cells: [initialCell])
+        let store = SettingsRootStore(initialRoot: SettingsRoot(sections: [section]))
 
         autoreleasepool {
             let controller = KsSettingsViewController(store: store)
             _ = controller.view
             // Store のメソッドを呼んで Diff 配信経路を確実に動かす
-            store.insertCell(LabelCell(title: "B"), in: store.root.sections[0].id, at: 1)
+            store.insertCell(insertedCell, in: section.id, at: 1)
+            XCTAssertEqual(store.root.sections.first?.cells.count, 2)
             weakController = controller
             XCTAssertNotNil(weakController)
         }
@@ -53,8 +55,10 @@ final class MemoryLeakTests: XCTestCase {
 
         XCTAssertNil(weakController, "Store 経路でも Controller が解放されていない（メモリリーク）")
 
-        // Store は長命なまま使い続けられること（追加操作してもクラッシュしない）
-        store.removeCell(cellID: KsCellID(cell: store.root.sections[0].cells.last!))
+        // Store は長命なまま使い続けられ、Controller 解放後も操作結果が状態へ反映される。
+        store.removeCell(cellID: KsCellID(cell: insertedCell))
+        XCTAssertEqual(store.root.sections.first?.cells.count, 1)
+        XCTAssertEqual(store.root.sections.first?.cells.first?.id, initialCell.id)
     }
 }
 #endif

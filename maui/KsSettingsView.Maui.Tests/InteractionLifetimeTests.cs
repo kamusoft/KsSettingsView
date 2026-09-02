@@ -1,12 +1,12 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Runtime.CompilerServices;
-using KsSettingsView.Maui.Internals;
-using KsSettingsView.Maui.Tests.Fakes;
-using KsSettingsView.Maui.Tests.Support;
+using KsSettingsView.Internals;
+using KsSettingsView.Tests.Fakes;
+using KsSettingsView.Tests.Support;
 using NUnit.Framework;
 
-namespace KsSettingsView.Maui.Tests;
+namespace KsSettingsView.Tests;
 
 /// <summary>
 /// ユーザー操作の通知経路の寿命を確認する。解除後は通知先が残らず、通知経路があっても

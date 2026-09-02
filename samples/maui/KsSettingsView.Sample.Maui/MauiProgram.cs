@@ -1,4 +1,4 @@
-using KsSettingsView.Maui;
+using KsSettingsView;
 using Microsoft.Maui.Hosting;
 
 namespace KsSettingsView.Sample.Maui;
