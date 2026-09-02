@@ -1,0 +1,50 @@
+# 一時 workflow (tasks 5.7 の確認用。確認後に取り除く)
+#
+# publish 段の代わりに Android のフィード準備を行い、その発行物を artifact として upload し、
+# 消費者検証 workflow を artifact 入力つきで呼んでフィード準備が再実行されないことを確認する。
+name: tmp consumer artifact check
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    name: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup JDK
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Prepare feed (publishToMavenLocal)
+        run: |
+          set -euo pipefail
+          maven_local="$(verification/android/prepare-feed.sh | tail -n 1)"
+          echo "maven_local=${maven_local}"
+          mkdir -p "${RUNNER_TEMP}/stage"
+          cp -R "${maven_local}/jp" "${RUNNER_TEMP}/stage/jp"
+          find "${RUNNER_TEMP}/stage" -type f | sed "s|${RUNNER_TEMP}/stage/||"
+
+      - name: Upload prepared distribution
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: consumer-android-feed
+          path: ${{ runner.temp }}/stage
+          if-no-files-found: error
+
+  consumer-android:
+    name: consumer-android
+    needs: prepare
+    uses: ./.github/workflows/verify-consumer-android.yml
+    with:
+      mode: dry-run
+      artifact: consumer-android-feed
