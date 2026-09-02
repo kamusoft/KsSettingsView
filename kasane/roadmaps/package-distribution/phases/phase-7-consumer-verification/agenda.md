@@ -56,6 +56,8 @@ sample-parity 規約の適用範囲は `samples/**` で閉じており、cross/A
 - [ ] **決定「CI への届け方」に伴う人の作業** (2026-09-02): 消費者検証 3 job を `develop` の branch protection に必須 status check として追加する (change の実装完了時)。phase-8 の `main` 作成申し送りにも追記済み
 - [ ] **docs-refresh の明示依頼をユーザーへ依頼する** (phase-5・6 からの申し送りの併合): 内容は下表「docs-refresh 依頼の内容」。phase-6 は change 完了直後の依頼を求めており、本フェーズの着手を待たずに依頼してよい。API 版付き TFM の SDK 要件は下の確認結果を待たず「SDK 10.0.300 で検証」の形で先に載せてよい
 - [ ] **phase-6 からの申し送り: API 版付き TFM の解決要件** (2026-09-02): change のタスクとして実測し、結果を docs-refresh 依頼へ追加する (詳細は下表)
+- [ ] **phase-8: 署名任意化の経路が CI で踏まれない** (2026-09-02 実装レビュー): 「リリース版 version × 署名鍵なし」の発行は PR CI (SNAPSHOT のみ) で踏まれない。publish 前に署名ファイルの生成を確認するステップを置く
+- [ ] **phase-8: 呼び出し側で `secrets: inherit` を使わない** (2026-09-02 実装レビュー): 消費者検証 workflow は secrets を宣言しないが `secrets: inherit` なら全 secrets が渡る。release から呼ぶときに使わないことを必須確認事項にする
 
 ### API 版付き TFM の解決要件の実測 (phase-6 申し送り)
 
@@ -64,6 +66,8 @@ sample-parity 規約の適用範囲は `samples/**` で閉じており、cross/A
 | 確認対象 | facade の TFM `net10.0-android36.0` / `net10.0-ios26.0` を、利用者側の SDK 版 / `TargetPlatformVersion` がどこまで古くても解決できるか |
 | 方法 | 古い `TargetPlatformVersion` を固定した消費者での解決可否を実測する (change のタスク) |
 | 出口 | README / skills の互換情報に SDK 要件として載せる (docs-refresh 依頼へ追加) |
+| 実測結果 (2026-09-02) | 消費者の TFM が API 版なし (`net10.0-android` / `net10.0-ios`) なら `lib/net10.0-android36.0` / `lib/net10.0-ios26.0` が選ばれ binding 2 件も入る。API 版を `net10.0-android35.0` / `net10.0-ios18.0` に固定すると restore は警告なく成功するが、`lib/net10.0` (platform 中立) にフォールバックし binding 2 件が依存グラフに入らない |
+| 実測の含意 | 解決不能ではなく「静かに native 実装が欠ける」形になるため、TFM に API 版を明示する利用者には android 36.0 / ios 26.0 以上が要ると書く必要がある |
 
 ### docs-refresh 依頼の内容 (phase-5・6 からの申し送りの集約)
 
@@ -74,6 +78,7 @@ sample-parity 規約の適用範囲は `samples/**` で閉じており、cross/A
 | MAUI (phase-6) | 互換情報: `Microsoft.Maui.Controls` 10.0.70 以上と NU1605 の注意、最低 OS 版 Android 29 / iOS 16.0 とビルド時ガード `KSSV0001` |
 | MAUI (phase-6) | `SwitchCell` / `EntryCell` が MAUI 本体の同名型と衝突するため C# では完全修飾または using alias が要る注意書き |
 | MAUI (phase-6) | API 版付き TFM の SDK 要件 (「SDK 10.0.300 で検証」の形で先に載せてよい) |
+| MAUI (phase-7 実測) | TFM に API 版を明示するなら `net10.0-android36.0` / `net10.0-ios26.0` 以上が要る。下回ると restore は成功するが platform 中立アセットにフォールバックし binding が入らない (警告なし) |
 
 ### 完了した申し送り
 

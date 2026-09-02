@@ -1,0 +1,11 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:ks="clr-namespace:KsSettingsView;assembly=KsSettingsView.Maui"
+             x:Class="MyApp.SettingsPage">
+  <ks:SettingsView>
+    <ks:Section HeaderText="General">
+      <ks:LabelCell Title="Version" ValueText="1.0.0" />
+      <ks:SwitchCell Title="Push notifications" On="True" />
+    </ks:Section>
+  </ks:SettingsView>
+</ContentPage>

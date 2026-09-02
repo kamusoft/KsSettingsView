@@ -104,7 +104,7 @@ mavenPublishing {
     publishToMavenCentral()
 
     // Central の必須要件。署名鍵は `ORG_GRADLE_PROJECT_signingInMemoryKey` 系で渡す。
-    // 鍵が未設定のローカル発行 (`publishToMavenLocal`) は未署名のまま成功する。
+    // 署名の必須/任意は下の `signing` ブロックで鍵の有無に連動させる。
     signAllPublications()
 
     pom {
@@ -140,6 +140,16 @@ mavenPublishing {
     }
 }
 
+// 署名鍵が渡されていない発行 (消費者検証の dry-run が行う `publishToMavenLocal`) は、
+// SNAPSHOT 以外の version でも Sign タスクを skip して未署名のまま通す。
+// release 本番で鍵が漏れていても Maven Central Portal が未署名を拒否するため、静かには通らない。
+// (signing プラグインは maven-publish プラグインが適用するため、型付きアクセサではなく拡張経由で設定する)
+plugins.withId("signing") {
+    extensions.configure<org.gradle.plugins.signing.SigningExtension> {
+        setRequired(providers.gradleProperty("signingInMemoryKey").isPresent)
+    }
+}
+
 // SNAPSHOT を Sonatype Central へ発行しない。
 //
 // 発行プラグインは version が `-SNAPSHOT` で終わるとき、mavenCentral リポジトリの URL を
@@ -162,8 +172,8 @@ if (isSnapshotVersion) {
             doFirst {
                 throw GradleException(
                     "SNAPSHOT ($snapshotVersion) は Maven Central へ発行しない。" +
-                        "リリース版の version を gradle/libs.versions.toml の kssettingsview キーへ" +
-                        "設定してから実行する。ローカルでの発行物確認には publishToMavenLocal を使う。",
+                        "リリース版の version は -Pversion=<version> で注入する (cross/ADR-0020)。" +
+                        "ローカルでの発行物確認には publishToMavenLocal を使う。",
                 )
             }
         }

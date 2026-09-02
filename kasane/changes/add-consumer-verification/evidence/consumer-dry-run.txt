@@ -1,0 +1,176 @@
+tasks 2.1〜2.4 / 3.1〜3.4: 消費者プロジェクトと実行スクリプトの手元実行
+実施日: 2026-09-02
+
+ビルド / restore ログの抜粋。全文は作業スクラッチ (手元保管) に残し、判定に要る行だけを
+転記した。作業ディレクトリのローカル絶対パスは <WORK> に置換している
+(実体は各スクリプトの既定値 ${TMPDIR}/kssettingsview-verification/<platform>)。
+
+================================================================
+1. iOS — verification/ios/build-consumer.sh (引数なし = dry-run)
+================================================================
+$ ./verification/ios/build-consumer.sh
+
+platform=ios mode=dry-run version=(なし)
+同期しました: <WORK>/ios/KsSettingsView-SPM
+
+==== 生成した Package.swift ====
+    (前略)
+    dependencies: [
+        .package(path: "<WORK>/ios/KsSettingsView-SPM")
+    ],
+    targets: [
+        .target(
+            name: "VerificationApp",
+            dependencies: [
+                .product(name: "KsSettingsView", package: "KsSettingsView-SPM")
+            ]
+        )
+    ]
+
+==== 依存グラフ ====
+.
+└── kssettingsview-spm<<WORK>/ios/KsSettingsView-SPM@unspecified>(traits: default)
+
+==== Release ビルド (iOS Simulator 向け) ====
+  -target arm64-apple-ios16.0-simulator / x86_64-apple-ios16.0-simulator
+  SwiftDriverJobDiscovery normal arm64 Compiling SettingsScreen.swift
+  ** BUILD SUCCEEDED **
+
+==== Package.resolved ====
+dry-run の依存は path 参照だけで version constraint を持たないため、Package.resolved は生成されない
+
+  => 取得元はスナップショットディレクトリのみ。identity は kssettingsview-spm。
+     署名情報なしで Release ビルドが成功する。
+
+smoke の参照先生成 (公開レジストリを指すことの確認):
+$ ./verification/ios/build-consumer.sh --mode smoke --version 0.1.0-rc.1
+    dependencies: [
+        .package(url: "https://github.com/kamusoft/KsSettingsView-SPM", exact: "0.1.0-rc.1")
+    ],
+  => ローカル参照先を含まない。解決自体は配布物が未公開のため成立しない (phase-8 で実証)。
+
+================================================================
+2. Android — verification/android/build-consumer.sh (引数なし = dry-run)
+================================================================
+$ ./verification/android/build-consumer.sh
+
+platform=android mode=dry-run version=0.1.0-SNAPSHOT
+> Task :kssettingsview:publishToMavenLocal
+BUILD SUCCESSFUL
+> Task :app:assembleRelease
+BUILD SUCCESSFUL in 21s
+49 actionable tasks: 49 executed
+
+==== releaseRuntimeClasspath の jp.kamusoft 行 ====
++--- jp.kamusoft:kssettingsview:0.1.0-SNAPSHOT
+
+  => mavenLocal へ exclusiveContent で排他割り当てした参照先から解決し、
+     利用者向けドキュメントの Android 最小例を含む release variant がビルドできる。
+
+================================================================
+3. MAUI — verification/maui/build-consumer.sh (引数なし = dry-run)
+================================================================
+$ ./verification/maui/build-consumer.sh
+
+platform=maui mode=dry-run version=0.0.0-dev
+==== restore ====
+  (pack 3 件のあと) 復元完了。NU1605 / NU1608 / NU1107 は 0 件
+
+==== 解決版と取得元 ====
+KsSettingsView.Maui             0.0.0-dev  <- <WORK>/maui/feed
+KsSettingsView.Binding.iOS      0.0.0-dev  <- <WORK>/maui/feed
+KsSettingsView.Binding.Android  0.0.0-dev  <- <WORK>/maui/feed
+facade と binding 2 件が 0.0.0-dev で一致し、取得元も参照先と一致する
+
+==== Release ビルド (net10.0-android) ====
+  warning XA4301: APK には既に項目 lib/arm64-v8a/libandroidx.graphics.path.so が含まれています (他 3 件)
+  ビルドに成功しました。
+      4 個の警告
+      0 エラー
+
+==== Release ビルド (net10.0-ios, iossimulator-arm64) ====
+    Code Signing Key: "" (-)
+    Provisioning Profile: "" () - no entitlements
+    Bundle Id: jp.kamusoft.kssettingsview.verification.maui
+  ビルドに成功しました。
+      0 個の警告
+      0 エラー
+
+  => 取得元はパッケージ単位の .nupkg.metadata でローカルフィードと確認できる。
+     XA4301 の警告 4 件が出ても Release ビルドは成功で終わる
+     (Scenario「ビルド警告は失敗にしない」)。
+     iOS は Simulator RID の明示により署名情報を要求しない。
+
+外部で準備した配布物を渡す経路 (フィード準備の非再実行):
+$ REF=$(./verification/maui/prepare-feed.sh | tail -1)
+$ ./verification/maui/build-consumer.sh --reference "$REF"
+  => 出力に pack の実行行が現れず、restore から始まる。解決版・取得元は上と同一。
+
+================================================================
+4. 不正な入力の早期失敗
+================================================================
+3 platform とも、フィード準備・依存解決に入る前に終了コード 1 で失敗する。
+
+$ ./verification/<platform>/build-consumer.sh --mode nope
+  エラー: mode は dry-run か smoke のいずれかです: nope       (exit 1)
+$ ./verification/<platform>/build-consumer.sh --mode smoke
+  エラー: smoke では --version が必須です                      (exit 1)
+
+================================================================
+5. README 最小例との一致検査 (scripts/readme-example-lint.py)
+================================================================
+$ python3 scripts/readme-example-lint.py
+README の最小例 4 件が消費者検証のソースと一致する          (exit 0)
+
+$ python3 scripts/readme-example-lint.py --selftest
+[抽出ロジック]
+  OK   最小例の節のブロックだけを取る (実際 4 件)
+  OK   Installation 節の同名見出しを拾わない
+  OK   対応表の 4 件すべてが解決する
+  OK   同一見出し配下は fence 言語で振り分ける
+[検査の疎通]
+  OK   一致していれば exit 0
+  OK   片側だけの変更で exit 1
+  OK   不一致のファイルが出力される
+  OK   一致しているファイルは報告しない
+  OK   対応先が無ければ exit 1
+  OK   不在の理由が出力される
+失敗なし                                                    (exit 0)
+
+README の 4 コードブロックは 3 platform ともそのままコンパイルできたため、
+tasks 2.4 (README の修正) は発生していない。
+
+================================================================
+6. 既存 lint の通過
+================================================================
+$ python3 scripts/local-path-lint.py        (exit 0)
+$ python3 scripts/identity-lint.py          (exit 0)
+$ python3 scripts/comment-policy-lint.py    合計: 0 ファイル / 禁止 0 件 (検査対象 728 ファイル) (exit 0)
+$ scripts/spm-snapshot/sync-snapshot-test.sh すべて成功しました。
+
+comment-policy-lint は追跡ファイルを走査するため、未追跡の verification/ 配下は
+--paths で明示して検査した (15 ファイル / 禁止 0 件)。
+
+================================================================
+7. 未達: Android の version 注入
+================================================================
+tasks 3.1 の「Android: `publishToMavenLocal -Pversion=`」は、現在の本体ビルドでは効かない。
+
+$ (android/) ./gradlew -q -Pversion=0.1.0-rc.1 :kssettingsview:properties
+group: jp.kamusoft
+version: 0.1.0-SNAPSHOT
+
+android/build.gradle.kts の subprojects ブロックが
+`version = ksSettingsViewVersion` (バージョンカタログの値) を無条件に代入するため、
+`-Pversion=` で与えたプロジェクトプロパティが上書きされる。
+
+verification/android/prepare-feed.sh は発行後に
+`~/.m2/repository/jp/kamusoft/kssettingsview/<要求 version>/` の存在を確かめるため、
+要求と異なる座標のまま消費者ビルドへ進むことはない。
+
+$ ./verification/android/prepare-feed.sh --version 0.1.0-rc.1
+BUILD SUCCESSFUL in 3s
+エラー: 要求した version が発行されていません: jp.kamusoft:kssettingsview:0.1.0-rc.1
+        (<HOME>/.m2/repository/jp/kamusoft/kssettingsview/0.1.0-rc.1 が無い)
+
+version 未指定の dry-run (開発用既定値 0.1.0-SNAPSHOT) は上記 2 のとおり通る。

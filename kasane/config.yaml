@@ -71,10 +71,11 @@ lint:
   exclude: []                         # 検査から外すリポジトリ相対パス (先頭セグメント一致または glob)
   identity:
     # 検査範囲。本体ソースは含めない (正当な UUID 定数があり誤検出になるため)。
-    # samples は例外として含める — Xcode の実機ビルドが DEVELOPMENT_TEAM 等の
-    # 開発者識別子を samples 配下のプロジェクトファイルへ書き戻すため、その捕捉が目的。
-    scope: [kasane, openspec, skills, samples]
-    allow: ["@kamusoft.jp"]          # 正当な値 (名前空間 UUID 等)。@ドメインはそのドメインのメール (デモデータ) を許可
+    # samples と verification は例外として含める — Xcode の実機ビルドが
+    # DEVELOPMENT_TEAM 等の開発者識別子をそれらのプロジェクトファイルへ書き戻すため、
+    # その捕捉が目的。
+    scope: [kasane, openspec, skills, samples, verification]
+    allow: ["@kamusoft.jp", "repo.local"]  # 正当な値 (名前空間 UUID 等)。@ドメインはそのドメインのメール (デモデータ) を許可。repo.local は Maven のシステムプロパティ maven.repo.local の一部 (mDNS ホスト名ではない。レビュー証跡 kasane/changes/ 配下の引用で誤検出したため)
     disable: []                       # 無効化する検出群: device / developer / network / personal / secret
   internal-hosts: []                  # 未公開サーバのホスト名
   doc-structure:                      # 育つ文書の構造 lint。hook には登録しない

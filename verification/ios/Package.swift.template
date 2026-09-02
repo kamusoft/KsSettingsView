@@ -1,0 +1,37 @@
+// swift-tools-version: 5.10
+// KsSettingsView の消費者検証パッケージ (テンプレート)
+//
+// build-consumer.sh が dependencies の差し込み口を mode に応じた 1 行へ置換して、
+// 作業ディレクトリに Package.swift として書き出す。dry-run はスナップショットディレクトリへの
+// path 参照、smoke は配信リポジトリ URL + exact 指定になる。
+//
+// package identity は path / URL の末尾の名前から決まるため、いずれの mode でも
+// `KsSettingsView-SPM` になり、product 参照の書き方は利用者向けドキュメントと同じ 1 行で済む。
+
+import PackageDescription
+
+let package = Package(
+    name: "VerificationApp",
+    platforms: [
+        // 本体ライブラリの対象と同じ iOS 16 に合わせる。
+        .iOS(.v16)
+    ],
+    products: [
+        .library(
+            name: "VerificationApp",
+            targets: ["VerificationApp"]
+        )
+    ],
+    dependencies: [
+        @KSSV_DEPENDENCY@
+    ],
+    targets: [
+        // 利用者向けドキュメントの iOS 最小例をそのままコンパイル対象にする唯一の target。
+        .target(
+            name: "VerificationApp",
+            dependencies: [
+                .product(name: "KsSettingsView", package: "KsSettingsView-SPM")
+            ]
+        )
+    ]
+)

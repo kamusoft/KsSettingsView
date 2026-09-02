@@ -1,0 +1,125 @@
+# Android 消費者検証 (再利用可能 workflow)
+#
+# 配布物を利用者と同じ経路 (公開座標 1 行の依存) で解決し、利用者向けドキュメントの
+# Android 最小例を含む消費者アプリを release variant でビルドする。
+# 本体のテストは verify-android.yml の担当で、この workflow は配布物の解決可否だけを見る。
+#
+# 参照先は mode で決まる。dry-run は mavenLocal (または artifact で受け取ったローカル
+# Maven リポジトリ)、smoke は Maven Central。artifact 入力は dry-run 専用で、与えるとその
+# 成果物を参照先にしてフィード準備 (mavenLocal への発行) を行わない。smoke の参照先は
+# 公開レジストリで、準備済みの配布物を差し込む余地がないため、同時指定は入力検査で拒む。
+#
+# 配信先への書き込み経路を持たないことを構成で示すため、権限は contents: read だけとし、
+# secrets は受け取らない。
+name: verify consumer android
+
+on:
+  workflow_call:
+    inputs:
+      mode:
+        description: "参照先の選択 (dry-run | smoke)"
+        type: string
+        required: true
+      version:
+        description: "解決する version (smoke では必須。dry-run で空なら開発用既定値)"
+        type: string
+        required: false
+        default: ""
+      artifact:
+        description: "外部で準備した配布物の artifact 名 (dry-run 専用。空ならフィード準備を job 内で行う)"
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: verify
+    # ランナーイメージは版指定にする。`ubuntu-latest` は指す実体が予告なく次の LTS へ
+    # 移り、JDK 既定版・Android SDK 同梱内容が diff なしに入れ替わる。
+    runs-on: ubuntu-24.04
+    # 既定の 360 分は長すぎる。発行と release variant のビルドに対する上限として置く。
+    timeout-minutes: 30
+
+    steps:
+      # 入力の検査はフィード準備より前に行う。checkout より前に置くことで、
+      # 不正な入力が配布物の準備どころかソースの取得にも到達しない。
+      - name: Validate inputs
+        env:
+          KS_MODE: ${{ inputs.mode }}
+          KS_VERSION: ${{ inputs.version }}
+          KS_ARTIFACT: ${{ inputs.artifact }}
+        run: |
+          set -euo pipefail
+          case "${KS_MODE}" in
+            dry-run|smoke) ;;
+            *)
+              echo "::error::mode は dry-run か smoke のいずれかです: ${KS_MODE}"
+              exit 1
+              ;;
+          esac
+          if [ "${KS_MODE}" = "smoke" ] && [ -z "${KS_VERSION}" ]; then
+            echo "::error::smoke では version が必須です"
+            exit 1
+          fi
+          # download-artifact より前に落とす。smoke の参照先は公開レジストリで、
+          # 渡された成果物は使われない — 黙って無視すると「渡した配布物を検証した」と
+          # 誤解される。
+          if [ "${KS_MODE}" = "smoke" ] && [ -n "${KS_ARTIFACT}" ]; then
+            echo "::error::smoke では artifact を指定できません (参照先は公開レジストリで、準備済みの配布物は使いません)"
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup JDK
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Cache Gradle dependencies
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          # 依存の解決結果と wrapper ディストリビューションだけをキャッシュする。
+          # ビルド出力はキャッシュしない。復元された結果を実行済みとみなす経路を
+          # 作らないため。mavenLocal (~/.m2) もキャッシュしない — 前回実行の発行物が
+          # 残ると、フィード準備が失敗しても解決できてしまう。
+          path: |
+            ~/.gradle/caches/modules-2
+            ~/.gradle/wrapper
+          key: gradle-consumer-${{ runner.os }}-${{ hashFiles('android/gradle/libs.versions.toml', 'android/gradle/wrapper/gradle-wrapper.properties', 'android/**/build.gradle.kts', 'android/settings.gradle.kts', 'verification/android/**/build.gradle.kts', 'verification/android/settings.gradle.kts', 'verification/android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-consumer-${{ runner.os }}-
+
+      - name: Show toolchain
+        run: |
+          java -version
+          echo "JAVA_HOME=${JAVA_HOME}"
+          echo "ANDROID_HOME=${ANDROID_HOME}"
+
+      - name: Download prepared distribution
+        if: inputs.artifact != ''
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: ${{ inputs.artifact }}
+          path: ${{ runner.temp }}/reference
+
+      - name: Verify consumer
+        env:
+          KS_MODE: ${{ inputs.mode }}
+          KS_VERSION: ${{ inputs.version }}
+          KS_ARTIFACT: ${{ inputs.artifact }}
+        run: |
+          set -euo pipefail
+          args=(--mode "${KS_MODE}")
+          if [ -n "${KS_VERSION}" ]; then
+            args+=(--version "${KS_VERSION}")
+          fi
+          if [ -n "${KS_ARTIFACT}" ]; then
+            args+=(--reference "${RUNNER_TEMP}/reference")
+          fi
+          verification/android/build-consumer.sh "${args[@]}"
