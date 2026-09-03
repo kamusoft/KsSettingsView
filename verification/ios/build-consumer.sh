@@ -36,7 +36,9 @@ work="$(cd "${work}" && pwd -P)"
 
 reference="${KSV_REFERENCE}"
 if [ "${KSV_MODE}" = "dry-run" ] && [ -z "${reference}" ]; then
-    reference="$("${SCRIPT_DIR}/prepare-feed.sh" --mode "${KSV_MODE}" --work "${work}" | tail -n 1)"
+    # フィード準備の出力はコマンド置換で最終行 (参照先) だけを取るため、そのままでは準備の
+    # ログが残らず失敗理由が見えない。標準エラーにも流して CI のログに残す。
+    reference="$("${SCRIPT_DIR}/prepare-feed.sh" --mode "${KSV_MODE}" --work "${work}" | tee /dev/stderr | tail -n 1)"
 fi
 
 if [ "${KSV_MODE}" = "dry-run" ]; then
