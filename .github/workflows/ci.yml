@@ -79,6 +79,30 @@ jobs:
       KS_GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
 
     steps:
+      # `main` の先端はリリース済み (またはリリース進行中) の状態を表すので、そこへ入るのは
+      # 検証を通った `develop` の内容だけに限る。branch protection は base だけを縛り head を
+      # 見ないため、この job で head を検査する (lint は必須 status check なので、失敗すれば
+      # マージがブロックされる)。push と develop 向け PR では何もしない。
+      # ブランチ名はシェルへ直に展開せず環境変数で渡す (名前にシェルの特殊文字が入り得る)。
+      # head のブランチ名だけでは fork 側の同名ブランチも通ってしまうため、head の
+      # リポジトリが自リポジトリであることも併せて検査する。
+      - name: Pull request head restriction
+        if: github.event_name == 'pull_request' && github.base_ref == 'main'
+        env:
+          KS_HEAD_REF: ${{ github.head_ref }}
+          KS_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+        run: |
+          set -euo pipefail
+          if [ "${KS_HEAD_REPOSITORY}" != "${GITHUB_REPOSITORY}" ]; then
+            echo "::error::main を base とする pull request の head は ${GITHUB_REPOSITORY} のブランチでなければならない (head: ${KS_HEAD_REPOSITORY})"
+            exit 1
+          fi
+          if [ "${KS_HEAD_REF}" != "develop" ]; then
+            echo "::error::main を base とする pull request の head は develop でなければならない (head: ${KS_HEAD_REF})"
+            exit 1
+          fi
+          echo "head は ${GITHUB_REPOSITORY} の develop"
+
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -136,3 +160,12 @@ jobs:
       # bash と git しか使わないので macOS ランナーを起こさずこの job で回す。
       - name: SPM snapshot sync script test
         run: scripts/spm-snapshot/sync-snapshot-test.sh
+
+      # リリース用スクリプトの自己テスト。Central Portal の API 呼び出しはモックへ
+      # 差し替わり、README の置換は一時コピーに対して行うので、ネットワークにも
+      # 作業ツリーにも触らない。bash と python3 だけで回る。
+      - name: Central Portal script selftest
+        run: scripts/release/central-portal.sh --selftest
+
+      - name: README version script selftest
+        run: python3 scripts/release/set-readme-version.py --selftest

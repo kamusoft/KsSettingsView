@@ -1,0 +1,28 @@
+# GitHub の自動生成リリースノートの分類。
+#
+# release workflow は `gh release create --generate-notes` で本文を作り、その並びを
+# この設定が決める。分類はマージ済み pull request に付いたラベルで決まるため、
+# ここに挙げるラベルはリポジトリに実在させる。どの分類にも当たらない pull request は
+# 末尾の「その他」に入る。
+changelog:
+  exclude:
+    labels:
+      # 開発ハーネスの作業と CI の整備は利用者向けの変更ではないので載せない。
+      - kasane
+      - ci
+  categories:
+    - title: 破壊的変更
+      labels:
+        - breaking
+    - title: 機能追加
+      labels:
+        - feature
+    - title: 不具合修正
+      labels:
+        - fix
+    - title: ドキュメント
+      labels:
+        - docs
+    - title: その他
+      labels:
+        - "*"

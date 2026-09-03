@@ -14,4 +14,67 @@
     <None Include="$(MSBuildThisFileDirectory)../assets/icon.png" Pack="true" PackagePath="" Visible="false" />
   </ItemGroup>
 
+  <!--
+    .NET Android SDK は class library ごとに自 assembly 用の aar ($(OutputPath)$(TargetName).aar) を作り、
+    pack でそのまま nupkg の lib/ へ入れる。この aar は推移依存の native ライブラリだけを詰めたもので、
+    利用者のアプリが同じ native ライブラリを別経路でも受け取ると XA4301 (重複) になる。
+    jar には Pack メタデータが効くが native ライブラリには効かず、除外用の公開プロパティも無いため、
+    pack の同梱物を組み立てる SDK ターゲット (_IncludeAarInNuGetPackage) の直後に aar を取り除く。
+    TargetsForTfmSpecificContentInPackage への追記だと SDK の追記より前に並んでしまい、
+    まだ同梱されていない段階で取り除くことになるため、実行順は AfterTargets で決める。
+
+    取り除く前に aar の中身を検査し、推移依存の native ライブラリ以外が入っていれば pack を失敗させる。
+    自前のリソース・クラス・manifest を持つようになったら落としてはいけないので、
+    その時点で気づけるようにする (切替先は _CreateAar より前に native item を除く方式)。
+    aar そのものが無ければ SDK 側の構成が変わったということなので、黙って通さず失敗させる。
+  -->
+  <PropertyGroup>
+    <_KsGeneratedAarPath>$(OutputPath)$(TargetName).aar</_KsGeneratedAarPath>
+    <!-- 推移依存由来として同梱を許すエントリ。これ以外が現れたら失敗させる -->
+    <_KsAllowedGeneratedAarEntryPattern>^jni/[^/]+/libandroidx\.graphics\.path\.so$</_KsAllowedGeneratedAarEntryPattern>
+    <_KsGeneratedAarHandlingEnabled Condition=" '$(IsPackable)' == 'true' and $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android' ">true</_KsGeneratedAarHandlingEnabled>
+  </PropertyGroup>
+
+  <!-- zip のエントリ名を列挙するだけの補助タスク。MSBuild 標準にアーカイブの一覧タスクが無い -->
+  <UsingTask TaskName="KsListArchiveEntries" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)/Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <ArchivePath ParameterType="System.String" Required="true" />
+      <Entries ParameterType="Microsoft.Build.Framework.ITaskItem[]" Output="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System.IO.Compression" />
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        using (var archive = ZipFile.OpenRead(ArchivePath))
+        {
+            Entries = archive.Entries
+                .Select(entry => (ITaskItem)new TaskItem(entry.FullName))
+                .ToArray();
+        }
+      ]]></Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="KsCheckGeneratedAarEntries" Condition=" '$(_KsGeneratedAarHandlingEnabled)' == 'true' ">
+    <Error Condition=" !Exists('$(_KsGeneratedAarPath)') "
+        Text="自 assembly 用 aar ($(_KsGeneratedAarPath)) が見つからない。pack が同梱する内容の前提が変わっているため、除外と検査の方式を見直すこと。" />
+    <KsListArchiveEntries ArchivePath="$(_KsGeneratedAarPath)">
+      <Output TaskParameter="Entries" ItemName="_KsGeneratedAarEntry" />
+    </KsListArchiveEntries>
+    <ItemGroup>
+      <_KsUnexpectedGeneratedAarEntry Include="@(_KsGeneratedAarEntry)"
+          Condition=" !$([System.Text.RegularExpressions.Regex]::IsMatch('%(Identity)', '$(_KsAllowedGeneratedAarEntryPattern)')) " />
+    </ItemGroup>
+    <Error Condition=" '@(_KsUnexpectedGeneratedAarEntry)' != '' "
+        Text="自 assembly 用 aar ($(_KsGeneratedAarPath)) に推移依存の native ライブラリ以外が入っている: @(_KsUnexpectedGeneratedAarEntry, ', ')。この aar は nupkg から外しているため、同梱が必要な内容であれば除外方式を見直すこと。" />
+  </Target>
+
+  <Target Name="KsExcludeGeneratedAarFromPackage"
+      Condition=" '$(_KsGeneratedAarHandlingEnabled)' == 'true' "
+      AfterTargets="_IncludeAarInNuGetPackage"
+      DependsOnTargets="KsCheckGeneratedAarEntries">
+    <ItemGroup>
+      <TfmSpecificPackageFile Remove="$(_KsGeneratedAarPath)" />
+    </ItemGroup>
+  </Target>
+
 </Project>

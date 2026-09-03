@@ -1,0 +1,120 @@
+# release.yml の権限・secrets・直列化の静的確認 (tasks 5.3 の静的部分)
+
+採取日: 2026-09-03 / 採取環境: macOS (arm64)、python3 3.11 (PyYAML)
+
+CI 実行を伴わない部分だけをここに残す。同時起動 2 本が直列になることの実測は
+`dry-run` 入力の実行が要るため、この証跡には含まれない。
+
+## Scenario との対応
+
+| デルタスペックの Scenario | 確認したもの |
+|---|---|
+| release-workflow: publish 以外の job は書き込み手段を持たない | 下の [job ごとの権限] と [secrets の参照位置]。`environment` と書き込み権限を持つ job は publish だけで、secrets の参照はすべて publish job の行範囲に収まる |
+| release-workflow: 同時に起動した 2 つの実行は直列になる (静的部分) | 下の [直列化]。`concurrency` が group `release` / cancel-in-progress false で置かれている |
+
+## job ごとの権限 (PyYAML で読んだ定義から生成)
+
+workflow の既定は `permissions: contents: read`。job 側で上書きしていないものは
+この既定を継承する。
+
+    job                   uses / runs-on                             permissions                                environment
+    validate              ubuntu-24.04                               (継承: contents: read)                      -
+    ios                   ./.github/workflows/verify-ios.yml         (継承: contents: read)                      -
+    android               ./.github/workflows/verify-android.yml     (継承: contents: read)                      -
+    maui                  ./.github/workflows/verify-maui.yml        (継承: contents: read)                      -
+    package-ios           ubuntu-24.04                               (継承: contents: read)                      -
+    package-android       ubuntu-24.04                               (継承: contents: read)                      -
+    package-maui          macos-26                                   (継承: contents: read)                      -
+    consumer-ios          ./.github/workflows/verify-consumer-ios.yml    (継承: contents: read)                   -
+    consumer-android      ./.github/workflows/verify-consumer-android.yml (継承: contents: read)                  -
+    consumer-maui         ./.github/workflows/verify-consumer-maui.yml   (継承: contents: read)                   -
+    publish               ubuntu-24.04                               {contents: write, id-token: write}         release
+    wait-for-registries   ubuntu-24.04                               (継承: contents: read)                      -
+    smoke-ios             ./.github/workflows/verify-consumer-ios.yml    (継承: contents: read)                   -
+    smoke-android         ./.github/workflows/verify-consumer-android.yml (継承: contents: read)                  -
+    smoke-maui            ./.github/workflows/verify-consumer-maui.yml   (継承: contents: read)                   -
+
+## secrets の参照位置
+
+publish job は 411 行目から 858 行目 (次の job `wait-for-registries` の直前) まで。
+`grep -n "secrets\." .github/workflows/release.yml` の結果は次の 13 行で、すべて
+publish job の行範囲に収まる。
+
+    503:          KS_DEPLOY_KEY: ${{ secrets.SPM_DEPLOY_KEY }}
+    556:          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+    557:          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+    558:          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+    559:          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_KEY_ID }}
+    560:          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
+    561:          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+    562:          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+    707:          user: ${{ secrets.NUGET_USER }}
+    740:          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+    741:          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+    826:          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+    827:          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+
+参照されている secret は 7 件 (MAVEN_CENTRAL_USERNAME / MAVEN_CENTRAL_PASSWORD /
+SIGNING_KEY / SIGNING_KEY_ID / SIGNING_PASSWORD / NUGET_USER / SPM_DEPLOY_KEY) で、
+リリース手順書が登録を求めるものと一致する。
+
+再利用可能 workflow の呼び出しに secrets を渡す指定 (`secrets:` ブロック) は
+1 つも無い。
+
+    $ grep -n "^\s*secrets:" .github/workflows/release.yml
+    (該当なし)
+
+    $ grep -rn "secrets: *inherit" .github/workflows/
+    .github/workflows/release.yml:382:  # (`secrets: inherit` を書かないことで、呼ばれた側は secrets を一切受け取らない)。
+
+唯一の一致はコメント行で、指定そのものは存在しない。
+
+## 直列化
+
+    top permissions: {'contents': 'read'}
+    concurrency: {'group': 'release', 'cancel-in-progress': False}
+
+group はリポジトリ内で一意の固定値なので、release workflow の実行は同時に 1 本だけになる。
+`cancel-in-progress` が false なので、進行中の publish が後続の起動で打ち切られることはない。
+
+## publish の Maven ステップの分岐 (モックによる机上確認)
+
+publish job の deployment 状態による分岐は、実行に Central Portal と Gradle が要るため
+CI 実行まで実測できない。分岐そのものの記述に誤りが無いことだけを、ステップの shell を
+そのまま取り出し、`central-portal.sh` / `check-signatures.sh` /
+`compare-maven-artifacts.sh` / `gradlew` を呼び出しを記録するだけのモックへ差し替えて
+確かめた (ネットワークにも作業ツリーにも触らない)。
+
+    ケース (前の attempt の ID / 状態)   呼び出し順                                     出力
+    なし / 公開されていない              published → publishToMavenLocal →
+                                         check-signatures → compare →
+                                         publishToMavenCentral → ID 抽出              id=(抽出値) release-needed=true
+    なし / 公開済み                      published のみ                                id=(空) release-needed=false
+    あり / VALIDATED                     status のみ                                   id=(引き継ぎ) release-needed=true
+    あり / PUBLISHING                    status → wait-published                       id=(引き継ぎ) release-needed=false
+    あり / PUBLISHED                     status のみ                                   id=(引き継ぎ) release-needed=false
+    あり / FAILED                        status → drop → published → 再ビルド →
+                                         compare → publishToMavenCentral → ID 抽出    id=(抽出値) release-needed=true
+    あり / NOT_FOUND (前の attempt が     status → published → 再ビルド →
+    後始末で削除した ID)                  compare → publishToMavenCentral → ID 抽出    id=(抽出値) release-needed=true
+
+いずれのケースでも、upload を行うのは署名検査と発行物の比較を通った後だけになっている。
+削除済みの ID を引き継いだ場合 (NOT_FOUND) も、状態照会で止まらず upload をやり直せる。
+
+upload のログの位置を step の環境変数で持つようにした後も、同じモックで
+「なし / 公開されていない」の経路が同じ結果 (ID の抽出と出力・ID ファイルの保存) に
+なることを確認した。ID を出力する前に落ちた場合にログから拾い直す step の実測は
+`scripts-unit.txt` の [保留 deployment の ID をログから拾い直す経路] 節に置く。
+
+## 構文検査
+
+`actionlint` は採取環境に導入されていない (`which actionlint` が該当なし。導入は行わなかった)。
+代わりに PyYAML で 3 ファイルを読み、構文と最上位のキー構成を確認した。
+
+    .github/workflows/release.yml: OK ['name', True, 'permissions', 'concurrency', 'env', 'jobs']
+    .github/workflows/spike-release-premise.yml: OK ['name', True, 'permissions', 'env', 'jobs']
+    .github/release.yml: OK ['changelog']
+
+キー一覧の `True` は YAML が `on:` を真偽値として解釈したもので、GitHub Actions では
+トリガー指定として扱われる (既存の workflow も同じ形)。この検査は構文の妥当性しか見ておらず、
+式やコンテキストの参照可否は CI 実行で確かめる。

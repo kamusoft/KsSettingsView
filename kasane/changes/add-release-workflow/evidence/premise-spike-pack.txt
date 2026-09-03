@@ -1,0 +1,230 @@
+tasks 1.2 / 3.x / 5.5 (MAUI パッケージング): pack 拡張点の実測と検証
+実施日: 2026-09-03
+
+このファイルは pack / ビルドログの抜粋。全文は作業スクラッチ (手元保管) に残し、判定に要る行だけを
+転記した。ローカル絶対パスは <SCRATCH> / <REPO> に置換している。作業ディレクトリはすべて
+リポジトリ外の一時ディレクトリで、生成物はリポジトリに残していない。
+
+結論: 1.2 の前提は成立した (生成 aar のエントリは jni/*/libandroidx.graphics.path.so の 4 件のみ、
+pack の拡張点から除ける)。1.5 のエスカレーションは発動していない。
+ただし除外ターゲットの結線方法は design の記述どおりでは成立せず、実行順の指定を変えている
+(下記 3 節)。
+
+================================================================
+0. 検証環境
+================================================================
+- .NET SDK 10.0.300 (リポジトリの global.json と同じ)
+- Microsoft.Android.Sdk.Darwin 36.1.53
+- JDK 17.0.18 (Microsoft) — Gradle 実行 JVM
+- Android SDK: ANDROID_HOME を既存 SDK に指定
+
+================================================================
+1. tasks 1.2 — 改変前の pack 結果 (前提の確認)
+================================================================
+$ dotnet pack maui/android/KsSettingsView.Binding.Android/KsSettingsView.Binding.Android.csproj -c Release -o <SCRATCH>/pack-baseline
+$ dotnet pack maui/KsSettingsView.Maui/KsSettingsView.Maui.csproj -c Release -o <SCRATCH>/pack-baseline
+
+KsSettingsView.Maui.0.0.0-dev.nupkg (抜粋):
+    lib/net10.0-android36.0/KsSettingsView.Maui.aar        <- 自 assembly 用の生成 aar
+    lib/net10.0-android36.0/KsSettingsView.Maui.dll
+    lib/net10.0-ios26.0/KsSettingsView.Maui.dll
+    lib/net10.0/KsSettingsView.Maui.dll
+    buildTransitive/KsSettingsView.Maui.props / .targets
+    README.md / icon.png
+
+KsSettingsView.Binding.Android.0.0.0-dev.nupkg (抜粋):
+    lib/net10.0-android36.0/KsSettingsView.Binding.Android.aar   <- 自 assembly 用の生成 aar
+    lib/net10.0-android36.0/KsSettingsView.Binding.Android.dll
+    lib/net10.0-android36.0/kssettingsview-bridge-release.aar    <- Gradle 由来 (残す)
+    lib/net10.0-android36.0/kssettingsview-release.aar           <- Gradle 由来 (残す)
+
+生成 aar のエントリ一覧 (2 件とも同一):
+    jni/armeabi-v7a/libandroidx.graphics.path.so
+    jni/x86/libandroidx.graphics.path.so
+    jni/arm64-v8a/libandroidx.graphics.path.so
+    jni/x86_64/libandroidx.graphics.path.so
+
+  => 推移依存由来の native ライブラリだけで、自前のリソース・クラス・manifest は無い。
+     前提「生成 aar のエントリは jni/*/libandroidx.graphics.path.so 以外を含まない」が成立。
+
+================================================================
+2. pack 拡張点の実測 (SDK 側の結線)
+================================================================
+Microsoft.Android.Sdk.AndroidLibraries.targets の該当箇所:
+    <_AarOutputPath>$(OutputPath)$(TargetName).aar</_AarOutputPath>
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);_IncludeAarInNuGetPackage</...>
+    _IncludeAarInNuGetPackage が TfmSpecificPackageFile へ $(_AarOutputPath) を Include する
+
+  => 除外は TfmSpecificPackageFile からの Remove で行える。
+
+================================================================
+3. 実行順の実測 (design の記述との差)
+================================================================
+design / tasks は「TargetsForTfmSpecificContentInPackage の末尾に除外ターゲットを足す」としている。
+maui/Directory.Build.targets からこのプロパティへ追記した状態で値を取ると:
+
+$ dotnet msbuild ... -getProperty:TargetsForTfmSpecificContentInPackage
+    ";_PackProjectToolValidation;KsCheckGeneratedAarEntries;KsExcludeGeneratedAarFromPackage;_IncludeAarInNuGetPackage"
+
+  => Directory.Build.targets の追記は SDK の追記より前に並ぶ。この並びでは Remove が Include より
+     先に走り、pack 結果に aar が残った (実測: 改変後も lib/net10.0-android36.0/KsSettingsView.Maui.aar
+     が nupkg に存在)。検査ターゲットも aar 生成前に走るため Exists() が偽で無音になり得る。
+
+     採った形: プロパティへの追記はやめ、両ターゲットを AfterTargets="_IncludeAarInNuGetPackage"
+     (検査は除外ターゲットの DependsOnTargets) で結線する。あわせて aar が存在しない場合は
+     黙って通さず Error にした。
+
+================================================================
+4. 改変後の pack 結果 (Scenario: 自 assembly 用 aar が nupkg に入らない)
+================================================================
+$ dotnet pack (binding 2 件 → facade) -c Release -o <SCRATCH>/pack-after
+
+KsSettingsView.Binding.Android.0.0.0-dev.nupkg:
+    icon.png
+    lib/net10.0-android36.0/KsSettingsView.Binding.Android.dll
+    lib/net10.0-android36.0/KsSettingsView.Binding.Android.xml
+    lib/net10.0-android36.0/kssettingsview-bridge-release.aar
+    lib/net10.0-android36.0/kssettingsview-release.aar
+KsSettingsView.Binding.iOS.0.0.0-dev.nupkg:
+    icon.png
+    lib/net10.0-ios26.0/KsSettingsView.Binding.iOS.dll
+    lib/net10.0-ios26.0/KsSettingsView.Binding.iOS.resources.zip
+KsSettingsView.Maui.0.0.0-dev.nupkg:
+    README.md
+    buildTransitive/KsSettingsView.Maui.props
+    buildTransitive/KsSettingsView.Maui.targets
+    icon.png
+    lib/net10.0-android36.0/KsSettingsView.Maui.dll / .xml
+    lib/net10.0-ios26.0/KsSettingsView.Maui.dll / .xml
+    lib/net10.0/KsSettingsView.Maui.dll / .xml
+
+  => 生成 aar 2 件が消え、Gradle 由来の aar 2 本・buildTransitive の props / targets・icon・README は残る。
+
+nuspec の差分 (改変前 vs 改変後、facade と Android binding):
+$ diff <baseline>/KsSettingsView.Maui.nuspec <after>/KsSettingsView.Maui.nuspec
+    (差分なし)
+$ diff <baseline>/KsSettingsView.Binding.Android.nuspec <after>/KsSettingsView.Binding.Android.nuspec
+    (差分なし)
+
+  => 依存グループ (platform TFM でのみ現れる binding 参照) は変わっていない。
+
+================================================================
+5. Scenario: 生成 aar に自前の内容が入ると pack が失敗する
+================================================================
+一時的に生成 aar へ res/values/dummy.xml を追加してから pack した (原状復帰済み)。
+
+$ zip -r <REPO>/maui/KsSettingsView.Maui/bin/Release/net10.0-android/KsSettingsView.Maui.aar res
+$ dotnet pack maui/KsSettingsView.Maui/KsSettingsView.Maui.csproj -c Release -o <SCRATCH>/pack-fail
+
+<REPO>/maui/Directory.Build.targets(67,5): error : 自 assembly 用 aar
+    (bin/Release/net10.0-android/KsSettingsView.Maui.aar) に推移依存の native ライブラリ以外が
+    入っている: res/, res/values/, res/values/dummy.xml。この aar は nupkg から外しているため、
+    同梱が必要な内容であれば除外方式を見直すこと。
+
+  => pack は失敗し、想定外のエントリが出力で確認できる。nupkg は生成されなかった
+     (<SCRATCH>/pack-fail は作られていない)。
+
+原状復帰: 退避しておいた aar を書き戻し、エントリが jni/*/libandroidx.graphics.path.so の 4 件に
+戻ったこと・退避元と byte 一致することを確認した。
+
+================================================================
+6. Scenario: 利用者の Android Release ビルドに重複警告が出ない / native ライブラリの重複で失敗する
+================================================================
+消費者検証 (dry-run) を、改変後のフォルダフィードと改変前のフォルダフィードのそれぞれで実行した。
+
+(a) 改変後のフィード (生成 aar なし)
+$ ./verification/maui/build-consumer.sh --reference <SCRATCH>/pack-after --work <SCRATCH>/vwork-after
+    ==== Release ビルド (net10.0-android) ====
+    ビルドに成功しました。
+        0 個の警告
+        0 エラー
+    ==== XA4301 (native ライブラリの重複) ====
+    検出なし
+    ==== Release ビルド (net10.0-ios, iossimulator-arm64) ====
+    ビルドに成功しました。
+        0 個の警告
+        0 エラー
+    EXIT=0
+
+(b) 改変前のフィード (生成 aar あり。iOS binding だけは改変の影響を受けないため改変後のものを流用)
+$ ./verification/maui/build-consumer.sh --reference <SCRATCH>/feed-baseline --work <SCRATCH>/vwork-baseline
+    ==== XA4301 (native ライブラリの重複) ====
+    <SCRATCH>/vwork-baseline/obj/Release/net10.0-android/lp/254/jl/jni/arm64-v8a/libandroidx.graphics.path.so
+        : warning XA4301: APK には既に項目 lib/arm64-v8a/libandroidx.graphics.path.so が含まれています; 無視しています。
+    <SCRATCH>/vwork-baseline/obj/Release/net10.0-android/lp/254/jl/jni/x86_64/libandroidx.graphics.path.so
+        : warning XA4301: APK には既に項目 lib/x86_64/libandroidx.graphics.path.so が含まれています; 無視しています。
+    <SCRATCH>/vwork-baseline/obj/Release/net10.0-android/lp/255/jl/jni/arm64-v8a/libandroidx.graphics.path.so
+        : warning XA4301: APK には既に項目 lib/arm64-v8a/libandroidx.graphics.path.so が含まれています; 無視しています。
+    <SCRATCH>/vwork-baseline/obj/Release/net10.0-android/lp/255/jl/jni/x86_64/libandroidx.graphics.path.so
+        : warning XA4301: APK には既に項目 lib/x86_64/libandroidx.graphics.path.so が含まれています; 無視しています。
+    エラー: Android の Release ビルドで native ライブラリの重複 (XA4301) が出ました
+    EXIT=1
+
+  => 重複したライブラリのパスが出力で確認でき、ビルドは失敗として報告される。
+     (a) では XA4301 以外の警告も 0 件で成功しており、「その他のビルド警告は失敗にしない」形
+     (警告全般の昇格ではなく XA4301 のみの検出) になっている。
+
+================================================================
+7. tasks 3.4 — 検証ホスト・テストプロジェクトへの影響
+================================================================
+$ dotnet test maui/KsSettingsView.Maui.Tests/KsSettingsView.Maui.Tests.csproj -c Release
+    成功!  失敗: 0、合格: 516、スキップ: 0、合計: 516
+
+$ dotnet build maui/tests/KsSettingsView.IntegrationHost.Android/KsSettingsView.IntegrationHost.Android.csproj -c Release
+    ビルドに成功しました。 9 個の警告 (NU1507 と BG8605。改変前から出ているもの)
+
+  => IsPackable=false のプロジェクトでは検査・除外ターゲットが有効にならない
+     (_KsGeneratedAarHandlingEnabled が設定されない)。加えて両ターゲットは pack 専用の SDK ターゲット
+     _IncludeAarInNuGetPackage の後にしか走らないため、verify-maui.yml のビルド・テスト手順
+     (pack を含まない) は影響を受けない。
+
+================================================================
+8. 未実施 — maui/nuget.config (tasks 3.1) ※ 9 節で解消済み
+================================================================
+以下はこの時点の記録として残す。maui/nuget.config は後に作成され、Scenario の充足は
+9 節で確認した。
+
+maui/nuget.config は作成できていない。この作業環境の権限設定に **/NuGet.Config を対象とする
+拒否ルールがあり、Write / Bash のどちらでもファイル作成が拒否された。
+
+そのため NU1507 は上記のログに出続けている (2 個のパッケージ ソース: nuget.org と社内フィード)。
+Scenario「複数ソース環境でも nuget.org だけから取得する」はこの時点では未検証
+(9 節で maui/nuget.config 適用後の restore を実測し、充足を確認した)。
+
+================================================================
+9. tasks 3.1 — maui/nuget.config 適用後の restore (追記 2026-09-03)
+================================================================
+$ (cd maui && dotnet nuget list source)
+  1. nuget.org [有効]  https://api.nuget.org/v3/index.json      (リポジトリルートでは 2 ソース: nuget.org + 社内フィード)
+$ (cd maui && dotnet restore KsSettingsView.Maui/KsSettingsView.Maui.csproj --force)
+  exit 0 / NU1507 の出現 0 件 / facade と binding 2 件を復元
+  => Scenario「複数ソース環境でも nuget.org だけから取得する」充足
+
+================================================================
+10. snupkg の生成確認 (追記 2026-09-03)
+================================================================
+release workflow の pack 段が 3 パッケージ x (nupkg, snupkg) の対を要求するので、手元の
+pack で snupkg が実際に出ることを確かめた。出力先は一時ディレクトリ (<work>) で、
+リポジトリの作業ツリーには何も残していない。
+
+$ dotnet pack <3 プロジェクト> -c Release -p:Version=0.0.0-spike.1 \
+      -p:ContinuousIntegrationBuild=true -o <work>
+  KsSettingsView.Binding.iOS.0.0.0-spike.1.nupkg      2539298 バイト
+  KsSettingsView.Binding.iOS.0.0.0-spike.1.snupkg      101305 バイト
+  KsSettingsView.Binding.Android.0.0.0-spike.1.nupkg   735908 バイト
+  KsSettingsView.Binding.Android.0.0.0-spike.1.snupkg   79797 バイト
+  KsSettingsView.Maui.0.0.0-spike.1.nupkg              365650 バイト
+  KsSettingsView.Maui.0.0.0-spike.1.snupkg             108577 バイト
+
+  => 3 パッケージすべてで nupkg と snupkg の対が出る (snupkg 3 件)。
+     maui/Directory.Build.props の IncludeSymbols=true / SymbolPackageFormat=snupkg が
+     3 プロジェクトすべてに効いている。
+
+$ unzip -Z1 <各 snupkg> | grep pdb
+  KsSettingsView.Binding.iOS      lib/net10.0-ios26.0/KsSettingsView.Binding.iOS.pdb
+  KsSettingsView.Binding.Android  lib/net10.0-android36.0/KsSettingsView.Binding.Android.pdb
+  KsSettingsView.Maui             lib/net10.0-android36.0/KsSettingsView.Maui.pdb
+                                  lib/net10.0-ios26.0/KsSettingsView.Maui.pdb
+                                  lib/net10.0/KsSettingsView.Maui.pdb
+
+  => snupkg は空ではなく、対象フレームワークぶんの pdb を含む。
