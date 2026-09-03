@@ -26,7 +26,8 @@
     取り除く前に aar の中身を検査し、推移依存の native ライブラリ以外が入っていれば pack を失敗させる。
     自前のリソース・クラス・manifest を持つようになったら落としてはいけないので、
     その時点で気づけるようにする (切替先は _CreateAar より前に native item を除く方式)。
-    aar そのものが無ければ SDK 側の構成が変わったということなので、黙って通さず失敗させる。
+    aar は SDK が同梱候補 (native ライブラリ等) を持つときだけ生成し、クリーンビルドでは生成されない
+    ことがある (増分ビルドで現れる)。無いときは同梱もされないため、検査も除外も行わない。
   -->
   <PropertyGroup>
     <_KsGeneratedAarPath>$(OutputPath)$(TargetName).aar</_KsGeneratedAarPath>
@@ -54,9 +55,7 @@
     </Task>
   </UsingTask>
 
-  <Target Name="KsCheckGeneratedAarEntries" Condition=" '$(_KsGeneratedAarHandlingEnabled)' == 'true' ">
-    <Error Condition=" !Exists('$(_KsGeneratedAarPath)') "
-        Text="自 assembly 用 aar ($(_KsGeneratedAarPath)) が見つからない。pack が同梱する内容の前提が変わっているため、除外と検査の方式を見直すこと。" />
+  <Target Name="KsCheckGeneratedAarEntries" Condition=" '$(_KsGeneratedAarHandlingEnabled)' == 'true' and Exists('$(_KsGeneratedAarPath)') ">
     <KsListArchiveEntries ArchivePath="$(_KsGeneratedAarPath)">
       <Output TaskParameter="Entries" ItemName="_KsGeneratedAarEntry" />
     </KsListArchiveEntries>
@@ -69,7 +68,7 @@
   </Target>
 
   <Target Name="KsExcludeGeneratedAarFromPackage"
-      Condition=" '$(_KsGeneratedAarHandlingEnabled)' == 'true' "
+      Condition=" '$(_KsGeneratedAarHandlingEnabled)' == 'true' and Exists('$(_KsGeneratedAarPath)') "
       AfterTargets="_IncludeAarInNuGetPackage"
       DependsOnTargets="KsCheckGeneratedAarEntries">
     <ItemGroup>

@@ -228,3 +228,27 @@ $ unzip -Z1 <各 snupkg> | grep pdb
                                   lib/net10.0/KsSettingsView.Maui.pdb
 
   => snupkg は空ではなく、対象フレームワークぶんの pdb を含む。
+
+================================================================
+11. クリーン checkout での pack (PR #3 consumer-maui の失敗の再現と修正、追記 2026-09-03)
+================================================================
+CI (macos-26、クリーン checkout) の consumer-maui でフィード準備 (pack) が失敗。
+手元の作業ツリーではなくクリーン clone で prepare-feed.sh を実行して再現した:
+
+  maui/Directory.Build.targets(58,5): error : 自 assembly 用 aar
+    (bin/Release/net10.0-android/KsSettingsView.Binding.Android.aar) が見つからない。...
+
+原因: SDK の _CreateAar は Inputs (AndroidAsset / _AndroidResourceDest / EmbeddedNativeLibrary 等) が
+空だと target ごと skip され、aar を生成しない。クリーンビルドでは推移依存の .so が入力に現れず
+aar 自体が無い (bin には Gradle 由来の aar 2 本だけ)。作業ツリーの aar (1〜5 節の観測対象) は
+増分ビルドで生成されたもの。
+
+修正: 検査・除外の両ターゲットを Exists(aar) 条件つきにし、aar が無ければ何もしない
+(SDK の _IncludeAarInNuGetPackage も Exists 条件つきで同梱しないため、XA4301 の原因も無い)。
+
+修正後:
+  クリーン clone: prepare-feed.sh exit 0
+    KsSettingsView.Maui nupkg lib/net10.0-android36.0/: dll, xml のみ
+    KsSettingsView.Binding.Android nupkg lib/net10.0-android36.0/: dll, xml, kssettingsview-bridge-release.aar, kssettingsview-release.aar
+  作業ツリー (aar あり): dotnet pack exit 0、nupkg の lib/ に KsSettingsView.Binding.Android.aar は無い (除外が引き続き効く)
+  => Scenario「自 assembly 用 aar が nupkg に入らない」はクリーン / 増分の両経路で成立
