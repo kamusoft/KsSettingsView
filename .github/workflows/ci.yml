@@ -1,15 +1,18 @@
 # 検証 CI の入口
 #
-# develop / main を対象とする pull_request と develop への push で、3 platform の検証・
-# 3 platform の消費者検証 (dry-run)・lint を起動する。paths による絞り込みは行わず、
-# 変更内容に関わらず常に全 job を実行する
-# (必須 status check として素通りする経路を作らないため)。
+# トリガーはブランチの役割で分ける (cross/ADR-0028)。
+# - develop への push: lint と 3 platform の検証。開発はローカルで develop へマージして
+#   直接 push する運用なので、develop 宛ての pull_request は起動条件に持たない
+# - main 宛ての pull_request (head は develop のみ): 上に加えて 3 platform の消費者検証
+#   (dry-run)。配布経路の検査はリリース候補が main へ入る時点で行えば足りる
+# paths による絞り込みは行わず、変更内容に関わらず事象ごとの全 job を実行する
+# (必須 status check として素通りする経路を作らないため)。絞るのは事象であって
+# 変更内容ではない。
 name: CI
 
 on:
   pull_request:
     branches:
-      - develop
       - main
   push:
     branches:
@@ -18,12 +21,12 @@ on:
 permissions:
   contents: read
 
-# PR への連続 push では古い実行を打ち切る (macOS ランナーを二重に積み上げないため)。
-# develop への push で起動した実行は打ち切らない — マージ結果に対する検証は
-# 後続の push に追い越されても完走させる必要がある。
+# 連続する起動では古い実行を打ち切る (macOS ランナーを二重に積み上げないため)。
+# group は PR では PR 番号、push ではブランチ (github.ref)。develop の検証は
+# 「最新の状態が通るか」の事後検証なので、追い越された中間 commit の結果は残さない。
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   # 再利用可能 workflow を呼ぶ job の status check 名は
@@ -42,24 +45,30 @@ jobs:
     name: maui
     uses: ./.github/workflows/verify-maui.yml
 
-  # 配布物を利用者と同じ経路で解決できるかの検証。CI 入口からは常に dry-run で呼び、
+  # 配布物を利用者と同じ経路で解決できるかの検証。main 宛ての pull_request でだけ走らせる
+  # (develop への push では走らせない)。job の条件で絞り、job 名は変えない — main の
+  # branch protection に登録した status check 名 (consumer-xxx / verify) を固定するため。
+  # CI 入口からは常に dry-run で呼び、
   # version は渡さない (platform ごとの開発用既定値を消費者側が使う。単一の version を
   # 渡すと少なくとも一方のローカル成果物と一致しない)。artifact も渡さないので、
   # 各 job が自分でフィード準備から行う。publish 成果物を渡す呼び出しは release 側。
   consumer-ios:
     name: consumer-ios
+    if: github.event_name == 'pull_request'
     uses: ./.github/workflows/verify-consumer-ios.yml
     with:
       mode: dry-run
 
   consumer-android:
     name: consumer-android
+    if: github.event_name == 'pull_request'
     uses: ./.github/workflows/verify-consumer-android.yml
     with:
       mode: dry-run
 
   consumer-maui:
     name: consumer-maui
+    if: github.event_name == 'pull_request'
     uses: ./.github/workflows/verify-consumer-maui.yml
     with:
       mode: dry-run
@@ -82,7 +91,7 @@ jobs:
       # `main` の先端はリリース済み (またはリリース進行中) の状態を表すので、そこへ入るのは
       # 検証を通った `develop` の内容だけに限る。branch protection は base だけを縛り head を
       # 見ないため、この job で head を検査する (lint は必須 status check なので、失敗すれば
-      # マージがブロックされる)。push と develop 向け PR では何もしない。
+      # マージがブロックされる)。push では何もしない。
       # ブランチ名はシェルへ直に展開せず環境変数で渡す (名前にシェルの特殊文字が入り得る)。
       # head のブランチ名だけでは fork 側の同名ブランチも通ってしまうため、head の
       # リポジトリが自リポジトリであることも併せて検査する。

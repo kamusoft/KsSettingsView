@@ -18,25 +18,26 @@ timestamp: 2026-09-03
 
 | ブランチ | 先端が表すもの |
 |---|---|
-| `develop` | 検証 CI を通った開発の最新。すべての feature ブランチのマージ先 |
+| `develop` | 開発の最新。ローカルの作業ブランチ (worktree) をローカルでマージして直接 push する。push のたびに検証 CI (lint + 3 platform) が事後検証として走り、失敗は通知で拾う |
 | `main` | 最新リリース、またはリリース進行中 (リリース PR のマージ後、publish 成功まで) のリリース候補。リポジトリの default branch |
 
-`main` へ入るのは `develop` からの pull request だけで、それ以外の head は CI の lint job が失敗させる。リリースの起動も `main` に限られる。
+`main` へ入るのは `develop` からの pull request だけで、それ以外の head は CI の lint job が失敗させる。この pull request では 3 platform の検証と lint に加えて消費者検証 3 本が走り、7 件すべてが `main` の必須 status check になっている。リリースの起動も `main` に限られる。
+
+`develop` には必須 status check も pull request の必須化も付けない (force-push 禁止と削除禁止だけ)。開発者 1 人が直接 push する運用に合わせた設定で、経緯は [cross/ADR-0028](../../decisions/cross/0028-ci-triggers-by-branch-role.md)。
 
 ## 初回だけ行う設定
 
 ### main の作成と保護
 
-`develop` から `main` を作り、`develop` と同じ保護を付けてから default branch を切り替える。必須 status check は 7 件で、名前は `develop` の設定が正なので先に読み出して確かめる。
+`develop` から `main` を作り、下の保護を付けてから default branch を切り替える。必須 status check は 7 件で、名前は `.github/workflows/ci.yml` の job 名 (再利用 workflow を呼ぶ job は「呼び出し側 / verify」) と一致させる。`develop` の保護は必須 check を持たないので写さない。
 
 ```bash
-gh api repos/kamusoft/KsSettingsView/branches/develop/protection
 gh api -X POST repos/kamusoft/KsSettingsView/git/refs \
   -f ref=refs/heads/main \
   -f sha="$(gh api repos/kamusoft/KsSettingsView/git/ref/heads/develop --jq .object.sha)"
 ```
 
-保護は完全な payload を PUT する (`gh api -X PUT` は部分更新にならず、書かなかった項目は消える)。`required_pull_request_reviews` の各値は上で読み出した `develop` の内容に合わせる。
+保護は完全な payload を PUT する (`gh api -X PUT` は部分更新にならず、書かなかった項目は消える)。
 
 ```bash
 gh api -X PUT repos/kamusoft/KsSettingsView/branches/main/protection --input - <<'JSON'
