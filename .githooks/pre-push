@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# managed-by: ksn-update — Kasane 標準の pre-push hook (配布元: ksn-init templates/githooks/)。
+# プロジェクト側では編集しない。
+#
+# push 対象のコミットが触ったファイルを、各コミット時点の内容で検査する
+# (scripts/git-gate-lint.py --push。pre-commit を迂回した commit や hooksPath 設定前の commit の取りこぼしを拾う)。
+#
+# 有効化 (clone ごとに 1 回): git config core.hooksPath .githooks
+set -uo pipefail
+
+if [ ! -f scripts/git-gate-lint.py ]; then
+  echo "警告: scripts/git-gate-lint.py が無いため push 前検査を省略しました (ksn-update で配布)。" >&2
+  exit 0
+fi
+
+if ! python3 scripts/git-gate-lint.py --push; then
+  echo "" >&2
+  echo "検査で止まったため push を中止しました。該当コミットを直して (rebase / amend) 再度 push してください。" >&2
+  exit 1
+fi

@@ -30,6 +30,16 @@
             "statusMessage": "コメント規約検査"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/git-gate-lint.py --bash-hook",
+            "statusMessage": "commit / push 前検査"
+          }
+        ]
       }
     ]
   }
