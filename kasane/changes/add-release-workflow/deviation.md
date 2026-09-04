@@ -12,3 +12,4 @@
 - tasks 1.3 / 1.4 の一時 workflow `spike-release-premise.yml` は実測完了 (evidence/github-actions-runs.txt) 後に削除した (2026-09-04)
 - tasks 1.1 (「PUBLISHING / PUBLISHED の deployment に DELETE が拒否されることも確認する」): 実接続では未確認のまま 1.1 を完了扱いにした。理由: この状態の deployment は実際に publish しないと作れず、spike で公開はしない。script 側は状態を照会して VALIDATED / FAILED 以外では DELETE を送らない (selftest で担保) ため、拒否の有無に依存しない (2026-09-04)
 - tasks 5.1 (配信リポジトリの内容が異なる同名 tag) / 5.6 (再実行の分岐): 実リポジトリでは「内容が異なる tag」を作れず (唯一の commit が現在のスナップショットと同一)、5.1 のこのケースは合成リポジトリの確認 (evidence/scripts-unit.txt) と CI での match 経路 (evidence/github-actions-runs.txt 10 節) で閉じた。5.6 は script の selftest (モック応答) と drop 済み ID の実 API 照会 (NOT_FOUND) で閉じ、CI 上での再実行そのものは初回リリースが attempt 1 で完走したため踏んでいない (2026-09-04)
+- tasks 7.4 (Release 本文の手編集): proposal では「初回は前回 tag が無いため Release 本文を手編集で補う」→ 指示により自動生成ノートのまま補わない。理由: オーナー判断 (Release ページの見え方だけの問題で、利用者向けの案内は README が担う) (2026-09-04)

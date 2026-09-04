@@ -54,6 +54,6 @@
 - [x] 7.1 docs-refresh をオーナーが依頼する (内容: 「配信準備中」バナー削除 2 枚 × 1 行、Maven / NuGet の未公開表記削除 2 枚 × 2 行、`blob/develop/` → `blob/main/` 2 枚 × 7 箇所、phase-5〜7 で溜まった追随。phase-7 agenda の「docs-refresh 依頼の内容」を参照) (→ proposal: 初回リリースの実施)
 - [x] 7.2 `set-readme-version.py 0.1.0-beta.1` を実行し、7.1 と合わせてリリース PR (develop → main) を作成・マージする (→ Requirement: README のインストール例の version 整合)
 - [x] 7.3 `main` から `0.1.0-beta.1` を dispatch し、publish 全成功 → tag 2 本 → prerelease の Release → 反映待ち → smoke 3 本の成功を確認する。所要時間と job summary を evidence に残す (→ Scenario: prerelease の suffix で prerelease になる / 反映を待ってから smoke する / 公開レジストリからの解決 (consumer-verification、phase-7 未実証))
-- [ ] 7.4 Release 本文を手編集で補う (初回は前回 tag が無いため)。nuget.org の README 表示・Maven Central の座標ページ・配信リポジトリの tag を目視確認する (→ Requirement: tag と GitHub Release)
+- [x] 7.4 Release 本文を手編集で補う (初回は前回 tag が無いため)。nuget.org の README 表示・Maven Central の座標ページ・配信リポジトリの tag を目視確認する (→ Requirement: tag と GitHub Release)
 - [x] 7.5 KsDialogs phase-11 の agenda に逆流の申し送り (release.yml と `scripts/release/` のコピー、Trusted Publisher Policy と Environment の別途作成) を書く (→ proposal: Non-Goals)
 - [x] 7.6 phase-8 agenda の TODO を更新する (所要時間の実測、Portal の公開確認 API の結果、upstream 起票の要否)
