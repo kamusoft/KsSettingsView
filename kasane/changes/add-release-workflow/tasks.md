@@ -5,8 +5,8 @@
 - [x] 1.1 Central Portal: vanniktech plugin 0.37.0 の `publishToMavenCentral` を `-Pversion=0.0.0-spike.1` 相当のリリース形式 version と署名鍵ありで実行し、ログの `deployment id:` 行を抽出できること、Portal API の `POST /status?id=` が VALIDATED を返すこと、`DELETE /deployment/<id>` で drop できることを確認する (公開しない。spike の deployment は必ず drop する)。PUBLISHING / PUBLISHED の deployment に `DELETE` が拒否されることも確認する。あわせて「座標 + version が公開済みか」を返すエンドポイントの有無を公式ドキュメントで確認し、無ければ `repo1.maven.org` の HEAD を採用する (→ Requirement: Maven Central の 2 段操作 / 同じ version での再実行)
 - [x] 1.2 pack 拡張点: `maui/Directory.Build.targets` で `TargetsForTfmSpecificContentInPackage` の末尾に生成 aar を `TfmSpecificPackageFile` から除くターゲットを足し、nupkg から `KsSettingsView.Maui.aar` / `KsSettingsView.Binding.Android.aar` が消えること、生成 aar のエントリ一覧が `jni/*/libandroidx.graphics.path.so` のみであることを確認する (→ Scenario: 自 assembly 用 aar が nupkg に入らない)
 - [x] 1.3 Android 発行物の再現性: ubuntu-24.04 の同じ JDK で `publishToMavenLocal -Pversion=<v>` を 2 回 (別 checkout) 実行し、pom / module の byte 一致と、aar / sources jar / javadoc jar のエントリ名・内容の一致を確認する。比較 script (`scripts/release/compare-maven-artifacts.sh`) の雛形をここで作る (→ Requirement: Android 成果物の同一性)
-- [ ] 1.4 GitHub Actions の配線: 呼び出し側 job が upload した artifact を `verify-consumer-*.yml` の `artifact` 入力で受け取れること (phase-7 で 1 回実証済み。release.yml の artifact 名で再確認)、同じ run の「失敗した job から再実行」で前回 attempt が upload した artifact を download できることを一時 workflow で確認する (→ Requirement: 段の構成と順序 / Maven Central の 2 段操作)
-- [ ] 1.5 前提が覆った場合 (ID がログに出ない / aar を除けない / Android 発行物が再現しない / artifact が渡らない) は結果を記録し、design.md の該当 Decision の見直し (再現しない場合は dry-run の保証範囲の縮小) をオーナーへ上げる
+- [x] 1.4 GitHub Actions の配線: 呼び出し側 job が upload した artifact を `verify-consumer-*.yml` の `artifact` 入力で受け取れること (phase-7 で 1 回実証済み。release.yml の artifact 名で再確認)、同じ run の「失敗した job から再実行」で前回 attempt が upload した artifact を download できることを一時 workflow で確認する (→ Requirement: 段の構成と順序 / Maven Central の 2 段操作)
+- [x] 1.5 前提が覆った場合 (ID がログに出ない / aar を除けない / Android 発行物が再現しない / artifact が渡らない) は結果を記録し、design.md の該当 Decision の見直し (再現しない場合は dry-run の保証範囲の縮小) をオーナーへ上げる
 
 ## 2. scripts
 
@@ -36,7 +36,7 @@
 ## 5. 検証 (Scenario の確認)
 
 - [ ] 5.1 validate の負ケース: 不正 version 7 種 (形式 4 種 + 先頭ゼロ 3 種)、`develop` からの本番起動、monorepo の別 commit の同名 tag、配信リポジトリの内容が異なる同名 tag、README の version 不一致、がそれぞれ validate で失敗すること (`dry-run` 入力と一時 tag で確認、tag は削除) (→ Scenario: 不正な version 形式は早期に失敗する / main 以外からの本番起動は失敗する / 別 commit を指す同名 tag があれば失敗する / README の version が一致しなければ失敗する)
-- [ ] 5.2 `dry-run` 入力で validate → test → package → dry-run が通り、publish 以降が skip され、配信先の状態 (配信リポジトリの tag・Portal の deployments・nuget.org の一覧) が実行前後で同一であること。dry-run の消費者検証が artifact の配布物を解決したことを job summary で確認する (→ Scenario: dry-run 入力は publish 手前で止まる / dry-run は publish する配布物そのものを検証する)
+- [x] 5.2 `dry-run` 入力で validate → test → package → dry-run が通り、publish 以降が skip され、配信先の状態 (配信リポジトリの tag・Portal の deployments・nuget.org の一覧) が実行前後で同一であること。dry-run の消費者検証が artifact の配布物を解決したことを job summary で確認する (→ Scenario: dry-run 入力は publish 手前で止まる / dry-run は publish する配布物そのものを検証する)
 - [x] 5.3 secrets と権限: release.yml の各 job の `permissions` / `environment` / `secrets` を静的に確認し、`secrets: inherit` が無いことを grep で確認する。`concurrency` の存在と、`dry-run` 入力の実行を 2 つ同時に起動して 2 つ目が待つことを確認する (→ Scenario: publish 以外の job は書き込み手段を持たない / 同時に起動した 2 つの実行は直列になる)
 - [ ] 5.6 再実行の分岐: 1.1 の spike deployment (VALIDATED) の ID を `central-deployment-id` として与えた再実行相当の実行で、upload が skip され状態分岐が期待どおりに動くこと、`drop` が PUBLISHING / PUBLISHED で削除しないことを script の単体 (モック応答) で確認する (→ Scenario: 部分 publish を同じ version で埋める / release の応答が失われても再実行で整合する)
 - [ ] 5.7 `main` への PR の head 制限: feature branch から `main` への draft PR で lint job が失敗すること、`develop` からの PR で通ることを確認する (→ Scenario: develop 以外から main への PR は失敗する)
@@ -51,8 +51,8 @@
 
 ## 7. 初回リリース
 
-- [ ] 7.1 docs-refresh をオーナーが依頼する (内容: 「配信準備中」バナー削除 2 枚 × 1 行、Maven / NuGet の未公開表記削除 2 枚 × 2 行、`blob/develop/` → `blob/main/` 2 枚 × 7 箇所、phase-5〜7 で溜まった追随。phase-7 agenda の「docs-refresh 依頼の内容」を参照) (→ proposal: 初回リリースの実施)
-- [ ] 7.2 `set-readme-version.py 0.1.0-beta.1` を実行し、7.1 と合わせてリリース PR (develop → main) を作成・マージする (→ Requirement: README のインストール例の version 整合)
+- [x] 7.1 docs-refresh をオーナーが依頼する (内容: 「配信準備中」バナー削除 2 枚 × 1 行、Maven / NuGet の未公開表記削除 2 枚 × 2 行、`blob/develop/` → `blob/main/` 2 枚 × 7 箇所、phase-5〜7 で溜まった追随。phase-7 agenda の「docs-refresh 依頼の内容」を参照) (→ proposal: 初回リリースの実施)
+- [x] 7.2 `set-readme-version.py 0.1.0-beta.1` を実行し、7.1 と合わせてリリース PR (develop → main) を作成・マージする (→ Requirement: README のインストール例の version 整合)
 - [ ] 7.3 `main` から `0.1.0-beta.1` を dispatch し、publish 全成功 → tag 2 本 → prerelease の Release → 反映待ち → smoke 3 本の成功を確認する。所要時間と job summary を evidence に残す (→ Scenario: prerelease の suffix で prerelease になる / 反映を待ってから smoke する / 公開レジストリからの解決 (consumer-verification、phase-7 未実証))
 - [ ] 7.4 Release 本文を手編集で補う (初回は前回 tag が無いため)。nuget.org の README 表示・Maven Central の座標ページ・配信リポジトリの tag を目視確認する (→ Requirement: tag と GitHub Release)
 - [ ] 7.5 KsDialogs phase-11 の agenda に逆流の申し送り (release.yml と `scripts/release/` のコピー、Trusted Publisher Policy と Environment の別途作成) を書く (→ proposal: Non-Goals)
