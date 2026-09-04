@@ -68,3 +68,53 @@ chore/release-spike-cleanup を head、main を base にした draft PR #5 (確�
   ##[error]main を base とする pull request の head は develop でなければならない (head: chore/release-spike-cleanup)
   => lint は必須 status check なのでマージはブロックされる (Scenario「develop 以外から main への PR は失敗する」)
 正ケース (develop → main の PR で lint が通る) は初回リリース PR (tasks 7.2) で確認する。
+
+================================================================
+8. tasks 6.2 / 6.3 — secrets と deploy key (オーナー作業、2026-09-04 に読み取りで確認)
+================================================================
+$ gh secret list --repo kamusoft/KsSettingsView --env release
+  MAVEN_CENTRAL_PASSWORD / MAVEN_CENTRAL_USERNAME / NUGET_USER / SIGNING_KEY / SIGNING_KEY_ID / SIGNING_PASSWORD / SPM_DEPLOY_KEY (7 件)
+$ gh api repos/kamusoft/KsSettingsView/environments/release
+  deployment_branch_policy: custom_branch_policies (branch policy: main)
+$ gh api repos/kamusoft/KsSettingsView-SPM/keys
+  KsSettingsView release workflow  read_only=false
+リポジトリ単位の secrets は 0 件 (secrets は Environment release にのみ存在する)。
+
+================================================================
+9. tasks 1.1 — Central Portal の 2 段操作 (オーナーが手元で実行、2026-09-04)
+================================================================
+$ (cd android && ./gradlew publishToMavenLocal publishToMavenCentral -Pversion=0.0.0-spike.1)   (User Token と署名鍵を ORG_GRADLE_PROJECT_* で注入)
+  Uploaded bundle to Central Portal as USER_MANAGED, deployment id: <DEPLOYMENT_ID>
+  BUILD SUCCESSFUL
+  => ID はログ 1 行に出て、release.yml の抽出パターン (deployment id: <uuid>) で取れる
+$ ls ~/.m2/repository/jp/kamusoft/kssettingsview/0.0.0-spike.1/*.asc
+  kssettingsview-0.0.0-spike.1.aar.asc / .pom.asc / .module.asc / -sources.jar.asc / -javadoc.jar.asc  (5 件)
+  => 鍵を渡した publishToMavenLocal は mavenLocal にも .asc を書く (Requirement「署名の生成確認」の入力前提が成立)
+$ scripts/release/central-portal.sh status <DEPLOYMENT_ID>
+  VALIDATED
+$ scripts/release/central-portal.sh drop <DEPLOYMENT_ID>
+  drop した (VALIDATED): <DEPLOYMENT_ID>
+  => Portal API の status / drop が実接続で動く。公開はしていない
+PUBLISHING / PUBLISHED の deployment に DELETE が拒否されることは、実 deployment を publish しないと踏めないため
+実接続では未確認 (script 側は状態を照会して VALIDATED / FAILED 以外では DELETE を送らない — selftest で担保)。
+「座標 + version が公開済みか」を返すエンドポイントは Portal API に無く (scripts-unit.txt)、repo1.maven.org の HEAD を採用済み。
+$ scripts/release/central-portal.sh status <DEPLOYMENT_ID>   (drop 後)
+  NOT_FOUND
+  => 実 API でも drop 済み deployment の status は 404 → NOT_FOUND となり、再実行時の「ID を捨てて公開済み確認 → 再 upload」分岐に入る
+
+================================================================
+10. tasks 5.1 — 配信リポジトリの同名 tag (2026-09-04、一時 tag 9.9.8 → 初回スナップショット commit 8661e38)
+================================================================
+実リポジトリ KsSettingsView-SPM の唯一の commit (initial snapshot) は現在の ios/ から作るスナップショットと同一
+(手元で clone → sync-snapshot.sh → git status: 差分 0 ファイル)。そのため実リポジトリの tag では
+「内容が同一なら続行」の正経路しか作れない。「内容が異なれば失敗」の負経路は scripts-unit.txt の
+合成リポジトリ (別内容の tag で exit 1、差分一覧つき) が証跡。
+
+validate の step 順は当初「monorepo tag → README → 配信リポジトリ tag」で、README 不一致が先に落ちて
+配信リポジトリの検査に到達しなかった (run 33832493118)。tasks 4.1 の順序 (配信リポジトリ tag → README) に
+直してから再実行 (chore/release-prep から dry-run 9.9.8、run 33832694159):
+  4 success  Verify monorepo tag
+  5 success  Verify distribution repository tag   → 出力: publish の tag 作成は skip される (match)
+  6 failure  Verify README install examples       → README.md:44: ... version が 9.9.8 でない (想定どおり)
+  => 実リポジトリに対して clone → スナップショット生成 → ls-remote → ツリー比較の経路が CI で動き、
+     同一内容の同名 tag を match と判定した。一時 tag 9.9.8 は確認後に削除する (オーナー作業)

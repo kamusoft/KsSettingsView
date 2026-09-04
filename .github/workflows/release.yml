@@ -119,11 +119,6 @@ jobs:
           fi
           echo "tag ${KS_VERSION} は起動 commit を指している (再実行として続行する)"
 
-      - name: Verify README install examples
-        env:
-          KS_VERSION: ${{ inputs.version }}
-        run: python3 scripts/release/set-readme-version.py --check "${KS_VERSION}"
-
       # 配信リポジトリの同名 tag が別内容で存在すると、publish の最後で tag を打てずに
       # 片側だけ公開された状態が残る。不可逆な操作に入る前にここで見つける。
       # 読むだけなので https で clone し、secrets を持ち込まない。
@@ -150,6 +145,11 @@ jobs:
               exit 1
               ;;
           esac
+
+      - name: Verify README install examples
+        env:
+          KS_VERSION: ${{ inputs.version }}
+        run: python3 scripts/release/set-readme-version.py --check "${KS_VERSION}"
 
       - name: Export artifact names
         id: names
