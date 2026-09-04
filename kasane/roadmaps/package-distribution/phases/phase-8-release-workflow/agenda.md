@@ -101,14 +101,14 @@ release.yml は KsSettingsView のリポジトリ内で完結させ、リポジ�
 ## TODO
 
 - [x] 論点の解消 (2026-09-03 に全件解消)
-- [ ] ksn-propose で変更提案を起こす
-- [ ] Central Portal Publisher API に「座標 + version が公開済みか」を返すエンドポイントがあるか公式ドキュメントで裏取りする (再実行時の Maven upload skip 判定に使う。無ければ `repo1.maven.org` の HEAD で代替)
-- [ ] secrets 登録手順書 (Environment `release` の作成・branch policy・7 secrets・deploy key の生成と配信リポジトリへの登録) を artifacts/ に書く。認証情報の準備状況は [artifacts/credentials-status.md](artifacts/credentials-status.md)
+- [x] ksn-propose で変更提案を起こす (2026-09-03: change add-release-workflow として提案化、2026-09-04 に初回リリースまで実施)
+- [x] Central Portal Publisher API に「座標 + version が公開済みか」を返すエンドポイントがあるか公式ドキュメントで裏取りする → 無い (upload / status / release / drop / download の 5 種のみ)。`repo1.maven.org` の pom への HEAD で代替 (2026-09-03、change の evidence/scripts-unit.txt)
+- [x] secrets 登録手順書 → handbook `cross/release-procedure.md` (guide) として change に同梱 (2026-09-03)。認証情報の準備状況は [artifacts/credentials-status.md](artifacts/credentials-status.md)
 - [x] `main` ブランチの作成タイミングと default branch の切替可否 (2026-09-03: 切り替える。提案化で決定、change に含める)
-- [ ] AGENTS.md (CLAUDE.md) の docs-refresh 専任の記述に、インストール例の version 更新 script の例外を 1 行加える (change に同梱)
-- [ ] release 全体の所要時間を見積もる (consumer-maui が dry-run・smoke とも約 20 分、Maven Central の反映待ち 10〜30 分)
+- [x] AGENTS.md (CLAUDE.md) の docs-refresh 専任の記述に、インストール例の version 更新 script の例外を 1 行加える (change に同梱、2026-09-03)
+- [x] release 全体の所要時間 → 初回リリース 0.1.0-beta.1 の実測 39 分 (validate 9 秒 / test ∥ package 7 分 / consumer-maui dry-run 12 分 / publish 11 分 / 反映待ち 7 秒 / smoke-maui 9 分。2026-09-04、change の evidence/github-actions-runs.txt 12 節)
 - [ ] (任意) dotnet/android へ「`CreateAar` が native lib に `Pack` を見ない」非対称を起票する
-- [ ] KsDialogs phase-11 の agenda に逆流の申し送りを書く (release.yml と scripts のコピー、Policy / Environment の別途作成)
+- [x] KsDialogs phase-11 の agenda に逆流の申し送りを書く (2026-09-04)
 
 ### `main` の branch protection (phase-3 申し送り)
 
