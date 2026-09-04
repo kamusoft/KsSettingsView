@@ -1,7 +1,7 @@
 ---
 id: 0028
 title: 検証 CI のトリガーはブランチの役割で分け、develop は直接 push、main は develop からの PR だけを検証する
-status: proposed
+status: accepted
 date: 2026-09-04
 ---
 
@@ -54,5 +54,7 @@ date: 2026-09-04
 - 負: `develop` の検証は事後になる。壊れた commit が `develop` に載り得るため、失敗通知を見て直す運用が前提になる (ローカルの pre-commit / pre-push hook が lint 相当を先に掛けている)
 - 負: 除外対象に新しい検査の入力が入ると、その検査が `develop` で走らない経路ができる。除外リストを広げるときは各 lint の入力を確かめる
 - 負: 開発体制が変わって外部や複数人からの pull request を `develop` で受けるようになったら、この決定は見直しが要る
+- 負: `main` への取り込み制限 (head が `develop` であること) は入口 workflow の lint job 内の検査なので、`main` 宛ての pull request 自身が workflow 定義を書き換えれば無効化できる。起動できるのは collaborators だけ ([ADR-0024](0024-contributions-via-issues-no-external-pull-requests.md)) で、意図的に検査を消す pull request は運用上の逸脱として扱うことにし、Ruleset や `pull_request_target` 化は採らない (残存リスクとして受容)
+- (2026-09-04 追記、出典: 実装結果) `develop` への push の実測は壁時計 7.7 分 (lint 0.1 / iOS 3.3 / Android 5.3 / MAUI 7.6 分。消費者検証 3 job は skipped)。壁時計は MAUI の本体検証に張り付く。変更パスの除外は、workflow 定義を含む push では起動し、開発ハーネスの記録だけの push では起動しないことを run 一覧で確認した
 
-出典: kasane/changes/slim-ci-triggers/exploration.md (検討した選択肢・決定事項)
+出典: kasane/changes/archive/2026-09-04-slim-ci-triggers/exploration.md (検討した選択肢・決定事項・実装結果) / kasane/changes/archive/2026-09-04-add-release-workflow/deviation.md (Requirement「マージ保護」の受容) / kasane/roadmaps/package-distribution/phases/phase-13-ci-trigger-slimming/agenda.md (TODO の実測)

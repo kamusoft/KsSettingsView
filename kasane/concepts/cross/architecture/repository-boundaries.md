@@ -3,7 +3,7 @@ type: concept
 title: リポジトリとビルドの責務境界
 description: 横断変更をまとめる monorepo と、独立した platform build・Sample・消費者検証 (verification/) の責務分担
 tags: [architecture, monorepo, build, sample, verification]
-timestamp: 2026-09-02
+timestamp: 2026-09-04
 ---
 
 この文書は、KsSettingsView の単一リポジトリと platform 別 build root、利用側 Sample、配布物の消費者検証 (`verification/`) の責務を説明する。読むと、横断変更を一つのリポジトリで扱いながら、iOS・Android・MAUI を一つの build graph に統合しない理由と、Sample が保証する範囲、消費者検証が確かめる範囲が分かる。
@@ -16,13 +16,15 @@ timestamp: 2026-09-02
 |---|---|---|---|
 | iOS `ios/Package.swift` | umbrella product `KsSettingsView` 1 本 (module は `KsSettingsViewCore` / `KsSettingsViewUI` / `KsSettingsViewSwiftUI`) | SwiftUI wrapper → UI Host → Core | iOS library と test の入口 |
 | Android `android/settings.gradle.kts` | 単一 artifact `jp.kamusoft:kssettingsview` (単一 module。層は Kotlin パッケージ `.core` / `.ui` / `.compose` で表す) | Compose wrapper → UI Host → Core | Android library と test の入口 |
-| MAUI `maui/KsSettingsView.slnx` | NuGet 3 パッケージ — facade `KsSettingsView.Maui` (利用者が書く 1 点) + binding `KsSettingsView.Binding.iOS` / `.Android` (推移依存)。pack 可、公開レジストリへは未発行 | facade → binding (iOS / Android) → native の xcframework / aar | MAUI library・binding・test・検証ホストの入口 |
+| MAUI `maui/KsSettingsView.slnx` | NuGet 3 パッケージ — facade `KsSettingsView.Maui` (利用者が書く 1 点) + binding `KsSettingsView.Binding.iOS` / `.Android` (推移依存)。nuget.org で公開 (初回 `0.1.0-beta.1`) | facade → binding (iOS / Android) → native の xcframework / aar | MAUI library・binding・test・検証ホストの入口 |
 
 公開単位のほかに、iOS の `KsSettingsViewBridge` target と Android の `kssettingsview-bridge` module が interop 境界として存在する。product / artifact としては公開せず、MAUI binding が束縛する入口である ([Native Bridge の interop 境界](../../maui/api/native-bridge.md))。MAUI の build root は binding の中から native 2 系統の build root を呼ぶ (Android は `gradlew` の Exec、iOS は Xcode project) 取り込む側であり、native が MAUI に依存する逆方向はない。
 
 各 build root は自身の module 構成、依存解決、toolchain、test 入口を所有する。一つの platform の build 成立は、別 platform の toolchain や build 成立を保証しない。
 
-iOS の SwiftPM 配布は monorepo を直接解決させず、専用の公開配信リポジトリ `KsSettingsView-SPM` から行う ([ADR-0018](../../../decisions/cross/0018-distribution-public-channels-root-swiftpm-manifest.md))。リリース時に `ios/Package.swift` / `ios/Sources/` / `ios/Tests/` と `LICENSE`・誘導 README のスナップショットを配信リポジトリのルートへ commit し、同じ version の tag を push する (ファイル配置は `scripts/spm-snapshot/` のスクリプト、commit / tag / push は呼び出し側の責務)。monorepo のルートに Package.swift は置かず、`ios/Package.swift` が開発用かつ配信用の唯一のマニフェストである。配信リポジトリには初回リリースまで tag が存在せず、利用者が解決できる版はまだない。
+iOS の SwiftPM 配布は monorepo を直接解決させず、専用の公開配信リポジトリ `KsSettingsView-SPM` から行う ([ADR-0018](../../../decisions/cross/0018-distribution-public-channels-root-swiftpm-manifest.md))。リリース時に `ios/Package.swift` / `ios/Sources/` / `ios/Tests/` と `LICENSE`・誘導 README のスナップショットを配信リポジトリのルートへ commit し、同じ version の tag を push する (ファイル配置は `scripts/spm-snapshot/` のスクリプト、commit / tag / push は release workflow の publish 段の責務)。monorepo のルートに Package.swift は置かず、`ios/Package.swift` が開発用かつ配信用の唯一のマニフェストである。利用者が解決できるのは tag の付いた版だけで、初回リリース `0.1.0-beta.1` から解決できる。commit は publish 段の先頭で push し、tag は Maven Central の release の後・monorepo の tag の直前に押す — 途中で失敗しても未 tag の commit は公開されない ([ADR-0020](../../../decisions/cross/0020-release-dispatch-tag-last-version-injection.md))。
+
+3 platform の公開は 1 本の release workflow (`.github/workflows/release.yml`、version を入力する手動起動) が担う。段は validate → 本体検証 ∥ 配布物の生成 → 消費者検証 (dry-run) → publish → 公開レジストリへの反映待ち → 消費者検証 (smoke) で、publish より前の段がすべて成功したときにだけ配信先へ書き込む。順序の根拠は [ADR-0020](../../../decisions/cross/0020-release-dispatch-tag-last-version-injection.md)、起動と再実行の手順は [リリース手順](../../../handbook/cross/release-procedure.md) にある。
 
 Core、UI Host、宣言 UI wrapper は責務を分けるが、Core が platform 型から完全に独立していることまでは意味しない。現行の Accessory 型は、iOS では UIKit / SwiftUI、Android では Android View / Compose と接続する。
 
@@ -51,8 +53,8 @@ Sample は公開 API の組み合わせ、app host の前提、統合状態、�
 
 | モード | 参照先 | 呼ばれる場面 |
 |---|---|---|
-| `dry-run` | iOS はスナップショット (`scripts/spm-snapshot/` の出力を identity `KsSettingsView-SPM` のディレクトリに置いた `path:` 参照)、Android は mavenLocal、MAUI はローカルフォルダフィード。version 未指定なら本体の開発用既定値 (Android `0.1.0-SNAPSHOT` / MAUI `0.0.0-dev`。iOS は version を持たない) | PR / push の検証 CI で毎回。release では publish 前 |
-| `smoke` | 配信リポジトリ `KsSettingsView-SPM` の tag、Maven Central、nuget.org。version は必須 | release の publish 後 (初回リリースまで正ケースは未実証) |
+| `dry-run` | iOS はスナップショット (`scripts/spm-snapshot/` の出力を identity `KsSettingsView-SPM` のディレクトリに置いた `path:` 参照)、Android は mavenLocal、MAUI はローカルフォルダフィード。version 未指定なら本体の開発用既定値 (Android `0.1.0-SNAPSHOT` / MAUI `0.0.0-dev`。iOS は version を持たない) | `main` 宛て pull request の検証 CI (`develop` への push では走らない — [ADR-0028](../../../decisions/cross/0028-ci-triggers-by-branch-role.md))。release では publish 前に、publish する配布物そのものを artifact で受けて実行 |
+| `smoke` | 配信リポジトリ `KsSettingsView-SPM` の tag、Maven Central、nuget.org。version は必須 | release の publish 後、公開レジストリへの反映待ち job の後 (初回リリース `0.1.0-beta.1` で 3 レジストリからの解決を実証済み) |
 
 dry-run の参照先は本リポジトリ由来の座標について排他的である。Android は `exclusiveContent` で `jp.kamusoft` を mavenLocal だけに割り当て、MAUI は packageSourceMapping で `KsSettingsView.*` をローカルフィードに固定したうえで実行ごとに空のパッケージ展開先を使い、取得元をパッケージ単位の `.nupkg.metadata` で検査する (global packages folder に既にある版には mapping が働かないため)。ローカルに無い version は公開レジストリやユーザー環境のキャッシュへ黙ってフォールバックせず失敗する — フォールバックを許すと dry-run が偽陽性になる。MAUI はさらに restore 警告 NU1605 / NU1608 / NU1107 をエラーにし、binding 2 件の解決版が facade と一致することを検査する (lockstep の消費者側の現れ)。
 
@@ -76,7 +78,7 @@ dry-run の参照先は本リポジトリ由来の座標について排他的で
 - 一つの platform の build や test を、別 platform の検証結果として扱わない。
 - Sample を library の配布物、挙動契約の SSoT、自動 test の代替として扱わない。
 - local source reference の成功を、公開 repository からの配布成立と説明しない。
-- MAUI の 3 パッケージがローカルで pack できることを、公開レジストリから取得できる配布物があることと説明しない (発行は未着手。ローカル pack と消費者検証まで)。
+- ローカル pack や mavenLocal への発行が通ることを、その version が公開レジストリにあることと説明しない (公開済みの版は tag と GitHub Release が正)。
 - 配信リポジトリ `KsSettingsView-SPM` を開発の入口として扱わない。手で commit せず、ソース・Issue の窓口は monorepo である。
 - `verification/` を Sample や本体開発の入口として扱わない。README 最小例の写し以外のコードを置かず、Sample の一致規約の対象にも数えない。
 - 消費者 dry-run の成功を、公開レジストリから取得できる配布物があることと説明しない (それを示すのは smoke である)。
@@ -102,4 +104,8 @@ dry-run の参照先は本リポジトリ由来の座標について排他的で
 - [ADR-0018: 配布チャネルと SwiftPM 配信リポジトリ](../../../decisions/cross/0018-distribution-public-channels-root-swiftpm-manifest.md)
 - [ADR-0025: 検証 CI は platform 別の再利用可能 workflow で構成する](../../../decisions/cross/0025-verification-ci-reusable-platform-workflows.md)
 - [ADR-0026: CI が保証する範囲](../../../decisions/cross/0026-ci-guarantee-logic-and-wiring-not-e2e.md)
+- [ADR-0028: 検証 CI のトリガーはブランチの役割で分ける](../../../decisions/cross/0028-ci-triggers-by-branch-role.md)
+- [ADR-0019: lockstep の単一バージョン](../../../decisions/cross/0019-lockstep-single-version.md)
+- [ADR-0020: 手動起動・tag は最後・version 注入](../../../decisions/cross/0020-release-dispatch-tag-last-version-injection.md)
 - [ローカル開発環境と Sample の実行](../../../handbook/cross/local-development-setup.md) — 消費者検証を手元で回す手順
+- [リリース手順](../../../handbook/cross/release-procedure.md) — ブランチの役割・secrets・起動・再実行・リハーサル

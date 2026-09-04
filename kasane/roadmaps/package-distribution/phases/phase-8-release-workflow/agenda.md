@@ -107,7 +107,7 @@ release.yml は KsSettingsView のリポジトリ内で完結させ、リポジ�
 - [x] `main` ブランチの作成タイミングと default branch の切替可否 (2026-09-03: 切り替える。提案化で決定、change に含める)
 - [x] AGENTS.md (CLAUDE.md) の docs-refresh 専任の記述に、インストール例の version 更新 script の例外を 1 行加える (change に同梱、2026-09-03)
 - [x] release 全体の所要時間 → 初回リリース 0.1.0-beta.1 の実測 39 分 (validate 9 秒 / test ∥ package 7 分 / consumer-maui dry-run 12 分 / publish 11 分 / 反映待ち 7 秒 / smoke-maui 9 分。2026-09-04、change の evidence/github-actions-runs.txt 12 節)
-- [ ] (任意) dotnet/android へ「`CreateAar` が native lib に `Pack` を見ない」非対称を起票する
+- [x] (任意) dotnet/android へ「`CreateAar` が native lib に `Pack` を見ない」非対称を起票する → 見送り (2026-09-04、下の「申し送りの受け皿」)
 - [x] KsDialogs phase-11 の agenda に逆流の申し送りを書く (2026-09-04)
 
 ### `main` の branch protection (phase-3 申し送り)
@@ -125,3 +125,25 @@ develop と同じ内容を作成と同時に付ける: 検証 CI 4 job (`ios / v
 | phase-6: `ContinuousIntegrationBuild` の注入、pack は csproj 単位で binding → facade | 決定「version 注入の配線」 |
 | phase-6: NU1507 / XA4301 | 論点として残置 |
 | phase-7: 消費者検証の呼び出し契約 (dry-run + artifact / smoke + version)、`secrets: inherit` を使わない、smoke 正ケースの初回実証と失敗時の扱い、所要時間、署名 `.asc` の生成確認、docs-refresh 依頼の併合 | 決定「job 構成」「smoke の位置」「README」。`secrets: inherit` を書かないことは提案化の必須確認事項、所要時間は上の TODO |
+
+## 実装結果 (2026-09-04 反映)
+
+change [add-release-workflow](../../../../changes/archive/2026-09-04-add-release-workflow/proposal.md) (L 級) で実装し、初回リリース `0.1.0-beta.1` を `main` から dispatch して attempt 1 で完走した (所要 39 分、3 レジストリからの smoke 成功)。決定事項からの乖離は change の deviation.md に 12 項目。主なもの:
+
+| 乖離 | 内容 |
+|---|---|
+| XA4301 対処の結線 | `TargetsForTfmSpecificContentInPackage` への追記ではなく SDK ターゲット `_IncludeAarInNuGetPackage` の `AfterTargets` で除く (追記だと SDK 側より前に並び aar が nupkg に残る) |
+| XA4301 対処の前提 | 「SDK は無条件で aar を生成して詰める」は手元の増分ビルド由来で、クリーン checkout では aar 自体が生成されない (`_CreateAar` は入力が空だと skip)。「aar が無ければ失敗」を「無ければ何もしない」に改めた。どちらの経路でも nupkg に aar は入らない |
+| Maven Central の再実行分岐 | 前回 deployment が PENDING / VALIDATING のときは決着を待ってから 4 状態の分岐に入る。PUBLISHING / PUBLISHED への DELETE 拒否は実接続では未確認 (script は VALIDATED / FAILED 以外では DELETE を送らない) |
+| `main` への取り込み制限 | CI の lint job 内の検査のまま受容。PR 自身が ci.yml を書き換えれば無効化できる残存リスクは collaborators only を根拠に受け入れ、Ruleset / `pull_request_target` 化は採らない (cross/ADR-0028 の Consequences) |
+| Release 本文 | 自動生成ノートのまま補わない (オーナー判断。利用者向けの案内は README が担う) |
+| 付随修正 | `kasane/config.yaml` の comment-policy 検査対象に `.sh` / `.py` を追加。`verification/*/build-consumer.sh` のフィード準備ログを CI に残す `tee` |
+
+### 申し送りの受け皿
+
+| 申し送り | 受け皿 |
+|---|---|
+| (任意) dotnet/android へ `CreateAar` が native lib に `Pack` を見ない非対称を起票する | 見送り (2026-09-04)。pack 側の除外と検査で対処が完了しており本ロードマップの成果に関わらない。起票するなら変更フローの外の手作業 |
+| release workflow の dry-run リハーサルで `ios / verify` の MemoryLeakTests が Simulator の負荷で不安定 (同 commit の PR CI では pass) | 独立 change [fix-ios-memoryleak-test-flaky](../../../../changes/fix-ios-memoryleak-test-flaky/exploration.md) に簡易起票済み |
+| KsDialogs への逆流 (release.yml と `scripts/release/` のコピー、Trusted Publisher Policy と Environment の別途作成) | KsDialogs phase-11 の agenda に申し送り済み (2026-09-04、本ロードマップの非ゴール) |
+| 初回リリース後の CI 待ち時間 (develop への反映ごとに 7 job × 2 回) | [phase-13-ci-trigger-slimming](../phase-13-ci-trigger-slimming/agenda.md) (完了) |

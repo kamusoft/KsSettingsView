@@ -3,7 +3,7 @@ type: concept
 title: MAUI facade (KsSettingsView.Maui) の公開契約
 description: XAML / C# から SettingsView を利用する facade 層 — 導入と前提・公開 API・双方向バインド・更新の意味論・lifecycle・配置制約
 tags: [maui, facade, xaml, handler]
-timestamp: 2026-09-02
+timestamp: 2026-09-04
 ---
 
 # MAUI facade (KsSettingsView.Maui) の公開契約
@@ -22,7 +22,7 @@ Binding assembly は Bridge API を C# へ運ぶだけの層で、アプリか�
 
 ## 導入と前提
 
-配布物は NuGet の 3 パッケージで、利用者が書くのは facade `KsSettingsView.Maui` の `PackageReference` 1 行だけである (binding 2 件は platform TFM の依存として推移的に届く — [maui/ADR-0025](../../../decisions/maui/0025-nuget-three-package-root-namespace.md))。公開レジストリへの発行は未着手で、現時点ではローカル pack の成果物とリポジトリ内の `ProjectReference` から利用できる。ローカル pack の成果物を利用者と同じ経路 (NuGet フィード) で解決・ビルドできることは消費者検証 `verification/maui` が PR CI で確かめている ([リポジトリとビルドの責務境界](../../cross/architecture/repository-boundaries.md))。pack の構成は [MAUI binding の Native artifact 統合](../architecture/binding-build-integration.md) が持つ。
+配布物は NuGet の 3 パッケージで、利用者が書くのは facade `KsSettingsView.Maui` の `PackageReference` 1 行だけである (binding 2 件は platform TFM の依存として推移的に届く — [maui/ADR-0025](../../../decisions/maui/0025-nuget-three-package-root-namespace.md))。nuget.org で公開している (初回 `0.1.0-beta.1`。prerelease の suffix を持つ版は NuGet 側で prerelease 扱いになる)。配布物を利用者と同じ経路 (NuGet フィード) で解決・ビルドできることは消費者検証 `verification/maui` が、`main` 宛て pull request の CI とリリースの publish 前 (dry-run)、公開後 (smoke) で確かめている ([リポジトリとビルドの責務境界](../../cross/architecture/repository-boundaries.md))。pack の構成は [MAUI binding の Native artifact 統合](../architecture/binding-build-integration.md) が持つ。
 
 公開型の名前空間は `KsSettingsView` (配下 `KsSettingsView.Internals` / `KsSettingsView.Handlers`) で、アセンブリ名・Package ID の `KsSettingsView.Maui` とは意図的に非対称である ([公開識別子と配布座標](../../../handbook/cross/public-identifiers.md))。最小の導入は XAML の xmlns と `MauiProgram` の登録の 2 箇所:
 

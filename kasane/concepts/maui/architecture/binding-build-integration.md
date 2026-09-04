@@ -3,7 +3,7 @@ type: concept
 title: MAUI binding の Native artifact 統合
 description: MAUI binding が iOS xcframework と Android aar を生成・取り込みする構成、既知の制約、SDK 更新時の再検証箇所、NuGet 3 パッケージの pack 構成と利用者ビルドへ同梱する最低 OS 版ガード
 tags: [maui, binding, build, interop, nuget]
-timestamp: 2026-09-02
+timestamp: 2026-09-04
 ---
 
 # MAUI binding の Native artifact 統合
@@ -43,8 +43,9 @@ iOS は .NET SDK の `XcodeProject` アイテムを使う。ただし SDK によ
 
 | 名前 | 所有者 | 役割 |
 |---|---|---|
-| `_BuildXcodeProjects` / `_SanitizeNativeReferences` / `_CategorizeAndroidLibraries` / `_ResolveLibraryProjectImports` / `_GetBuildXcodeProjectsInputs` / `_XcbInputs` | .NET SDK (互換保証なし) | 割り込み先。SDK 更新で名前も挙動も変わり得る |
+| `_BuildXcodeProjects` / `_SanitizeNativeReferences` / `_CategorizeAndroidLibraries` / `_ResolveLibraryProjectImports` / `_GetBuildXcodeProjectsInputs` / `_XcbInputs` / `_IncludeAarInNuGetPackage` | .NET SDK (互換保証なし) | 割り込み先。SDK 更新で名前も挙動も変わり得る |
 | `_RegisterXcodeProjectNativeReference` / `_AdjustKsBridgeXcodeProjectInputs` | binding csproj (自作) | 上の拡張点へ割り込む側 |
+| `KsCheckGeneratedAarEntries` / `KsExcludeGeneratedAarFromPackage` | `maui/Directory.Build.targets` (自作) | pack 時に自 assembly 用 aar を検査して nupkg から除く側 (下の「自 assembly 用 aar の除外」) |
 
 Xcode project の target 名と SwiftPM package の target 名は同じである。**同名であるため自動生成 scheme ではどちらが archive されるか定まらない**。そこで共有 scheme `ios/binding/KsSettingsViewBridge.xcodeproj/xcshareddata/xcschemes/KsSettingsViewBridge.xcscheme` が project target を明示する。この scheme を失うと framework が install されず、生成物が有効な framework にならない。
 
@@ -107,7 +108,8 @@ binding 2 件と facade はそれぞれ NuGet パッケージになり、利用�
 |---|---|
 | `maui/Directory.Build.props` | NuGet メタデータ (Authors / License / URL / `PackageIcon`)、`Version` 既定値、`IsPackable` 既定 false (pack は facade と binding 2 件の csproj で opt-in)、SourceLink + snupkg、利用者へ同梱する `buildTransitive/KsSettingsView.Maui.props` (最低 OS 版の定数) をリポジトリ内ビルドでも読む import |
 | `maui/Directory.Packages.props` | CPM (`ManagePackageVersionsCentrally`) の版一覧と、その版を選んだ理由 (MAUI 本体の下限、AndroidX の family 整合)。各 csproj は `Version` 属性を持たない |
-| `maui/Directory.Build.targets` | `PackageIcon` の同梱アイテム (pack 対象だけ)、利用者へ同梱する `buildTransitive/KsSettingsView.Maui.targets` (下の「最低 OS 版のビルド時ガード」) の import |
+| `maui/Directory.Build.targets` | `PackageIcon` の同梱アイテム (pack 対象だけ)、利用者へ同梱する `buildTransitive/KsSettingsView.Maui.targets` (下の「最低 OS 版のビルド時ガード」) の import、自 assembly 用 aar の検査と nupkg からの除外 (下の「自 assembly 用 aar の除外」) |
+| `maui/nuget.config` | `maui/` 配下の restore 元を nuget.org だけに固定する (packageSources を `<clear/>` してから nuget.org を宣言し、packageSourceMapping で `*` を割り当てる)。環境側のローカルフィード等を継承しないため、複数ソース環境で CPM が出す NU1507 が出ず、ローカルフィードの混入で別物を掴む余地もない。`maui/` 配下でローカルフィードを使うときは `-p:RestoreConfigFile=` で明示する (`samples/maui` と `verification/maui` は別ツリーで対象外) |
 
 `Directory.Build.props` はプロジェクト本体より先に読まれるため、csproj 本体で決まる `TargetFramework` や `IsPackable` をそこで参照できない。TFM に依存する代入 (`SupportedOSPlatformVersion`) は各 csproj の TFM 条件の中で行い、`IsPackable` に依存するアイテム (アイコンの同梱) は csproj 評価後に読まれる `Directory.Build.targets` に置く。この分担を崩すと条件が空振りし、ビルドは通るのに成果物から黙って抜ける。
 
@@ -125,15 +127,23 @@ facade パッケージは `buildTransitive/KsSettingsView.Maui.props` (要件の
 
 ### SDK 挙動として受け入れているもの
 
-いずれも SDK の pack 内部構造に手を入れないと変えられない事象で、現状は受け入れている ([maui/ADR-0025](../../../decisions/maui/0025-nuget-three-package-root-namespace.md) の Consequences)。利用者に影響しないもの (iOS manifest の絶対パス、facade → binding の依存版、NU1507) と、利用者のビルドに影響が出得るもの (自 assembly 用 aar による XA4301 — 対処は未決で release workflow フェーズが扱う、API 版付き TFM — 利用者側の要件として確定済み) が混在する。
+いずれも SDK の pack 内部構造に手を入れないと変えられない事象である ([maui/ADR-0025](../../../decisions/maui/0025-nuget-three-package-root-namespace.md) の Consequences)。利用者に影響しないためそのまま受け入れているもの (iOS manifest の絶対パス、facade → binding の依存版)、利用者側の要件として確定したもの (API 版付き TFM)、pack / restore の構成で対処したもの (自 assembly 用 aar、NU1507) が混在する。
 
 | 事象 | 内容と扱い |
 |---|---|
-| 自 assembly 用 aar | .NET Android SDK が Android ライブラリ assembly ごとに自動生成する `KsSettingsView.Maui.aar` / `KsSettingsView.Binding.Android.aar` (中身は推移依存 `androidx.graphics.path` の ABI 別 `.so` のみ) が各 nupkg に入る。facade 自身が native コードを持ち込んでいるのではなく、推移依存の `.so` を SDK が assembly ごとの aar に再梱包した結果である。利用者の Android Release ビルドで同じ `.so` が重複し XA4301 が出る — 対処は未決 (release workflow フェーズ) |
+| 自 assembly 用 aar | .NET Android SDK が Android ライブラリ assembly ごとに自動生成する `KsSettingsView.Maui.aar` / `KsSettingsView.Binding.Android.aar` (中身は推移依存 `androidx.graphics.path` の ABI 別 `.so` のみ) を各 nupkg に入れようとする。facade 自身が native コードを持ち込んでいるのではなく、推移依存の `.so` を SDK が assembly ごとの aar に再梱包した結果である。nupkg に入ると利用者の Android Release ビルドで同じ `.so` が重複し XA4301 が出るため、pack 時に nupkg から除く (下の「自 assembly 用 aar の除外」) |
 | iOS manifest の絶対パス | binding resource package の `manifest` に pack した環境の絶対パスが載る。リリースは CI で pack するため CI ランナーのパスになる |
 | API 版付き TFM | nuspec の TFM group は `net10.0-android36.0` / `net10.0-ios26.0` のように SDK (10.0.300) の既定 platform 版が付く。消費者の TFM が API 版なしなら常にこの group が選ばれるが、古い API 版 (`net10.0-android35.0` / `net10.0-ios18.0`) を固定した利用者では restore が警告なく成功したうえで `lib/net10.0` へフォールバックし、binding 2 件が依存グラフに入らない (消費者検証で実測)。利用者向けの要件は [MAUI facade の公開契約](../api/maui-facade.md) の「導入と前提」が持つ |
 | facade → binding の依存版 | 完全一致 `[x.y.z]` ではなく下限指定。lockstep で同時発行される ([cross/ADR-0019](../../../decisions/cross/0019-lockstep-single-version.md)) ため、NuGet は下限を満たす最小の版を選ぶ (lowest applicable version) 規則で同版の binding を解決する |
-| NU1507 | CPM のため、複数の NuGet ソースを構成した環境では `maui/` 配下全プロジェクトの restore で出る (単一ソースでは出ない)。恒久対処は未決 (release workflow フェーズ) |
+| NU1507 | CPM のため、複数の NuGet ソースを構成した環境では restore で出る (単一ソースでは出ない)。`maui/nuget.config` が restore 元を nuget.org だけに固定するため、`maui/` 配下では環境側のソース構成に関わらず出ない (上の「共通設定の置き場と評価順序」) |
+
+### 自 assembly 用 aar の除外
+
+`maui/Directory.Build.targets` は、`IsPackable` が true の Android TFM の内部ビルドで、SDK が pack の同梱物を組み立てるターゲット `_IncludeAarInNuGetPackage` の直後 (`AfterTargets`) に生成 aar (`$(OutputPath)$(TargetName).aar`) を `TfmSpecificPackageFile` から除く。`TargetsForTfmSpecificContentInPackage` への追記では SDK 側の追記より前に並び、まだ同梱されていない段階で Remove が走って aar が nupkg に残るため、実行順は SDK の内部ターゲット名で決めている。jar には `Pack` メタデータが効くが native ライブラリには効かず、除外の公開プロパティも無い (`AndroidLibrary` の `Pack="false"` は別の意味) ので、非公式手段であることを受け入れている。
+
+除く前に aar のエントリを列挙し、推移依存の native ライブラリ (`jni/<abi>/libandroidx.graphics.path.so`) 以外があれば pack を失敗させる。自前の res / classes / manifest を持つようになったら落としてはいけないので、その時点で気づき、除外方式 (`_CreateAar` より前に native item を除く方式へ切り替える) を見直す。
+
+aar は SDK が同梱候補 (native ライブラリ等) を持つときだけ生成し、クリーンビルドでは生成されないことがある (推移依存の `.so` は増分ビルドでのみ入力に現れる)。無いときは SDK も同梱しないため、検査も除外も行わない — どちらの経路でも nupkg に aar は入らない。利用者側の回帰は `verification/maui` の Release ビルドが XA4301 を検出したら失敗にすることで止める (ビルド警告全般はエラーにしない)。
 
 ## SDK 更新時に再検証する箇所
 
@@ -144,6 +154,7 @@ binding csproj は互換保証のない SDK 内部 target / item に割り込む
 | `_BuildXcodeProjects` / `_SanitizeNativeReferences` | xcframework が `NativeReference` に登録され、最終的な binding の配布成果物へ同梱される |
 | `_GetBuildXcodeProjectsInputs` / `_XcbInputs` | Bridge・Core・UI の Swift 変更で Native build が再実行され、`ios/binding/build/` の生成物は入力に入らない |
 | `_CategorizeAndroidLibraries` / `_ResolveLibraryProjectImports` | aar の生成が `AndroidLibrary` の解決より前に走る |
+| `_IncludeAarInNuGetPackage` / `_CreateAar` | pack した nupkg に自 assembly 用 aar が入らず、生成 aar の中身が推移依存の native ライブラリだけである (aar が生成されない構成では検査ターゲットが走らないので、nupkg の展開で確認する) |
 
 iOS の入力一覧は次で確認できる。
 

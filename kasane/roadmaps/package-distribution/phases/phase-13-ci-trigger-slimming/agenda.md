@@ -19,8 +19,12 @@
 ## TODO
 
 - [x] 論点の解消 (2026-09-04: ksn-explore で全件決定)
-- [x] change `slim-ci-triggers` を S 級として実装する (2026-09-04、commit e85cb98。develop の保護設定変更の証跡は change の evidence/branch-protection-develop.md) ([exploration.md](../../../../changes/slim-ci-triggers/exploration.md) の「実装の見当」)
+- [x] change `slim-ci-triggers` を S 級として実装する (2026-09-04、commit e85cb98。develop の保護設定変更の証跡は change の evidence/branch-protection-develop.md) ([exploration.md](../../../../changes/archive/2026-09-04-slim-ci-triggers/exploration.md) の「実装の見当」)
 - [x] handbook `cross/release-procedure.md` の「develop の保護設定が正」「必須 check 7 件」の記述を追従させる (change に同梱、2026-09-04)
 - [x] 実装後、`develop` への push で 4 job だけが走ることを確認し、所要時間の実測をここに残す → run 33849577847 (2026-09-04、commit e85cb98): 壁時計 7.7 分 (変更前 14〜20 分)。lint 0.1 / ios 3.3 / android 5.3 / maui 7.6 分、consumer 3 job は skipped。壁時計は maui に張り付く
-- [x] paths-ignore の確認 (2026-09-04): ci.yml を含む push (29cc361) では run 33850817547 が 4 job で起動。kasane だけの push (このコミット) で起動しないことは push 後の run 一覧で確認する
-- [ ] 蒸留時に cross/ADR-0028 を accepted へ昇格し、本フェーズを completed にする
+- [x] paths-ignore の確認 (2026-09-04): ci.yml を含む push (29cc361) では run 33850817547 が 4 job で起動。kasane だけの push (499125d・9922b53) では起動しないことを run 一覧で確認した (蒸留時、2026-09-04)
+- [x] 蒸留時に cross/ADR-0028 を accepted へ昇格し、本フェーズを completed にする (2026-09-04)
+
+## 実装結果 (2026-09-04 反映)
+
+change [slim-ci-triggers](../../../../changes/archive/2026-09-04-slim-ci-triggers/exploration.md) (S 級、commit e85cb98 と 29cc361) で決定事項どおりに実装した。乖離なし。実測は上の TODO のとおり (壁時計 7.7 分、paths-ignore は起動・非起動の両方を確認)。concurrency の打ち切りは push が並列しない運用のため実測していない。申し送り: なし。

@@ -5,7 +5,7 @@ applies-when:
   tasks: [リリースの実施, release workflow の secrets / Environment の設定, リリースの再実行, リリースのリハーサル]
 title: リリース手順
 description: main ブランチと branch protection の用意、Environment release と secrets の登録、配信リポジトリの deploy key、リリース PR と dispatch、失敗時の再実行、dry-run によるリハーサル
-timestamp: 2026-09-03
+timestamp: 2026-09-04
 ---
 
 # リリース手順
@@ -132,7 +132,7 @@ gh workflow run release.yml --ref main -f version=<version>
 gh run watch "$(gh run list --workflow=release.yml --limit 1 --json databaseId --jq '.[0].databaseId')"
 ```
 
-全体で 60〜90 分かかる。publish が終わると配信リポジトリと monorepo に tag が付き、prerelease の suffix を持つ version は prerelease として Release が作られる。そのあと公開レジストリへの反映を待って smoke が走る。
+全体で 40 分前後かかる (初回リリース `0.1.0-beta.1` の実測は 39 分。消費者検証 MAUI の dry-run 12 分と publish 11 分が大半で、Maven Central の反映待ちは公式には 10〜30 分かかり得るが初回は数秒だった)。publish が終わると配信リポジトリと monorepo に tag が付き、prerelease の suffix を持つ version は prerelease として Release が作られる。そのあと公開レジストリへの反映を待って smoke が走る。
 
 ### 公開後の確認
 
@@ -140,7 +140,7 @@ gh run watch "$(gh run list --workflow=release.yml --limit 1 --json databaseId -
 - Maven Central の `jp.kamusoft:kssettingsview` の当該 version
 - 配信リポジトリの tag と、monorepo の Release 本文
 
-前回の tag が無い初回リリースでは自動生成ノートに全 pull request が並ぶので、Release 本文は手で整える。
+Release 本文は自動生成ノートのままにし、手で補わない (利用者向けの案内は README が担う。Release ページの見え方だけの問題であり、初回リリースもこの扱いで済ませた)。
 
 ## 失敗したとき
 
@@ -154,7 +154,7 @@ publish の各ステップは冪等なので、原因を取り除いてから **
 | Maven の release | 保留中の deployment を release する |
 | tag / Release | 同じ内容の tag は skip、別内容なら失敗する |
 
-publish が途中で失敗すると、保留中の Maven deployment は失敗経路の後始末で削除され、次の attempt へ引き継ぐ ID も同時に破棄される (再実行は upload からやり直す)。削除できない状態 (公開処理が始まっている) のときは何もせず理由が出て ID もそのまま残るので (次の attempt がその状態を見て続きを行う)、[Central Portal の deployment 一覧](https://central.sonatype.com/publishing/deployments) で状態を見る。手で操作するときは次を使う。
+publish が途中で失敗すると、保留中の Maven deployment は失敗経路の後始末で削除され、次の attempt へ引き継ぐ ID も同時に破棄される (再実行は upload からやり直す)。削除できない状態 (検証中か公開処理中) のときは何もせず理由が出て ID もそのまま残るので (次の attempt がその状態を見て続きを行う)、[Central Portal の deployment 一覧](https://central.sonatype.com/publishing/deployments) で状態を見る。手で操作するときは次を使う。
 
 ```bash
 export MAVEN_CENTRAL_USERNAME=... MAVEN_CENTRAL_PASSWORD=...

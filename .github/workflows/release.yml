@@ -12,6 +12,9 @@
 #
 # `dry-run` 入力を true にすると publish 以降を行わず、起動ブランチの制限も外れる
 # (任意のブランチからリハーサルできる)。
+#
+# 決定の経緯は cross/ADR-0019 (lockstep の単一 version) と cross/ADR-0020 (手動起動・
+# tag は publish 全成功後・version は CI が注入)。
 name: release
 
 on:
