@@ -11,7 +11,7 @@ ksn-explore (2026-08-21) で配信先・バージョニング・各 platform の
 - iOS (SwiftPM 配信リポジトリの umbrella product `KsSettingsView`)、Android (`jp.kamusoft:kssettingsview`)、MAUI (`KsSettingsView.Maui`) を公開レジストリから 1 点の依存で導入できる ([cross/ADR-0018](../../decisions/cross/0018-distribution-public-channels-root-swiftpm-manifest.md)、[android/ADR-0016](../../decisions/android/0016-single-module-single-maven-artifact.md)、[maui/ADR-0025](../../decisions/maui/0025-nuget-three-package-root-namespace.md))
 - 単一 version で全 platform を 1 回の手動起動で一斉リリースでき、tag は publish 全成功後にのみ生まれる ([cross/ADR-0019](../../decisions/cross/0019-lockstep-single-version.md)、[cross/ADR-0020](../../decisions/cross/0020-release-dispatch-tag-last-version-injection.md))
 - 配布物を参照する消費者プロジェクト (`verification/`) で配信経路が検証されている (publish 前の dry-run と publish 後の smoke)
-- PR / push で 3 platform のビルド・テストを回す検証 CI がある
+- ブランチの役割に合わせた検証 CI がある: `develop` への push で 3 platform のビルド・テスト + lint、`main` 宛て PR ではそれに消費者検証を加える (2026-09-04 改訂、[cross/ADR-0028](../../decisions/cross/0028-ci-triggers-by-branch-role.md))
 - リポジトリが public である (機密情報・個人情報の混入チェック後)
 - 利用者向けドキュメントが `docs/` ではなく、利用者が自分のプロジェクトへコピーして使える Skills (`skills/`、英語 / 日本語の 2 版) として提供され、docs-refresh がそれを manifest 方式の差分更新で kasane/concepts/ とコード・テストに追従させる道具になっている。`docs/` は廃止され、cross/ADR-0014 は新 ADR で supersede されている
 - public 化の前に、英語 README + `README_ja` (原典 AiForms の運用を踏襲) にインストール手順 (確定済み識別子で記述、初回リリースまでは「未配信」の状態表記つき) と AiForms からの移行ガイドがあり、初回リリース時に状態表記を解除する
@@ -53,6 +53,7 @@ graph TD
 
     subgraph CI["検証 CI"]
         P3[phase-3<br/>3 platform CI]
+        P13[phase-13<br/>CI トリガー整理]
     end
 
     subgraph PKG["パッケージング (並行可)"]
@@ -75,9 +76,10 @@ graph TD
     P4 --> P7
     P5 --> P7
     P6 --> P7
+    P8 --> P13
 ```
 
-phase-10 → 11 → 12 (Skills 化) → phase-9 (README) → phase-2 の実施 (public 化) の順。phase-1 は独立 (完了済み)。phase-4 と phase-5 は phase-3 の後で並行可 (ただし phase-5 は phase-1 完了後)。
+phase-10 → 11 → 12 (Skills 化) → phase-9 (README) → phase-2 の実施 (public 化) の順。phase-13 は初回リリース (phase-8) の実測を受けて CI のトリガーを開発運用に合わせて絞る後続フェーズ。phase-1 は独立 (完了済み)。phase-4 と phase-5 は phase-3 の後で並行可 (ただし phase-5 は phase-1 完了後)。
 
 ## フェーズ一覧
 
@@ -95,3 +97,4 @@ phase-10 → 11 → 12 (Skills 化) → phase-9 (README) → phase-2 の実施 (
 | phase-6-maui-packaging | completed | change | [agenda](phases/phase-6-maui-packaging/agenda.md) | [changes/archive/2026-09-02-add-maui-nuget-distribution](../../changes/archive/2026-09-02-add-maui-nuget-distribution/proposal.md) |
 | phase-7-consumer-verification | completed | change | [agenda](phases/phase-7-consumer-verification/agenda.md) | [changes/archive/2026-09-02-add-consumer-verification](../../changes/archive/2026-09-02-add-consumer-verification/proposal.md) |
 | phase-8-release-workflow | in-progress | change | [agenda](phases/phase-8-release-workflow/agenda.md) | [changes/add-release-workflow](../../changes/add-release-workflow/proposal.md) |
+| phase-13-ci-trigger-slimming | in-progress | change | [agenda](phases/phase-13-ci-trigger-slimming/agenda.md) | [changes/slim-ci-triggers](../../changes/slim-ci-triggers/exploration.md) |

@@ -18,6 +18,7 @@
 | [0025](0025-verification-ci-reusable-platform-workflows.md) | 検証 CI は platform 別の再利用可能 workflow と、それを呼ぶ入口で構成する | accepted | platform 別 workflow 3 本を `workflow_call` で定義し入口 1 本が呼ぶ。リリース用 workflow は検証を再定義せず同じ workflow を再利用する。変更パスによる絞り込みは行わず常に全 platform を検証し、status check 名は呼び出し側と呼ばれる側の双方で固定する。 |
 | [0026](0026-ci-guarantee-logic-and-wiring-not-e2e.md) | CI が保証するのはロジックの全件通過と native への配線のコンパイルまでとし、実機・実行ホストでの検証は手元の手順に残す | accepted | 自動で成否が決まるテストは全件実行し (iOS は Simulator 対象)、実行 0 件はテストが緑でも失敗とする。実行ホストを人が見る検証は CI に載せない。利用者可視の変更への実機確認は CI とは独立に完了条件として残る。 |
 | [0027](0027-negative-verification-fixed-wait-exception.md) | 負の検証は条件ベース待機の対象外とし、意図を明示した固定時間待機で書く | accepted | no-op・不達の確認には正の完了条件が存在しないため条件ベース化しない。意図を名前で明示したヘルパで書き、収束待ちの直し漏れと区別可能にする。収束待ちへの適用は引き続き規約違反。 |
+| [0028](0028-ci-triggers-by-branch-role.md) | 検証 CI のトリガーはブランチの役割で分け、develop は直接 push、main は develop からの PR だけを検証する | proposed | develop 宛て PR トリガーを廃止し、develop push は lint + 本体検証 3 本、main 宛て PR はそれに消費者検証 3 本を加える。develop の必須 status check は撤去 (直接 push 運用に合わせる)、main は 7 件を維持。 |
 
 欠番: 0012 (product-qualified-public-namespace) は移行トリアージで却下 (出典: kasane/changes/archive/2026-07-18-migrate-openspec/candidates/rejected-0012-product-qualified-public-namespace.md)。
 

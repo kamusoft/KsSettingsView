@@ -112,7 +112,7 @@ release.yml は KsSettingsView のリポジトリ内で完結させ、リポジ�
 
 ### `main` の branch protection (phase-3 申し送り)
 
-develop と同じ内容を作成と同時に付ける: 検証 CI 4 job (`ios / verify` / `android / verify` / `maui / verify` / `lint`) + 消費者検証 3 job (`consumer-{ios,android,maui} / verify`) を必須 status check、pull_request 経由を必須 (承認数 0)、force-push 禁止・削除禁止、admin バイパスは緊急時の逃げ道として許容。`gh api -X PUT` は保護設定を全体置換するため既存設定を含む完全な payload を送る (実例: [branch-protection-develop.txt](../../../../changes/archive/2026-09-02-add-consumer-verification/evidence/branch-protection-develop.txt))。
+develop と同じ内容を作成と同時に付ける: 検証 CI 4 job (`ios / verify` / `android / verify` / `maui / verify` / `lint`) + 消費者検証 3 job (`consumer-{ios,android,maui} / verify`) を必須 status check、pull_request 経由を必須 (承認数 0)、force-push 禁止・削除禁止、admin バイパスは緊急時の逃げ道として許容。`gh api -X PUT` は保護設定を全体置換するため既存設定を含む完全な payload を送る (実例: [branch-protection-develop.txt](../../../../changes/archive/2026-09-02-add-consumer-verification/evidence/branch-protection-develop.txt))。 **2026-09-04 追記**: `main` の 7 件必須 check は維持するが、`develop` 側の必須 status check と PR 必須化は [phase-13-ci-trigger-slimming](../phase-13-ci-trigger-slimming/agenda.md) で撤去するため、以後「develop と同じ」ではなく `main` 独自の設定として扱う。
 
 ### 申し送りの取り込み状況
 
