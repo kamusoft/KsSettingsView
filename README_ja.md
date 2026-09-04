@@ -41,7 +41,7 @@ Androidは単一のMaven artifact `jp.kamusoft:kssettingsview`として配布し
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/kamusoft/KsSettingsView-SPM", from: "0.1.0")
+    .package(url: "https://github.com/kamusoft/KsSettingsView-SPM", exact: "0.1.0-beta.1")
 ]
 ```
 
@@ -53,7 +53,7 @@ productは`.product(name: "KsSettingsView", package: "KsSettingsView-SPM")`と�
 
 ```kotlin
 dependencies {
-    implementation("jp.kamusoft:kssettingsview:0.1.0")
+    implementation("jp.kamusoft:kssettingsview:0.1.0-beta.1")
 }
 ```
 
@@ -63,7 +63,7 @@ prerelease版は、依存宣言のversionに`X.Y.Z-alpha.N`、`X.Y.Z-beta.N`、`
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="KsSettingsView.Maui" Version="0.1.0" />
+  <PackageReference Include="KsSettingsView.Maui" Version="0.1.0-beta.1" />
 </ItemGroup>
 ```
 
