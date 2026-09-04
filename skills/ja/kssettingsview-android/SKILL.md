@@ -29,31 +29,40 @@ KsSettingsView は、iOS の設定アプリのようなリスト形式の設定�
 
 ### ライブラリをビルドに取り込む
 
-アプリモジュールの `build.gradle.kts` に依存を宣言する。
+Maven Central から依存を解決し、アプリモジュールの `build.gradle.kts` に依存を宣言する。
 
 ```kotlin
+repositories {
+    mavenCentral()
+}
+
 dependencies {
     implementation("jp.kamusoft:kssettingsview:0.1.0")
 }
 ```
 
-Maven Central への初回公開はまだ行われていないため、執筆時点ではこの座標は公開リポジトリから解決できない。`0.1.0` は初回リリースの版を表す。公開までの間は、`android/` の Gradle ビルドで `./gradlew publishToMavenLocal` を実行して artifact を作り (版は `0.1.0-SNAPSHOT` になる)、`mavenLocal()` 経由で取り込める。artifact は Compose runtime / ui / foundation-layout・kotlinx-coroutines-core・androidx.annotation・RecyclerView を `api` 依存として宣言しているので、公開 API に対するコンパイルはこの 1 行で足りる。
+artifact は Compose runtime / ui / foundation-layout・kotlinx-coroutines-core・androidx.annotation・RecyclerView を `api` 依存として宣言しているので、公開 API に対するコンパイルはこの依存 1 つで足りる。
 
 ### バージョン
 
-以下はアプリモジュール自身が満たす必要のあるもの。
+利用アプリは以下の互換要件を満たす必要がある。
 
-| アプリ側の要件 | 最低バージョン |
+| 互換要件 | 最低バージョン |
 |---|---|
 | minSdk | 29 |
 | compileSdk | 35 |
-| Java / Kotlin の JVM target | 17 |
+| Kotlin | 2.3 以上 |
+
+以下は現行ライブラリをビルドする版である。ライブラリ側のツールチェーンであり、利用アプリのビルドへ課す最低バージョンではない。
+
+| ライブラリのツールチェーン | 現行バージョン |
+|---|---|
 | Kotlin | 2.4.10 |
-| Compose BOM | 2025.11.01 |
+| Android Gradle Plugin | 8.13.2 |
+| Gradle | 9.5.0 |
+| JDK | 17 |
 
-ライブラリ自身は Gradle 9.5.0 と Android Gradle Plugin 8.13.2 でビルドされている。これらはライブラリ側のツールチェーンであり、利用者のビルドへの要件ではない。Compose BOM の行は artifact がコンパイルされた版で、推移的に引き込まれる Compose ライブラリの下限もこれに追従する。
-
-ライブラリは利用アプリ側に前提を置かない。すべてを自前で同梱する Material3 派生テーマでラップした Context の中に描くため、XML テーマは何でもよく (最小構成のテーマ・AppCompat 系・MAUI テンプレート既定のいずれでも)、Activity も何でもよい (`ComponentActivity` を含む)。時刻・日付のピッカーもどの構成でも開く。この自己完結には知っておくべき帰結が 2 つある:
+ライブラリは利用アプリのテーマや Activity 型に前提を置かない。すべてを自前で同梱する Material3 派生テーマでラップした Context の中に描くため、XML テーマは何でもよく (最小構成のテーマ・AppCompat 系・MAUI テンプレート既定のいずれでも)、Activity も何でもよい (`ComponentActivity` を含む)。時刻・日付のピッカーもどの構成でも開く。この自己完結には知っておくべき帰結が 2 つある:
 
 - アプリ側テーマの色 (カスタム色・dynamic color を含む) はライブラリ UI に届かない。見た目の調整はライブラリ自身の `Theme` / `CellStyle` で行う — [references/styling.md](references/styling.md) を参照。利用者所有のコンテンツ (`CustomCell` の中身、`KsAnyView` 経由で渡した View) だけは従来どおりホストのテーマで描画される。
 - ライト / ダークは端末の夜間モードとアプリの uiMode 制御 (`AppCompatDelegate.setDefaultNightMode` / `UiModeManager.setApplicationNightMode`) で切り替わる。アプリが XML テーマで Dark 系を宣言するだけでは、ライブラリ UI は切り替わらない。

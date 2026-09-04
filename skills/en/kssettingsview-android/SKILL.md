@@ -29,31 +29,40 @@ The library ships as a single artifact that already contains the Compose DSL. It
 
 ### Take the library into your build
 
-Declare the dependency in the `build.gradle.kts` of your app module.
+Resolve dependencies from Maven Central, then declare the dependency in the `build.gradle.kts` of your app module.
 
 ```kotlin
+repositories {
+    mavenCentral()
+}
+
 dependencies {
     implementation("jp.kamusoft:kssettingsview:0.1.0")
 }
 ```
 
-The first release has not been published to Maven Central yet, so at the time of writing this coordinate does not resolve from a public repository; `0.1.0` stands for the first release version. Until it is published, the artifact can be built from the `android/` Gradle build with `./gradlew publishToMavenLocal` (it comes out as `0.1.0-SNAPSHOT`) and consumed through `mavenLocal()`. The artifact declares Compose runtime / ui / foundation-layout, kotlinx-coroutines-core, androidx.annotation and RecyclerView as `api` dependencies, so this one line is enough to compile against the public API.
+The artifact declares Compose runtime / ui / foundation-layout, kotlinx-coroutines-core, androidx.annotation and RecyclerView as `api` dependencies, so this one dependency is enough to compile against the public API.
 
 ### Versions
 
-These are what your own application module has to satisfy.
+Your application has to satisfy these compatibility requirements.
 
-| Requirement of your app | Minimum |
+| Compatibility requirement | Minimum |
 |---|---|
 | minSdk | 29 |
 | compileSdk | 35 |
-| Java / Kotlin JVM target | 17 |
+| Kotlin | 2.3 or newer |
+
+The versions below describe the current library build. They are its toolchain, not minimum versions imposed on your application build.
+
+| Library toolchain | Current version |
+|---|---|
 | Kotlin | 2.4.10 |
-| Compose BOM | 2025.11.01 |
+| Android Gradle Plugin | 8.13.2 |
+| Gradle | 9.5.0 |
+| JDK | 17 |
 
-The library itself is built with Gradle 9.5.0 and Android Gradle Plugin 8.13.2. Those are its own toolchain rather than a requirement on your build. The Compose BOM row is what the artifact is compiled against, and the lower bound of the Compose libraries it pulls in transitively follows it.
-
-The library puts no prerequisites on the host application. It draws everything inside a context wrapped in its own bundled Material3-derived theme, so any XML theme works - a minimal theme, AppCompat, or a MAUI template default - and any activity works, `ComponentActivity` included; the time and date pickers open everywhere. Two consequences of that self-containment are worth knowing:
+The library puts no prerequisites on the host application's theme or activity type. It draws everything inside a context wrapped in its own bundled Material3-derived theme, so any XML theme works - a minimal theme, AppCompat, or a MAUI template default - and any activity works, `ComponentActivity` included; the time and date pickers open everywhere. Two consequences of that self-containment are worth knowing:
 
 - The colors of your app theme (custom colors and dynamic color included) do not reach the library UI. Restyling is done with the library's own `Theme` / `CellStyle` - see [references/styling.md](references/styling.md). Only content you own - a `CustomCell` body, a view passed through `KsAnyView` - still renders with the theme of the host.
 - Light and dark switch with the device night mode and the app's uiMode APIs (`AppCompatDelegate.setDefaultNightMode` / `UiModeManager.setApplicationNightMode`). Merely declaring a dark XML theme in the app does not switch the library UI.

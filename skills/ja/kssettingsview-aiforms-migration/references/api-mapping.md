@@ -9,7 +9,7 @@ XAML と C# から参照するものはすべて 1 つの namespace に移り、
 | AiForms | KsSettingsView | 備考 |
 |---|---|---|
 | `AiForms.Settings` namespace | `KsSettingsView` | XAML: `clr-namespace:KsSettingsView;assembly=KsSettingsView.Maui` (旧: `clr-namespace:AiForms.Settings;assembly=SettingsView`)。namespace は `KsSettingsView`、アセンブリとパッケージは `KsSettingsView.Maui` で、この非対称は意図したもの。`using` や `clr-namespace` にパッケージ ID を書かない |
-| `AiForms.Maui.SettingsView` NuGet パッケージ | `KsSettingsView.Maui` NuGet パッケージ | 変わるのはパッケージ名だけで、binding パッケージは推移的に入る。まだ NuGet.org には上がっていない。公開までは、リポジトリのチェックアウト内の facade プロジェクトへの `ProjectReference` か、ローカルで pack した成果物を置いたフィードを使う |
+| `AiForms.Maui.SettingsView` NuGet パッケージ | `KsSettingsView.Maui` NuGet パッケージ | 変わるのはパッケージ名だけで、binding パッケージは推移的に入る |
 | `MauiAppBuilder.UseSettingsView(bool)` | `MauiAppBuilder.AddKsSettingsView()` | 引数の `bool` はリーク回避策の有効化だったが、その仕組み自体が無くなった |
 | `IMauiHandlersCollection.AddSettingsViewHandler()` | 提供しない | 登録すべき Handler は 1 件だけで、`AddKsSettingsView()` が行う |
 | Cell 種別ごとの Handler 登録 | 提供しない | Cell は Native の行へ変換されるデータであり、Handler を持つ View ではない |
@@ -375,6 +375,7 @@ AiForms は Cell 種別ごとに Handler を公開しており、そこが描画
 | 項目 | AiForms | KsSettingsView |
 |---|---|---|
 | ターゲットフレームワーク | net9.0-ios, net9.0-android, net9.0-maccatalyst | net10.0-ios, net10.0-android |
+| API 版付きターゲットフレームワーク (明示する場合) | - | net10.0-android36.0, net10.0-ios26.0 以上 |
 | .NET SDK | 9.0.314 | 10.0.300 |
 | Microsoft.Maui.Controls | 9.0.120 | 10.0.70 |
 | iOS | 14.2 | 16.0 |
@@ -383,6 +384,8 @@ AiForms は Cell 種別ごとに Handler を公開しており、そこが描画
 | 配置 | 任意のレイアウト | 大きさが決まる配置 (ページ直下・Grid の `*` 行・明示サイズ) |
 
 `Microsoft.Maui.Controls` の下限は restore 時に効く: `MauiVersion` が 10.0.70 より低いと restore が NU1605 (パッケージのダウングレード) で失敗する。OS の下限はビルド時に効く: パッケージが利用側プロジェクトへ持ち込む検査が、その TFM の `SupportedOSPlatformVersion` が下限を下回ると `net10.0-ios` / `net10.0-android` のビルドをエラー `KSSV0001` で止める。Android は未設定でも SDK 既定値が API 29 を下回るため同じく止まる。
+
+API 版なしの `net10.0-android` / `net10.0-ios` を優先する。この形なら正しい native binding パッケージが選ばれる。API 版を明示する場合は `net10.0-android36.0` / `net10.0-ios26.0` 以上にする。それより低い版では警告なく restore が成功しても platform 中立の `lib/net10.0` asset へフォールバックし、iOS / Android の native binding 依存が静かに欠ける。この挙動は SDK 10.0.300 で検証済み。
 
 Android では行・Header・選択面はホストテーマから視覚的に隔離されている: ライブラリは同梱の Material3 (DayNight) テーマでそれらをラップするため、ホストテーマの色 (dynamic color を含む) では変わらず、ホスト Activity の型・テーマへの要求もない。AiForms がホストテーマで描いていた画面は既定の見た目が変わり得るので、調整は `SettingsView` のプロパティと Cell 単位の上書きで行う。ライト / ダークは端末の夜間モードとアプリ自身の uiMode 制御で決まり、ホストテーマの親宣言では決まらない。埋め込む View (`CustomCell.Content`・Header / Footer の View) は従来どおりホストテーマで解決される。
 
