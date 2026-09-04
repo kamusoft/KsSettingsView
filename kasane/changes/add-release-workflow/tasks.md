@@ -4,7 +4,7 @@
 
 - [ ] 1.1 Central Portal: vanniktech plugin 0.37.0 の `publishToMavenCentral` を `-Pversion=0.0.0-spike.1` 相当のリリース形式 version と署名鍵ありで実行し、ログの `deployment id:` 行を抽出できること、Portal API の `POST /status?id=` が VALIDATED を返すこと、`DELETE /deployment/<id>` で drop できることを確認する (公開しない。spike の deployment は必ず drop する)。PUBLISHING / PUBLISHED の deployment に `DELETE` が拒否されることも確認する。あわせて「座標 + version が公開済みか」を返すエンドポイントの有無を公式ドキュメントで確認し、無ければ `repo1.maven.org` の HEAD を採用する (→ Requirement: Maven Central の 2 段操作 / 同じ version での再実行)
 - [x] 1.2 pack 拡張点: `maui/Directory.Build.targets` で `TargetsForTfmSpecificContentInPackage` の末尾に生成 aar を `TfmSpecificPackageFile` から除くターゲットを足し、nupkg から `KsSettingsView.Maui.aar` / `KsSettingsView.Binding.Android.aar` が消えること、生成 aar のエントリ一覧が `jni/*/libandroidx.graphics.path.so` のみであることを確認する (→ Scenario: 自 assembly 用 aar が nupkg に入らない)
-- [ ] 1.3 Android 発行物の再現性: ubuntu-24.04 の同じ JDK で `publishToMavenLocal -Pversion=<v>` を 2 回 (別 checkout) 実行し、pom / module の byte 一致と、aar / sources jar / javadoc jar のエントリ名・内容の一致を確認する。比較 script (`scripts/release/compare-maven-artifacts.sh`) の雛形をここで作る (→ Requirement: Android 成果物の同一性)
+- [x] 1.3 Android 発行物の再現性: ubuntu-24.04 の同じ JDK で `publishToMavenLocal -Pversion=<v>` を 2 回 (別 checkout) 実行し、pom / module の byte 一致と、aar / sources jar / javadoc jar のエントリ名・内容の一致を確認する。比較 script (`scripts/release/compare-maven-artifacts.sh`) の雛形をここで作る (→ Requirement: Android 成果物の同一性)
 - [ ] 1.4 GitHub Actions の配線: 呼び出し側 job が upload した artifact を `verify-consumer-*.yml` の `artifact` 入力で受け取れること (phase-7 で 1 回実証済み。release.yml の artifact 名で再確認)、同じ run の「失敗した job から再実行」で前回 attempt が upload した artifact を download できることを一時 workflow で確認する (→ Requirement: 段の構成と順序 / Maven Central の 2 段操作)
 - [ ] 1.5 前提が覆った場合 (ID がログに出ない / aar を除けない / Android 発行物が再現しない / artifact が渡らない) は結果を記録し、design.md の該当 Decision の見直し (再現しない場合は dry-run の保証範囲の縮小) をオーナーへ上げる
 
@@ -37,7 +37,7 @@
 
 - [ ] 5.1 validate の負ケース: 不正 version 7 種 (形式 4 種 + 先頭ゼロ 3 種)、`develop` からの本番起動、monorepo の別 commit の同名 tag、配信リポジトリの内容が異なる同名 tag、README の version 不一致、がそれぞれ validate で失敗すること (`dry-run` 入力と一時 tag で確認、tag は削除) (→ Scenario: 不正な version 形式は早期に失敗する / main 以外からの本番起動は失敗する / 別 commit を指す同名 tag があれば失敗する / README の version が一致しなければ失敗する)
 - [ ] 5.2 `dry-run` 入力で validate → test → package → dry-run が通り、publish 以降が skip され、配信先の状態 (配信リポジトリの tag・Portal の deployments・nuget.org の一覧) が実行前後で同一であること。dry-run の消費者検証が artifact の配布物を解決したことを job summary で確認する (→ Scenario: dry-run 入力は publish 手前で止まる / dry-run は publish する配布物そのものを検証する)
-- [ ] 5.3 secrets と権限: release.yml の各 job の `permissions` / `environment` / `secrets` を静的に確認し、`secrets: inherit` が無いことを grep で確認する。`concurrency` の存在と、`dry-run` 入力の実行を 2 つ同時に起動して 2 つ目が待つことを確認する (→ Scenario: publish 以外の job は書き込み手段を持たない / 同時に起動した 2 つの実行は直列になる)
+- [x] 5.3 secrets と権限: release.yml の各 job の `permissions` / `environment` / `secrets` を静的に確認し、`secrets: inherit` が無いことを grep で確認する。`concurrency` の存在と、`dry-run` 入力の実行を 2 つ同時に起動して 2 つ目が待つことを確認する (→ Scenario: publish 以外の job は書き込み手段を持たない / 同時に起動した 2 つの実行は直列になる)
 - [ ] 5.6 再実行の分岐: 1.1 の spike deployment (VALIDATED) の ID を `central-deployment-id` として与えた再実行相当の実行で、upload が skip され状態分岐が期待どおりに動くこと、`drop` が PUBLISHING / PUBLISHED で削除しないことを script の単体 (モック応答) で確認する (→ Scenario: 部分 publish を同じ version で埋める / release の応答が失われても再実行で整合する)
 - [ ] 5.7 `main` への PR の head 制限: feature branch から `main` への draft PR で lint job が失敗すること、`develop` からの PR で通ることを確認する (→ Scenario: develop 以外から main への PR は失敗する)
 - [x] 5.4 script の単体: `set-readme-version.py` の置換 6 行と該当行欠落時の失敗、`central-portal.sh --selftest`、`check-signatures.sh` の `.asc` 欠落検出、`compare-maven-artifacts.sh` の差異検出 (→ Scenario: 置換で 6 行が同じ値になる / 該当行が見つからなければ失敗する / 署名鍵が渡っていなければ upload しない / 再ビルドの差異で upload を止める)
@@ -45,7 +45,7 @@
 
 ## 6. GitHub 設定 (オーナーの手作業、手順書 4.5 に従う)
 
-- [ ] 6.1 `main` を develop から作成し、branch protection (7 job 必須・PR 必須・force-push / 削除禁止、`gh api -X PUT` の完全 payload) を付け、default branch を `main` に切り替える。証跡を evidence に残す (→ Scenario: main が保護された default branch である)
+- [x] 6.1 `main` を develop から作成し、branch protection (7 job 必須・PR 必須・force-push / 削除禁止、`gh api -X PUT` の完全 payload) を付け、default branch を `main` に切り替える。証跡を evidence に残す (→ Scenario: main が保護された default branch である)
 - [ ] 6.2 Environment `release` を作成し deployment branch policy を `main` に限定、secrets 7 件を登録する (`SIGNING_KEY` は登録直前に export し平文をディスクに残さない) (→ Scenario: main 以外から Environment は参照できない)
 - [ ] 6.3 配信リポジトリ `KsSettingsView-SPM` に書き込み可の deploy key を登録し、秘密鍵を `SPM_DEPLOY_KEY` に置く (→ Requirement: publish の順序)
 
