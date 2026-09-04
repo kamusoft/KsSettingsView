@@ -65,3 +65,10 @@
 2. GitHub: `develop` の branch protection から `required_status_checks` を外す (完全 payload の PUT。release-procedure.md の手順に倣う)。`main` は変更しない。設定後に読み直して確かめる
 3. handbook `cross/release-procedure.md`: main の保護は「develop を写す」ではなく main 独自の 7 件として書き直す。develop の説明 (「検証 CI を通った開発の最新」) を直接 push 運用に合わせる
 4. `develop` へ push して 4 job だけが走ること、`main` 宛て PR (次回リリース時) で 7 job が走ることを確認する
+
+## 実装結果 (2026-09-04)
+
+- commit e85cb98 (ci.yml・handbook・保護設定の証跡)。develop の保護設定は evidence/branch-protection-develop.md
+- develop への push で起動した run 33849577847: 4 job のみ実行、consumer 3 job は skipped。壁時計 7.7 分 (lint 0.1 / ios 3.3 / android 5.3 / maui 7.6)。変更前の 14〜20 分 × 2 回 (PR + push) から 1 回 7.7 分に短縮
+- concurrency の打ち切りは GitHub 標準の挙動で、push が並列しない運用のため実測での確認は行っていない
+
