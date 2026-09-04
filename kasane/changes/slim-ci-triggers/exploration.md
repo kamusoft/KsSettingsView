@@ -6,7 +6,7 @@
 
 開発体制は「外部 PR なし・開発者 1 人・ローカルで `develop` から worktree を切って並列作業し、ローカルで `develop` へマージして push」であり、`develop` 宛ての pull request は運用上存在しない。
 
-現状の図解: 探索時に HTML で作成 (CI トリガー 3 系統、job 構成、develop push の job 実測、再利用 workflow の責務、観察)。
+図解: [artifacts/ci-map.html](artifacts/ci-map.html) (変更後の姿。トリガー 3 系統、job 構成、develop push の job 実測、再利用 workflow の責務、変更前との比較)。探索時に変更前の姿で作った HTML は同じファイルを変更後に描き直したもので、変更前の数値は比較表に残している。
 
 ## 検討した選択肢 (却下案と理由を含む)
 
