@@ -59,3 +59,12 @@ $ gh api -X PUT .../environments/release  (deployment_branch_policy: custom_bran
 $ gh api -X POST .../environments/release/deployment-branch-policies -f name=main -f type=branch
   branch_policies: main (branch)
 secrets 7 件の登録はオーナー作業 (未実施)
+
+================================================================
+7. tasks 5.7 (負ケース) — develop 以外から main への PR
+================================================================
+chore/release-spike-cleanup を head、main を base にした draft PR #5 (確認後に close):
+  lint job (run 33827250296) が失敗:
+  ##[error]main を base とする pull request の head は develop でなければならない (head: chore/release-spike-cleanup)
+  => lint は必須 status check なのでマージはブロックされる (Scenario「develop 以外から main への PR は失敗する」)
+正ケース (develop → main の PR で lint が通る) は初回リリース PR (tasks 7.2) で確認する。
