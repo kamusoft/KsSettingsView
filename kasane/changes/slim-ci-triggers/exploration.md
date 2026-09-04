@@ -41,6 +41,7 @@
 - main の必須 status check 7 件は維持
 - リリース workflow は触らない
 - 変更パスによる絞り込みは引き続き行わない (ADR-0025 を維持。絞るのは事象であって変更内容ではない)
+- develop への push に限り paths-ignore を入れる (`kasane/**`・`.github/ISSUE_TEMPLATE/**`・CONTRIBUTING 2 枚)。ADR-0025 が絞り込みを退けた理由 (必須 check の素通り) は develop の必須 check 撤去で成り立たなくなった。README と `skills/` は README example lint の入力なので除外しない。main 宛て PR は絞らない。きっかけは実測記録 (kasane の md 2 枚) の push で 4 job が起動したこと。ユーザー決定 2026-09-04
 - develop への push の concurrency は「ブランチ単位の group + cancel-in-progress: true」にする。現状の group は push では commit SHA なので同じ group に後続が来ず、cancel 設定に関わらず打ち切りは起きない構造だった。ブランチ名 (`github.ref`) を group にすれば連続 push で古い実行を新しい実行が打ち切る。打ち切られた commit の結果は残らないが、最新 push がその commit を含むので壊れていれば最新の実行で失敗する。commit 単位の切り分けはローカルで行う前提。加えてリモートへの push は並列しない運用 (worktree の並列はローカル作業で、develop への push は 1 本ずつ) なので、このトレードオフは実質発生しない (ユーザー確認 2026-09-04)。main 宛て PR は PR 番号 group のまま。ユーザー決定 2026-09-04
 
 ## ADR 候補 (作成済み: cross/ADR-0028 (proposed) / 未起票: なし)
@@ -70,5 +71,6 @@
 
 - commit e85cb98 (ci.yml・handbook・保護設定の証跡)。develop の保護設定は evidence/branch-protection-develop.md
 - develop への push で起動した run 33849577847: 4 job のみ実行、consumer 3 job は skipped。壁時計 7.7 分 (lint 0.1 / ios 3.3 / android 5.3 / maui 7.6)。変更前の 14〜20 分 × 2 回 (PR + push) から 1 回 7.7 分に短縮
+- 追加 (2026-09-04): develop push の paths-ignore。ci.yml を含むコミットで push し起動すること、kasane だけのコミットで起動しないことを確認する
 - concurrency の打ち切りは GitHub 標準の挙動で、push が並列しない運用のため実測での確認は行っていない
 

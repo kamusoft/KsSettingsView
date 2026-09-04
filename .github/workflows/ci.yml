@@ -5,9 +5,12 @@
 #   直接 push する運用なので、develop 宛ての pull_request は起動条件に持たない
 # - main 宛ての pull_request (head は develop のみ): 上に加えて 3 platform の消費者検証
 #   (dry-run)。配布経路の検査はリリース候補が main へ入る時点で行えば足りる
-# paths による絞り込みは行わず、変更内容に関わらず事象ごとの全 job を実行する
-# (必須 status check として素通りする経路を作らないため)。絞るのは事象であって
-# 変更内容ではない。
+# main 宛ての pull_request は paths による絞り込みを行わず、変更内容に関わらず全 job を
+# 実行する (必須 status check として素通りする経路を作らないため。cross/ADR-0025)。
+# develop への push は必須 status check を持たないのでこの制約がなく、ビルド・テスト・
+# lint のどれにも入力されないファイル (開発ハーネスの記録・Issue テンプレート・貢献案内)
+# だけの push では起動しない。README と skills/ は lint (README example lint) の入力なので
+# 除外しない。
 name: CI
 
 on:
@@ -17,6 +20,11 @@ on:
   push:
     branches:
       - develop
+    paths-ignore:
+      - "kasane/**"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/CONTRIBUTING.md"
+      - ".github/CONTRIBUTING_ja.md"
 
 permissions:
   contents: read
