@@ -9,7 +9,7 @@ Everything you reference from XAML or C# moves to one namespace, and registratio
 | AiForms | KsSettingsView | Notes |
 |---|---|---|
 | `AiForms.Settings` namespace | `KsSettingsView` | XAML: `clr-namespace:KsSettingsView;assembly=KsSettingsView.Maui` (was `clr-namespace:AiForms.Settings;assembly=SettingsView`). The namespace is `KsSettingsView`; the assembly and the package are `KsSettingsView.Maui` - the asymmetry is deliberate, so do not write the package ID into `using` or `clr-namespace` |
-| `AiForms.Maui.SettingsView` NuGet package | `KsSettingsView.Maui` NuGet package | The package name is the whole change; the binding packages come in transitively. Not on NuGet.org yet - until it is published, use a `ProjectReference` to the facade project in a repository checkout or a feed holding a locally packed build |
+| `AiForms.Maui.SettingsView` NuGet package | `KsSettingsView.Maui` NuGet package | The package name is the whole change; the binding packages come in transitively |
 | `MauiAppBuilder.UseSettingsView(bool)` | `MauiAppBuilder.AddKsSettingsView()` | The `bool` selected the leak workaround, which no longer exists |
 | `IMauiHandlersCollection.AddSettingsViewHandler()` | Not provided | `AddKsSettingsView()` registers the one handler there is |
 | Per-cell handler registrations | Not provided | Cells are data converted to native rows, not handler-backed views |
@@ -375,6 +375,7 @@ Collected here so a search finds them, with the reason and whatever you can do i
 | Item | AiForms | KsSettingsView |
 |---|---|---|
 | Target frameworks | net9.0-ios, net9.0-android, net9.0-maccatalyst | net10.0-ios, net10.0-android |
+| API-versioned target frameworks, if specified | - | net10.0-android36.0, net10.0-ios26.0 or later |
 | .NET SDK | 9.0.314 | 10.0.300 |
 | Microsoft.Maui.Controls | 9.0.120 | 10.0.70 |
 | iOS | 14.2 | 16.0 |
@@ -383,6 +384,8 @@ Collected here so a search finds them, with the reason and whatever you can do i
 | Placement | any layout | a layout that decides the size: a page, a `*` grid row, or an explicit size |
 
 The `Microsoft.Maui.Controls` floor is enforced at restore: a `MauiVersion` below 10.0.70 fails the restore with NU1605 (package downgrade). The OS floors are enforced at build: the package brings a check into your project that stops the `net10.0-ios` / `net10.0-android` build with error `KSSV0001` when that target framework's `SupportedOSPlatformVersion` is below the floor. On Android the check also fires when the value is unset, because the SDK default lies below API 29.
+
+Prefer `net10.0-android` / `net10.0-ios` without an API version; they select the correct native binding packages. If you explicitly pin the API versions, use `net10.0-android36.0` / `net10.0-ios26.0` or later. Lower versions can restore without a warning while falling back to the platform-neutral `lib/net10.0` asset, silently omitting the iOS and Android native binding dependencies. This behavior was verified with SDK 10.0.300.
 
 On Android the rows, headers, and selection surfaces are visually isolated from the host theme: the library wraps them in its bundled Material3 (DayNight) theme, so the host theme's colors - dynamic color included - do not restyle them, and there is no requirement on the host activity type or theme. Where AiForms drew with the host theme, expect the default look to change; restyle through the `SettingsView` properties and per-cell overrides instead. Light or dark follows the device's night mode and the app's own uiMode control, not the host theme's declared parent. Views you embed (`CustomCell.Content`, header and footer views) still resolve against the host theme.
 

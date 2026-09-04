@@ -37,7 +37,7 @@ Add the package reference in the `.csproj` of your app.
 </ItemGroup>
 ```
 
-That one reference is all you add; the binding layer underneath comes in transitively. The package is not on NuGet.org yet - public distribution is being prepared. Until it is published, reference the facade project `maui/KsSettingsView.Maui/KsSettingsView.Maui.csproj` from a checkout of the repository with a `ProjectReference` (the sample app does the same), or point restore at a feed that holds a locally packed build; everything else in this Skill is the same either way. Then register the library once during startup. A single handler is registered; there is no per-cell handler to add.
+That one reference is all you add; NuGet brings in the platform binding layer transitively. Then register the library once during startup. A single handler is registered; there is no per-cell handler to add.
 
 ```csharp
 using KsSettingsView;
@@ -69,6 +69,8 @@ public static class MauiProgram
 | Android | API 29 |
 
 The `Microsoft.Maui.Controls` floor is enforced at restore time: the version the .NET 10 project template writes into `MauiVersion` is lower than 10.0.70 (10.0.20 at SDK 10.0.300), and leaving it there fails the restore with NU1605 (package downgrade), so set `MauiVersion` to 10.0.70 or later. The OS floors are enforced at build time: the package carries a check into your project that stops the `net10.0-ios` / `net10.0-android` build with error `KSSV0001` when the `SupportedOSPlatformVersion` of that target framework is below iOS 16.0 / Android API 29. On Android the check also fires when the value is unset, because the SDK default lies below the floor, so declare both values explicitly.
+
+Prefer the API-versionless target frameworks shown above. They select the platform asset and its transitive binding. If you pin an API version in the TFM, use `net10.0-android36.0` / `net10.0-ios26.0` or later. Older pins such as `net10.0-android35.0` / `net10.0-ios18.0` can restore without a warning but silently fall back to the platform-neutral `lib/net10.0` asset, so neither native binding enters the dependency graph. This package selection behavior was verified with .NET SDK 10.0.300.
 
 ```xml
 <PropertyGroup>
