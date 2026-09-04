@@ -118,3 +118,61 @@ validate の step 順は当初「monorepo tag → README → 配信リポジト�
   6 failure  Verify README install examples       → README.md:44: ... version が 9.9.8 でない (想定どおり)
   => 実リポジトリに対して clone → スナップショット生成 → ls-remote → ツリー比較の経路が CI で動き、
      同一内容の同名 tag を match と判定した。一時 tag 9.9.8 は確認後に削除する (オーナー作業)
+
+================================================================
+11. tasks 5.2 / 1.4 前半 / 5.1 (README 一致の正ケース) — dry-run リハーサル (2026-09-04)
+================================================================
+release/0.1.0-beta.1 (README の version 置換後、develop へは PR #8 でマージ) から
+release.yml を version=0.1.0-beta.1 / dry-run=true で dispatch (run 33836940680):
+
+attempt 1: validate / package-{ios,android,maui} / consumer-{ios,android,maui} / android / maui = success、
+  ios / verify = failure (phase-3 の既存 workflow。MemoryLeakTests「KsSettingsViewController はスコープを抜けると
+  deinit される」の非同期待機タイムアウト。同じ commit の PR #8 CI では ios / verify は pass — Simulator の
+  負荷に左右される不安定テストで、release workflow の欠陥ではない)。publish 以降は skipped
+attempt 2 (ios / verify のみ再実行): 全 job success。publish / wait-for-registries / smoke-* は skipped
+
+消費者検証が package 段の artifact (配布物そのもの) を解決した証跡 (各 job のログ):
+  consumer-ios:     Total of 1 artifact(s) downloaded / platform=ios mode=dry-run version=0.1.0-beta.1
+                    Resolved source packages: KsSettingsView: <TEMP>/reference/KsSettingsView-SPM @ local
+  consumer-android: Total of 1 artifact(s) downloaded / +--- jp.kamusoft:kssettingsview:0.1.0-beta.1
+  consumer-maui:    Total of 1 artifact(s) downloaded / KsSettingsView.Maui 0.1.0-beta.1 <- <TEMP>/reference
+                    (binding 2 件も同じ参照先から 0.1.0-beta.1)
+  => Scenario「dry-run 入力は publish 手前で止まる」「dry-run は publish する配布物そのものを検証する」、
+     tasks 1.4 前半 (artifact を verify-consumer-*.yml に渡せる) が成立。validate の README 検査は
+     0.1.0-beta.1 で一致 (正ケース)。配信先 (配信リポジトリの tag / Portal の deployments / nuget.org) への
+     書き込みは発生していない (publish job が skipped)
+tasks 1.5 (前提が覆った場合のエスカレーション) は、1.1〜1.4 の前提がすべて成立したため発動しなかった。
+
+================================================================
+12. tasks 7.3 — 初回リリース 0.1.0-beta.1 (2026-09-04、run 33839962511、main @ b47239b から dispatch)
+================================================================
+全 15 job success (attempt 1 で完走)。所要 39 分 24 秒 (05:17:46 dispatch → 05:57:10 完了、UTC)。
+
+| job | 結果 | 所要 |
+|---|---|---|
+| validate | success | 0m09s |
+| package-ios / package-android / package-maui | success | 0m09s / 2m31s / 6m59s |
+| ios / android / maui (verify) | success | 4m32s / 6m07s / 5m59s |
+| consumer-ios / consumer-android / consumer-maui (dry-run、artifact) | success | 1m21s / 2m48s / 11m43s |
+| publish | success | 11m15s |
+| wait-for-registries | success | 0m07s (Maven Central・nuget.org とも即時に取得可能だった) |
+| smoke-ios / smoke-android / smoke-maui (公開レジストリから解決) | success | 0m51s / 2m35s / 8m44s |
+
+publish job のステップ (順序どおり):
+  Re-check external state: monorepo の tag 未作成 / Maven Central 未公開
+  Push snapshot commit: スナップショットに差分なし (commit を skip する) — 配信リポジトリの initial snapshot と同一内容
+  Re-check distribution repository tag: absent
+  Publish Android to Central Portal: Uploaded bundle to Central Portal as USER_MANAGED, deployment id: <DEPLOYMENT_ID> → artifact に保存
+  Login to NuGet.org: Successfully exchanged OIDC token for NuGet API key (Trusted Publishing の初回 login が本番で成功)
+  Push packages to NuGet.org: Your package was pushed. × 6 (binding 2 件 → facade、nupkg + snupkg の対)
+  Release Maven Central deployment: VALIDATED を再確認して release → PUBLISHED まで待機
+  Push distribution repository tag: tag 0.1.0-beta.1 → 8661e38 (initial snapshot commit)
+  Push monorepo tag: tag 0.1.0-beta.1 → b47239b
+  Create GitHub Release: prerelease=true (自動生成ノート)
+
+公開後の確認 (gh / 反映待ち job):
+  monorepo tag 0.1.0-beta.1 → b47239b / 配信リポジトリ tag 0.1.0-beta.1 → 8661e38 / Release prerelease=true draft=false
+  smoke-ios (配信リポジトリの tag から解決)、smoke-android (Maven Central から解決)、smoke-maui (nuget.org から 3 Package ID を解決) が success
+  => Scenario「prerelease の suffix で prerelease になる」「反映を待ってから smoke する」「3 パッケージが同じ version で公開される」
+     「NuGet push の後に release される」「途中で失敗すれば tag は作られない」(正経路) と、
+     consumer-verification の「公開レジストリからの解決」(phase-7 で未実証だった正ケース) が成立
