@@ -37,7 +37,7 @@ KsSettingsView は、iOS の設定アプリのようなリスト形式の設定�
 </ItemGroup>
 ```
 
-足す参照はこの 1 本だけでよく、下層の Binding 層は推移参照で入る。パッケージはまだ NuGet.org に上がっていない (公開配信の準備中)。公開までは、リポジトリのチェックアウトから facade プロジェクト `maui/KsSettingsView.Maui/KsSettingsView.Maui.csproj` を `ProjectReference` で参照するか (Sample アプリも同じ形)、ローカルで pack した成果物を置いたフィードから restore する。この Skill の以降の内容はどちらの経路でも同じ。そのうえで起動時に 1 度だけ登録する。登録される Handler は 1 件だけで、Cell 種別ごとに足す Handler はない。
+足す参照はこの 1 本だけでよく、platform の Binding 層は NuGet の推移参照で入る。そのうえで起動時に 1 度だけ登録する。登録される Handler は 1 件だけで、Cell 種別ごとに足す Handler はない。
 
 ```csharp
 using KsSettingsView;
@@ -69,6 +69,8 @@ public static class MauiProgram
 | Android | API 29 |
 
 `Microsoft.Maui.Controls` の下限は restore 時に効く: .NET 10 のプロジェクトテンプレートが `MauiVersion` に書く版は 10.0.70 より低く (SDK 10.0.300 時点で 10.0.20)、そのままだと restore が NU1605 (パッケージのダウングレード) で失敗するので、`MauiVersion` は 10.0.70 以上にする。OS の下限はビルド時に効く: パッケージが利用側プロジェクトへ持ち込む検査が、その TFM の `SupportedOSPlatformVersion` が iOS 16.0 / Android API 29 を下回ると `net10.0-ios` / `net10.0-android` のビルドをエラー `KSSV0001` で止める。Android は未設定でも SDK 既定値が下限を下回るため同じく止まるので、両方の値を明示的に宣言しておく。
+
+ターゲットフレームワークは上表の API 版なしを推奨する。この形なら platform asset と推移依存の Binding が選ばれる。TFM に API 版を固定する場合は `net10.0-android36.0` / `net10.0-ios26.0` 以上にする。`net10.0-android35.0` / `net10.0-ios18.0` など古い版を固定すると、restore が警告なく成功しても platform 中立の `lib/net10.0` asset へ静かにフォールバックし、Native Binding 2 件が依存グラフに入らない。このパッケージ選択の挙動は .NET SDK 10.0.300 で検証済み。
 
 ```xml
 <PropertyGroup>
