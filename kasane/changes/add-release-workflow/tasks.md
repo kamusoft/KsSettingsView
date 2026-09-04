@@ -2,7 +2,7 @@
 
 ## 1. 前提の実測 (机上確定の裏取り。覆ったら実装を進めずエスカレーションする)
 
-- [ ] 1.1 Central Portal: vanniktech plugin 0.37.0 の `publishToMavenCentral` を `-Pversion=0.0.0-spike.1` 相当のリリース形式 version と署名鍵ありで実行し、ログの `deployment id:` 行を抽出できること、Portal API の `POST /status?id=` が VALIDATED を返すこと、`DELETE /deployment/<id>` で drop できることを確認する (公開しない。spike の deployment は必ず drop する)。PUBLISHING / PUBLISHED の deployment に `DELETE` が拒否されることも確認する。あわせて「座標 + version が公開済みか」を返すエンドポイントの有無を公式ドキュメントで確認し、無ければ `repo1.maven.org` の HEAD を採用する (→ Requirement: Maven Central の 2 段操作 / 同じ version での再実行)
+- [x] 1.1 Central Portal: vanniktech plugin 0.37.0 の `publishToMavenCentral` を `-Pversion=0.0.0-spike.1` 相当のリリース形式 version と署名鍵ありで実行し、ログの `deployment id:` 行を抽出できること、Portal API の `POST /status?id=` が VALIDATED を返すこと、`DELETE /deployment/<id>` で drop できることを確認する (公開しない。spike の deployment は必ず drop する)。PUBLISHING / PUBLISHED の deployment に `DELETE` が拒否されることも確認する。あわせて「座標 + version が公開済みか」を返すエンドポイントの有無を公式ドキュメントで確認し、無ければ `repo1.maven.org` の HEAD を採用する (→ Requirement: Maven Central の 2 段操作 / 同じ version での再実行)
 - [x] 1.2 pack 拡張点: `maui/Directory.Build.targets` で `TargetsForTfmSpecificContentInPackage` の末尾に生成 aar を `TfmSpecificPackageFile` から除くターゲットを足し、nupkg から `KsSettingsView.Maui.aar` / `KsSettingsView.Binding.Android.aar` が消えること、生成 aar のエントリ一覧が `jni/*/libandroidx.graphics.path.so` のみであることを確認する (→ Scenario: 自 assembly 用 aar が nupkg に入らない)
 - [x] 1.3 Android 発行物の再現性: ubuntu-24.04 の同じ JDK で `publishToMavenLocal -Pversion=<v>` を 2 回 (別 checkout) 実行し、pom / module の byte 一致と、aar / sources jar / javadoc jar のエントリ名・内容の一致を確認する。比較 script (`scripts/release/compare-maven-artifacts.sh`) の雛形をここで作る (→ Requirement: Android 成果物の同一性)
 - [ ] 1.4 GitHub Actions の配線: 呼び出し側 job が upload した artifact を `verify-consumer-*.yml` の `artifact` 入力で受け取れること (phase-7 で 1 回実証済み。release.yml の artifact 名で再確認)、同じ run の「失敗した job から再実行」で前回 attempt が upload した artifact を download できることを一時 workflow で確認する (→ Requirement: 段の構成と順序 / Maven Central の 2 段操作)
@@ -46,8 +46,8 @@
 ## 6. GitHub 設定 (オーナーの手作業、手順書 4.5 に従う)
 
 - [x] 6.1 `main` を develop から作成し、branch protection (7 job 必須・PR 必須・force-push / 削除禁止、`gh api -X PUT` の完全 payload) を付け、default branch を `main` に切り替える。証跡を evidence に残す (→ Scenario: main が保護された default branch である)
-- [ ] 6.2 Environment `release` を作成し deployment branch policy を `main` に限定、secrets 7 件を登録する (`SIGNING_KEY` は登録直前に export し平文をディスクに残さない) (→ Scenario: main 以外から Environment は参照できない)
-- [ ] 6.3 配信リポジトリ `KsSettingsView-SPM` に書き込み可の deploy key を登録し、秘密鍵を `SPM_DEPLOY_KEY` に置く (→ Requirement: publish の順序)
+- [x] 6.2 Environment `release` を作成し deployment branch policy を `main` に限定、secrets 7 件を登録する (`SIGNING_KEY` は登録直前に export し平文をディスクに残さない) (→ Scenario: main 以外から Environment は参照できない)
+- [x] 6.3 配信リポジトリ `KsSettingsView-SPM` に書き込み可の deploy key を登録し、秘密鍵を `SPM_DEPLOY_KEY` に置く (→ Requirement: publish の順序)
 
 ## 7. 初回リリース
 
