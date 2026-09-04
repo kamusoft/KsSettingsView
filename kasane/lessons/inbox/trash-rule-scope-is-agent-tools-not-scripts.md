@@ -2,11 +2,12 @@
 scope: code-review
 kind: pain
 severity: normal
-count: 1
+count: 2
 first-seen: 2026-08-05
-last-seen: 2026-08-05
+last-seen: 2026-09-03
 evidence:
   - add-maui-native-bridge (second-opinion-003 の rm -rf フォールバック指摘をオーナーが的外れとして却下)
+  - add-release-workflow (second-opinion-code-001 の「新規 script の rm -rf が trash 規約違反」指摘。オーケストレーターが本パターンで降格し、オーナーが却下を確認)
 ---
 
 ## ルール文
@@ -16,3 +17,4 @@ evidence:
 ## 経緯
 
 - 2026-08-05 add-maui-native-bridge: 相方レビュー (codex) が `ios/binding/build-xcframework.sh` の `rm -rf` フォールバックを規約違反として指摘 → オーナーが「規約はエージェントのツール操作限定。スクリプトの trash は CI が回らないので逆に NG」と却下。スクリプトからは trash 側を除去する修正になった
+- 2026-09-03 add-release-workflow: 相方レビュー (codex) が `scripts/release/central-portal.sh` / `compare-maven-artifacts.sh` の mktemp ディレクトリ掃除の `rm -rf` を規約違反 (Minor) として指摘 → 本パターンを根拠に降格、オーナーが却下を確認

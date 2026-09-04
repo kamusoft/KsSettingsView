@@ -35,6 +35,9 @@ date: 2026-08-21
 - 負: リリースは GitHub UI (または `gh workflow run`) からの手動起動になり、git 操作だけでは完結しない。
 - 負: ローカルビルドや Sample は開発用 version (SNAPSHOT / dev) で動き、リリース版番号はリポジトリのファイルからは読めない (tag と Release が履歴になる)。
 - 負: Maven Central Portal の「upload して保留 → 後で release」の 2 段階を CI から操作する必要がある。
+- (2026-09-02 追記、出典: 消費者検証の実装結果) 注入の受け口は決定時点では未実装だった。Gradle 側は `android/build.gradle.kts` が `-Pversion=` の注入があればそれを全モジュールの version に使い、無いときだけカタログの開発用既定値 (`0.1.0-SNAPSHOT`) を使う形で、消費者検証の変更 (add-consumer-verification) が付随修正として実装した。MSBuild 側は `Version` の既定値 `0.0.0-dev` を `-p:Version=` が上書きする形で NuGet 化の時点から成立している。
+- (2026-09-02 追記、同上) 負: 署名鍵 (`signingInMemoryKey`) を持たない Maven 発行は、リリース版の version でも署名を skip して未署名で成功する (publish 前の dry-run が鍵なしでリリース版を扱えるようにするため)。鍵の渡し忘れは Maven Central Portal の未署名拒否で止まるが CI 自身の検査ではないため、release workflow は publish 前に署名ファイルの生成を確認する。
 
 出典: kasane/roadmaps/package-distribution/exploration.md (F1・F2) / kasane/decisions/cross/0019-lockstep-single-version.md
 出典 (2026-09-01 tag 表記の確定): kasane/roadmaps/package-distribution/phases/phase-4-ios-packaging/history.md (2026-09-01「tag 表記の統一」)
+出典 (2026-09-02 実装結果の追記): kasane/changes/archive/2026-09-02-add-consumer-verification/deviation.md (付随修正 1・2 件目)

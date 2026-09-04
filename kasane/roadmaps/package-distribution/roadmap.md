@@ -93,5 +93,5 @@ phase-10 → 11 → 12 (Skills 化) → phase-9 (README) → phase-2 の実施 (
 | phase-4-ios-packaging | completed | change | [agenda](phases/phase-4-ios-packaging/agenda.md) | [changes/archive/2026-09-01-add-spm-distribution](../../changes/archive/2026-09-01-add-spm-distribution/proposal.md) |
 | phase-5-android-packaging | completed | change | [agenda](phases/phase-5-android-packaging/agenda.md) | [changes/archive/2026-09-01-add-android-maven-distribution](../../changes/archive/2026-09-01-add-android-maven-distribution/proposal.md) |
 | phase-6-maui-packaging | completed | change | [agenda](phases/phase-6-maui-packaging/agenda.md) | [changes/archive/2026-09-02-add-maui-nuget-distribution](../../changes/archive/2026-09-02-add-maui-nuget-distribution/proposal.md) |
-| phase-7-consumer-verification | in-progress | change | [agenda](phases/phase-7-consumer-verification/agenda.md) | [changes/add-consumer-verification](../../changes/add-consumer-verification/proposal.md) |
-| phase-8-release-workflow | pending | change | [agenda](phases/phase-8-release-workflow/agenda.md) | — |
+| phase-7-consumer-verification | completed | change | [agenda](phases/phase-7-consumer-verification/agenda.md) | [changes/archive/2026-09-02-add-consumer-verification](../../changes/archive/2026-09-02-add-consumer-verification/proposal.md) |
+| phase-8-release-workflow | in-progress | change | [agenda](phases/phase-8-release-workflow/agenda.md) | [changes/add-release-workflow](../../changes/add-release-workflow/proposal.md) |

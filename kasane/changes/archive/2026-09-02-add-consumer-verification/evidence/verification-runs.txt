@@ -429,3 +429,54 @@ consumer-android / verify の step 列:
 
 備考: workflow_dispatch は既定ブランチにファイルが無いと起動できないため、一時 workflow は
 確認用ブランチへの push をトリガーにした。
+
+================================================================
+16. tasks 5.6: draft PR での 7 job の起動確認
+================================================================
+draft PR: https://github.com/kamusoft/KsSettingsView/pull/2
+
+1 回目の完走 run (33633018324): consumer-maui / verify のみ失敗 (他 6 job は成功)。
+  原因: ランナーイメージの /Applications/Xcode_26.5.0.app は Xcode_26.5.app へのシンボリックリンクで、
+  消費者アプリの iOS Release ビルドが trimming 後に xcrun 経由で install_name_tool を探す際、
+  xcodebuild が DEVELOPER_DIR 配下の MacOSX.sdk を絶対パスで解決できず exit 72 になった。
+    xcodebuild: error: SDK "/Applications/Xcode_26.5.0.app/.../SDKs/MacOSX.sdk" cannot be located.
+    xcrun: error: unable to find utility "install_name_tool"
+  本体の maui / verify はライブラリビルドのみでこの経路を踏まないため影響しない。
+  対処: verify-consumer-maui.yml の Select Xcode で app パスを `pwd -P` で実体に解決してから
+  DEVELOPER_DIR に渡す (commit「ci(consumer-maui): Xcode の DEVELOPER_DIR を実体パスに解決する」)。
+
+修正後の run (33634628829): 7 job すべて success
+  job                       開始     -> 終了     (所要)
+  lint                      13:15:24 -> 13:15:35 (0:11)
+  consumer-ios / verify     13:15:24 -> 13:16:47 (1:23)
+  consumer-android / verify 13:15:24 -> 13:18:26 (3:02)
+  android / verify          13:15:23 -> 13:20:35 (5:12)
+  ios / verify              13:15:25 -> 13:21:06 (5:41)
+  maui / verify             13:15:24 -> 13:23:30 (8:06)
+  consumer-maui / verify    13:15:24 -> 13:35:02 (19:38)
+  => 消費者検証 3 job のうち consumer-maui が最長 (約 20 分)。proposal の見込み (5〜10 分) を超える。
+     内訳は MAUI workload の install と、空の RestorePackagesPath による毎回フルの restore
+     (design.md Risks に記載のトレードオフ)。CI 全体の所要は maui / verify (8 分) から
+     consumer-maui (20 分) に延びる。
+
+  Show toolchain (consumer-maui):
+    DEVELOPER_DIR=/Applications/Xcode_26.5.app/Contents/Developer
+    lrwxr-xr-x  /Applications/Xcode_26.5.0.app -> /Applications/Xcode_26.5.app
+    drwxr-xr-x  /Applications/Xcode_26.5.app
+
+  解決結果 (job ログ。スクリプトは同内容を GITHUB_STEP_SUMMARY にも書く):
+    consumer-android: +--- jp.kamusoft:kssettingsview:0.1.0-SNAPSHOT
+    consumer-ios:     kssettingsview-spm<.../_temp/consumer/KsSettingsView-SPM@unspecified> (path 参照、version なし)
+    consumer-maui:    KsSettingsView.Maui / .Binding.iOS / .Binding.Android  0.0.0-dev  <- <RUNNER_TEMP>/consumer/feed
+
+  permissions (各消費者 job の Set up job → GITHUB_TOKEN Permissions):
+    Contents: read / Metadata: read  (3 job とも)。ci.yml から secrets の受け渡しなし、
+    verify-consumer-*.yml は workflow_call.secrets を宣言しない。
+
+================================================================
+17. develop へのマージ後の CI (Scenario「develop へのマージ後にも検証される」)
+================================================================
+PR #2 を merge commit でマージ (develop cd2a6dc)。push で起動した run 33636947374 は
+7 job (ios / android / maui / lint / consumer-ios / consumer-android / consumer-maui) すべて success。
+branch protection の更新 (tasks 6.1) はこのマージ後に行った (design.md Migration Plan の順序)。
+証跡: evidence/branch-protection-develop.txt

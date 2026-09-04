@@ -2,10 +2,10 @@
 kind: guide
 applies-when:
   always: false
-  tasks: [環境構築, Sample の起動, 本体のビルド・lint, 本体 source へのステップイン]
+  tasks: [環境構築, Sample の起動, 本体のビルド・lint, 消費者検証の実行, 本体 source へのステップイン]
 title: ローカル開発環境と Sample の実行
-description: iOS・Android・MAUI のローカル環境設定、Sample の起動、本体モジュールのビルド / lint コマンド、本体 source へのステップイン手順
-timestamp: 2026-09-01
+description: iOS・Android・MAUI のローカル環境設定、Sample の起動、本体モジュールのビルド / lint コマンド、消費者検証 (verification/) の手元実行、本体 source へのステップイン手順
+timestamp: 2026-09-02
 ---
 
 # ローカル開発環境と Sample の実行
@@ -35,7 +35,7 @@ timestamp: 2026-09-01
 
 ## Android SDK ロケーション
 
-MAUI の `dotnet build` は Android SDK を自身で解決できるため、本節は Android Native のビルドと Sample が対象である。MAUI Sample で `ANDROID_HOME` が要るのは `emulator` / `adb` を CLI から直接呼ぶ場合に限る。
+MAUI の `dotnet build` は Android SDK を自身で解決できるため、本節は Android Native のビルドと Sample が対象である。MAUI Sample で `ANDROID_HOME` が要るのは `emulator` / `adb` を CLI から直接呼ぶ場合に限る。消費者検証 (`verification/android/`) は 3 つめの Gradle build root だが、スクリプトが `ANDROID_HOME` → `ANDROID_SDK_ROOT` → `android/local.properties` の `sdk.dir` の順に SDK を解決するため、下記のどちらの経路でも追加設定なしで動く (3 つめの `local.properties` は要らない)。
 
 Android Native Sample は `samples/android/` を root build、`android/` を included build とする Gradle composite build である。Android Gradle Plugin は各 build root の `local.properties` を独立して解決するため、SDK を両方から見える状態にする。
 
@@ -193,6 +193,18 @@ dotnet build KsSettingsView.Maui/KsSettingsView.Maui.csproj    # facade 層を�
 ```
 
 binding のビルドは Native 側のビルドを自動で呼ぶ。その経路と既知の制約は [MAUI binding の Native artifact 統合](../../concepts/maui/architecture/binding-build-integration.md) を参照する。
+
+## 消費者検証を手元で回す
+
+配布物を利用者と同じ経路で解決・ビルドできるかを、`verification/<platform>/` の消費者プロジェクトで確かめる (役割と参照先の切り替えは [リポジトリとビルドの責務境界](../../concepts/cross/architecture/repository-boundaries.md))。引数なしで dry-run になり、フィード準備 (スナップショット配置 / `publishToMavenLocal` / `pack`) と消費者ビルドを続けて行う。
+
+```bash
+./verification/ios/build-consumer.sh
+./verification/android/build-consumer.sh
+./verification/maui/build-consumer.sh
+```
+
+オプションは 3 platform 共通で `--help` に出る (`--mode dry-run|smoke` / `--version` / `--reference <準備済みの参照先>` / `--work`)。smoke は version が必須で公開レジストリを参照し、`--reference` とは同時に指定できない。解決版と取得元は標準出力に出る。MAUI は実行ごとに空のパッケージ展開先で restore するため、手元でも毎回フルの restore になる。
 
 ## 本体 source へステップインする
 

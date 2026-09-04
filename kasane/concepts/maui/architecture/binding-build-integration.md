@@ -125,13 +125,13 @@ facade パッケージは `buildTransitive/KsSettingsView.Maui.props` (要件の
 
 ### SDK 挙動として受け入れているもの
 
-いずれも SDK の pack 内部構造に手を入れないと変えられない事象で、現状は受け入れている ([maui/ADR-0025](../../../decisions/maui/0025-nuget-three-package-root-namespace.md) の Consequences)。利用者に影響しないもの (iOS manifest の絶対パス、facade → binding の依存版、NU1507) と、利用者のビルドに影響が出得るが対処を未決のまま持ち越しているもの (自 assembly 用 aar による XA4301、API 版付き TFM) が混在し、未決のものは `kasane/roadmaps/package-distribution/` の消費者検証・release workflow フェーズが扱う。
+いずれも SDK の pack 内部構造に手を入れないと変えられない事象で、現状は受け入れている ([maui/ADR-0025](../../../decisions/maui/0025-nuget-three-package-root-namespace.md) の Consequences)。利用者に影響しないもの (iOS manifest の絶対パス、facade → binding の依存版、NU1507) と、利用者のビルドに影響が出得るもの (自 assembly 用 aar による XA4301 — 対処は未決で release workflow フェーズが扱う、API 版付き TFM — 利用者側の要件として確定済み) が混在する。
 
 | 事象 | 内容と扱い |
 |---|---|
 | 自 assembly 用 aar | .NET Android SDK が Android ライブラリ assembly ごとに自動生成する `KsSettingsView.Maui.aar` / `KsSettingsView.Binding.Android.aar` (中身は推移依存 `androidx.graphics.path` の ABI 別 `.so` のみ) が各 nupkg に入る。facade 自身が native コードを持ち込んでいるのではなく、推移依存の `.so` を SDK が assembly ごとの aar に再梱包した結果である。利用者の Android Release ビルドで同じ `.so` が重複し XA4301 が出る — 対処は未決 (release workflow フェーズ) |
 | iOS manifest の絶対パス | binding resource package の `manifest` に pack した環境の絶対パスが載る。リリースは CI で pack するため CI ランナーのパスになる |
-| API 版付き TFM | nuspec の TFM group は `net10.0-android36.0` / `net10.0-ios26.0` のように SDK (10.0.300) の既定 platform 版が付く。古い `TargetPlatformVersion` を固定した利用者は解決できない。利用者側の SDK 要件は、パッケージを外から参照する側 (消費者) のプロジェクトで restore を通す検証 (消費者検証フェーズ) で確定する |
+| API 版付き TFM | nuspec の TFM group は `net10.0-android36.0` / `net10.0-ios26.0` のように SDK (10.0.300) の既定 platform 版が付く。消費者の TFM が API 版なしなら常にこの group が選ばれるが、古い API 版 (`net10.0-android35.0` / `net10.0-ios18.0`) を固定した利用者では restore が警告なく成功したうえで `lib/net10.0` へフォールバックし、binding 2 件が依存グラフに入らない (消費者検証で実測)。利用者向けの要件は [MAUI facade の公開契約](../api/maui-facade.md) の「導入と前提」が持つ |
 | facade → binding の依存版 | 完全一致 `[x.y.z]` ではなく下限指定。lockstep で同時発行される ([cross/ADR-0019](../../../decisions/cross/0019-lockstep-single-version.md)) ため、NuGet は下限を満たす最小の版を選ぶ (lowest applicable version) 規則で同版の binding を解決する |
 | NU1507 | CPM のため、複数の NuGet ソースを構成した環境では `maui/` 配下全プロジェクトの restore で出る (単一ソースでは出ない)。恒久対処は未決 (release workflow フェーズ) |
 

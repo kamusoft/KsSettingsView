@@ -75,7 +75,7 @@ lint:
     # DEVELOPMENT_TEAM 等の開発者識別子をそれらのプロジェクトファイルへ書き戻すため、
     # その捕捉が目的。
     scope: [kasane, openspec, skills, samples, verification]
-    allow: ["@kamusoft.jp", "repo.local"]  # 正当な値 (名前空間 UUID 等)。@ドメインはそのドメインのメール (デモデータ) を許可。repo.local は Maven のシステムプロパティ maven.repo.local の一部 (mDNS ホスト名ではない。レビュー証跡 kasane/changes/ 配下の引用で誤検出したため)
+    allow: ["@kamusoft.jp", "repo.local"]  # 正当な値 (名前空間 UUID 等)。@ドメインはそのドメインのメール (デモデータ) を許可。repo.local は mDNS ホスト名ではなく、レビュー証跡 kasane/changes/archive/2026-09-02-add-consumer-verification/second-opinion-code-001.md に引用された Maven のコマンドライン `-Dmaven.repo.local=` の一部 (検査範囲 kasane 内の引用が誤検出になるため。実装は maven.repo.local を使っていない)
     disable: []                       # 無効化する検出群: device / developer / network / personal / secret
   internal-hosts: []                  # 未公開サーバのホスト名
   doc-structure:                      # 育つ文書の構造 lint。hook には登録しない
@@ -87,7 +87,7 @@ lint:
     file-chars: 10000                 # 1 ファイルの散文字数の警告閾値
   comment-policy:                     # ソースコメント規約の lint / hook (この節の存在が採用宣言)
     exclude: [openspec, docs]         # 凍結資料とドキュメント置き場は対象外 (kasane/ .claude/ build/ .git/ は常に対象外)
-    ext: [.csproj, .props, .targets]  # 検査対象に追加する拡張子 (既定は scripts/comment-policy-lint.py 冒頭の列挙)
+    ext: [.csproj, .props, .targets, .sh, .py]  # 検査対象に追加する拡張子 (既定は scripts/comment-policy-lint.py 冒頭の列挙)。.sh / .py はリポジトリ組み込み script (scripts/ verification/) を検査に入れるため
 
 drift:
   timestamp-threshold-days: 90

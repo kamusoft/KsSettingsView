@@ -32,7 +32,7 @@ timestamp: 2026-09-02
 Android の公開層 (Core / UI / Compose) は namespace ではなく Kotlin パッケージ名
 (`jp.kamusoft.kssettingsview.core` / `.ui` / `.compose`) が表す。
 
-iOS / Android の Sample application は `jp.kamusoft.kssettingsview.samples.ios` / `.android` を使う。後続の module や Sample も独自の体系を作らず、上表の接頭辞と各 ecosystem の表記規則から用途を導く。
+iOS / Android の Sample application は `jp.kamusoft.kssettingsview.samples.ios` / `.android`、配布物の消費者検証 (`verification/`) の application は `jp.kamusoft.kssettingsview.verification.android` / `.maui` を使う。後続の module や Sample も独自の体系を作らず、上表の接頭辞と各 ecosystem の表記規則から用途を導く。
 
 ## SwiftPM の配布座標
 
@@ -78,7 +78,7 @@ GAV は Maven 系の `groupId:artifactId:version` 形式の座標を指す。`:k
 
 - 完全な識別子から、kamusoft、KsSettingsView、成果物または application の用途を判別できる。
 - Swift product は PascalCase、Android namespace は lowercase reverse-DNS、artifact / project 名は lowercase を使い、ハイフンはブランド名とサブモジュールの境目にだけ置く。
-- Sample application は `jp.kamusoft.kssettingsview.samples.*` の下で platform を区別する。
+- Sample application は `jp.kamusoft.kssettingsview.samples.*`、消費者検証の application は `jp.kamusoft.kssettingsview.verification.*` の下で platform を区別する。
 - Android の公開ライブラリは単一 artifact `kssettingsview` として配る。Core、UI、Compose の区別は Kotlin パッケージ名が担い、artifactId には現れない。
 - SwiftPM で公開する product は umbrella 1 本 (`KsSettingsView`) に保ち、公開層の区別は module 名で表す。
 - NuGet は facade 1 件 + binding 2 件で配り、利用者が書く座標は `KsSettingsView.Maui` だけに保つ。

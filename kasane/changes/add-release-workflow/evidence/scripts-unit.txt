@@ -1,0 +1,265 @@
+# scripts/release/ の単体確認 (tasks 5.4)
+
+採取日: 2026-09-03 / 採取環境: macOS (arm64)、bash 3.2 / python3 3.11 / unzip (Info-ZIP)
+
+Android の発行物サンプルは `cd android && ./gradlew publishToMavenLocal -Pversion=0.0.0-spike.1`
+(JDK 17、署名鍵なし) の出力を使った。生成されたのは 5 成果物 (aar / pom / module /
+sources jar / javadoc jar) で、署名鍵が無いため `.asc` は 1 件も出ない。以下の確認は
+その出力を一時ディレクトリ (`<work>`) に複製したものに対して行い、mavenLocal 自体と
+リポジトリの作業ツリーは変更していない。ログ中の `<repo>` はリポジトリルート、
+`<work>` は一時作業ディレクトリを表す。
+
+`maven-metadata-local.xml` のケースだけは、成果物 5 件に加えて `publishToMavenLocal` が
+書き出す `~/.m2/repository/jp/kamusoft/kssettingsview/maven-metadata-local.xml` も含めて
+複製し (`<work>/a/jp` と `<work>/b/jp`)、B 側の `<lastUpdated>` だけを別の値に書き換えた
+2 本で実行した。このファイルは発行のたびに時刻が変わるため比較対象から外してあり、
+成果物 5 件だけを比較して一致と判定する。
+
+## Scenario との対応
+
+| デルタスペックの Scenario | 確認したもの |
+|---|---|
+| release-workflow: 置換で 6 行が同じ値になる | `set-readme-version.py --selftest` の [置換] 節 (合成 README で 2 枚 x 3 行が新 version になり、散文のプレースホルダとコードブロック外の同じ字面は変わらない) と [実物の README に対する疎通] 節 (リポジトリの README 2 枚のコピーで 6 行を確定して置換し、検査が通る) |
+| release-workflow: 該当行が見つからなければ失敗する | 同 [該当行が確定できない場合] 節 (対象行が 0 行 / 2 行のいずれでも置換せず失敗し、ファイルと対象と行数を出力する。1 枚でも確定できなければもう 1 枚も書き換えない) |
+| release-workflow: 署名鍵が渡っていなければ upload しない | `check-signatures.sh` の「署名が 1 件も無い発行物」(署名鍵なしで発行した実物) と「aar の .asc だけを外した発行物」で失敗し、欠けているファイルを列挙する。`.asc` を揃えた発行物では成功する |
+| release-workflow: 配信リポジトリの同名 tag は publish の前に内容で判定する | `check-distribution-tag.sh` の 4 ケース (ローカルの bare リポジトリを origin にした合成の作業コピー)。tag が無ければ `absent`、tag があり内容が同一なら `match` を返して続行でき、内容が違えば差分のファイル一覧を出して失敗する。clone の後に remote 側で tag が削除された場合も、判定は remote が正なので `absent` になり、手元に残った古い tag は消される。validate と publish の再検査・tag 作成の直前がこの同じ判定を通り、いずれも終了ステータスを代入で受けるので失敗が step へ伝わる (下の [step の終了ステータス] 節) |
+| release-workflow: 再ビルドの差異で upload を止める | `compare-maven-artifacts.sh` の 5 ケース。署名の有無だけの差・アーカイブのタイムスタンプと圧縮方法だけの差・`maven-metadata-local.xml` の発行時刻だけの差は一致と判定し、aar の 1 エントリの内容の差・pom の byte 差・片側にしかないファイルは差異として列挙して失敗する |
+| release-workflow: upload 後は保留状態で止まる / NuGet push の後に release される | `central-portal.sh --selftest` の [状態の解釈] [release] 節 (status が deploymentState を返し、release は VALIDATED を再確認してからでなければ何も送らない) |
+| release-workflow: 失敗時に保留 deployment が残らない / 部分 publish を同じ version で埋める / release の応答が失われても再実行で整合する | 同 [drop の状態分岐] [wait-published] [published] 節 (VALIDATED / FAILED だけ DELETE、PUBLISHING / PUBLISHED / PENDING / VALIDATING は DELETE を送らず理由を出力。PUBLISHING → PUBLISHED は待って成功、FAILED と上限超過は失敗。`published` は Maven Central の pom への HEAD が 200 なら exit 0、404 なら exit 1、それ以外は exit 2) |
+
+いずれも `--selftest` およびモックで完結し、ネットワークには出ていない。
+
+## 「公開済みか」を返すエンドポイントの確認 (tasks 1.1 の一部)
+
+Central Portal Publisher API の公式ドキュメント
+(https://central.sonatype.org/publish/publish-portal-api/) が定義するのは、bundle の
+upload (`POST /api/v1/publisher/upload`)、deployment の状態照会
+(`POST /api/v1/publisher/status?id=`)、release (`POST /api/v1/publisher/deployment/<id>`)、
+drop (`DELETE /api/v1/publisher/deployment/<id>`)、deployment 内ファイルの download
+(`GET /api/v1/publisher/deployment/<id>/download/<path>` と
+`GET /api/v1/publisher/deployments/download/<path>`) の 6 つで、**座標 + version が
+Maven Central へ公開済みかを返すエンドポイントは無い**。download 系は deployment
+または validated な deployment を起点にするため、過去に公開済みかの判定には使えない。
+
+したがって `central-portal.sh published <version>` は Maven Central の配信元
+`https://repo1.maven.org/maven2/jp/kamusoft/kssettingsview/<v>/kssettingsview-<v>.pom`
+への HEAD で判定する。認証は不要で、200 = 公開済み、404 = 未公開、それ以外は判定不能
+(exit 2) として扱う。
+
+## 実行ログ
+```
+
+### central-portal.sh --selftest
+[URL の組み立て]
+  OK   status の URL
+  OK   deployment の URL
+  OK   Maven Central の pom の URL
+[状態の解釈]
+  OK   status が deploymentState を返す
+  OK   status は認証つきの POST 1 件
+  OK   deploymentState が無い応答で失敗する
+  OK   200 以外の状態照会で失敗する
+  OK   404 は NOT_FOUND を返す (失敗にしない)
+[release]
+  OK   VALIDATED なら release する
+  OK   release は deployment へ POST する
+  OK   VALIDATED 以外は release しない
+  OK   release しないときは状態照会だけで止まる
+  OK   release が 204 以外なら失敗する
+[drop の状態分岐]
+  OK   VALIDATED は drop する
+  OK   VALIDATED の drop は DELETE を送る
+  OK   FAILED は drop する
+  OK   FAILED の drop は DELETE を送る
+  OK   PUBLISHING は DELETE を送らない
+  OK   PUBLISHING は理由を出力する
+  OK   PUBLISHED は DELETE を送らない
+  OK   PUBLISHED は理由を出力する
+  OK   PENDING は DELETE を送らない
+  OK   PENDING は理由を出力する
+  OK   VALIDATING は DELETE を送らない
+  OK   VALIDATING は理由を出力する
+  OK   drop 済みの ID には DELETE を送らない
+  OK   drop 済みの ID は存在しない旨を出力する
+  OK   存在しない deployment の公開待ちは失敗する
+  OK   存在しない deployment は release しない
+  OK   release しないときは状態照会だけで止まる (NOT_FOUND)
+[wait-published]
+  OK   PUBLISHING を経て PUBLISHED になれば成功する
+  OK   PUBLISHED まで照会を繰り返す
+  OK   FAILED になれば失敗する
+  OK   上限を過ぎれば失敗する
+[published]
+  OK   200 なら公開済み (exit 0)
+  OK   published は認証なしの HEAD 1 件
+  OK   404 なら未公開 (exit 1)
+  OK   判定できない応答は exit 2
+[認証情報]
+  OK   認証情報が空なら止まる
+  OK   片方だけでも止まる
+  OK   両方あれば通る
+  OK   Bearer は user:token の base64
+失敗なし
+exit=0
+
+### set-readme-version.py --selftest
+[置換]
+  OK   置換が成功する (2 枚の README の 6 行を 1.2.3-beta.4 にした)
+  OK   SwiftPM の from: が exact: の新 version になる
+  OK   Maven 座標が新 version になる
+  OK   NuGet の Version が新 version になる
+  OK   散文のプレースホルダは書き換えない
+  OK   コードブロック外の同じ字面は書き換えない
+  OK   書き換わるのは 1 枚あたり 3 行だけ (README.md=3; README_ja.md=3)
+  OK   置換後の検査が通る (README のインストール例 6 行が 1.2.3-beta.4 と一致する)
+  OK   別の version の検査は失敗する
+  OK   不一致の行番号が出力される (::error::README.md:9: SwiftPM の依存宣言 の version が 9.9.9 でない (実際は 1.2.3-beta.4)
+::error::README.md:20: Maven 座標 の version が 9.9.9 でない (実際は 1.2.3-beta.4)
+::error::README.md:28: NuGet の PackageReference の version が 9.9.9 でない (実際は 1.2.3-beta.4)
+::error::README_ja.md:9: SwiftPM の依存宣言 の version が 9.9.9 でない (実際は 1.2.3-beta.4)
+::error::README_ja.md:20: Maven 座標 の version が 9.9.9 でない (実際は 1.2.3-beta.4)
+::error::README_ja.md:28: NuGet の PackageReference の version が 9.9.9 でない (実際は 1.2.3-beta.4)
+README のインストール例が 9.9.9 と一致しない (6 件))
+[該当行が確定できない場合]
+  OK   対象行が無ければ置換しない
+  OK   見つからなかったファイルと対象が出力される (::error::README.md: SwiftPM の依存宣言 がコードブロック内に 0 行ある (1 行であるべき)
+対象行を確定できないため置換しない)
+  OK   1 枚でも確定できなければ他方も書き換えない
+  OK   対象行が 2 行あれば置換しない
+  OK   見つかった行数が出力される (::error::README.md: Maven 座標 がコードブロック内に 2 行ある (1 行であるべき)
+対象行を確定できないため置換しない)
+[実物の README に対する疎通]
+  OK   実物の README で 6 行を確定できる (2 枚の README の 6 行を 9.9.9-rc.7 にした)
+  OK   置換したコピーの検査が通る (README のインストール例 6 行が 9.9.9-rc.7 と一致する)
+失敗なし
+exit=0
+
+### check-signatures.sh: 署名が 1 件も無い発行物
+::error::署名 (.asc) がありません: kamusoft/kssettingsview/0.0.0-spike.1/kssettingsview-0.0.0-spike.1-javadoc.jar
+::error::署名 (.asc) がありません: kamusoft/kssettingsview/0.0.0-spike.1/kssettingsview-0.0.0-spike.1-sources.jar
+::error::署名 (.asc) がありません: kamusoft/kssettingsview/0.0.0-spike.1/kssettingsview-0.0.0-spike.1.aar
+::error::署名 (.asc) がありません: kamusoft/kssettingsview/0.0.0-spike.1/kssettingsview-0.0.0-spike.1.module
+::error::署名 (.asc) がありません: kamusoft/kssettingsview/0.0.0-spike.1/kssettingsview-0.0.0-spike.1.pom
+::error::成果物 5 件のうち 5 件に署名がありません
+exit=1
+
+### check-signatures.sh: .asc を揃えた発行物
+成果物 5 件すべてに署名 (.asc) があります: <work>/signed/jp
+exit=0
+
+### check-signatures.sh: aar の .asc だけを外した発行物
+::error::署名 (.asc) がありません: kamusoft/kssettingsview/0.0.0-spike.1/kssettingsview-0.0.0-spike.1.aar
+::error::成果物 5 件のうち 1 件に署名がありません
+exit=1
+
+### compare-maven-artifacts.sh: 署名の有無だけが違う 2 ツリー
+発行物 5 件が一致します (署名を除く比較): <work>/signed/jp / <work>/plain/jp
+exit=0
+
+### compare-maven-artifacts.sh: aar のタイムスタンプと圧縮方法だけが違う
+発行物 5 件が一致します (署名を除く比較): <work>/signed/jp / <work>/plain/jp
+exit=0
+
+### compare-maven-artifacts.sh: aar の 1 エントリの内容を書き換えた
+::error::アーカイブの内容が異なります: kamusoft/kssettingsview/0.0.0-spike.1/kssettingsview-0.0.0-spike.1.aar
+1c1
+< AndroidManifest.xml a9ba0264cb6451c9a5cc9a7e6097e3446aa165d9
+---
+> AndroidManifest.xml 6da182246e5591135201ef541a84fd73e079abdc
+::error::発行物に 1 件の差異があります (署名を除く比較)
+exit=1
+
+### compare-maven-artifacts.sh: pom の byte 差異と片側にしかないファイル
+::error::片方にしかありません (A のみ): kamusoft/kssettingsview/0.0.0-spike.1/kssettingsview-0.0.0-spike.1-javadoc.jar
+::error::片方にしかありません (B のみ): kamusoft/kssettingsview/0.0.0-spike.1/kssettingsview-0.0.0-spike.1-extra.jar
+::error::アーカイブの内容が異なります: kamusoft/kssettingsview/0.0.0-spike.1/kssettingsview-0.0.0-spike.1.aar
+1c1
+< AndroidManifest.xml a9ba0264cb6451c9a5cc9a7e6097e3446aa165d9
+---
+> AndroidManifest.xml 6da182246e5591135201ef541a84fd73e079abdc
+::error::内容が異なります: kamusoft/kssettingsview/0.0.0-spike.1/kssettingsview-0.0.0-spike.1.pom
+::error::発行物に 4 件の差異があります (署名を除く比較)
+exit=1
+
+### compare-maven-artifacts.sh: maven-metadata-local.xml の <lastUpdated> だけが違う
+発行物 5 件が一致します (署名を除く比較): <work>/a/jp / <work>/b/jp
+exit=0
+
+### check-distribution-tag.sh: tag が無い / 同一 / 別内容 / remote で削除済み
+=== ケース1: tag 無し ===
+配信リポジトリに tag 1.0.0 は無い
+absent
+exit=0
+
+=== ケース2: tag あり・内容が同一 ===
+配信リポジトリの tag 1.0.0 は今回のスナップショットと同一
+match
+exit=0
+
+=== ケース3: tag あり・内容が別 ===
+ Extra.swift   | 1 -
+ Package.swift | 2 +-
+ 2 files changed, 1 insertion(+), 2 deletions(-)
+::error::配信リポジトリの tag 1.0.0 が今回のスナップショットと異なる内容を指している
+exit=1
+
+=== ケース4: clone 後に remote で tag が削除された ===
+ローカルの tag: 1.0.0
+remote から削除された tag 1.0.0 を手元からも消した
+配信リポジトリに tag 1.0.0 は無い
+absent
+exit=0
+判定後のローカルの tag: []
+tag 作成 exit=0
+
+```
+
+## step の終了ステータス (release.yml の run ブロックをそのまま実行)
+
+`check-distribution-tag.sh` を呼ぶ 2 つの step の `run` を PyYAML で release.yml から
+取り出し、上と同じ合成リポジトリ (remote に内容の異なる `1.0.0` がある状態) に対して
+`bash` で実行した。validate 側は CI 固有の 2 行 (github.com からの clone とスナップショット
+生成) だけを合成に差し替え、残りはそのまま実行している。
+
+    step                                 remote の tag の状態          step の exit
+    validate: Verify distribution        内容が異なる同名 tag          1
+      repository tag
+    publish: Push distribution           内容が異なる同名 tag          1
+      repository tag
+    publish: Push distribution           同名 tag が無い               0 (tag を作成して push)
+      repository tag
+
+判定結果を代入で受けているため、スクリプトの exit 1 が `set -e` に載って step が失敗する。
+tag 作成の直前でも、失敗理由は git の重複エラーではなく検査のエラー出力になる。
+
+## 保留 deployment の ID をログから拾い直す経路 (モックによる机上確認)
+
+`Publish Android to Central Portal` と `Recover deployment id from upload log` の `run` を
+release.yml から取り出し、`central-portal.sh` / `check-signatures.sh` /
+`compare-maven-artifacts.sh` / `gradlew` を呼び出しを記録するだけのモックへ差し替えて
+実行した (ネットワークにも作業ツリーにも触らない)。両 step は同じ環境変数で upload の
+ログの位置を共有する。
+
+    ケース                                        結果
+    upload まで通る (公開されていない)             出力 deployment-id=(抽出値) / release-needed=true、
+                                                  ID ファイルに同じ値
+    ID を出力する前に落ちた (ログだけ残る)         `::warning::` を出して出力 deployment-id=(同じ値)
+    upload に入る前に落ちた (ログが無い)           出力なし (ID なしのまま続行)
+
+拾い直した ID は `Summarize` の表と `Drop pending deployment` の条件・入力に載る。
+
+## wait-for-registries.sh の補足確認 (tasks 2.3)
+
+5.4 の対象外だが、ポーリングの骨格だけ手元で確かめた。
+
+- 未公開の version (`0.0.0-never-published`) を与え、`KSR_POLL_INTERVAL_SECONDS=2` /
+  `KSR_POLL_TIMEOUT_SECONDS=4` で実行すると、Maven Central と nuget.org の 3 Package ID の
+  4 件すべてを未反映として繰り返し報告し、上限で `::error::` を出して exit 1 になった
+  (環境変数による間隔・上限の上書きが効いている)。
+- nuget.org の index.json の判定 (`versions` に当該 version が含まれるか) を合成データで確認:
+  大文字小文字の違う `1.2.3-BETA.4` と `1.2.3-beta.4` はどちらも一致 (exit 0)、
+  含まれない `9.9.9` は exit 1、JSON として壊れた応答も exit 1。
+
+公開済みの正ケース (4 件すべてが揃って exit 0 になること) は、対象の 3 Package ID と
+Maven 座標がまだどこにも公開されていないため手元では踏めない。初回リリースの本番 run で
+初めて通る経路になる。

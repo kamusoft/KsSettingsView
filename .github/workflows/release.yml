@@ -1,0 +1,917 @@
+# リリースの実行
+#
+# version を手で与えて起動し、3 platform の配布物を 1 回の実行で lockstep に公開する。
+# 段は validate → (本体検証 ∥ 配布物の生成) → 消費者検証 (dry-run) → publish →
+# 公開レジストリへの反映待ち → 消費者検証 (smoke) の 6 つで、publish より前の段が
+# すべて成功したときにだけ配信先へ書き込む。
+#
+# publish は 1 つの job に直列に置き、配信リポジトリへの commit → Maven Central への
+# upload (保留) → NuGet.org への push → Maven Central の release → tag 2 本 →
+# GitHub Release の順に進む。tag は不可逆な公開がすべて済んでから作る。各ステップは
+# 冪等で、同じ version で「失敗した job から再実行」すれば済んだ分を飛ばして続きを行える。
+#
+# `dry-run` 入力を true にすると publish 以降を行わず、起動ブランチの制限も外れる
+# (任意のブランチからリハーサルできる)。
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "公開する version (X.Y.Z または X.Y.Z-{alpha|beta|rc}.N)"
+        type: string
+        required: true
+      dry-run:
+        description: "publish 以降を行わないリハーサル"
+        type: boolean
+        required: false
+        default: false
+
+# 既定は読み取りのみ。配信先への書き込み手段を持つのは publish job だけで、
+# そこにだけ Environment と書き込み権限を与える。
+permissions:
+  contents: read
+
+# リリースはリポジトリ全体で 1 本ずつ流す。Environment は排他制御にならないため、
+# 2 つの実行が同時に publish へ進まないことをここで保証する。進行中の実行は
+# 打ち切らない — 公開の途中で止めると片側だけ出た状態が残る。
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+# リリース固有の値はここに集約する。同型のリリースを別リポジトリへ持っていくときは、
+# workflow と scripts/release/ を写してこの節の値を差し替える。
+env:
+  KS_MAVEN_COORDINATES: jp.kamusoft:kssettingsview
+  KS_NUGET_BINDING_IOS: KsSettingsView.Binding.iOS
+  KS_NUGET_BINDING_ANDROID: KsSettingsView.Binding.Android
+  KS_NUGET_FACADE: KsSettingsView.Maui
+  KS_NUGET_SOURCE: https://api.nuget.org/v3/index.json
+  KS_SPM_REPOSITORY: kamusoft/KsSettingsView-SPM
+  # Central Portal の deployment 一覧。手で状態を確認・後始末するときの入口として、
+  # publish の要約と失敗時の案内に出す。
+  KS_PORTAL_DEPLOYMENTS_URL: https://central.sonatype.com/publishing/deployments
+  KS_ARTIFACT_IOS: release-ios-snapshot
+  KS_ARTIFACT_ANDROID: release-android-maven
+  KS_ARTIFACT_MAUI: release-maui-nupkg
+  # 保留中の deployment の ID を同じ実行の再実行へ引き継ぐための artifact。
+  KS_ARTIFACT_DEPLOYMENT_ID: central-deployment-id
+
+jobs:
+  # 不可逆な操作に入る前の入力検査。配布物の生成にも進ませない。
+  validate:
+    name: validate
+    # ランナーイメージは版指定にする。`ubuntu-latest` は指す実体が予告なく次の LTS へ
+    # 移り、python3 やプリインストールツールの版が diff なしに入れ替わる。
+    runs-on: ubuntu-24.04
+    # 既定の 360 分は長すぎる。検査は clone と文字列比較だけなので短い上限を置く。
+    timeout-minutes: 15
+
+    # 再利用可能 workflow の呼び出し (`with:`) では env コンテキストを参照できないため、
+    # 冒頭の env に集約した artifact 名を出力として渡し直す。
+    outputs:
+      artifact-ios: ${{ steps.names.outputs.ios }}
+      artifact-android: ${{ steps.names.outputs.android }}
+      artifact-maui: ${{ steps.names.outputs.maui }}
+
+    steps:
+      # version の形とブランチの検査は checkout より前に置く。不正な起動がソースの
+      # 取得にも到達しない位置にする。
+      - name: Validate inputs
+        env:
+          KS_VERSION: ${{ inputs.version }}
+          KS_DRY_RUN: ${{ inputs['dry-run'] }}
+          KS_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          # SemVer 2.0.0 の数値識別子は先頭ゼロを許さない。prerelease は運用で使う
+          # 3 種類だけを受け付ける。
+          if ! printf '%s' "${KS_VERSION}" | grep -Eq \
+            '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(alpha|beta|rc)\.(0|[1-9][0-9]*))?$'; then
+            echo "::error::version の形式が不正: ${KS_VERSION} (X.Y.Z または X.Y.Z-{alpha|beta|rc}.N、先頭ゼロ不可)"
+            exit 1
+          fi
+          if [ "${KS_DRY_RUN}" != "true" ] && [ "${KS_REF}" != "refs/heads/main" ]; then
+            echo "::error::本番のリリースは main からのみ起動できる (起動 ref: ${KS_REF})"
+            exit 1
+          fi
+          echo "version: ${KS_VERSION} / dry-run: ${KS_DRY_RUN} / ref: ${KS_REF}"
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # tag の照合を行うため全履歴と tag を取る。
+          fetch-depth: 0
+
+      - name: Verify monorepo tag
+        env:
+          KS_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if ! git rev-parse -q --verify "refs/tags/${KS_VERSION}" > /dev/null; then
+            echo "tag ${KS_VERSION} は未作成"
+            exit 0
+          fi
+          tagged="$(git rev-list -n 1 "refs/tags/${KS_VERSION}")"
+          if [ "${tagged}" != "${GITHUB_SHA}" ]; then
+            echo "::error::tag ${KS_VERSION} が別の commit を指している (tag: ${tagged} / 起動: ${GITHUB_SHA})"
+            exit 1
+          fi
+          echo "tag ${KS_VERSION} は起動 commit を指している (再実行として続行する)"
+
+      - name: Verify README install examples
+        env:
+          KS_VERSION: ${{ inputs.version }}
+        run: python3 scripts/release/set-readme-version.py --check "${KS_VERSION}"
+
+      # 配信リポジトリの同名 tag が別内容で存在すると、publish の最後で tag を打てずに
+      # 片側だけ公開された状態が残る。不可逆な操作に入る前にここで見つける。
+      # 読むだけなので https で clone し、secrets を持ち込まない。
+      - name: Verify distribution repository tag
+        env:
+          KS_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          work="${RUNNER_TEMP}/spm-validate"
+          git clone --quiet "https://github.com/${KS_SPM_REPOSITORY}.git" "${work}"
+          scripts/spm-snapshot/sync-snapshot.sh "${work}"
+          # 代入で受けることで、内容が違って検査が失敗したときに errexit がこの step を
+          # 落とす (コマンド置換を case や if の条件に直接置くと終了ステータスが捨てられる)。
+          result="$(scripts/release/check-distribution-tag.sh "${work}" "${KS_VERSION}")"
+          case "${result}" in
+            match)
+              echo "publish の tag 作成は skip される"
+              ;;
+            absent)
+              echo "publish で tag を作成する"
+              ;;
+            *)
+              echo "::error::配信リポジトリの tag 検査が想定しない結果を返した: ${result}"
+              exit 1
+              ;;
+          esac
+
+      - name: Export artifact names
+        id: names
+        run: |
+          set -euo pipefail
+          {
+            echo "ios=${KS_ARTIFACT_IOS}"
+            echo "android=${KS_ARTIFACT_ANDROID}"
+            echo "maui=${KS_ARTIFACT_MAUI}"
+          } >> "$GITHUB_OUTPUT"
+
+  # 本体の検証。version を注入しないので、検証 CI が回しているものと同じ内容になる。
+  ios:
+    name: ios
+    needs: validate
+    uses: ./.github/workflows/verify-ios.yml
+
+  android:
+    name: android
+    needs: validate
+    uses: ./.github/workflows/verify-android.yml
+
+  maui:
+    name: maui
+    needs: validate
+    uses: ./.github/workflows/verify-maui.yml
+
+  # 配布物の生成。消費者検証 (dry-run) に渡すのも、publish で外へ出すのもこの成果物で、
+  # 「検証したものと出すもの」を一致させる (Android だけは署名の都合で publish 側が
+  # 作り直すため、publish が内容の一致を検査する)。
+  package-ios:
+    name: package-ios
+    needs: validate
+    runs-on: ubuntu-24.04
+    # 既定の 360 分は長すぎる。clone とファイルコピーだけなので短い上限を置く。
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # スナップショットの生成は publish と同じ経路 (配信リポジトリの作業コピーへ同期) で
+      # 行う。同期スクリプトは同期先が配信リポジトリの作業コピーであることを要求する。
+      - name: Build snapshot
+        run: |
+          set -euo pipefail
+          work="${RUNNER_TEMP}/spm-package"
+          git clone --quiet --depth 1 "https://github.com/${KS_SPM_REPOSITORY}.git" "${work}"
+          scripts/spm-snapshot/sync-snapshot.sh "${work}"
+          # artifact には配信リポジトリの履歴を含めない。消費者検証は展開したディレクトリを
+          # そのまま package として参照する。
+          snapshot="${RUNNER_TEMP}/snapshot"
+          mkdir -p "${snapshot}"
+          tar -C "${work}" --exclude=.git -cf - . | tar -C "${snapshot}" -xf -
+          find "${snapshot}" -maxdepth 1 -mindepth 1 | sort
+
+      - name: Upload snapshot
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: ${{ env.KS_ARTIFACT_IOS }}
+          path: ${{ runner.temp }}/snapshot
+          if-no-files-found: error
+          retention-days: 7
+          # `Re-run all jobs` で同じ名前を作り直せるようにする。
+          overwrite: true
+
+  package-android:
+    name: package-android
+    needs: validate
+    # publish job と同じランナー OS にする。publish は署名鍵つきで発行物を作り直し、
+    # ここで作ったものと内容を比べるため、OS が違うと比較が成立しない。
+    runs-on: ubuntu-24.04
+    # 既定の 360 分は長すぎる。本体の検証 (実測 6 分) と同規模のビルドに対する上限として置く。
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup JDK
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Cache Gradle dependencies
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          # 依存の解決結果と wrapper ディストリビューションだけをキャッシュする。
+          # 発行物 (~/.m2) はキャッシュしない — 前回実行の残りを今回の成果物と
+          # 取り違える経路を作らないため。
+          path: |
+            ~/.gradle/caches/modules-2
+            ~/.gradle/wrapper
+          key: gradle-release-${{ runner.os }}-${{ hashFiles('android/gradle/libs.versions.toml', 'android/gradle/wrapper/gradle-wrapper.properties', 'android/**/build.gradle.kts', 'android/settings.gradle.kts') }}
+          restore-keys: |
+            gradle-release-${{ runner.os }}-
+
+      - name: Show toolchain
+        run: |
+          java -version
+          echo "JAVA_HOME=${JAVA_HOME}"
+
+      # 署名鍵は渡さない。この成果物は消費者検証と同一性の比較に使うだけで、
+      # Maven Central へ送るのは publish job が鍵つきで作り直したものになる。
+      - name: Publish to local Maven repository
+        working-directory: android
+        env:
+          KS_VERSION: ${{ inputs.version }}
+        run: ./gradlew --no-daemon --console=plain publishToMavenLocal -Pversion="${KS_VERSION}"
+
+      - name: Stage local Maven repository
+        run: |
+          set -euo pipefail
+          staged="${RUNNER_TEMP}/maven"
+          mkdir -p "${staged}"
+          # groupId の先頭セグメントごと写す。artifact の根が `jp/` になり、消費者検証が
+          # 展開先をローカル Maven リポジトリとしてそのまま参照できる。
+          cp -R "${HOME}/.m2/repository/jp" "${staged}/jp"
+          find "${staged}" -type f | sort
+
+      - name: Upload local Maven repository
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: ${{ env.KS_ARTIFACT_ANDROID }}
+          path: ${{ runner.temp }}/maven
+          if-no-files-found: error
+          retention-days: 7
+          # `Re-run all jobs` で同じ名前を作り直せるようにする。
+          overwrite: true
+
+  package-maui:
+    name: package-maui
+    needs: validate
+    # iOS binding の pack が Xcode を必要とする。
+    runs-on: macos-26
+    # 既定の 360 分は長すぎる。消費者検証 (実測 20 分前後) のうち pack 相当の部分に対する
+    # 上限として置き、ハングで高コストな macOS ランナーを占有し続けないようにする。
+    timeout-minutes: 40
+
+    env:
+      # iOS binding が Xcode を必要とするため、他の検証と同じ版を選ぶ。
+      KS_XCODE_VERSION: "26.5"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Select Xcode
+        run: |
+          # メジャー.マイナーが一致する Xcode のうち、パッチが最も新しいものを選ぶ。
+          app=$(ls -d "/Applications/Xcode_${KS_XCODE_VERSION}"*.app 2>/dev/null | sort -V | tail -n 1)
+          if [ -z "$app" ]; then
+            echo "::error::Xcode ${KS_XCODE_VERSION} がランナーイメージに存在しない"
+            ls -d /Applications/Xcode_*.app || true
+            exit 1
+          fi
+          echo "DEVELOPER_DIR=${app}/Contents/Developer" >> "$GITHUB_ENV"
+
+      - name: Setup JDK
+        # Android binding の pack が呼ぶ `android/gradlew` の実行 JVM になる。
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Show toolchain
+        run: |
+          echo "DEVELOPER_DIR=${DEVELOPER_DIR}"
+          dotnet --info
+          java -version
+
+      - name: Install MAUI workload
+        # workload set の版は global.json の workloadVersion で固定されている。
+        run: dotnet workload install maui
+
+      # binding 2 件を先に、facade を最後に pack する。facade は binding を
+      # ProjectReference で参照しているので pack 自体は順不同で成立するが、NuGet.org へ
+      # push する順序 (binding が先) と揃えて、成果物の並びを追いやすくする。
+      - name: Pack packages
+        env:
+          KS_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          feed="${RUNNER_TEMP}/nupkg"
+          mkdir -p "${feed}"
+          projects=(
+            "maui/macios/KsSettingsView.Binding.iOS/KsSettingsView.Binding.iOS.csproj"
+            "maui/android/KsSettingsView.Binding.Android/KsSettingsView.Binding.Android.csproj"
+            "maui/KsSettingsView.Maui/KsSettingsView.Maui.csproj"
+          )
+          for project in "${projects[@]}"; do
+            dotnet pack "${project}" \
+              -c Release \
+              -p:Version="${KS_VERSION}" \
+              -p:ContinuousIntegrationBuild=true \
+              -p:JavaSdkDirectory="${JAVA_HOME}" \
+              -o "${feed}"
+          done
+          # 3 パッケージが nupkg と snupkg の対で揃っていることを確かめる。片方だけの
+          # 状態で publish へ渡すと、シンボルの無いパッケージが公開される。
+          for package in "${KS_NUGET_BINDING_IOS}" "${KS_NUGET_BINDING_ANDROID}" "${KS_NUGET_FACADE}"; do
+            for extension in nupkg snupkg; do
+              file="${feed}/${package}.${KS_VERSION}.${extension}"
+              if [ ! -f "${file}" ]; then
+                echo "::error::pack されていない: $(basename "${file}")"
+                exit 1
+              fi
+            done
+          done
+          ls -l "${feed}"
+
+      - name: Upload packages
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: ${{ env.KS_ARTIFACT_MAUI }}
+          path: ${{ runner.temp }}/nupkg
+          if-no-files-found: error
+          retention-days: 7
+          # `Re-run all jobs` で同じ名前を作り直せるようにする。
+          overwrite: true
+
+  # 配布物を利用者と同じ経路で解決できるかの検証。参照先には package 段が作った成果物を
+  # 渡し、publish で外へ出すものそのものを検証する。secrets は渡さない
+  # (`secrets: inherit` を書かないことで、呼ばれた側は secrets を一切受け取らない)。
+  consumer-ios:
+    name: consumer-ios
+    needs: [validate, package-ios]
+    uses: ./.github/workflows/verify-consumer-ios.yml
+    with:
+      mode: dry-run
+      version: ${{ inputs.version }}
+      artifact: ${{ needs.validate.outputs.artifact-ios }}
+
+  consumer-android:
+    name: consumer-android
+    needs: [validate, package-android]
+    uses: ./.github/workflows/verify-consumer-android.yml
+    with:
+      mode: dry-run
+      version: ${{ inputs.version }}
+      artifact: ${{ needs.validate.outputs.artifact-android }}
+
+  consumer-maui:
+    name: consumer-maui
+    needs: [validate, package-maui]
+    uses: ./.github/workflows/verify-consumer-maui.yml
+    with:
+      mode: dry-run
+      version: ${{ inputs.version }}
+      artifact: ${{ needs.validate.outputs.artifact-maui }}
+
+  # 配信先への書き込み。ここだけが Environment と書き込み権限を持つ。
+  publish:
+    name: publish
+    needs: [validate, ios, android, maui, consumer-ios, consumer-android, consumer-maui]
+    if: ${{ !inputs['dry-run'] }}
+    # package-android と同じランナー OS。発行物の再ビルドを同じ条件で行い、
+    # package 段の成果物と内容を比較できるようにする。
+    runs-on: ubuntu-24.04
+    # Environment の deployment branch policy が main 以外からの参照を拒む。
+    # 起動ブランチの検査 (validate) が外れた場合の二重の歯止めになる。
+    environment: release
+    permissions:
+      # tag と GitHub Release の作成に要る。
+      contents: write
+      # NuGet の Trusted Publishing (OIDC) に要る。
+      id-token: write
+    # 既定の 360 分は長すぎる。Android の再ビルドと Central Portal の検証待ちを含む
+    # 直列の publish に対する上限として置く。
+    timeout-minutes: 90
+
+    env:
+      KS_VERSION: ${{ inputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup JDK
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      # 直列化のロックを取ったのは publish job が始まった時点なので、待っている間に
+      # 別の実行が進めた可能性のある外部状態をここで見直す。
+      - name: Re-check external state
+        run: |
+          set -euo pipefail
+          if git rev-parse -q --verify "refs/tags/${KS_VERSION}" > /dev/null; then
+            tagged="$(git rev-list -n 1 "refs/tags/${KS_VERSION}")"
+            if [ "${tagged}" != "${GITHUB_SHA}" ]; then
+              echo "::error::tag ${KS_VERSION} が別の commit を指している (tag: ${tagged} / 起動: ${GITHUB_SHA})"
+              exit 1
+            fi
+            echo "monorepo の tag ${KS_VERSION} は作成済み (起動 commit を指している)"
+          else
+            echo "monorepo の tag ${KS_VERSION} は未作成"
+          fi
+          maven_state=0
+          scripts/release/central-portal.sh published "${KS_VERSION}" || maven_state=$?
+          case "${maven_state}" in
+            0) echo "Maven Central: 公開済み (以降の upload / release は skip される)" ;;
+            1) echo "Maven Central: 未公開" ;;
+            *)
+              echo "::error::Maven Central の公開状態を判定できない"
+              exit 1
+              ;;
+          esac
+
+      - name: Download Android artifacts
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: ${{ needs.validate.outputs.artifact-android }}
+          path: ${{ runner.temp }}/package-android
+
+      - name: Download MAUI packages
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: ${{ needs.validate.outputs.artifact-maui }}
+          path: ${{ runner.temp }}/package-maui
+
+      # 同じ実行の前の attempt が保留中の deployment を残しているかを引き継ぐ。
+      # 初回の attempt には存在しないので、名前に完全一致する pattern で取りに行き、
+      # 0 件を正常として扱う (name 指定は不在も失敗にする)。通信や展開の失敗まで
+      # 「引き継ぐものが無い」と読み替えると、保留 deployment を二重に作ってしまう。
+      - name: Download previous deployment id
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          pattern: ${{ env.KS_ARTIFACT_DEPLOYMENT_ID }}
+          merge-multiple: true
+          path: ${{ runner.temp }}/deployment
+
+      # 秘密鍵はディスクに置かず agent に載せる。ホスト鍵は公開されている固定値を使う
+      # (ssh-keyscan は取得した鍵をそのまま信頼するため、なりすましを検出できない)。
+      - name: Configure distribution repository access
+        env:
+          KS_DEPLOY_KEY: ${{ secrets.SPM_DEPLOY_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${KS_DEPLOY_KEY}" ]; then
+            echo "::error::配信リポジトリの deploy key が渡っていない (SPM_DEPLOY_KEY)"
+            exit 1
+          fi
+          mkdir -p "${HOME}/.ssh"
+          chmod 700 "${HOME}/.ssh"
+          printf '%s\n' \
+            'github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl' \
+            > "${HOME}/.ssh/known_hosts"
+          chmod 600 "${HOME}/.ssh/known_hosts"
+          eval "$(ssh-agent -s)"
+          printf '%s\n' "${KS_DEPLOY_KEY}" | ssh-add -
+          {
+            echo "SSH_AUTH_SOCK=${SSH_AUTH_SOCK}"
+            echo "SSH_AGENT_PID=${SSH_AGENT_PID}"
+          } >> "$GITHUB_ENV"
+
+      # 利用者が iOS の配布物を解決できるのは tag の瞬間なので、commit だけを先に押し込む。
+      # deploy key の認証と push 経路の失敗を、取り消せない公開の前に出す。
+      - name: Push snapshot commit
+        run: |
+          set -euo pipefail
+          work="${RUNNER_TEMP}/spm"
+          git clone --quiet "git@github.com:${KS_SPM_REPOSITORY}.git" "${work}"
+          scripts/spm-snapshot/sync-snapshot.sh "${work}"
+          git -C "${work}" config user.name "github-actions[bot]"
+          git -C "${work}" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "${work}" add -A
+          if git -C "${work}" diff --cached --quiet; then
+            echo "スナップショットに差分なし (commit を skip する)"
+          else
+            git -C "${work}" commit -m "${KS_VERSION}"
+            git -C "${work}" push origin HEAD
+            echo "スナップショット commit を push した"
+          fi
+
+      # validate からここまでの間に、別の実行や人が配信リポジトリへ同名 tag を作っている
+      # ことがある。取り消せない公開に入る前に、押し込んだツリーと tag の内容を照合し直す。
+      # 内容が異なれば検査が失敗し、この step で止まる。
+      - name: Re-check distribution repository tag
+        run: |
+          set -euo pipefail
+          result="$(scripts/release/check-distribution-tag.sh "${RUNNER_TEMP}/spm" "${KS_VERSION}")"
+          echo "配信リポジトリの tag ${KS_VERSION}: ${result}"
+
+      # 保留中の deployment があれば、その状態で分岐する。無ければ署名つきで発行物を
+      # 作り直し、消費者検証に渡したものと内容が同じであることを確かめてから upload する。
+      - name: Publish Android to Central Portal
+        id: maven
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_KEY_ID }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          # upload のログ。この step が ID を保存する前に落ちたときの拾い直しでも読む。
+          KS_CENTRAL_UPLOAD_LOG: ${{ runner.temp }}/central-upload.log
+        run: |
+          set -euo pipefail
+
+          deployment_id=""
+          id_file="${RUNNER_TEMP}/deployment/deployment-id.txt"
+          if [ -f "${id_file}" ]; then
+            deployment_id="$(tr -d '[:space:]' < "${id_file}")"
+          fi
+
+          # 「release を送る必要があるか」を後段へ渡す。upload 直後 (VALIDATED) と、
+          # 前の attempt が VALIDATED のまま残した場合だけ true になる。
+          release_needed=false
+
+          if [ -n "${deployment_id}" ]; then
+            echo "前の attempt の deployment を引き継いだ: ${deployment_id}"
+            # 検証中 (PENDING / VALIDATING) は結論が出ていないだけなので、決着を待つ。
+            deadline=$(( SECONDS + 1800 ))
+            while :; do
+              state="$(scripts/release/central-portal.sh status "${deployment_id}")"
+              case "${state}" in
+                PENDING|VALIDATING) ;;
+                *) break ;;
+              esac
+              if [ "${SECONDS}" -ge "${deadline}" ]; then
+                echo "::error::deployment の検証が終わらない (最後の状態 ${state}): ${deployment_id}"
+                exit 1
+              fi
+              echo "検証待ち (${state}): ${deployment_id}"
+              sleep 30
+            done
+            echo "状態: ${state}"
+            case "${state}" in
+              VALIDATED)
+                release_needed=true
+                ;;
+              PUBLISHING)
+                scripts/release/central-portal.sh wait-published "${deployment_id}"
+                ;;
+              PUBLISHED)
+                echo "公開済みなので upload と release を skip する"
+                ;;
+              FAILED)
+                scripts/release/central-portal.sh drop "${deployment_id}"
+                deployment_id=""
+                ;;
+              NOT_FOUND)
+                # 前の attempt の後始末で削除された ID を引き継いだ場合。引き継ぐものが
+                # 無いので捨て、公開済みかを確かめたうえで必要なら upload をやり直す。
+                echo "引き継いだ deployment は存在しない (削除済み): ${deployment_id}"
+                deployment_id=""
+                ;;
+              *)
+                echo "::error::想定しない deployment の状態: ${state}"
+                exit 1
+                ;;
+            esac
+          fi
+
+          if [ -z "${deployment_id}" ] && [ "${release_needed}" = "false" ]; then
+            published=0
+            scripts/release/central-portal.sh published "${KS_VERSION}" || published=$?
+            case "${published}" in
+              0)
+                echo "Maven Central に公開済みなので upload を skip する"
+                ;;
+              1)
+                echo "::group::発行物を署名つきで作り直す"
+                (cd android && ./gradlew --no-daemon --console=plain publishToMavenLocal -Pversion="${KS_VERSION}")
+                echo "::endgroup::"
+
+                scripts/release/check-signatures.sh "${HOME}/.m2/repository/jp"
+                scripts/release/compare-maven-artifacts.sh \
+                  "${RUNNER_TEMP}/package-android/jp" "${HOME}/.m2/repository/jp"
+
+                echo "::group::Central Portal へ upload する"
+                (cd android && ./gradlew --no-daemon --console=plain publishToMavenCentral -Pversion="${KS_VERSION}") \
+                  2>&1 | tee "${KS_CENTRAL_UPLOAD_LOG}"
+                echo "::endgroup::"
+
+                # plugin は upload した bundle の deployment ID をログに 1 行だけ出す。
+                # ここで取れないと後段の release も失敗時の後始末もできないため、
+                # 取れなければ upload を成功として扱わない。
+                deployment_id="$(grep -oiE 'deployment id: [0-9a-f-]{36}' "${KS_CENTRAL_UPLOAD_LOG}" | tail -n 1 | awk '{print $3}' || true)"
+                if [ -z "${deployment_id}" ]; then
+                  echo "::error::upload のログから deployment ID を抽出できない"
+                  exit 1
+                fi
+                echo "deployment ID: ${deployment_id}"
+                release_needed=true
+                ;;
+              *)
+                echo "::error::Maven Central の公開状態を判定できない"
+                exit 1
+                ;;
+            esac
+          fi
+
+          mkdir -p "${RUNNER_TEMP}/deployment"
+          printf '%s' "${deployment_id}" > "${RUNNER_TEMP}/deployment/deployment-id.txt"
+          {
+            echo "deployment-id=${deployment_id}"
+            echo "release-needed=${release_needed}"
+          } >> "$GITHUB_OUTPUT"
+
+      # bundle が Portal に受理された後・ID を出力へ書く前に前の step が落ちると、
+      # 保留 deployment だけが残って後始末の手がかりが無くなる。同じ規則で upload の
+      # ログから拾い直し、要約と drop へ渡す。
+      - name: Recover deployment id from upload log
+        id: recover-deployment
+        if: failure() && steps.maven.outputs.deployment-id == ''
+        env:
+          KS_CENTRAL_UPLOAD_LOG: ${{ runner.temp }}/central-upload.log
+        run: |
+          set -euo pipefail
+          if [ ! -f "${KS_CENTRAL_UPLOAD_LOG}" ]; then
+            echo "upload のログが無い (upload に入る前に失敗した)"
+            exit 0
+          fi
+          deployment_id="$(grep -oiE 'deployment id: [0-9a-f-]{36}' "${KS_CENTRAL_UPLOAD_LOG}" | tail -n 1 | awk '{print $3}' || true)"
+          if [ -z "${deployment_id}" ]; then
+            echo "upload のログに deployment ID は無い"
+            exit 0
+          fi
+          echo "::warning::保存されなかった deployment ID を upload のログから拾い直した: ${deployment_id}"
+          echo "deployment-id=${deployment_id}" >> "$GITHUB_OUTPUT"
+          # 次の attempt にも引き継げるよう、通常経路と同じ場所に書いて artifact に保存する。
+          mkdir -p "${RUNNER_TEMP}/deployment"
+          printf '%s\n' "${deployment_id}" > "${RUNNER_TEMP}/deployment/deployment-id.txt"
+
+      # 拾い直した ID は artifact に無いので、後始末 (drop) より前に保存する。drop できた
+      # 場合は後段が空の内容で置き換えるため、削除済みの ID が引き継がれることはない。
+      - name: Store recovered deployment id
+        if: failure() && steps.recover-deployment.outputs.deployment-id != ''
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: ${{ env.KS_ARTIFACT_DEPLOYMENT_ID }}
+          path: ${{ runner.temp }}/deployment/deployment-id.txt
+          if-no-files-found: error
+          overwrite: true
+
+      # 抽出した ID は、publish の後半が失敗しても後始末できるよう upload の直後に保存する。
+      - name: Upload deployment id
+        if: steps.maven.outputs.deployment-id != ''
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: ${{ env.KS_ARTIFACT_DEPLOYMENT_ID }}
+          path: ${{ runner.temp }}/deployment/deployment-id.txt
+          if-no-files-found: error
+          # 再実行では前の attempt の内容を置き換える。
+          overwrite: true
+
+      # 長期の API key を持たず、この実行に紐づく短命な key を OIDC で受け取る。
+      - name: Login to NuGet.org
+        id: nuget-login
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      # binding 2 件を先に、facade を最後に push する。facade だけが先に出ると、
+      # 利用者がその version を取得したときに依存が解決できない。
+      - name: Push packages to NuGet.org
+        env:
+          KS_NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
+        run: |
+          set -euo pipefail
+          feed="${RUNNER_TEMP}/package-maui"
+          for package in "${KS_NUGET_BINDING_IOS}" "${KS_NUGET_BINDING_ANDROID}" "${KS_NUGET_FACADE}"; do
+            # nupkg と snupkg を対で送る。片方だけ出た状態を残さないため、対の存在は
+            # push の前に確かめる。
+            for extension in nupkg snupkg; do
+              file="${feed}/${package}.${KS_VERSION}.${extension}"
+              if [ ! -f "${file}" ]; then
+                echo "::error::配布物が見つからない: $(basename "${file}")"
+                exit 1
+              fi
+            done
+            for extension in nupkg snupkg; do
+              dotnet nuget push "${feed}/${package}.${KS_VERSION}.${extension}" \
+                --source "${KS_NUGET_SOURCE}" \
+                --api-key "${KS_NUGET_API_KEY}" \
+                --skip-duplicate
+            done
+          done
+
+      # NuGet が出たあとに Maven Central を公開する。ここで初めて Maven 側が
+      # 取り消せない状態になる。
+      - name: Release Maven Central deployment
+        if: steps.maven.outputs.release-needed == 'true'
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          KS_DEPLOYMENT_ID: ${{ steps.maven.outputs.deployment-id }}
+        run: |
+          set -euo pipefail
+          scripts/release/central-portal.sh release "${KS_DEPLOYMENT_ID}"
+          scripts/release/central-portal.sh wait-published "${KS_DEPLOYMENT_ID}"
+
+      - name: Push distribution repository tag
+        run: |
+          set -euo pipefail
+          work="${RUNNER_TEMP}/spm"
+          # 公開前の再検査から後、同名 tag が作られたり削除されたりしていることがある。
+          # 判定は remote が正なので、作る直前にもう一度同じ検査を通す。代入で受けるのは、
+          # 内容が違って検査が失敗したときに git の重複エラーへすり替わらないようにするため。
+          result="$(scripts/release/check-distribution-tag.sh "${work}" "${KS_VERSION}")"
+          if [ "${result}" = "match" ]; then
+            echo "配信リポジトリの tag ${KS_VERSION} は作成済み (skip する)"
+            exit 0
+          fi
+          if [ "${result}" != "absent" ]; then
+            echo "::error::配信リポジトリの tag 検査が想定しない結果を返した: ${result}"
+            exit 1
+          fi
+          git -C "${work}" tag "${KS_VERSION}"
+          git -C "${work}" push origin "refs/tags/${KS_VERSION}"
+          echo "配信リポジトリに tag ${KS_VERSION} を作成した"
+
+      - name: Push monorepo tag
+        run: |
+          set -euo pipefail
+          if git rev-parse -q --verify "refs/tags/${KS_VERSION}" > /dev/null; then
+            tagged="$(git rev-list -n 1 "refs/tags/${KS_VERSION}")"
+            if [ "${tagged}" != "${GITHUB_SHA}" ]; then
+              echo "::error::tag ${KS_VERSION} が別の commit を指している (tag: ${tagged} / 起動: ${GITHUB_SHA})"
+              exit 1
+            fi
+            echo "tag ${KS_VERSION} は作成済み (skip する)"
+            exit 0
+          fi
+          git tag "${KS_VERSION}" "${GITHUB_SHA}"
+          git push origin "refs/tags/${KS_VERSION}"
+          echo "tag ${KS_VERSION} を作成した"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view "${KS_VERSION}" > /dev/null 2>&1; then
+            echo "Release ${KS_VERSION} は作成済み (本文は更新しない)"
+            exit 0
+          fi
+          args=(--generate-notes --title "${KS_VERSION}")
+          # prerelease の suffix を持つ version は prerelease として出す。
+          case "${KS_VERSION}" in
+            *-*) args+=(--prerelease) ;;
+          esac
+          gh release create "${KS_VERSION}" "${args[@]}"
+
+      - name: Summarize
+        if: always()
+        env:
+          # upload の後に ID を失った場合はログから拾い直したものを使う。
+          KS_DEPLOYMENT_ID: ${{ steps.maven.outputs.deployment-id || steps.recover-deployment.outputs.deployment-id }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## publish: ${KS_VERSION}"
+            echo ""
+            echo "| 項目 | 値 |"
+            echo "|---|---|"
+            echo "| Maven 座標 | ${KS_MAVEN_COORDINATES}:${KS_VERSION} |"
+            echo "| NuGet | ${KS_NUGET_BINDING_IOS} / ${KS_NUGET_BINDING_ANDROID} / ${KS_NUGET_FACADE} |"
+            echo "| 配信リポジトリ | ${KS_SPM_REPOSITORY} |"
+            echo "| Central deployment | ${KS_DEPLOYMENT_ID:-なし} |"
+            echo ""
+            echo "Central Portal の deployment 一覧: ${KS_PORTAL_DEPLOYMENTS_URL}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # 途中で失敗したら保留中の deployment を残さない。削除できる状態でなければ
+      # スクリプトが理由を出して何もしない。
+      - name: Drop pending deployment
+        id: drop-deployment
+        if: failure() && (steps.maven.outputs.deployment-id || steps.recover-deployment.outputs.deployment-id) != ''
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          KS_DEPLOYMENT_ID: ${{ steps.maven.outputs.deployment-id || steps.recover-deployment.outputs.deployment-id }}
+        run: |
+          set -euo pipefail
+          scripts/release/central-portal.sh drop "${KS_DEPLOYMENT_ID}"
+          echo "deployment の状態は ${KS_PORTAL_DEPLOYMENTS_URL} でも確認できる"
+          # 実際に消えたときだけ引き継ぎを断つ。削除できない状態 (公開処理が進行中) の
+          # deployment は次の attempt が状態を見て続きを行うので、ID を残す。
+          state="$(scripts/release/central-portal.sh status "${KS_DEPLOYMENT_ID}")"
+          if [ "${state}" = "NOT_FOUND" ]; then
+            # 空の内容で保存し直す (この artifact を読む側は空白だけの内容を
+            # 「ID なし」として扱う)。
+            mkdir -p "${RUNNER_TEMP}/deployment"
+            printf '\n' > "${RUNNER_TEMP}/deployment/deployment-id.txt"
+            echo "cleared=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "deployment は残っている (${state})。ID の引き継ぎはそのままにする"
+          fi
+
+      # 後始末の直後に保存し直す。ここを飛ばすと、削除済みの ID を引き継いだ再実行が
+      # 存在しない deployment を照会することになる。
+      - name: Clear stored deployment id
+        if: failure() && steps.drop-deployment.outputs.cleared == 'true'
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: ${{ env.KS_ARTIFACT_DEPLOYMENT_ID }}
+          path: ${{ runner.temp }}/deployment/deployment-id.txt
+          if-no-files-found: error
+          overwrite: true
+
+  # 公開レジストリの配信元へ反映されるまで待つ。反映前に smoke を回すと、
+  # 解決できないのか間に合っていないだけなのかが区別できない。
+  wait-for-registries:
+    name: wait-for-registries
+    needs: publish
+    if: ${{ !inputs['dry-run'] }}
+    runs-on: ubuntu-24.04
+    # スクリプト側の上限 (45 分) を超えても job が居座らないようにする。
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Wait for registries
+        env:
+          KS_VERSION: ${{ inputs.version }}
+        run: scripts/release/wait-for-registries.sh "${KS_VERSION}"
+
+  # 公開レジストリからの解決の確認。失敗しても作成済みの tag と Release は取り消さない
+  # (公開そのものが取り消せないため、tag を消しても利用者を守れない)。
+  smoke-ios:
+    name: smoke-ios
+    needs: wait-for-registries
+    if: ${{ !inputs['dry-run'] }}
+    uses: ./.github/workflows/verify-consumer-ios.yml
+    with:
+      mode: smoke
+      version: ${{ inputs.version }}
+
+  smoke-android:
+    name: smoke-android
+    needs: wait-for-registries
+    if: ${{ !inputs['dry-run'] }}
+    uses: ./.github/workflows/verify-consumer-android.yml
+    with:
+      mode: smoke
+      version: ${{ inputs.version }}
+
+  smoke-maui:
+    name: smoke-maui
+    needs: wait-for-registries
+    if: ${{ !inputs['dry-run'] }}
+    uses: ./.github/workflows/verify-consumer-maui.yml
+    with:
+      mode: smoke
+      version: ${{ inputs.version }}

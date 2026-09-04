@@ -34,8 +34,10 @@ work="$(cd "${work}" && pwd -P)"
 
 reference="${KSV_REFERENCE}"
 if [ "${KSV_MODE}" = "dry-run" ] && [ -z "${reference}" ]; then
+    # フィード準備の出力はコマンド置換で最終行 (参照先) だけを取るため、そのままでは pack の
+    # ログが残らず失敗理由が見えない。標準エラーにも流して CI のログに残す。
     reference="$("${SCRIPT_DIR}/prepare-feed.sh" \
-        --mode "${KSV_MODE}" --version "${KSV_VERSION}" --work "${work}" | tail -n 1)"
+        --mode "${KSV_MODE}" --version "${KSV_VERSION}" --work "${work}" | tee /dev/stderr | tail -n 1)"
 fi
 
 if [ "${KSV_MODE}" = "dry-run" ]; then
@@ -92,7 +94,22 @@ python3 "${SCRIPT_DIR}/check-dependencies.py" \
     | ksv_evidence "解決版と取得元"
 
 echo "==== Release ビルド (net10.0-android) ===="
-(cd "${SCRIPT_DIR}" && dotnet build "${PROJECT}" -f net10.0-android --no-restore "${common_args[@]}")
+# native ライブラリの重複 (XA4301) は利用者のアプリで実害が出るため失敗にする。
+# 警告全般をエラーに昇格させると検証範囲の外の指摘まで巻き込むので、
+# ビルド出力からこの 1 件だけを拾って判定し、重複したライブラリのパスを残す。
+android_log="${work}/build-android.log"
+(cd "${SCRIPT_DIR}" && dotnet build "${PROJECT}" -f net10.0-android --no-restore "${common_args[@]}") \
+    2>&1 | tee "${android_log}"
+
+android_duplicates="${work}/xa4301.txt"
+grep -F "XA4301" "${android_log}" | sort -u > "${android_duplicates}" || true
+
+if [ -s "${android_duplicates}" ]; then
+    ksv_evidence "XA4301 (native ライブラリの重複)" < "${android_duplicates}"
+    ksv_fail "Android の Release ビルドで native ライブラリの重複 (XA4301) が出ました"
+fi
+
+echo "検出なし" | ksv_evidence "XA4301 (native ライブラリの重複)"
 
 echo "==== Release ビルド (net10.0-ios, ${ios_rid}) ===="
 (cd "${SCRIPT_DIR}" && dotnet build "${PROJECT}" -f net10.0-ios --no-restore \

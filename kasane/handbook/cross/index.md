@@ -11,4 +11,5 @@
 | [public-identifiers.md](public-identifiers.md) | 公開識別子・namespace・application ID・配布座標を決めるとき (`**/build.gradle.kts` / `ios/Package.swift` / `**/*.csproj` を触るとき) | rule |
 | [aiforms-origin-reference.md](aiforms-origin-reference.md) | 未移植機能を実装するとき・移植元との挙動差や不具合を調査するとき (移植完了までの時限規約) | rule |
 | [user-skill-api-listing.md](user-skill-api-listing.md) | `skills/` を触るとき・docs-refresh の API 名網羅検査 (3e) の報告を仕分けるとき | rule |
-| [local-development-setup.md](local-development-setup.md) | 環境構築・Sample の起動・本体のビルド / lint・本体 source へのステップインが要るとき | guide |
+| [local-development-setup.md](local-development-setup.md) | 環境構築・Sample の起動・本体のビルド / lint・消費者検証 (`verification/`) の手元実行・本体 source へのステップインが要るとき | guide |
+| [release-procedure.md](release-procedure.md) | リリースを行うとき・release workflow の secrets / Environment を設定するとき・リリースを再実行 / リハーサルするとき | guide |
