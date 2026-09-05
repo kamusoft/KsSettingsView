@@ -4,14 +4,14 @@
 
 ライブラリ本体の Theme 既定色が 3 platform とも外観 (iOS のダーク / Android の夜間モード) に追随しない。title / description の文字色だけがシステム色 (iOS `.label` / `.secondaryLabel`、Android の同梱 DayNight テーマの `textColorPrimary`) で外観に追随するため、Theme を渡さずにダーク外観で使うと**白地に淡色 (白) 文字**になり判読できない。
 
-発見の文脈: add-sample-dark-mode-toggle の実装フェーズ (2026-09-05)。サンプルに外観切替を付けて「Theme を渡さない画面 (isVisible デモ・Section 装飾デモの箱)」をダークで開いたところ、Android Native・iOS Native の両面で再現 (証跡: `kasane/changes/add-sample-dark-mode-toggle/ui/verification/android-visibility-dark.png` / `ios-visibility-dark.png`。注意: config `distill.archive-media: delete` により archive 時に画像は削除されるので、必要なら archive 前に確認するか本 change の `ui/references/` へ写す。archive 後は `kasane/changes/archive/*-add-sample-dark-mode-toggle/ui/brief.md` の照合記録 (文章) だけが残る)。同 change では proposal の Non-Goals (本体の既定値・夜間モード解決の変更) を守って deviation で達成範囲を縮小し、本体側をこの change に切り出した (オーナー裁定 2026-09-05)。
+発見の文脈: add-sample-dark-mode-toggle の実装フェーズ (2026-09-05)。サンプルに外観切替を付けて「Theme を渡さない画面 (isVisible デモ・Section 装飾デモの箱)」をダークで開いたところ、Android Native・iOS Native の両面で再現 (証跡: 本 change の `ui/references/android-visibility-dark.png` / `ios-visibility-dark.png` / `android-section-decoration-dark.png` / `ios-section-decoration-dark.png` — 起票元 change の archive 時 (2026-09-05) に `ui/verification/` から写した。起票元の照合記録 (文章) は `kasane/changes/archive/2026-09-05-add-sample-dark-mode-toggle/ui/brief.md`)。同 change では proposal の Non-Goals (本体の既定値・夜間モード解決の変更) を守って deviation で達成範囲を縮小し、本体側をこの change に切り出した (オーナー裁定 2026-09-05)。
 
 該当箇所:
 - iOS: `ios/Sources/KsSettingsViewUI/Theme.swift` — `defaultBackgroundColor` (白固定) / `cellBackgroundColor` の既定引数 `.white` / `defaultSeparatorColor` / `defaultHeaderTextColor` / `defaultFooterTextColor` が固定 RGB。dynamic なのは `defaultCellTitleColor` = `.label`、`defaultCellDescriptionColor` = `.secondaryLabel` のみ
 - Android: `android/kssettingsview/src/main/kotlin/jp/kamusoft/kssettingsview/ui/Theme.kt` — `DEFAULT_BACKGROUND_COLOR` (#FFFFFF) / `cellBackgroundColor` 既定 `Color.White` / `DEFAULT_SEPARATOR_COLOR` / `DEFAULT_CELL_DESCRIPTION_COLOR` が固定値。`ui/EffectiveStyle.kt` の `resolveDefaultTitleColor` だけが `android.R.attr.textColorPrimary` から解決。ライブラリの res に `values-night` は無い
-- MAUI: facade は native をラップするため同じ挙動。MAUI iOS / MAUI Android の両実行面で同じ症状を確認済み (証跡: add-sample-dark-mode-toggle の `ui/verification/maui-ios-visibility-dark.png` / `maui-android-visibility-dark.png`、同 `ui/brief.md` の照合結果)
+- MAUI: facade は native をラップするため同じ挙動。MAUI iOS / MAUI Android の両実行面で同じ症状を確認済み (証跡: 本 change の `ui/references/maui-ios-visibility-dark.png` / `maui-android-visibility-dark.png`、起票元 archive の `ui/brief.md` の照合結果)
 
-長命層の記述の乖離 (本 change で直すか、ksn-drift / 蒸留で扱う):
+長命層の記述の乖離 — **2026-09-05 の起票元 change の蒸留で反映済み** (本 change での再修正は不要。既定色を追随させる実装が入ったら、下記の記述を再度追随させる):
 - `kasane/concepts/core/styling/style-resolution.md` の「Android のライト / ダークは、同梱テーマが DayNight 派生であるため端末の夜間モードとアプリの uiMode 制御で決まる」— chrome・選択面・title 既定には当てはまるが、Theme の既定色定数には届いていない
 - add-sample-dark-mode-toggle の exploration.md「iOS のライブラリ既定色はシステム色 (`UIColor.label` 等) でアプリ外観に自動追随する」— 文字色にしか当てはまらない
 

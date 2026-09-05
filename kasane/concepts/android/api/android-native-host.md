@@ -3,7 +3,7 @@ type: reference
 title: Android Native Host の利用と更新境界
 description: SettingsRootStore と KsSettingsView を使って Android View の設定画面を構築・更新・拡張する方法
 tags: [android, views, host, public-api]
-timestamp: 2026-08-29
+timestamp: 2026-09-05
 ---
 
 この文書は、Android View から KsSettingsView を使うための公開 API 利用契約と責務境界を整理した reference である。読むと、`SettingsRootStore` と `KsSettingsView` の役割、表示後の更新方法、独自 Cell の登録方法、ホスト側に前提が無いこと (テーマ・Activity 型) が分かる。Jetpack Compose から使う場合は [Android Compose Bridge と宣言 DSL](android-compose.md) を参照する。設定ツリーと差分の型自体は [SettingsRoot・Section・Cell の設定ツリー](../../core/core-model/settings-tree.md) と [SettingsRootDiff による構造変更](../../core/core-model/structural-changes.md) を先に読む。
@@ -125,7 +125,7 @@ Theme 属性の未指定時に使われるライブラリ既定値は、`Theme` 
 
 Host はライブラリ同梱の Material3 派生テーマ (DayNight) でラップした Context から自前の UI を生成するため、ホストアプリの XML テーマに前提はない — 最小構成のテーマ・AppCompat 系・MAUI テンプレート既定 (`Maui.SplashTheme`) のいずれでも、全 Cell と選択面が例外なく表示・動作する ([android/ADR-0020](../../../decisions/android/0020-bundled-theme-always-wrap-host-independent.md))。ホストテーマの色 (カスタム色・dynamic color を含む) はライブラリ UI へ反映されず、見た目の調整はライブラリの `Theme` / `CellStyle` で行う。利用者所有コンテンツ (CustomCell の content・`KsAnyView` 経由の利用者 View) は隔離の対象外で、従来どおりホストの Context (ホストテーマ) で解決される。
 
-ライト / ダークは端末の夜間モードとアプリの uiMode 制御 (`AppCompatDelegate.setDefaultNightMode` / `UiModeManager.setApplicationNightMode`) で決まる。ホストが XML テーマで Dark 系を明示するだけの指定は反映されない ([スタイルの所有と実効値解決](../../core/styling/style-resolution.md))。
+同梱テーマから解決される値 (chrome・選択面の配色、Cell title の既定色) のライト / ダークは端末の夜間モードとアプリの uiMode 制御 (Activity の Configuration 上書き・`AppCompatDelegate.setDefaultNightMode` 等) で決まる。ホストが XML テーマで Dark 系を明示するだけの指定は反映されない。`Theme` の他の既定色 (下地・Cell 背景・separator・description・Header / Footer 文字) は同梱テーマを経由しない固定のライト値で、夜間モードに追随しない — ダークで使う application は `Theme` に dark の色値を渡す ([スタイルの所有と実効値解決](../../core/styling/style-resolution.md) の「既定色と外観の追随」)。
 
 ホスト Activity の型にも前提はない — `ComponentActivity` を含む任意の Activity で、`TimePickerCell` / `DatePickerCell` の選択面を含む全 Cell が動作する。FragmentActivity / FragmentManager への依存は存在しない ([android/ADR-0018](../../../decisions/android/0018-timepickercell-bottom-sheet-wheel-unification.md) / [android/ADR-0019](../../../decisions/android/0019-datepickercell-calendar-compose-datepicker.md))。
 
@@ -146,10 +146,16 @@ Host はライブラリ同梱の Material3 派生テーマ (DayNight) でラッ�
 - Registry の解決後は Cell 固有の bind / reset を ViewHolder へ委譲する。
 - Cell の内容更新と可視性変更を別の表示同期経路へ流す。
 - 同じ ID の内容更新は ViewHolder を再生成せず同一 ViewHolder への再 bind として届く。フォーカスや IME の未確定文字列 (composing) を破壊しない ([android/ADR-0001](../../../decisions/android/0001-content-update-preserves-viewholder.md))。
-- **フォーカス中の EntryCell 入力欄は値の SSoT** ([android/ADR-0014](../../../decisions/android/0014-entrycell-focused-editor-owns-text.md))。同一 Cell への内容更新はフォーカス中の text とキャレットを差し替えず、フォーカス喪失時に最後にバインドされた `cell.text` へ再同期する (再同期は `onTextChanged` を発火させない)。書き戻しの往復より速い連続入力でも欠落・並び替えは起きない。裏返しの利用側契約: `onTextChanged` を受けて `cell.text` を更新しない構成では、フォーカス喪失時に入力欄が最後の bind 値へ戻る — 値 + callback 経路の利用側は callback を受けて `cell.text` を更新すること。
-- カレンダー選択面は Activity 再生成後、安定 id と一意な保存先の構成なら選択状態 (選択日・表示月・表示モード) を維持して再提示され、配色・今日ジャンプ・確定/破棄の契約も有効なまま復元される。対応付けできない場合は再表示せず、別の Cell へ値を書き込まない ([android/ADR-0021](../../../decisions/android/0021-calendar-dialog-restore-via-view-instance-state.md))。
+- **フォーカス中の EntryCell 入力欄は値の SSoT** で、内容更新はフォーカス中の text とキャレットを差し替えない ([android/ADR-0014](../../../decisions/android/0014-entrycell-focused-editor-owns-text.md)、下記「EntryCell 入力欄の SSoT」)。
+- カレンダー選択面は Activity 再生成後、復元条件を満たせば選択状態を保って再提示され、満たさなければ再表示せず他の Cell へ値を書き込まない (上記「カレンダー選択面の回転復元」、[android/ADR-0021](../../../decisions/android/0021-calendar-dialog-restore-via-view-instance-state.md))。
 - detach → 再 attach をまたいでも表示は Store の現在値と一致して復帰する。detach 中に発行された Store 更新も、再 attach 時の Store 現在状態の取り込み直しにより失われない (スクロール位置は保証しない)。
 - `bind` から attach までの間の Store 更新も、attach 後にメインスレッドのキューが空になった時点までに表示へ収束する (取り付け順序に依存しない。[core/ADR-0019](../../../decisions/core/0019-host-restores-from-store-on-attach.md))。
+
+### EntryCell 入力欄の SSoT
+
+フォーカス中の入力欄への内容更新は text とキャレットを差し替えず、フォーカス喪失時に最後にバインドされた `cell.text` へ再同期する (再同期は `onTextChanged` を発火させない)。書き戻しの往復より速い連続入力でも欠落・並び替えは起きない。
+
+裏返しの利用側契約: `onTextChanged` を受けて `cell.text` を更新しない構成では、フォーカス喪失時に入力欄が最後の bind 値へ戻る。値 + callback 経路の利用側は callback を受けて `cell.text` を更新すること。
 
 ## してはいけないこと
 

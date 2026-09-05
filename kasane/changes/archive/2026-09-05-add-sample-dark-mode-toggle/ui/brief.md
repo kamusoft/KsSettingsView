@@ -33,7 +33,7 @@ dark プリセットの色値の正は approved.png 内 (plan-a.html 下部) の
 
 2026-09-05、Emulator (API 35 / 1080x2340) で撮影し approved.png と照合した。撮影は 1 周で収束し、乖離修正の追加ラウンドは発生していない。画像は verification/ の `android-*.png` (個人要素なし。表示はデモデータのみ)。
 
-- 構造: ルートメニュー先頭の「外観」項目群 (システム / ライト / ダーク、選択中にチェック) と後続の「デモ」群、基本 Cell 7 種デモの Section 構成はモックと一致する
+- 構造: ルートメニュー先頭の「外観」項目群 (システム / ライト / ダーク、選択中にチェック) と後続の「デモ」群 (`android-menu-light.png` / `android-menu-dark.png`)、基本 Cell 7 種デモの Section 構成はモックと一致する
 - ルートメニュー: ライト / ダークの外観で `android-menu-light.png` / `android-menu-dark.png`。入力 Cell 5 種デモの dark プリセットは `android-input-cells-dark.png`
 - トークン: dark プリセットの 10 色ロールは対応表の RGBA をそのまま `SampleTheme` に写した (canvas #1B1915 / cell #2A2620 / separator #4A3F28 / accent #FFBF00 / header・ButtonCell title #E0B040 / footer #9A948A / disabled #7A756C / title #E6E1D6 / valueText #B8B2A6 / description #9A948A)
 - 状態: light プリセットは現行のまま変化なし (`android-basic-cells-light.png`)。dark プリセットは `android-basic-cells-dark-1.png` / `-2.png`
@@ -46,7 +46,7 @@ dark プリセットの色値の正は approved.png 内 (plan-a.html 下部) の
 
 2026-09-05、Simulator (iPhone 17 Pro / iOS 26.5) で撮影し approved.png と照合した。撮影は 2 周で収束した (1 周目の乖離: ルートメニューの外観項目名が既定 Button の accent 色で描かれ、モックの「項目名は行の既定色・選択中の印だけ accent」と食い違った。`buttonStyle(.plain)` + 印だけ `.tint` にして解消)。画像は verification/ の `ios-*.png` (個人要素なし。表示はデモデータのみ)。
 
-- 構造: ルートメニュー先頭の「外観」項目群 (システム / ライト / ダーク、選択中にチェック) と後続の「デモ」「検証」群、基本 Cell 7 種デモの Section 構成はモックと一致する
+- 構造: ルートメニュー先頭の「外観」項目群 (システム / ライト / ダーク、選択中にチェック) と後続の「デモ」「検証」群 (`ios-menu-light.png` / `ios-menu-dark.png`)、基本 Cell 7 種デモの Section 構成はモックと一致する
 - ルートメニュー: ライト / ダークの外観で `ios-menu-light.png` / `ios-menu-dark.png`
 - トークン: dark プリセットの 10 色ロールは対応表の RGBA をそのまま `SampleTheme` に写した (canvas #1B1915 / cell #2A2620 / separator #4A3F28 / accent #FFBF00 / header・ButtonCell title #E0B040 / footer #9A948A / disabled #7A756C / title #E6E1D6 / valueText #B8B2A6 / description #9A948A)。Android 側と同一値
 - 状態: light プリセットは現行のまま変化なし (`ios-basic-cells-light.png`)。dark プリセットは `ios-basic-cells-dark-1.png` / `-2.png` と `ios-input-cells-dark.png`
@@ -60,7 +60,7 @@ dark プリセットの色値の正は approved.png 内 (plan-a.html 下部) の
 
 2026-09-05、Simulator (iPhone 17 Pro / iOS 26.5) で撮影し approved.png と照合した。撮影は 1 周で収束した。画像は verification/ の `maui-ios-*.png` (個人要素なし。表示はデモデータのみ)。
 
-- 構造: ルートメニュー先頭の「外観」項目群 (システム / ライト / ダーク、選択中にチェック) と後続の「デモ」「MAUI 固有」群、基本 Cell 7 種デモの Section 構成はモックと一致する
+- 構造: ルートメニュー先頭の「外観」項目群 (システム / ライト / ダーク、選択中にチェック) と後続の「デモ」「MAUI 固有」群 (`maui-ios-menu-light.png` / `maui-ios-menu-dark.png`)、基本 Cell 7 種デモの Section 構成はモックと一致する
 - ルートメニュー: ライト / ダークの外観で `maui-ios-menu-light.png` / `maui-ios-menu-dark.png`
 - トークン: dark プリセットの 10 色ロールは対応表の RGBA をそのまま `SampleTheme` に写した。iOS Native / Android Native と同一値であることを定数名と値の対応表で突き合わせ済み
 - 状態: light プリセットは現行のまま変化なし (`maui-ios-basic-cells-light.png`)。dark プリセットは `maui-ios-basic-cells-dark-1.png` / `-2.png` と `maui-ios-input-cells-dark.png`

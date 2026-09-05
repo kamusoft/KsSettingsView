@@ -29,7 +29,7 @@
 
 ## styling/
 
-- [styling/style-resolution.md](styling/style-resolution.md) — UI 層が Theme と CellStyle を所有し、platform の描画値へ段階的に解決する共通規則。ライブラリ既定色を中立に保つ方針を含む
+- [styling/style-resolution.md](styling/style-resolution.md) — UI 層が Theme と CellStyle を所有し、platform の描画値へ段階的に解決する共通規則。ライブラリ既定色を中立に保つ方針、既定色のうち外観 (ダーク) に追随する範囲、iOS のモーダル提示物が提示元の外観を引き継ぐ契約を含む
 - [styling/cell-row-layout.md](styling/cell-row-layout.md) — Cell 種別をまたいで共有する視覚文法・主行の幅配分と platform 別の行寸法
 - [styling/cell-visual-states.md](styling/cell-visual-states.md) — 通常・押下または選択・無効状態を実効 style へ重ねる描画契約
 - [styling/list-appearance.md](styling/list-appearance.md) — Classic・Modern style と Section 装飾4属性・Section・Root Header / Footer の配置原則

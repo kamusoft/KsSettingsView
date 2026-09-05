@@ -3,7 +3,7 @@ type: concept
 title: リポジトリとビルドの責務境界
 description: 横断変更をまとめる monorepo と、独立した platform build・Sample・消費者検証 (verification/) の責務分担
 tags: [architecture, monorepo, build, sample, verification]
-timestamp: 2026-09-04
+timestamp: 2026-09-05
 ---
 
 この文書は、KsSettingsView の単一リポジトリと platform 別 build root、利用側 Sample、配布物の消費者検証 (`verification/`) の責務を説明する。読むと、横断変更を一つのリポジトリで扱いながら、iOS・Android・MAUI を一つの build graph に統合しない理由と、Sample が保証する範囲、消費者検証が確かめる範囲が分かる。
@@ -39,7 +39,7 @@ Sample は library 本体の配布物ではなく、利用者 application と同
 
 Android の composite build は source 参照を接続するが、Sample と included library の build root を一つへ統合しない。両 build root は Android SDK と toolchain の場所をそれぞれの開発環境から解決できる必要がある。local source reference から toolchain 設定の継承まで推論しない。ただしビルド関連バージョン (AGP / Kotlin / Compose BOM / ライブラリの version) の宣言だけは `android/gradle/libs.versions.toml` を両 build root が共有する — Sample 側は settings の `versionCatalogs` で同じファイルを読み、二重に宣言しない (詳細は [Android ビルドツールチェーンの契約](../../android/architecture/build-toolchain.md))。
 
-Sample は公開 API の組み合わせ、app host の前提、統合状態、視覚、操作結果を実行・目視確認する。挙動契約の唯一の正（SSoT）と自動回帰検証は library code と test が担う。Sample の画面数、navigation、表示文字列、デモデータ、比較用の色値は製品契約にしない。ただし製品契約にしないことと platform 間で揃えることは別軸であり、Sample の文言・画面構成は platform 間で一致させる（[Sample のプラットフォーム間一致](../../../handbook/cross/sample-parity.md)）。
+Sample は公開 API の組み合わせ、app host の前提、統合状態、視覚、操作結果を実行・目視確認する。外観に依存する描画 (Theme の dark 値・既定色のダーク描画・選択面の配色) も確認対象で、そのために 3 面ともルートメニューに外観の切替 (システム / ライト / ダーク) を常設し、Theme を渡す画面は light / dark プリセットの対を切り替える — Sample を一時改変せずにダーク描画を目視できる状態を保つ。挙動契約の唯一の正（SSoT）と自動回帰検証は library code と test が担う。Sample の画面数、navigation、表示文字列、デモデータ、比較用の色値は製品契約にしない。ただし製品契約にしないことと platform 間で揃えることは別軸であり、Sample の文言・画面構成は platform 間で一致させる（[Sample のプラットフォーム間一致](../../../handbook/cross/sample-parity.md)）。
 
 ## 消費者検証 (`verification/`) の境界
 
@@ -96,10 +96,15 @@ dry-run の参照先は本リポジトリ由来の座標について排他的で
 - [Native Bridge の interop 境界](../../maui/api/native-bridge.md)
 - [MAUI binding の Native artifact 統合](../../maui/architecture/binding-build-integration.md) — NuGet 3 パッケージの pack 構成
 
-### 規約と決定
+### 規約と手順 (handbook)
 
 - [公開識別子と配布座標](../../../handbook/cross/public-identifiers.md)
 - [Sample のプラットフォーム間一致](../../../handbook/cross/sample-parity.md)
+- [ローカル開発環境と Sample の実行](../../../handbook/cross/local-development-setup.md) — 消費者検証を手元で回す手順・Sample の外観切替
+- [リリース手順](../../../handbook/cross/release-procedure.md) — ブランチの役割・secrets・起動・再実行・リハーサル
+
+### 決定 (ADR)
+
 - [ADR-0001: モノレポとプラットフォーム別ビルドルート](../../../decisions/cross/0001-monorepo-platform-build-roots.md)
 - [ADR-0018: 配布チャネルと SwiftPM 配信リポジトリ](../../../decisions/cross/0018-distribution-public-channels-root-swiftpm-manifest.md)
 - [ADR-0025: 検証 CI は platform 別の再利用可能 workflow で構成する](../../../decisions/cross/0025-verification-ci-reusable-platform-workflows.md)
@@ -107,5 +112,3 @@ dry-run の参照先は本リポジトリ由来の座標について排他的で
 - [ADR-0028: 検証 CI のトリガーはブランチの役割で分ける](../../../decisions/cross/0028-ci-triggers-by-branch-role.md)
 - [ADR-0019: lockstep の単一バージョン](../../../decisions/cross/0019-lockstep-single-version.md)
 - [ADR-0020: 手動起動・tag は最後・version 注入](../../../decisions/cross/0020-release-dispatch-tag-last-version-injection.md)
-- [ローカル開発環境と Sample の実行](../../../handbook/cross/local-development-setup.md) — 消費者検証を手元で回す手順
-- [リリース手順](../../../handbook/cross/release-procedure.md) — ブランチの役割・secrets・起動・再実行・リハーサル

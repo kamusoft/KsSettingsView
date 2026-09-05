@@ -64,17 +64,36 @@ Header / Footer、separator、選択色なども Theme が持つが、各 platfo
 
 ## platform theme の前提
 
-platform default の最終段は各 platform の標準的な既定値へ解決する。iOS はシステム色 (`UIColor.label` 等)。Android はライブラリが同梱する Material3 派生テーマ (DayNight) から解決し、ホストアプリの XML テーマには依存しない — ライブラリ所有の UI (標準 Cell の行・chrome・選択面) は常に同梱テーマでラップした Context で生成され、ホストのテーマ属性 (カスタム色・dynamic color を含む) は反映されない ([android/ADR-0020](../../../decisions/android/0020-bundled-theme-always-wrap-host-independent.md))。ホストの XML テーマ・Activity 型に前提はなく、最小テーマ + `ComponentActivity` の構成でも全 Cell が動作する。見た目の調整はライブラリの Theme / CellStyle で行う。
+platform default の最終段は各 platform の標準的な既定値へ解決する。iOS で外観 (ライト / ダーク) に追随するシステム色は Cell の title (`UIColor.label`) と description (`.secondaryLabel`) の既定だけで、他の既定色は固定 RGB (下記「既定色と外観の追随」)。Android はライブラリが同梱する Material3 派生テーマ (DayNight) から解決し、ホストアプリの XML テーマには依存しない — ライブラリ所有の UI (標準 Cell の行・chrome・選択面) は常に同梱テーマでラップした Context で生成され、ホストのテーマ属性 (カスタム色・dynamic color を含む) は反映されない ([android/ADR-0020](../../../decisions/android/0020-bundled-theme-always-wrap-host-independent.md))。ホストの XML テーマ・Activity 型に前提はなく、最小テーマ + `ComponentActivity` の構成でも全 Cell が動作する。見た目の調整はライブラリの Theme / CellStyle で行う。
 
-Android のライト / ダークは、同梱テーマが DayNight 派生であるため端末の夜間モードとアプリの uiMode 制御 (`AppCompatDelegate.setDefaultNightMode` / `UiModeManager.setApplicationNightMode`) で決まる。ホストが XML テーマで Dark 系を明示するだけの指定は反映されない。
+Android で同梱テーマから解決される値 (chrome・選択面の配色、Cell title の既定色 `textColorPrimary`) のライト / ダークは、同梱テーマが DayNight 派生であるため端末の夜間モードとアプリの uiMode 制御 (Activity の Configuration 上書き・`AppCompatDelegate.setDefaultNightMode` 等) で決まる。ホストが XML テーマで Dark 系を明示するだけの指定は反映されない。Theme の他の既定色は同梱テーマを経由しない固定値で、夜間モードに追随しない (下記「既定色と外観の追随」)。
 
 利用者所有コンテンツ (CustomCell の content・`KsAnyView` 経由の利用者 View) は隔離の対象外で、従来どおりホストの Context (ホストテーマ) で解決される。
+
+### 既定色と外観の追随
+
+Theme を渡さないときの既定色のうち、アプリ外観 (iOS のダーク / Android の夜間モード) に追随するのは次の文字色だけで、他はライト前提の固定値である (2026-09-05 に 4 実行面で実測)。
+
+| 既定色 | iOS | Android |
+|---|---|---|
+| Cell title | 追随 (`UIColor.label`) | 追随 (同梱テーマの `textColorPrimary`) |
+| Cell description | 追随 (`.secondaryLabel`) | 固定 |
+| list 下地・Cell 背景・separator | 固定 | 固定 |
+| Header / Footer の背景・文字、disabled 文字、selected | 固定 | 固定 |
+
+帰結として、Theme を渡さずダーク外観で使うと「白地に淡色の文字」になる。MAUI facade は native をラップするため同じ。ダークで使う application は現時点では Theme に dark の色値を渡す (Sample の dark プリセットが利用例)。本体既定色の追随は変更 `fix-default-colors-dark-appearance` で検討中。
+
+### iOS の提示物の外観
+
+Cell から提示するモーダル (PickerCell の選択面・DatePickerCell のカレンダーシート) は、提示元 view の実効外観と window の実効外観が食い違うとき、提示元の外観を提示物とその presentation controller へ引き継ぐ (`PresentationAppearance`)。モーダルの土台 (container view) は提示元の階層ではなく window 直下に置かれるため、ホストが window ではなく root view controller に `overrideUserInterfaceStyle` を掛ける構成 (.NET MAUI の `Application.UserAppTheme` はこの形) では、引き継ぎがないとシートの地色と chrome だけが window の外観 (端末の外観) のまま残る。両者が同じ外観なら上書きを付けず、提示中の外観変更にホストが追随する余地を残す。`inputView` 経由のピッカー (TimePickerCell・NumberPickerCell・wheels 形式の DatePickerCell) は提示コンテナを経由しないため対象外で、同じ構成でも提示元の外観で描かれる。
 
 ## Sample の AiForms 互換色
 
 ライブラリの Theme 既定値は、Sample が比較用に持つ AiForms 互換色へ変更しない。AiForms の見た目を再現する application は、利用側の `Theme` として互換色を明示する。Sample はその値を各 platform の `SampleTheme` に置くが、比較用の色値は製品契約ではなく実ソースが正である ([Sample のプラットフォーム間一致](../../../handbook/cross/sample-parity.md))。
 
 この境界により、ライブラリ既定値は platform default を含む通常の解決順を維持し、特定の移植元 application の配色をすべての利用者へ暗黙適用しない。
+
+Sample の `SampleTheme` は互換色の light プリセットと、それを暗色へ写した dark プリセットの対を持ち、Sample のルートメニューの外観切替 (システム / ライト / ダーク) がダークのとき dark 側を渡す。dark プリセットは AiForms 原典に無い Sample 固有の配色で、light 側と同じく製品契約ではない。
 
 ## Theme 更新
 
@@ -87,6 +106,7 @@ Theme は `SettingsRoot` の構造ではなく独立した表示状態である�
 - size 専用フィールドと valueText / hintText の fallback を通常の4段階と区別する。
 - canvas 背景と Cell 背景を別の表示領域として扱う。
 - Theme 更新で設定ツリーの identity と構造を変えない。
+- iOS の Cell から提示するモーダルは、提示元と window の実効外観が食い違う構成でも提示元の外観で描かれる。
 
 ## してはいけないこと
 
