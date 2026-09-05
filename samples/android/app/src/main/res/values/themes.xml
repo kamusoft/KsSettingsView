@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!--
+    Sample アプリのウィンドウテーマ（ライト）。
+
+    フレームワーク標準の素のテーマを親に取る。Material3 の XML テーマも AppCompat の XML テーマも
+    持たない Compose 専業アプリ（Compose テンプレートの既定構成）を模し、KsSettingsView が
+    ホストのテーマ種別を問わずに動作することを示すため (android/ADR-0020)。
+
+    夜間モードでは values-night/ の同名 style が選ばれ、暗いウィンドウ配色になる。
+  -->
+  <style name="Theme.KsSettingsViewSample" parent="@android:style/Theme.Material.Light.NoActionBar" />
+</resources>

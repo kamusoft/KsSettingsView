@@ -47,11 +47,43 @@ object SampleTheme {
     /** 無効時テキスト色（#999999）。 */
     val mauiDisabledText: Color = Color(0xFF999999)
 
-    /** MAUI Sample の TitleTextColor 用（ButtonCell の `CellStyle(titleColor)` で使用）。 */
-    val mauiTitleText: Color = Color(0xFFCC9900)
-
     /** DeepTextColor（#555555）。Cell タイトルの文字色。 */
     val mauiDeepText: Color = Color(0xFF555555)
+
+    // =============================================================================
+    // dark プリセットの色定数
+    // =============================================================================
+    //
+    // light の各色ロールを、色相を保ったまま暗色側へ写した対。accent は light と同じ #FFBF00 を
+    // 保ち、Theme に dark 値を渡したときの描画がライブラリ既定色のダークと見分けられるようにする。
+    // 値は iOS / MAUI と同一の RGBA にする（cross/ADR-0016）。
+
+    /** dark の下地色（#1B1915）。SettingsView 全体と Header / Footer の背景。 */
+    val mauiDarkViewBackground: Color = Color(0xFF1B1915)
+
+    /** dark の Cell 背景（#2A2620）。 */
+    val mauiDarkCellBackground: Color = Color(0xFF2A2620)
+
+    /** dark のセパレータ色（#4A3F28）。 */
+    val mauiDarkSeparator: Color = Color(0xFF4A3F28)
+
+    /** dark のヘッダ文字色（#E0B040）。ButtonCell の `CellStyle(titleColor)` にも使う。 */
+    val mauiDarkHeaderText: Color = Color(0xFFE0B040)
+
+    /** dark のフッタ文字色（#9A948A）。 */
+    val mauiDarkFooterText: Color = Color(0xFF9A948A)
+
+    /** dark の無効時テキスト色（#7A756C）。 */
+    val mauiDarkDisabledText: Color = Color(0xFF7A756C)
+
+    /** dark の Cell タイトル文字色（#E6E1D6）。 */
+    val mauiDarkDeepText: Color = Color(0xFFE6E1D6)
+
+    /** dark の valueText 文字色（#B8B2A6）。 */
+    val mauiDarkValueText: Color = Color(0xFFB8B2A6)
+
+    /** dark の description 文字色（#9A948A）。 */
+    val mauiDarkDescriptionText: Color = Color(0xFF9A948A)
 
     // =============================================================================
     // 共通フィールド統合デモ用の共有アクセントパレット
@@ -144,8 +176,8 @@ object SampleTheme {
     // Theme
     // =============================================================================
 
-    /** MAUI 互換 Theme。 */
-    val maui: Theme = Theme(
+    /** MAUI 互換 Theme（light）。 */
+    val mauiLight: Theme = Theme(
         separatorColor = mauiSeparator,
         backgroundColor = mauiViewBackground,
         cellBackgroundColor = mauiCellBackground,
@@ -162,28 +194,68 @@ object SampleTheme {
     )
 
     /**
+     * MAUI 互換 Theme（dark）。
+     *
+     * 色ロールの構成は [mauiLight] と同じで、description と valueText の色だけを追加で明示する。
+     * この 2 つは未指定のままだと暗い下地に追随しない既定色へ解決されるため。
+     */
+    val mauiDark: Theme = Theme(
+        separatorColor = mauiDarkSeparator,
+        backgroundColor = mauiDarkViewBackground,
+        cellBackgroundColor = mauiDarkCellBackground,
+        selectedColor = mauiSelected,
+        cellAccentColor = mauiAccent,
+        disabledTextColor = mauiDarkDisabledText,
+        rowHeight = -1,
+        hasUnevenRows = true,
+        headerTextColor = mauiDarkHeaderText,
+        headerBackgroundColor = mauiDarkViewBackground,
+        footerTextColor = mauiDarkFooterText,
+        footerBackgroundColor = mauiDarkViewBackground,
+        cellTitleColor = mauiDarkDeepText,
+        cellValueTextColor = mauiDarkValueText,
+        cellDescriptionColor = mauiDarkDescriptionText,
+    )
+
+    /**
+     * 実効外観に対応する MAUI 互換 Theme。
+     *
+     * @param dark 実効外観がダークなら `true`
+     */
+    fun maui(dark: Boolean): Theme = if (dark) mauiDark else mauiLight
+
+    /**
+     * 実効外観に対応する ButtonCell の `CellStyle(titleColor)`（ヘッダ文字色と同色）。
+     *
+     * @param dark 実効外観がダークなら `true`
+     */
+    fun mauiTitleText(dark: Boolean): Color = if (dark) mauiDarkHeaderText else mauiHeaderText
+
+    /**
      * Section 装飾デモ用 Theme。
      *
-     * 下地（`backgroundColor`）と Header / Footer の背景に PaleBackColorPrimary を敷き、
+     * 下地（`backgroundColor`）と Header / Footer の背景に実効外観に応じた下地色を敷き、
      * 箱（`cellBackgroundColor`）・separator・Header / Footer 文字色はライブラリ既定のまま残す。
      * アイコンはバッジ型（[SampleIconBadge]）に合わせたサイズ・角丸を指定する。
      * Section 装飾の 4 属性だけを引数で差し替えてプリセットを作る。
      *
+     * @param dark 実効外観がダークなら `true`
      * @param sectionMargin Section 単位の外側余白（`null` で style ごとの既定）
      * @param sectionCornerRadius 箱の角丸半径（`null` で style ごとの既定）
      * @param sectionBorderWidth 箱のボーダー幅（`null` で実効 0dp）
      * @param sectionBorderColor 箱のボーダー色（`null` で実効透明）
      */
     fun sectionDecorationDemo(
+        dark: Boolean,
         sectionMargin: PaddingValues? = null,
         sectionCornerRadius: Dp? = null,
         sectionBorderWidth: Dp? = null,
         sectionBorderColor: Color? = null,
     ): Theme = Theme(
-        backgroundColor = mauiViewBackground,
+        backgroundColor = if (dark) mauiDarkViewBackground else mauiViewBackground,
         cellAccentColor = demoAccentGreen,
-        headerBackgroundColor = mauiViewBackground,
-        footerBackgroundColor = mauiViewBackground,
+        headerBackgroundColor = if (dark) mauiDarkViewBackground else mauiViewBackground,
+        footerBackgroundColor = if (dark) mauiDarkViewBackground else mauiViewBackground,
         cellIconSize = SampleIconBadge.size,
         cellIconRadius = SampleIconBadge.cornerRadius,
         sectionMargin = sectionMargin,

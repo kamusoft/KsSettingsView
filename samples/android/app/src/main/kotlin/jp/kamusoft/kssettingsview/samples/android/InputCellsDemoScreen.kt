@@ -1,6 +1,7 @@
 package jp.kamusoft.kssettingsview.samples.android
 
 import android.text.InputType
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -37,6 +38,8 @@ import java.time.format.DateTimeFormatter
  */
 @Composable
 fun InputCellsDemoScreen() {
+    val dark = isSystemInDarkTheme()
+
     // MARK: - EntryCell TwoWay binding 用
     /** 名前（テキスト、`maxLength = 20`） */
     val userName = remember { mutableStateOf("Tanaka Taro") }
@@ -110,7 +113,7 @@ fun InputCellsDemoScreen() {
         KsSettingsView(
             modifier = Modifier.fillMaxSize(),
             style = KsSettingsViewStyle.Classic,
-            theme = SampleTheme.maui,
+            theme = SampleTheme.maui(dark),
         ) {
             // 1. EntryCell セクション（TwoWay binding + Store 経路）
             Section(
@@ -316,6 +319,10 @@ fun InputCellsDemoScreen() {
                         onEvent = record,
                     ),
                     format = "yyyy/MM/dd",
+                    // 範囲外の日付が同じ月の表示内で無効として見えるよう、月の途中で範囲を切る
+                    // （カレンダーは前後の月の日を描画しないため）。
+                    minDate = LocalDate.of(2026, 6, 1),
+                    maxDate = LocalDate.of(2026, 6, 20),
                     pickerTitle = "予約日を選択",
                     // iOS の `.calendar` に視覚的に対応する形式。
                     uiStyle = DatePickerUIStyle.Material,

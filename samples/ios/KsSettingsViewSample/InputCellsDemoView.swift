@@ -101,6 +101,9 @@ struct InputCellsDemoView: View {
     /// 「最後のイベント: <Cell の title> → <変更後の値>」形式の1行表示。
     @State private var lastEvent: String = "(none)"
 
+    /// 実効外観。ダークのとき Theme の dark 側を渡す。
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
         VStack(spacing: 0) {
             Text("最後のイベント: \(lastEvent)")
@@ -288,6 +291,10 @@ struct InputCellsDemoView: View {
                         title: "予約日",
                         date: tracked($reservationDate, title: "予約日", display: { Self.dateFormatter.string(from: $0) }),
                         format: "yyyy/MM/dd",
+                        // 範囲外の日付が同じ月の表示内で無効として見えるよう、月の途中で範囲を切る
+                        // （カレンダーは前後の月の日を描画しないため）。
+                        minDate: Self.makeDate(year: 2026, month: 6, day: 1),
+                        maxDate: Self.makeDate(year: 2026, month: 6, day: 20),
                         pickerTitle: "予約日を選択",
                         uiStyle: .calendar,
                         todayText: "今日"
@@ -311,7 +318,7 @@ struct InputCellsDemoView: View {
                     )
                 }
             }
-            .theme(SampleTheme.maui)
+            .theme(SampleTheme.maui(dark: colorScheme == .dark))
             .ignoresSafeArea(.container, edges: .bottom)
         }
         .navigationTitle(SampleScreen.inputCells.title)
