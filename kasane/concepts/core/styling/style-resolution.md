@@ -3,7 +3,7 @@ type: concept
 title: スタイルの所有と実効値解決
 description: UI 層が Theme と CellStyle を所有し、platform の描画値へ段階的に解決する共通規則。ライブラリ既定色を中立に保ち AiForms 互換色は利用側が設定する方針を含む
 tags: [styling, theme, cell-style, native-types]
-timestamp: 2026-08-29
+timestamp: 2026-09-05
 ---
 
 この文書は、iOS / Android の Theme と CellStyle の所有境界と解決順を説明する。読むと、Core に style を置かない理由、Cell 固有値・CellStyle・Theme・platform default の優先順位、Theme 更新の境界が分かる。
@@ -41,11 +41,20 @@ ButtonCell の title 色や Switch / Checkbox の accent など、Cell 固有の
 通常の4段階だけでは表せない公開値は、次の順で解決する。
 
 - 正の `Theme.cellTitleFontSize` は、`CellStyle.titleFont` を含めて選ばれた最終 title font の size を上書きする。
-- valueText の色と font は `CellStyle` → Theme の valueText 既定 → Theme の title 既定 → platform default の順で解決する。EntryCell の入力中テキストの色もこの valueText の解決順に従う (EntryCell は `valueText` を持たないが、入力欄が表示する値の色は valueText 系の契約に属する。iOS / Android 共通)。
 - hintText の色は `CellStyle.hintTextColor` → `Theme.cellHintTextColor` → `Theme.cellAccentColor` の順で解決する。
 - Header / Footer の font は Theme の `headerFont` / `footerFont` を基礎にし、対応する正の `headerFontSize` / `footerFontSize` が最終 size を上書きする。
-- icon size / radius は `CellStyle` → Theme → 既定 (24pt / 24dp と radius 0) の順で解決する。icon size は正の有限値のみ、radius は 0 以上の有限値のみを有効とし、無効値 (負・NaN・±∞) は未指定として次の段へ進める (正値を要求する `rowHeight` / `cellTitleFontSize` と同じパターン)。解決済み値は両 platform とも icon の正方形枠へ反映する ([Cell 共通行のレイアウト](cell-row-layout.md) の icon 枠、core/ADR-0025)。
-- Section 装飾4属性 (`sectionMargin` / `sectionCornerRadius` / `sectionBorderWidth` / `sectionBorderColor`) は Section 単位の属性のため `CellStyle` 段を持たず、Theme → **platform default** (margin は style 間・platform 間とも同値の既定寸法 — core/ADR-0027。Classic は水平成分を無視) の2段で解決する。Theme へフラットに直置きし、集約用の中間型 (`SectionStyle` 等) を作らない。装飾の意味論は [設定 list の外観と補助領域](list-appearance.md) を参照する。
+
+### valueText の色と font
+
+`CellStyle` → Theme の valueText 既定 → Theme の title 既定 → platform default の順で解決する。EntryCell の入力中テキストの色もこの解決順に従う。EntryCell は `valueText` を持たないが、入力欄が表示する値の色は valueText 系の契約に属する (iOS / Android 共通)。
+
+### icon size / radius
+
+`CellStyle` → Theme → 既定 (24pt / 24dp と radius 0) の順で解決する。icon size は正の有限値のみ、radius は 0 以上の有限値のみを有効とし、無効値 (負・NaN・±∞) は未指定として次の段へ進める (正値を要求する `rowHeight` / `cellTitleFontSize` と同じパターン)。解決済み値は両 platform とも icon の正方形枠へ反映する ([Cell 共通行のレイアウト](cell-row-layout.md) の icon 枠、core/ADR-0025)。
+
+### Section 装飾4属性
+
+`sectionMargin` / `sectionCornerRadius` / `sectionBorderWidth` / `sectionBorderColor` は Section 単位の属性のため `CellStyle` 段を持たず、Theme → **platform default** の2段で解決する。margin の既定は style 間・platform 間とも同値の既定寸法で、Classic は水平成分を無視する (core/ADR-0027)。Theme へフラットに直置きし、集約用の中間型 (`SectionStyle` 等) を作らない。装飾の意味論は [設定 list の外観と補助領域](list-appearance.md) を参照する。
 
 ## 表示領域
 
