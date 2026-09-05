@@ -3,7 +3,7 @@ type: concept
 title: MauiView の native 実体化機構 (materializer seam と platform lease)
 description: VisualElement を platform view へ実体化する facade 内の共有基盤 — seam 契約・自己計測 wrapper・論理所有と lease の寿命分離・退役順序・native への埋め込みの継ぎ目
 tags: [maui, materialization, handler, lifecycle]
-timestamp: 2026-08-22
+timestamp: 2026-09-05
 ---
 
 # MauiView の native 実体化機構 (materializer seam と platform lease)
@@ -103,13 +103,17 @@ Compose の interop は factory が返した view を framework 自身が行ご�
 
 Compose の破棄チェーンはすべて親側・自己スコープ — `layoutNode.onDetach` は `removeAllViewsInLayout()` (自分の子だけを外す)、node 破棄の `onRelease` は view 操作を一切しない (実体は退役した holder の子のまま残り、次に表示する行の factory が引き取る)、holder の除去 (`removeAndroidView`) も holder 自身を外すだけ。別の行へ移った実体には構造的に届かない (compose-ui 1.7.5 ソースで確認)。子側の操作は「これから表示する行」方向にしか存在しない — 埋め込み factory の detach→返却と、wrapper (`KsAccessoryHostView`) 構築時の `RemoveFromParent()`。ViewGroup の単一親不変条件 (親を持つ子への `addView` は例外) により親替えは必ず現在の親の `removeView` を経由するため、退役側が後から表示中の行へ手を出す経路自体が無い。
 
-reuse 経路 (`AndroidViewHolder.onReuse` には子側の `addView` があり、他の行に奪われた実体へ実行されると例外になり得る) は、埋め込みが `onReset` を渡していない → 非 reusable (`ComposeNode`) のため通らない。根拠は compose-runtime の再利用分岐 — Composer は onReset を持たないノードを再利用対象から外し、reuse の機会でも**強制置換 (破棄して作り直し)** する。native CustomCell が `ReusableContent` で中身をリサイクルするようになった ([android/ADR-0015](../../../decisions/android/0015-customcell-pool-aware-composition-disposal.md)) 後もこの前提は変わらない。**`AndroidView` へ `onReset` を与える変更はこの前提を壊す**ので、加える場合はこの節を確かめ直すこと。
+reuse 経路 (`AndroidViewHolder.onReuse` には子側の `addView` があり、他の行に奪われた実体へ実行されると例外になり得る) は通らない。理由は 2 つある。第一に、埋め込みは `key(token)` で包まれており、Composer は reusing 中でもグループキーと objectKey (= トークン) が一致する既存グループしか引き当てないため、Cell ごとに異なるトークンを持つ埋め込みは常に新規挿入になる (compose-runtime 1.7.5 の `Composer.start()` で確認、2026-09-05)。第二に、`onReset` を渡していない `AndroidView` は非 reusable (`ComposeNode`) で、reuse の機会でも**強制置換 (破棄して作り直し)** される。native CustomCell が `ReusableContent` で中身をリサイクルするようになった ([android/ADR-0015](../../../decisions/android/0015-customcell-pool-aware-composition-disposal.md)) 後もこの前提は変わらない。**`onReset` を渡すだけでは再利用は成立せず、`key(token)` を外して成立させると factory が再実行されないまま前の Cell の View が行に残る** (factory が Cell ごとの輸送 View を返す設計のため)。埋め込みの再利用に手を入れるなら、factory が行ごとの入れ物を返し `update` で輸送 View を付け替える構造への作り替えになり、この節と次節を確かめ直すこと。
 
 deactivate 経路 (`AndroidViewHolder.onDeactivate` = `removeAllViewsInLayout`) は android/ADR-0015 以降、プール投入時の非活性化で埋め込みに対して**新たに走るようになった**。これも親側・自己スコープの操作で別の行の実体には届かない。deactivate を明示的に通す Bridge 専用回帰テスト (`KsBridgeCustomCellDeactivateTest`) と実機高速フリック再検証 (2026-08-16、エミュ 583 + Pixel 6a 267 ジェスチャで空行・例外 0) で裏取り済み。
 
 ### 実証と再検証の条件
 
-エミュレータ実証 (2026-08-13、API 35 / compose-ui 1.7.5): CustomCellDemo 全域の高速フリック往復 2 セッション (計約 600 フリック・約 100 検査点、iOS 再現手順と同じ高速フリック+遅いドラッグの組を含む) で空行 0 件・埋め込み起因の例外 0 件 (iOS は修正前およそ 10 スワイプ中 2 件)。この根拠は compose-ui の実装詳細に依存するため、Compose BOM のメジャー更新時は破棄チェーン (`onDetach` / `onRelease`) に子側 detach が増えていないかを確かめ直すこと。
+エミュレータ実証 (2026-08-13、API 35 / compose-ui 1.7.5): CustomCellDemo 全域の高速フリック往復 2 セッション (計約 600 フリック・約 100 検査点、iOS 再現手順と同じ高速フリック+遅いドラッグの組を含む) で空行 0 件・埋め込み起因の例外 0 件 (iOS は修正前およそ 10 スワイプ中 2 件)。ソースの確認は compose-ui / compose-runtime 1.7.5 で行ったが、bridge が実際に解決するのは compose-ui 1.9.5 (BOM 2025.11.01、2026-09-05 に `gradlew :kssettingsview-bridge:dependencies` で確認) で、1.9.5 の破棄チェーンはソース未確認である (deactivate 回帰テストと Pixel 4a / 6a の実機フリングは 1.9.5 で通っている)。この根拠は compose-ui の実装詳細に依存するため、Compose (BOM) の更新時は破棄チェーン (`onDetach` / `onRelease`) に子側 detach が増えていないかを、解決される版のソースで確かめ直すこと。
+
+### Android — 行リサイクルのコスト (実測)
+
+行のリサイクルで走るのは輸送 View の再親付け (factory の detach → holder の `addView`) 1 回で、wrapper の再実体化は起きない (世代トークンが安定しているため)。スクロール中のコストはこの再親付けの下流に集中する — `addView` に伴うウィンドウ全体への inset 再配布、付け直した部分木の描画記録、`onGloballyPositioned` 経由で走る Android 側 layout (wrapper の `OnLayout` → MAUI の Arrange)、再 composition — で、wrapper の measure (`OnMeasure` → `IView.Measure`) は bind あたり 1.5〜3 回・1 回 0.1〜0.2ms と 1 フレームの 2% に満たない。**wrapper 側の計測キャッシュは効かず、行ごとの入れ物の再利用も再親付けの回数を減らさない**。主因に効く手は「MAUI content を持つ行をリサイクルしない」方向だけで、未着手 (端末クラスと content の重さの目安は [MAUI の描画性能を測るビルド構成](../../../handbook/maui/performance-verification.md))。実測は `kasane/changes/archive/2026-09-05-maui-android-customcell-embed-perf/evidence/measurements-2026-09-05.md` (Pixel 4a / 6a、Release、gfxinfo + atrace)。
 
 ## サイズ変化の伝播
 
