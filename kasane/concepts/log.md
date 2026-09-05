@@ -378,3 +378,7 @@
 - distilled: slim-ci-triggers (S 級・phase-13-ci-trigger-slimming 完了 — [cross/ADR-0028](../decisions/cross/0028-ci-triggers-by-branch-role.md) を proposed → **accepted** へ昇格し、実測 (壁時計 7.7 分・paths-ignore の起動 / 非起動の確認) と、`main` の head 制限を lint job 検査のまま受容した残存リスク (add-release-workflow の deviation 由来) を Consequences に追記。`.github/workflows/ci.yml` の ADR-0028 参照コメントは change 内で付与済み / handbook: `cross/release-procedure.md` の「ブランチの役割」は change 内で改訂済み (本蒸留で timestamp のみ更新) / concepts: `cross/architecture/repository-boundaries.md` の消費者検証 dry-run の呼ばれる場面を「`main` 宛て PR の CI」へ更新 (上の add-release-workflow の項に含む) / lessons: 追加捕捉なし / deviation なし (デルタスペックを持たない S 級) / 媒体 0 件)
 - roadmap: package-distribution の全 13 フェーズが completed になった。ロードマップ自体のアーカイブは ksn-roadmap で行う (未実施)。
 - distilled: fix-ios-memoryleak-test-flaky (S 級・ADR / handbook / concepts / lessons / deviation なし — iOS 解放テスト 3 ケースを既存の条件待機へ置換。独立レビュー APPROVED、10 反復 90 件・全件 1000 件が failure 0、検出力確認済み / 媒体 0 件)
+
+## 2026-09-05
+
+- updated: 用語統一 (proofread-skills-wording) — Section の Cell 群を囲む領域の呼称を「箱」から **Container**、その縁線を「ボーダー」から **Border** へ統一 (skills/ja の利用者向け語彙に正本を揃える)。あわせて Cell を指す「行」を「Cell」へ整えた。対象: `core/styling/list-appearance.md` (節見出し「Modern の Section Container」を含む 20 箇所)、`ios/api/ios-native-host.md`、`android/api/android-native-host.md`、`maui/api/maui-facade.md`、`core/cells/number-picker-selection-surface.md`。契約の意味・公開 API 名・既定値は変更していないため各ファイルの timestamp (最終検証日) は据え置き。

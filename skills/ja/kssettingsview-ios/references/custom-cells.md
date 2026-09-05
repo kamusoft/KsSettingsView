@@ -1,10 +1,10 @@
 # カスタム Cell
 
-組み込み Cell で足りない行のためのレシピ。まず `CustomCell` を試し、共通行レイアウトと style 解決に参加する行が必要なときだけ独自 Cell 型を定義する。例はいずれも [SKILL.md](../SKILL.md) の最小動作コードと同じ import を前提とする。
+組み込み Cell では表せない内容のためのレシピ。まず `CustomCell` を試し、共通 Cell レイアウトと style 解決に参加させたいときだけ独自 Cell 型を定義する。例はいずれも [SKILL.md](../SKILL.md) の最小動作コードと同じ import を前提とする。
 
-## 任意の SwiftUI View を行 (row) として表示する
+## 任意の SwiftUI View を Cell として表示する
 
-`CustomCell` は任意の SwiftUI View を行として描く。Renderer を書く必要も登録も要らない。行が表示する値は `content` として渡し、View は builder の引数から組み立てる。
+`CustomCell` は任意の SwiftUI View を Cell として描く。Renderer を書く必要も登録も要らない。Cell が表示する値は `content` として渡し、View は builder の引数から組み立てる。
 
 ```swift
 @State private var volume: Double = 50
@@ -22,11 +22,11 @@ KsSettingsView {
 }
 ```
 
-行の表示に効く値は必ず `content` に入れる (`Hashable` であること)。builder と `onTap` のクロージャは等価判定に参加しないため、キャプチャした値だけを変えても行は更新されない。
+Cell の表示に効く値は必ず `content` に入れる (`Hashable` であること)。builder と `onTap` のクロージャは等価判定に参加しないため、キャプチャした値だけを変えても Cell は更新されない。
 
-## データを持たない固定表示の行を置く
+## データを持たない固定表示の Cell を置く
 
-変化する表示がない行では `content` を省略し、builder だけを渡す。
+変化する表示がない Cell では `content` を省略し、builder だけを渡す。
 
 ```swift
 CustomCell {
@@ -39,7 +39,7 @@ CustomCell {
 
 ## タップ操作や Disclosure Indicator を付ける
 
-`onTap` は行タップで発火する (content 内の要素がタップを消費した場合は発火しない)。`showArrow` は `CommandCell` と同じ Disclosure Indicator を表示し、両者は独立に指定できる。
+`onTap` は Cell のタップで発火する (content 内の要素がタップを消費した場合は発火しない)。`showArrow` は `CommandCell` と同じ Disclosure Indicator を表示し、両者は独立に指定できる。
 
 ```swift
 CustomCell(content: planName, showArrow: true, onTap: { openPlans() }) { name in
@@ -51,11 +51,11 @@ CustomCell(content: planName, showArrow: true, onTap: { openPlans() }) { name in
 }
 ```
 
-`isEnabled: false` は行タップと content 内部の操作の両方を抑止し、content 全体を淡色化する。
+`isEnabled: false` は Cell のタップと content 内部の操作の両方を抑止し、content 全体を淡色化する。
 
-## カスタム行の高さを指定する
+## カスタム Cell の高さを指定する
 
-行は既定で content の高さに追従する。`cellHeight` は Theme の可変高さが有効な間は最低高として働き、無効にすると固定高になる。カスタム行に効く `CellStyle` は背景色と高さだけで、文字色やフォントは効かない。`icon` modifier もここでは no-op である — `CustomCell` はアイコン領域を持たないため、画像は content の中に自分で描く。
+Cell は既定で content の高さに追従する。`cellHeight` は Theme の可変高さが有効な間は最低高として働き、無効にすると固定高になる。カスタム Cell に効く `CellStyle` は背景色と高さだけで、文字色やフォントは効かない。`icon` modifier もここでは no-op である — `CustomCell` はアイコン領域を持たないため、画像は content の中に自分で描く。
 
 ```swift
 CustomCell(content: message) { text in
@@ -66,7 +66,7 @@ CustomCell(content: message) { text in
 .cellHeight(120)
 ```
 
-## CustomCell を再利用可能な行にする
+## CustomCell を再利用可能な Cell にする
 
 画面をまたいで使い回すには `CustomCell` を返す関数に包むだけでよい。登録は要らない。
 
@@ -122,9 +122,9 @@ private struct SliderRow: View {
 }
 ```
 
-ドラッグ中はローカルの値で追従し、ドラッグ確定時にだけ外へ返すことで、1 フレームごとの再バインドを避けている。ドラッグ中でないときは `content.value` を描くため、外から押し込まれた値 (Store 更新など) も行に届く。
+ドラッグ中はローカルの値で追従し、ドラッグ確定時にだけ外へ返すことで、1 フレームごとの再バインドを避けている。ドラッグ中でないときは `content.value` を描くため、外から押し込まれた値 (Store 更新など) も Cell に届く。
 
-こうして作った行は組み込み Cell と同じように置け、同じ関数を画面や Section をまたいで何度でも呼べる。`CustomCell` に効く modifier もそのまま chain できる。
+こうして作った Cell は組み込み Cell と同じように置け、同じ関数を画面や Section をまたいで何度でも呼べる。`CustomCell` に効く modifier もそのまま chain できる。
 
 ```swift
 struct SoundSettingsView: View {
@@ -151,7 +151,7 @@ struct SoundSettingsView: View {
 
 ## 独自の Cell 型と Renderer を定義する
 
-独自 Cell 型は `KsCell` に準拠した値で、要求されるメンバは `var id: UUID` の 1 つだけである。`KsCell` は `Hashable` / `Identifiable` / `Sendable` を継承しているため、格納プロパティがすべて `Hashable` かつ `Sendable` な値型にする。`style: CellStyle` は契約に含まれない — 後述の `DSLStyleModifiable` が要求するので、style 系 modifier を効かせたい場合にだけ持たせる。行に `isVisible` を効かせたい場合は `VisibilityAware` も付ける。
+独自 Cell 型は `KsCell` に準拠した値で、要求されるメンバは `var id: UUID` の 1 つだけである。`KsCell` は `Hashable` / `Identifiable` / `Sendable` を継承しているため、格納プロパティがすべて `Hashable` かつ `Sendable` な値型にする。`style: CellStyle` は契約に含まれない — 後述の `DSLStyleModifiable` が要求するので、style 系 modifier を効かせたい場合にだけ持たせる。Cell に `isVisible` を効かせたい場合は `VisibilityAware` も付ける。
 
 ```swift
 struct ProgressCell: KsCell, VisibilityAware {
@@ -169,7 +169,7 @@ struct ProgressCell: KsCell, VisibilityAware {
 }
 ```
 
-Renderer は `KsCellRenderer` に準拠する自前の `UICollectionViewCell` サブクラスである (ライブラリ内部の基底クラスは継承できない)。bind のたびに現在の Cell と Theme を受け取り、再利用時には前の行に属するものを解放する。
+Renderer は `KsCellRenderer` に準拠する自前の `UICollectionViewCell` サブクラスである (ライブラリ内部の基底クラスは継承できない)。bind のたびに現在の Cell と Theme を受け取り、再利用時には前の Cell に属するものを解放する。
 
 ```swift
 final class ProgressCellView: UICollectionViewListCell, KsCellRenderer {
@@ -211,7 +211,7 @@ final class ProgressCellView: UICollectionViewListCell, KsCellRenderer {
 }
 ```
 
-行を表示する前に、この 2 つを対応付けて共有 Registry へ登録する。SwiftUI の `KsSettingsView` は registry の引数を持たず常に `KsCellRegistry.shared` を使うため、SwiftUI 経路ではこれが唯一の登録手段になる。
+Cell を表示する前に、この 2 つを対応付けて共有 Registry へ登録する。SwiftUI の `KsSettingsView` は registry の引数を持たず常に `KsCellRegistry.shared` を使うため、SwiftUI 経路ではこれが唯一の登録手段になる。
 
 ```swift
 KsCellRegistry.shared.register(
@@ -220,7 +220,7 @@ KsCellRegistry.shared.register(
 )
 ```
 
-未登録の Cell は DEBUG ビルドでは assertion で検出され、それ以外では空の placeholder 行になる。
+未登録の Cell は DEBUG ビルドでは assertion で検出され、それ以外では空の placeholder Cell になる。
 
 ## 独自の Registry を使う
 

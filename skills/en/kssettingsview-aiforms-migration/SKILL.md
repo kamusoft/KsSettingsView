@@ -9,9 +9,9 @@ metadata:
 
 # Migrating from AiForms.SettingsView to KsSettingsView
 
-KsSettingsView is a UI library for building settings screens - the list-style screens the iOS Settings app is made of. You declare the screen as a tree of rows (cells) grouped into sections, and that tree is the screen. This Skill covers moving a .NET MAUI app off AiForms.Maui.SettingsView onto KsSettingsView, member by member of the old public API.
+KsSettingsView is a UI library for building settings screens - the list-style screens the iOS Settings app is made of. You declare the screen as a tree of cells grouped into sections, and that tree is the screen. This Skill covers moving a .NET MAUI app off AiForms.Maui.SettingsView onto KsSettingsView, member by member of the old public API.
 
-KsSettingsView keeps the shape of AiForms.SettingsView - a `SettingsView` holding `Section`s holding cells, bound from a view model - but the rows are drawn by a native settings list instead of MAUI handlers. Most properties survive the move under the same name; a smaller set is renamed, retyped, or gone. This Skill tells you which is which for every AiForms member you may have in your XAML.
+KsSettingsView keeps the shape of AiForms.SettingsView - a `SettingsView` holding `Section`s holding cells, bound from a view model - but the cells are drawn by a native settings list instead of MAUI handlers. Most properties survive the move under the same name; a smaller set is renamed, retyped, or gone. This Skill tells you which is which for every AiForms member you may have in your XAML.
 
 The mapping is against AiForms.Maui.SettingsView, the .NET MAUI release. Coming from the older Xamarin.Forms AiForms.SettingsView you can still read across, since the member names largely carried over into the MAUI release, but the tables here are not checked against the Xamarin.Forms API.
 
@@ -22,7 +22,7 @@ The mapping is against AiForms.Maui.SettingsView, the .NET MAUI release. Coming 
 | Swap the package reference, XAML namespace, and startup registration | Setup and Minimal migration below |
 | Translate a cell property that survives under the same or a new name | [references/api-mapping.md](references/api-mapping.md) |
 | Find what replaced `TextPickerCell`, the attached `RadioCell.SelectedValue`, `EntryCell.CompletedCommand`, or `IsAndroidSpinnerStyle` | [references/api-mapping.md](references/api-mapping.md) |
-| Carry screen-wide styling over: `Cell*` defaults, header and footer, row height, section borders | [references/api-mapping.md](references/api-mapping.md) |
+| Carry screen-wide styling over: `Cell*` defaults, header and footer, cell height, section borders | [references/api-mapping.md](references/api-mapping.md) |
 | Decide what to do about a dropped feature: drag sort, `ScrollToTop`, `UseDescriptionAsValue`, `LongCommand` | [references/api-mapping.md](references/api-mapping.md) |
 | Delete the per-cell Handler / PropertyMapper code and the `HandlerCleanUpHelper` leak workaround | [references/api-mapping.md](references/api-mapping.md) |
 | Fix a CS0104 on `SwitchCell` / `EntryCell` in C# that migrated cell-building code now hits | [references/api-mapping.md](references/api-mapping.md), then the kssettingsview-maui Skill |
@@ -55,7 +55,7 @@ The `Microsoft.Maui.Controls` floor is checked at restore: an AiForms project ca
 
 Prefer the unversioned platform TFMs shown in the table. They select the correct native binding packages. If you explicitly pin the platform API versions, use `net10.0-android36.0` / `net10.0-ios26.0` or later. Lower versions can restore without a warning while selecting the platform-neutral `lib/net10.0` asset instead, which silently omits the iOS and Android native binding dependencies. This behavior was verified with SDK 10.0.300.
 
-Mac Catalyst is not a target. Android puts no requirement on the host activity type or theme: the library ships its own Material3 theme and draws its rows inside it, so the host theme does not restyle them - AiForms screens that relied on the host theme may look different until you restyle through the `SettingsView` properties - and light or dark follows the device's night mode.
+Mac Catalyst is not a target. Android puts no requirement on the host activity type or theme: the library ships its own Material3 theme and draws its cells inside it, so the host theme does not restyle them - AiForms screens that relied on the host theme may look different until you restyle through the `SettingsView` properties - and light or dark follows the device's night mode.
 
 ## Minimal migration
 
@@ -111,8 +111,8 @@ After, in KsSettingsView:
 </ContentPage>
 ```
 
-Place `SettingsView` where the layout decides its size - directly in a page, in a `*` grid row, or with an explicit size. AiForms tolerated an `Auto` row or a `VerticalStackLayout`. Here it does not: in a container that sizes itself to its content, an editable row on Android loses focus while the user is typing.
+Place `SettingsView` where the layout decides its size - directly in a page, in a `*` grid row, or with an explicit size. AiForms tolerated an `Auto` row or a `VerticalStackLayout`. Here it does not: in a container that sizes itself to its content, an editable cell on Android loses focus while the user is typing.
 
 ## Reference files
 
-- [references/api-mapping.md](references/api-mapping.md) - the full old-to-new table, grouped by what you are trying to migrate: namespace and registration, screen skeleton, shared cell fields, each cell type, screen-wide styling, headers and footers, templated rows, handler customizations, and the members with no replacement.
+- [references/api-mapping.md](references/api-mapping.md) - the full old-to-new table, grouped by what you are trying to migrate: namespace and registration, screen skeleton, shared cell fields, each cell type, screen-wide styling, headers and footers, templated cells, handler customizations, and the members with no replacement.

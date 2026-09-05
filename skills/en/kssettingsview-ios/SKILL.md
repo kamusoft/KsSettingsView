@@ -1,6 +1,6 @@
 ---
 name: kssettingsview-ios
-description: Build iOS settings screens with KsSettingsView - a SwiftUI declarative DSL (KsSettingsView) or a UIKit host (KsSettingsViewController) over the built-in cells (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker), CustomCell rows holding any SwiftUI view, live updates through SettingsRootStore, and Theme / CellStyle styling. Use when adding, changing, or reviewing a settings screen in a Swift app that depends on KsSettingsViewCore, KsSettingsViewUI, or KsSettingsViewSwiftUI.
+description: Build iOS settings screens with KsSettingsView - a SwiftUI declarative DSL (KsSettingsView) or a UIKit host (KsSettingsViewController) over the built-in cells (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker), CustomCell holding any SwiftUI view, live updates through SettingsRootStore, and Theme / CellStyle styling. Use when adding, changing, or reviewing a settings screen in a Swift app that depends on KsSettingsViewCore, KsSettingsViewUI, or KsSettingsViewSwiftUI.
 license: MIT
 metadata:
   language: en
@@ -9,20 +9,20 @@ metadata:
 
 # KsSettingsView for iOS
 
-KsSettingsView is a UI library for building settings screens - the list-style screens the iOS Settings app is made of. You declare the screen as a tree of rows (cells) grouped into sections, and that tree is the screen. This Skill covers the iOS build, which comes in two forms: a SwiftUI declarative DSL and a UIKit host (`KsSettingsViewController`). The tree can be written declaratively or driven imperatively from a store.
+KsSettingsView is a UI library for building settings screens - the list-style screens the iOS Settings app is made of. You declare the screen as a tree of cells grouped into sections, and that tree is the screen. This Skill covers the iOS build, which comes in two forms: a SwiftUI declarative DSL and a UIKit host (`KsSettingsViewController`). The tree can be written declaratively or driven imperatively from a store.
 
 ## What you can do
 
 | What you want to do | Where to look |
 |---|---|
-| Place a row: label, action, button, switch, checkbox, radio, text field, list picker, number, time, date | [references/cells.md](references/cells.md) |
-| Group rows into sections, add icons, descriptions, hints; disable or hide a row | [references/cells.md](references/cells.md) |
-| Change the screen after it is on display: insert, remove, move, replace rows, batch updates | [references/updates.md](references/updates.md) |
-| Keep rows identified across re-evaluations, drive visibility from state, host the screen from UIKit | [references/updates.md](references/updates.md) |
+| Place a cell: label, action, button, switch, checkbox, radio, text field, list picker, number, time, date | [references/cells.md](references/cells.md) |
+| Group cells into sections, add icons, descriptions, hints; disable or hide a cell | [references/cells.md](references/cells.md) |
+| Change the screen after it is on display: insert, remove, move, replace cells, batch updates | [references/updates.md](references/updates.md) |
+| Keep cells identified across re-evaluations, drive visibility from state, host the screen from UIKit | [references/updates.md](references/updates.md) |
 | Express a change as a `SettingsRootDiff`, apply a diff or theme to the controller directly | [references/updates.md](references/updates.md) |
-| Colors, fonts, row height, Classic / Modern list appearance, section boxes | [references/styling.md](references/styling.md) |
+| Colors, fonts, cell height, Classic / Modern list appearance, section boxes | [references/styling.md](references/styling.md) |
 | Section and screen headers / footers, including arbitrary SwiftUI in them | [references/styling.md](references/styling.md) |
-| Put any SwiftUI view into a row of the list, or define your own cell type with its own renderer | [references/custom-cells.md](references/custom-cells.md) |
+| Put any SwiftUI view into a cell of the list, or define your own cell type with its own renderer | [references/custom-cells.md](references/custom-cells.md) |
 
 ## Setup
 
@@ -82,11 +82,11 @@ struct SettingsScreen: View {
 }
 ```
 
-`ksSection` is used instead of `Section` so the row builder never collides with `SwiftUI.Section`.
+`ksSection` is used instead of `Section` so the cell builder never collides with `SwiftUI.Section`.
 
 ## Reference files
 
-- [references/cells.md](references/cells.md) - one recipe per built-in cell, plus sections, icons, and the fields every row shares.
-- [references/updates.md](references/updates.md) - changing a screen that is already on display, row identity, visibility, and UIKit hosting.
+- [references/cells.md](references/cells.md) - one recipe per built-in cell, plus sections, icons, and the fields every cell shares.
+- [references/updates.md](references/updates.md) - changing a screen that is already on display, cell identity, visibility, and UIKit hosting.
 - [references/styling.md](references/styling.md) - `Theme`, `CellStyle`, style modifiers, list appearance, headers and footers.
 - [references/custom-cells.md](references/custom-cells.md) - `CustomCell`, reusable wrappers, and your own cell type with a renderer.

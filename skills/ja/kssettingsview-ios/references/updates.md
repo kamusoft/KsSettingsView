@@ -1,6 +1,6 @@
 # 表示中の画面の更新
 
-表示中の設定画面を変えるためのレシピと、宣言ツリーの再評価をまたいで行を追跡するためのレシピ。import を自分で書いていないコードは [SKILL.md](../SKILL.md) の最小動作コードと同じ import を前提とする。
+表示中の設定画面を変えるためのレシピと、宣言ツリーの再評価をまたいで Cell を追跡するためのレシピ。import を自分で書いていないコードは [SKILL.md](../SKILL.md) の最小動作コードと同じ import を前提とする。
 
 ## Store で設定ツリーを所有する
 
@@ -44,15 +44,15 @@ struct SettingsScreen: View {
 |---|---|
 | Root 全体 | `replaceAll(_:)` |
 | Section | `insertSection(_:at:)`、`removeSection(sectionID:)`、`moveSection(from:to:)`、`replaceSection(sectionID:new:)` |
-| 行 | `insertCell(_:in:at:)`、`removeCell(cellID:)`、`replaceCell(cellID:new:)`、`replaceCells(_:)`、`moveCell(cellID:to:)` |
+| Cell | `insertCell(_:in:at:)`、`removeCell(cellID:)`、`replaceCell(cellID:new:)`、`replaceCells(_:)`、`moveCell(cellID:to:)` |
 | Header / Footer | `updateAccessory(target:accessory:)`、`invalidateAccessoryMeasurement(target:)` |
 | Theme | `applyTheme(_:)` |
 
 以降の Store のレシピはこの `SettingsModel` のメンバとして書いてあり、`store` と `generalSectionID` はその 2 つのプロパティを指す。
 
-## 表示後に行を追加・削除する
+## 表示後に Cell を追加・削除する
 
-`insertCell` は Section の中へ行を置き、`removeCell` は行の識別子を受ける。この識別子は `KsCellID` で、Cell の `id` (`UUID`) だけをラップした値である — 内容がどう変わっても `id` が同じなら同じ行として扱われる。index は画面上の位置ではなく非表示要素を含む model 配列上の位置である。
+`insertCell` は Section の中へ Cell を置き、`removeCell` は Cell の識別子を受ける。この識別子は `KsCellID` で、Cell の `id` (`UUID`) だけをラップした値である — 内容がどう変わっても `id` が同じなら同じ Cell として扱われる。index は画面上の位置ではなく非表示要素を含む model 配列上の位置である。
 
 ```swift
 func appendUser(_ name: String) {
@@ -68,20 +68,20 @@ func removeLastUser() {
 
 対象の識別子が見つからない操作は、状態も変えず通知も行わない。
 
-## 1 行の内容を差し替える
+## Cell 1 つの内容を差し替える
 
-`replaceCell` は行をその場で更新する。行は同一性と位置を保ち、削除・再挿入ではなく再構成として反映される。同じ識別子を持つ新しい Cell を渡す。
+`replaceCell` は Cell をその場で更新する。Cell は同一性と位置を保ち、削除・再挿入ではなく再構成として反映される。同じ識別子を持つ新しい Cell を渡す。
 
 ```swift
 let updated = LabelCell(id: cell.id, title: "Version", valueText: "1.1.0")
 store.replaceCell(cellID: KsCellID(cell: cell), new: updated)
 ```
 
-新しい Cell は別の型でもよい — `LabelCell` を `SwitchCell` に差し替えるなど。行は同一性と位置を保ったまま、背後の Native cell だけが交換される。識別子そのものを変える場合は、削除と挿入で表す。
+新しい Cell は別の型でもよい — `LabelCell` を `SwitchCell` に差し替えるなど。Cell は同一性と位置を保ったまま、背後の Native cell だけが交換される。識別子そのものを変える場合は、削除と挿入で表す。
 
-## 複数行を 1 バッチで更新する
+## 複数の Cell を 1 バッチで更新する
 
-1 回の操作で複数行が変わるとき (ラジオグループなど) はまとめて渡し、1 回の状態更新と 1 回の通知で反映させる。
+1 回の操作で複数の Cell が変わるとき (ラジオグループなど) はまとめて渡し、1 回の状態更新と 1 回の通知で反映させる。
 
 ```swift
 store.replaceCells([
@@ -110,9 +110,9 @@ store.replaceCells([
 
 未知の識別子はスキップされ、空リストは何もしない。
 
-## Section や行を並べ替える
+## Section や Cell を並べ替える
 
-`moveSection` は全 Section 配列上の位置で動き、`moveCell` は行が属する Section を解決してその中で並べ替える。どちらも `to` は「対象をいったん取り除いた後の挿入位置」として解釈される。
+`moveSection` は全 Section 配列上の位置で動き、`moveCell` は Cell が属する Section を解決してその中で並べ替える。どちらも `to` は「対象をいったん取り除いた後の挿入位置」として解釈される。
 
 ```swift
 store.moveSection(from: 2, to: 0)
@@ -142,7 +142,7 @@ store.applyTheme(darkTheme)
 
 宣言的な書き方では `.theme(_:)` modifier が同じ経路を通る。
 
-## 再評価をまたいで行を追跡する
+## 再評価をまたいで Cell を追跡する
 
 宣言ツリーは評価のたびに作り直されるため、動的なコレクションには key が要る。`Identifiable` の要素または `id:` KeyPath を受ける DSL の `ForEach` を使う。
 
@@ -174,9 +174,9 @@ ksSection("General") {
 .sectionID("general")
 ```
 
-## 状態から行の表示・非表示を切り替える
+## 状態から Cell の表示・非表示を切り替える
 
-`isVisible` の切り替えは表示対象の集合を作り直すため、既存の行のその場更新ではなく、行の追加・削除として反映される。
+`isVisible` の切り替えは表示対象の集合を作り直すため、既存の Cell のその場更新ではなく、Cell の追加・削除として反映される。
 
 ```swift
 @State private var showAdvanced = false

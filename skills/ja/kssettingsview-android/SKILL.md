@@ -1,6 +1,6 @@
 ---
 name: kssettingsview-android
-description: KsSettingsView で Android の設定画面 (settings screen) を作る - Jetpack Compose の宣言的 DSL または XML の View ホスト (KsSettingsView という View) で、組み込みの Cell (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker) に加えて任意の Composable を行 (row) として表示する CustomCell、SettingsRootStore による表示中の更新、Theme / CellStyle のスタイル指定を扱う。jp.kamusoft:kssettingsview に依存する、または jp.kamusoft.kssettingsview.core / .ui / .compose を import する Kotlin アプリで設定画面を追加・変更・レビューするときに使う。
+description: KsSettingsView で Android の設定画面 (settings screen) を作る - Jetpack Compose の宣言的 DSL または XML の View ホスト (KsSettingsView という View) で、組み込みの Cell (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker) に加えて任意の Composable を Cell として表示する CustomCell、SettingsRootStore による表示中の更新、Theme / CellStyle のスタイル指定を扱う。jp.kamusoft:kssettingsview に依存する、または jp.kamusoft.kssettingsview.core / .ui / .compose を import する Kotlin アプリで設定画面を追加・変更・レビューするときに使う。
 license: MIT
 metadata:
   language: ja
@@ -9,19 +9,19 @@ metadata:
 
 # KsSettingsView for Android
 
-KsSettingsView は、iOS の設定アプリのようなリスト形式の設定画面を組み立てる UI ライブラリ。画面は行 (Cell) を Section にまとめたツリーとして宣言し、そのツリーがそのまま画面になる。この Skill が扱うのは Android 版で、Jetpack Compose の宣言的 DSL と XML に置く View ホスト (`KsSettingsView` という View) の 2 つの形で提供される。宣言ツリーとして書いても、Store から命令的に操作する形でも書ける。
+KsSettingsView は、iOS の設定アプリのようなリスト形式の設定画面を組み立てる UI ライブラリ。画面は Cell を Section にまとめたツリーとして宣言し、そのツリーがそのまま画面になる。この Skill が扱うのは Android 版で、Jetpack Compose の宣言的 DSL と XML に置く View ホスト (`KsSettingsView` という View) の 2 つの形で提供される。宣言ツリーとして書いても、Store から命令的に操作する形でも書ける。
 
 ## できること
 
 | やりたいこと | 参照先 |
 |---|---|
-| 行を置く: ラベル、操作、ボタン、スイッチ、チェックボックス、ラジオ、テキスト入力、リスト選択、数値、時刻、日付 | [references/cells.md](references/cells.md) |
-| 行を Section にまとめる、アイコン・説明・ヒントを付ける、行を無効化・非表示にする | [references/cells.md](references/cells.md) |
-| 表示中の画面を変える: 行の挿入・削除・移動・差し替え、複数行のバッチ更新、`SettingsRootDiff` での直接駆動 | [references/updates.md](references/updates.md) |
-| 再評価をまたいで行を追跡する、状態から表示・非表示を切り替える、XML から画面を組み込む | [references/updates.md](references/updates.md) |
-| 色・フォント・行高さ、Classic / Modern の list 外観、Section の箱、`Theme` の既定値定数 | [references/styling.md](references/styling.md) |
+| Cell を置く: ラベル、操作、ボタン、スイッチ、チェックボックス、ラジオ、テキスト入力、リスト選択、数値、時刻、日付 | [references/cells.md](references/cells.md) |
+| Cell を Section にまとめる、アイコン・説明・ヒントを付ける、Cell を無効化・非表示にする | [references/cells.md](references/cells.md) |
+| 表示中の画面を変える: Cell の挿入・削除・移動・差し替え、複数 Cell のバッチ更新、`SettingsRootDiff` での直接駆動 | [references/updates.md](references/updates.md) |
+| 再評価をまたいで Cell を追跡する、状態から表示・非表示を切り替える、XML から画面を組み込む | [references/updates.md](references/updates.md) |
+| 色・フォント・Cell の高さ、Classic / Modern の list 外観、Section の Container、`Theme` の既定値定数 | [references/styling.md](references/styling.md) |
 | Section と画面全体の Header / Footer (任意の Composable も置ける) | [references/styling.md](references/styling.md) |
-| 任意の Composable を行 (row) として表示する、独自の Cell 型と ViewHolder を定義する | [references/custom-cells.md](references/custom-cells.md) |
+| 任意の Composable を Cell として表示する、独自の Cell 型と ViewHolder を定義する | [references/custom-cells.md](references/custom-cells.md) |
 
 ## 導入
 
@@ -92,11 +92,11 @@ fun SettingsScreen() {
 
 `Section` は DSL スコープのメンバ関数なので import は要らない。Cell の関数は Section スコープの拡張関数なので、使うものを個別に import する。`KsSettingsView` Composable は DSL / Store のどちらの overload も Compose の `modifier` 引数を受ける。
 
-この `KsSettingsView { ... }` の再評価 DSL では、Cell の関数が `CellHandle` を返し、`Section` は `SectionHandle` を返す ([references/updates.md](references/updates.md) に出てくる `settingsRoot` builder の `section` / `cell` は Handle を返さない)。Handle は今置いた行や Section への不透明な参照で (利用者が構築することも中身を読むこともできない)、`LabelCell(title = "Name").titleColor(Color.Red)` のように [references/styling.md](references/styling.md) の modifier を呼び出しへ chain するために存在する。返り値を無視するのが通常の使い方。
+この `KsSettingsView { ... }` の再評価 DSL では、Cell の関数が `CellHandle` を返し、`Section` は `SectionHandle` を返す ([references/updates.md](references/updates.md) に出てくる `settingsRoot` builder の `section` / `cell` は Handle を返さない)。Handle は今置いた Cell や Section への不透明な参照で (利用者が構築することも中身を読むこともできない)、`LabelCell(title = "Name").titleColor(Color.Red)` のように [references/styling.md](references/styling.md) の modifier を呼び出しへ chain するために存在する。返り値を無視するのが通常の使い方。
 
 ## リファレンス
 
 - [references/cells.md](references/cells.md) - 組み込み Cell ごとのレシピと、Section・アイコン・全 Cell 共通フィールド。
-- [references/updates.md](references/updates.md) - 表示中の画面の更新、行の同一性、可視性、XML からの利用。
+- [references/updates.md](references/updates.md) - 表示中の画面の更新、Cell の同一性、可視性、XML からの利用。
 - [references/styling.md](references/styling.md) - `Theme`、`CellStyle`、style modifier、list 外観、Header / Footer。
 - [references/custom-cells.md](references/custom-cells.md) - `CustomCell`、再利用のためのラップ関数、独自 Cell 型と ViewHolder。

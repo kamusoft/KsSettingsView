@@ -1,10 +1,10 @@
 # Custom cells
 
-Recipes for rows the built-in cells do not cover. Start with `CustomCell`; define your own cell type only when you need a row that takes part in the shared row layout and style resolution. Every example assumes the imports from the minimal example in [SKILL.md](../SKILL.md).
+Recipes for content the built-in cells do not cover. Start with `CustomCell`; define your own cell type only when you need to take part in the shared cell layout and style resolution. Every example assumes the imports from the minimal example in [SKILL.md](../SKILL.md).
 
-## Put arbitrary SwiftUI into a row of the list
+## Put arbitrary SwiftUI into a cell of the list
 
-`CustomCell` renders any SwiftUI view as a row with no renderer to write and nothing to register. Pass the values the row displays as `content` and build the view from the builder argument.
+`CustomCell` renders any SwiftUI view as a cell with no renderer to write and nothing to register. Pass the values the cell displays as `content` and build the view from the builder argument.
 
 ```swift
 @State private var volume: Double = 50
@@ -22,11 +22,11 @@ KsSettingsView {
 }
 ```
 
-Anything that affects what the row shows must live in `content`, which needs to be `Hashable`. The builder and `onTap` closures are excluded from the comparison, so changing only a captured value leaves the row as it was.
+Anything that affects what the cell shows must live in `content`, which needs to be `Hashable`. The builder and `onTap` closures are excluded from the comparison, so changing only a captured value leaves the cell as it was.
 
-## Show a fixed row with no data
+## Show a fixed cell with no data
 
-When the row displays nothing that changes, drop `content` and pass the builder alone.
+When the cell displays nothing that changes, drop `content` and pass the builder alone.
 
 ```swift
 CustomCell {
@@ -39,7 +39,7 @@ CustomCell {
 
 ## Add a tap action or a disclosure indicator
 
-`onTap` fires when the row is tapped, unless something inside the content consumed the tap. `showArrow` draws the same disclosure indicator as `CommandCell`, and the two are independent.
+`onTap` fires when the cell is tapped, unless something inside the content consumed the tap. `showArrow` draws the same disclosure indicator as `CommandCell`, and the two are independent.
 
 ```swift
 CustomCell(content: planName, showArrow: true, onTap: { openPlans() }) { name in
@@ -51,11 +51,11 @@ CustomCell(content: planName, showArrow: true, onTap: { openPlans() }) { name in
 }
 ```
 
-`isEnabled: false` blocks both the row tap and the controls inside the content, and dims the whole content.
+`isEnabled: false` blocks both the cell tap and the controls inside the content, and dims the whole content.
 
-## Set the height of a custom row
+## Set the height of a custom cell
 
-The row grows with its content by default. `cellHeight` acts as a minimum while the theme leaves uneven rows enabled, and as a fixed height once they are disabled. Only the background color and the height of `CellStyle` reach a custom row; text colors and fonts do not. The `icon` modifier is a no-op here too, because a `CustomCell` has no icon area - draw the image inside the content instead.
+The cell grows with its content by default. `cellHeight` acts as a minimum while the theme leaves uneven rows enabled, and as a fixed height once they are disabled. Only the background color and the height of `CellStyle` reach a custom cell; text colors and fonts do not. The `icon` modifier is a no-op here too, because a `CustomCell` has no icon area - draw the image inside the content instead.
 
 ```swift
 CustomCell(content: message) { text in
@@ -66,9 +66,9 @@ CustomCell(content: message) { text in
 .cellHeight(120)
 ```
 
-## Make a reusable row out of CustomCell
+## Make a reusable cell out of CustomCell
 
-To reuse a row across screens, wrap the `CustomCell` in a function. No registration is involved.
+To reuse a cell across screens, wrap the `CustomCell` in a function. No registration is involved.
 
 ```swift
 struct SliderValue: Hashable {
@@ -122,9 +122,9 @@ private struct SliderRow: View {
 }
 ```
 
-The row keeps a local value while the slider is being dragged and reports it once the drag ends, so the row is not rebound on every frame. Outside a drag it draws `content.value`, so a value pushed from elsewhere - a store update, for instance - still reaches the row.
+The cell keeps a local value while the slider is being dragged and reports it once the drag ends, so the cell is not rebound on every frame. Outside a drag it draws `content.value`, so a value pushed from elsewhere - a store update, for instance - still reaches the cell.
 
-A row built this way goes in like any built-in cell, and the same function serves as many screens and sections as you need. The modifiers that reach a `CustomCell` still chain onto it.
+A cell built this way goes in like any built-in cell, and the same function serves as many screens and sections as you need. The modifiers that reach a `CustomCell` still chain onto it.
 
 ```swift
 struct SoundSettingsView: View {
@@ -151,7 +151,7 @@ struct SoundSettingsView: View {
 
 ## Define your own cell type and renderer
 
-A cell type of your own is a value conforming to `KsCell`, which requires exactly one member: `var id: UUID`. `KsCell` refines `Hashable`, `Identifiable` and `Sendable`, so make it a value type whose stored properties are all `Hashable` and `Sendable`. A `style: CellStyle` property is not part of the contract - add one only if you want the style modifiers, which is what `DSLStyleModifiable` below asks for. Add `VisibilityAware` if the row should honor `isVisible`.
+A cell type of your own is a value conforming to `KsCell`, which requires exactly one member: `var id: UUID`. `KsCell` refines `Hashable`, `Identifiable` and `Sendable`, so make it a value type whose stored properties are all `Hashable` and `Sendable`. A `style: CellStyle` property is not part of the contract - add one only if you want the style modifiers, which is what `DSLStyleModifiable` below asks for. Add `VisibilityAware` if the cell should honor `isVisible`.
 
 ```swift
 struct ProgressCell: KsCell, VisibilityAware {
@@ -169,7 +169,7 @@ struct ProgressCell: KsCell, VisibilityAware {
 }
 ```
 
-The renderer is a `UICollectionViewCell` subclass of your own conforming to `KsCellRenderer` - the library's internal base class is not available to subclass. It receives the current cell and theme on every bind, and releases what belonged to the previous row on reuse.
+The renderer is a `UICollectionViewCell` subclass of your own conforming to `KsCellRenderer` - the library's internal base class is not available to subclass. It receives the current cell and theme on every bind, and releases what belonged to the previous cell on reuse.
 
 ```swift
 final class ProgressCellView: UICollectionViewListCell, KsCellRenderer {
@@ -211,7 +211,7 @@ final class ProgressCellView: UICollectionViewListCell, KsCellRenderer {
 }
 ```
 
-Register the pair into the shared registry before the row is displayed. This is the only route for the SwiftUI `KsSettingsView`, which has no registry parameter and always uses `KsCellRegistry.shared`.
+Register the pair into the shared registry before the cell is displayed. This is the only route for the SwiftUI `KsSettingsView`, which has no registry parameter and always uses `KsCellRegistry.shared`.
 
 ```swift
 KsCellRegistry.shared.register(
@@ -220,7 +220,7 @@ KsCellRegistry.shared.register(
 )
 ```
 
-An unregistered cell trips an assertion in debug builds and falls back to an empty placeholder row elsewhere.
+An unregistered cell trips an assertion in debug builds and falls back to an empty placeholder cell elsewhere.
 
 ## Use a registry of your own
 

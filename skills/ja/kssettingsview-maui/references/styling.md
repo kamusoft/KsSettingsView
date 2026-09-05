@@ -1,8 +1,8 @@
 # スタイル
 
-画面の見た目にかかわるレシピ: 画面全体の既定値、行ごとの上書き、list の外観、Section 装飾、Header / Footer、配置場所。XAML の断片は [SKILL.md](../SKILL.md) の最小動作コードにある `ks` 名前空間宣言を前提とする。
+画面の見た目にかかわるレシピ: 画面全体の既定値、Cell ごとの上書き、list の外観、Section 装飾、Header / Footer、配置場所。XAML の断片は [SKILL.md](../SKILL.md) の最小動作コードにある `ks` 名前空間宣言を前提とする。
 
-描画値は次の順で解決される: Cell 種別が意味として持つ値 (ButtonCell のタイトル色など) → 行ごとの上書き → `SettingsView` の画面全体の既定値 → platform 既定。未指定は「次の段から継承する」意思であって「何も使わない」ではない。
+描画値は次の順で解決される: Cell 種別が意味として持つ値 (ButtonCell のタイトル色など) → Cell ごとの上書き → `SettingsView` の画面全体の既定値 → platform 既定。未指定は「次の段から継承する」意思であって「何も使わない」ではない。
 
 ## 画面全体の既定値を決める
 
@@ -28,11 +28,11 @@
 </ks:SettingsView>
 ```
 
-`BackgroundColor` は list 全体の下地、`CellBackgroundColor` は行の既定背景で、一方から他方を推論しない。`HeaderBackgroundColor` / `FooterBackgroundColor` は Section の Header / Footer 領域を塗る指定だが、両 platform に届かない唯一の組でもある — iOS ではこれらは領域へ適用されず、効くのは `HeaderTextColor` / `FooterTextColor` だけになる。`CellPlaceholderColor` は全 `EntryCell` のプレースホルダ文字色の既定で、行ごとには `PlaceholderColor` で上書きする。どちらも未指定なら OS 既定のプレースホルダ色のままで、ダークモードにも自動で追従する。
+`BackgroundColor` は list 全体の下地、`CellBackgroundColor` は Cell の既定背景で、一方から他方を推論しない。`HeaderBackgroundColor` / `FooterBackgroundColor` は Section の Header / Footer 領域を塗る指定だが、両 platform に届かない唯一の組でもある — iOS ではこれらは領域へ適用されず、効くのは `HeaderTextColor` / `FooterTextColor` だけになる。`CellPlaceholderColor` は全 `EntryCell` のプレースホルダ文字色の既定で、Cell ごとには `PlaceholderColor` で上書きする。どちらも未指定なら OS 既定のプレースホルダ色のままで、ダークモードにも自動で追従する。
 
-## 行 1 つの見た目を上書きする
+## Cell 1 つの見た目を上書きする
 
-同じ値が行ごとにも用意されていて、指定した行だけがその値で描かれる。
+同じ値が Cell ごとにも用意されていて、指定した Cell だけがその値で描かれる。
 
 ```xml
 <ks:LabelCell Title="Danger zone"
@@ -50,7 +50,7 @@
 
 ## スタイルプロパティの一覧
 
-画面全体の既定値は `SettingsView` に、行ごとの上書きは `CellBase` (全 Cell 共通の基底) に、次のプロパティとして並んでいる。個々の使い方はこのファイルの各レシピが扱う。いずれも bindable property で、対応する `FooProperty` という名前の `BindableProperty` フィールド (例: `CellTitleColorProperty`) を持つ。
+画面全体の既定値は `SettingsView` に、Cell ごとの上書きは `CellBase` (全 Cell 共通の基底) に、次のプロパティとして並んでいる。個々の使い方はこのファイルの各レシピが扱う。いずれも bindable property で、対応する `FooProperty` という名前の `BindableProperty` フィールド (例: `CellTitleColorProperty`) を持つ。
 
 `SettingsView` (画面全体の既定):
 
@@ -66,7 +66,7 @@
 | アイコン | `CellIconSize`、`CellIconRadius` |
 | Section 装飾 | `SectionMargin`、`SectionCornerRadius`、`SectionBorderWidth`、`SectionBorderColor` |
 
-`CellBase` (行ごとの上書き):
+`CellBase` (Cell ごとの上書き):
 
 | 分類 | プロパティ |
 |---|---|
@@ -74,11 +74,11 @@
 | 値テキスト | `ValueTextColor`、`ValueTextFontFamily`、`ValueTextFontSize`、`ValueTextFontAttributes` |
 | 説明文 | `DescriptionColor`、`DescriptionFontFamily`、`DescriptionFontSize`、`DescriptionFontAttributes` |
 | ヒント | `HintTextColor`、`HintFontFamily`、`HintFontSize`、`HintFontAttributes` |
-| 行・アイコン | `BackgroundColor`、`IconSize`、`IconRadius`、`Height` |
+| Cell・アイコン | `BackgroundColor`、`IconSize`、`IconRadius`、`Height` |
 
 ## フォントを変える
 
-フォントはテキストのスロットごとに 3 つのプロパティに分けて公開されていて、画面全体にも行ごとにも指定できる。
+フォントはテキストのスロットごとに 3 つのプロパティに分けて公開されていて、画面全体にも Cell ごとにも指定できる。
 
 ```xml
 <ks:SettingsView CellTitleFontFamily="OpenSansRegular"
@@ -91,9 +91,9 @@
 </ks:SettingsView>
 ```
 
-## 行の高さを決める
+## Cell の高さを決める
 
-`RowHeight` が画面全体の基準で、`Height` が行ごとの上書き。`HasUnevenRows="True"` なら高さは最低値として働き各行が内容に応じて伸び、`False` なら固定される。`RowHeight` は正値だけが有効なので「自動」を意味する数値は無い — どの行も内容に合わせたいときは `RowHeight` を指定せず、`HasUnevenRows="True"` に任せる。
+`RowHeight` が画面全体の基準で、`Height` が Cell ごとの上書き。`HasUnevenRows="True"` なら高さは最低値として働き各 Cell が内容に応じて伸び、`False` なら固定される。`RowHeight` は正値だけが有効なので「自動」を意味する数値は無い — どの Cell も内容に合わせたいときは `RowHeight` を指定せず、`HasUnevenRows="True"` に任せる。
 
 ```xml
 <ks:SettingsView HasUnevenRows="True">
@@ -103,9 +103,9 @@
 </ks:SettingsView>
 ```
 
-## フラットな外観 (Classic) と箱の外観 (Modern) を切り替える
+## Section の区切り方を切り替える (Classic の罫線 / Modern の角丸 Container)
 
-`ListStyle` (`SettingsViewStyle` 型) は Section の区切り方を選ぶ。`Classic` は罫線でフラットに区切り、`Modern` は Section の行だけを角丸の箱にまとめて Header / Footer を箱の外に置く。切り替えても内容と identity は変わらない。
+`ListStyle` (`SettingsViewStyle` 型) は Section の区切り方を選ぶ。`Classic` は Cell と Section の境界を罫線で引くだけで、Cell は画面の全幅に並ぶ。`Modern` は Section の Cell だけを角丸の Container にまとめ、Section Header / Footer はその Container の外側に置く。切り替えても内容と identity は変わらない。
 
 ```xml
 <ks:SettingsView ListStyle="Modern">
@@ -115,9 +115,9 @@
 </ks:SettingsView>
 ```
 
-## Section の箱を調整する
+## Modern の Section Container を調整する
 
-箱と Section 周りの余白は 4 つのプロパティで表す。指定は画面内の全 Section に効く。`SectionMargin` の左右は leading / trailing の意味なので文字の流れる向きに従い、`Classic` では上下成分だけが効く。
+Container と Section 周りの余白は 4 つのプロパティで表す。指定は画面内の全 Section に効く。`SectionMargin` の左右は leading / trailing の意味なので文字の流れる向きに従い、`Classic` では上下成分だけが効く。
 
 ```xml
 <ks:SettingsView ListStyle="Modern"
@@ -131,7 +131,7 @@
 </ks:SettingsView>
 ```
 
-未指定のものは platform 既定へ落ちる — 既定の余白と角丸は両 platform で同じ値、ボーダーは描かれない。
+未指定のものは platform 既定へ落ちる — 既定の余白と角丸は両 platform で同じ値、Border は描かれない。
 
 ## Header と Footer を付ける
 
@@ -176,7 +176,7 @@ Section は `HeaderText` / `FooterText`、画面全体は `RootHeaderText` / `Ro
 
 ## アイコンの大きさを決める
 
-アイコンのサイズと角丸は画面ごとにも行ごとにも解決される。
+アイコンのサイズと角丸は画面ごとにも Cell ごとにも解決される。
 
 ```xml
 <ks:SettingsView CellIconSize="32" CellIconRadius="8">

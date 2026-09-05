@@ -1,6 +1,6 @@
 # Cells
 
-Recipes for placing rows in a settings screen. Every example on this page assumes the imports below. Cell functions live in `jp.kamusoft.kssettingsview.compose` and have to be imported one by one; the value types they take (`KsImage`, `DatePickerUIStyle`) live in `jp.kamusoft.kssettingsview.ui`, not in `compose`.
+Recipes for placing cells in a settings screen. Every example on this page assumes the imports below. Cell functions live in `jp.kamusoft.kssettingsview.compose` and have to be imported one by one; the value types they take (`KsImage`, `DatePickerUIStyle`) live in `jp.kamusoft.kssettingsview.ui`, not in `compose`.
 
 ```kotlin
 import android.text.InputType
@@ -29,11 +29,11 @@ import jp.kamusoft.kssettingsview.ui.DatePickerUIStyle
 import jp.kamusoft.kssettingsview.ui.KsImage
 ```
 
-`getValue` and `setValue` are what make `var x by remember { mutableStateOf(...) }` compile; without them the delegate form fails to resolve. Snippets that place rows are fragments of a `KsSettingsView { Section { ... } }` body inside a `@Composable` function, unless they show that frame themselves.
+`getValue` and `setValue` are what make `var x by remember { mutableStateOf(...) }` compile; without them the delegate form fails to resolve. Snippets that place cells are fragments of a `KsSettingsView { Section { ... } }` body inside a `@Composable` function, unless they show that frame themselves.
 
-## Group rows into a section
+## Group cells into a section
 
-Rows always live inside a section. `Section` takes an optional string header and footer.
+Cells always live inside a section. `Section` takes an optional string header and footer.
 
 ```kotlin
 KsSettingsView {
@@ -54,9 +54,9 @@ KsSettingsView {
 LabelCell(title = "Storage", valueText = "256 GB")
 ```
 
-## Run an action or navigate from a row
+## Run an action or navigate from a cell
 
-`CommandCell` reports taps and shows a disclosure indicator - the chevron at the trailing edge of the row that marks it as leading somewhere - unless you pass `hideArrow = true`.
+`CommandCell` reports taps and shows a disclosure indicator - the chevron at the trailing edge of the cell that marks it as leading somewhere - unless you pass `hideArrow = true`.
 
 ```kotlin
 CommandCell(
@@ -65,9 +65,9 @@ CommandCell(
 )
 ```
 
-## Put a button in a row
+## Put a button in a cell
 
-`ButtonCell` never shows a disclosure indicator and centers its title by default. `titleAlignment` takes a `CellTitleAlignment` (`START` / `CENTER` / `END`) from `jp.kamusoft.kssettingsview.core`, and only shows visually on rows that have no `valueText`.
+`ButtonCell` never shows a disclosure indicator and centers its title by default. `titleAlignment` takes a `CellTitleAlignment` (`START` / `CENTER` / `END`) from `jp.kamusoft.kssettingsview.core`, and only shows visually on cells that have no `valueText`.
 
 ```kotlin
 ButtonCell(
@@ -127,9 +127,9 @@ SimpleCheckCell(
 )
 ```
 
-## Choose one option among rows
+## Choose one option among cells
 
-`RadioCell` rows that share a `groupId` form one selection. The row is drawn as selected when `value == selectedValue`, and you own `selectedValue`.
+`RadioCell` cells that share a `groupId` form one selection. The cell is drawn as selected when `value == selectedValue`, and you own `selectedValue`.
 
 ```kotlin
 var appearance by remember { mutableStateOf("light") }
@@ -152,7 +152,7 @@ Section(header = "Appearance") {
 }
 ```
 
-Tapping the row that is already selected does not fire `onSelected` again.
+Tapping the cell that is already selected does not fire `onSelected` again.
 
 ## Let the user type text
 
@@ -171,11 +171,11 @@ EntryCell(
 
 For a password field pass `isPassword = true`; for a numeric field pass `keyboardType = InputType.TYPE_CLASS_NUMBER`. `textAlignment` aligns the entered text with a `CellTitleAlignment` (`START` / `CENTER` / `END`) and defaults to `END`. `placeholderColor` colors the placeholder text; left unspecified it resolves through `CellStyle.placeholderColor`, then `Theme.cellPlaceholderColor`, and finally the OS default, which follows dark mode on its own.
 
-While the field has focus it owns its own text: content updates for the same row do not replace what is being typed, and the row re-syncs with the last supplied value when focus is lost. So if you use the callback overload - a `String` for `text` and `onTextChanged` for the change - feed the new value back into the cell, or the field snaps back on blur. Enter on a single-line field closes the keyboard and keeps the focus; include `InputType.TYPE_TEXT_FLAG_MULTI_LINE` in `keyboardType` if you want Enter to insert a line break instead.
+While the field has focus it owns its own text: content updates for the same cell do not replace what is being typed, and the cell re-syncs with the last supplied value when focus is lost. So if you use the callback overload - a `String` for `text` and `onTextChanged` for the change - feed the new value back into the cell, or the field snaps back on blur. Enter on a single-line field closes the keyboard and keeps the focus; include `InputType.TYPE_TEXT_FLAG_MULTI_LINE` in `keyboardType` if you want Enter to insert a line break instead.
 
 ## Choose one item from a list
 
-`PickerCell` opens a bottom sheet when the row is tapped. The single-selection overload takes a `MutableState<Int?>`; there is no confirm button, and tapping a candidate writes the value back and closes the sheet right away.
+`PickerCell` opens a bottom sheet when the cell is tapped. The single-selection overload takes a `MutableState<Int?>`; there is no confirm button, and tapping a candidate writes the value back and closes the sheet right away.
 
 ```kotlin
 val themeIndex = remember { mutableStateOf<Int?>(0) }
@@ -187,7 +187,7 @@ PickerCell(
 )
 ```
 
-`pageTitle` sets the title of the sheet; left unspecified, the `title` of the row is used.
+`pageTitle` sets the title of the sheet; left unspecified, the `title` of the cell is used.
 
 ## Choose one object from a list
 
@@ -212,7 +212,7 @@ PickerCell(
 )
 ```
 
-The row itself shows only the `displayText` of the selection, never the `subText`. Instead of an index state, single selection can also bind the element directly: `selectedItem` takes a `MutableState<T?>`, resolves it to the first equal candidate when the cell is built (an element not in the list means no selection), and writes the chosen element back.
+The cell itself shows only the `displayText` of the selection, never the `subText`. Instead of an index state, single selection can also bind the element directly: `selectedItem` takes a `MutableState<T?>`, resolves it to the first equal candidate when the cell is built (an element not in the list means no selection), and writes the chosen element back.
 
 ```kotlin
 val plan = remember { mutableStateOf<Plan?>(null) }
@@ -263,11 +263,11 @@ NumberPickerCell(
 )
 ```
 
-`pickerTitle` sets the title of the sheet; left unspecified, the `title` of the row is used. `TimePickerCell` and `DatePickerCell` take the same parameter.
+`pickerTitle` sets the title of the sheet; left unspecified, the `title` of the cell is used. `TimePickerCell` and `DatePickerCell` take the same parameter.
 
 ## Choose a time
 
-`TimePickerCell` edits a `java.time.LocalTime`. Tapping the row opens a bottom sheet with hour and minute wheels, and the value is written back once, on confirmation - closing the sheet any other way discards the change. `format` only controls the text shown on the row.
+`TimePickerCell` edits a `java.time.LocalTime`. Tapping the cell opens a bottom sheet with hour and minute wheels, and the value is written back once, on confirmation - closing the sheet any other way discards the change. `format` only controls the text shown on the cell.
 
 ```kotlin
 val alarm = remember { mutableStateOf(LocalTime.of(7, 0)) }
@@ -306,7 +306,7 @@ DatePickerCell(
 )
 ```
 
-Here too the value is written back only on confirmation; every other way of closing discards the change. The calendar dialog survives a rotation with its selection intact as long as the row keeps a stable id across the activity being recreated - see [updates.md](updates.md); the Spinner sheet, like the other bottom sheets, closes on rotation without reporting anything. `androidButtonColor` recolors only the header controls (confirm and cancel) of the `Spinner` sheet and has no effect on the `Material` dialog.
+Here too the value is written back only on confirmation; every other way of closing discards the change. The calendar dialog survives a rotation with its selection intact as long as the cell keeps a stable id across the activity being recreated - see [updates.md](updates.md); the Spinner sheet, like the other bottom sheets, closes on rotation without reporting anything. `androidButtonColor` recolors only the header controls (confirm and cancel) of the `Spinner` sheet and has no effect on the `Material` dialog.
 
 `minDate` and `maxDate` restrict what can be chosen; either may be given on its own. A current value outside the range is presented clamped to the nearest bound.
 
@@ -319,7 +319,7 @@ DatePickerCell(
 )
 ```
 
-## Add an icon to a row
+## Add an icon to a cell
 
 `icon` takes a `KsImage`: a drawable resource id or a `Drawable` instance.
 
@@ -328,9 +328,9 @@ LabelCell(title = "Storage", icon = KsImage.Resource(R.drawable.ic_storage))
 LabelCell(title = "Avatar", icon = KsImage.Drawable(avatarDrawable))
 ```
 
-The icon is drawn inside a square frame, so rows keep their titles aligned regardless of the glyph width. `KsImage.SystemName` exists for symmetry with iOS and resolves to no icon here.
+The icon is drawn inside a square frame, so cells keep their titles aligned regardless of the glyph width. `KsImage.SystemName` exists for symmetry with iOS and resolves to no icon here.
 
-## Add description, value and hint to the same row
+## Add description, value and hint to the same cell
 
 Every built-in cell accepts `description` (below the title), `valueText` (trailing on the title row), and `hintText` (top right). There are two exceptions: `ButtonCell` has no `description`, and `EntryCell` has no `valueText` because the text field itself shows the value - use `text` there.
 
@@ -344,19 +344,19 @@ LabelCell(
 )
 ```
 
-When the row is too narrow, the title is kept and `valueText` is truncated.
+When the cell is too narrow, the title is kept and `valueText` is truncated.
 
-## Disable a row
+## Disable a cell
 
-Pass `isEnabled = false` at construction. It blocks taps and the embedded control, and swaps the text color for the disabled color. There is also a `disabled(...)` modifier on the handle, but it is deliberately a no-op that returns the row unchanged, so it is not an alternative to the constructor argument.
+Pass `isEnabled = false` at construction. It blocks taps and the embedded control, and swaps the text color for the disabled color. There is also a `disabled(...)` modifier on the handle, but it is deliberately a no-op that returns the cell unchanged, so it is not an alternative to the constructor argument.
 
 ```kotlin
 CommandCell(title = "Advanced settings", isEnabled = false)
 ```
 
-## Hide a row without dropping its value
+## Hide a cell without dropping its value
 
-`isVisible = false` removes the row from the display while the value stays in the model, so an update applied while hidden is visible again when the row returns.
+`isVisible = false` removes the cell from the display while the value stays in the model, so an update applied while hidden is visible again when the cell returns.
 
 ```kotlin
 var showAdvanced by remember { mutableStateOf(false) }
@@ -367,4 +367,4 @@ Section(header = "General") {
 }
 ```
 
-`isVisible` also exists on `Section`, where it hides the header, footer and every row of that section.
+`isVisible` also exists on `Section`, where it hides the header, footer and every cell of that section.

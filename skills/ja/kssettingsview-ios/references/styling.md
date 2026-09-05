@@ -1,6 +1,6 @@
 # スタイル
 
-色・フォント・寸法・list の外観と、行の周りの補助領域のレシピ。例はいずれも [SKILL.md](../SKILL.md) の最小動作コードと同じ import を前提とする。
+色・フォント・寸法・list の外観と、Cell の周りの補助領域のレシピ。例はいずれも [SKILL.md](../SKILL.md) の最小動作コードと同じ import を前提とする。
 
 描画値は Cell 種別の意味上の固有値 → `CellStyle` → `Theme` → UIKit 既定値の順で解決する。意味上の固有値とは、その Cell にとっての意味からその型が持っているフィールド — `ButtonCell.titleColor`、選択系・入力系 Cell の `accentColor` など — で、同じ属性を `CellStyle` で指定しても固有値が優先される。型は UIKit のものをそのまま使う (`UIColor` / `UIFont` / `CGFloat`)。`import SwiftUI` から UIKit が入らないファイルでは `import UIKit` が要る。
 
@@ -24,7 +24,7 @@ KsSettingsView {
 .theme(warmTheme)
 ```
 
-`backgroundColor` は list 全体の下地、`cellBackgroundColor` は行の背景であり、別の領域である。一方から他方を推論しない。
+`backgroundColor` は list 全体の下地、`cellBackgroundColor` は Cell の背景であり、別の領域である。一方から他方を推論しない。
 
 `Theme` のフィールドは以下がすべてで、並びは宣言順である。実引数もこの順に並べる。
 
@@ -37,8 +37,8 @@ KsSettingsView {
 | list | `cellAccentColor` | `UIColor` | ライブラリ既定 |
 | list | `disabledTextColor` | `UIColor` | ライブラリ既定 |
 | list | `scrollIndicatorVisible` | `Bool` | `true` |
-| 行高さ | `rowHeight` | `Int` | `-1` (自動) |
-| 行高さ | `hasUnevenRows` | `Bool` | `true` |
+| Cell の高さ | `rowHeight` | `Int` | `-1` (自動) |
+| Cell の高さ | `hasUnevenRows` | `Bool` | `true` |
 | Header | `headerTextColor` | `UIColor` | ライブラリ既定 |
 | Header | `headerBackgroundColor` | `UIColor` | ライブラリ既定 |
 | Header | `headerFontSize` | `Double` | `-1` |
@@ -60,10 +60,10 @@ KsSettingsView {
 | Cell 既定 | `cellPlaceholderColor` | `UIColor?` | `nil` (OS 既定) |
 | Cell 既定 | `cellIconSize` | `CGFloat?` | `nil` (24pt) |
 | Cell 既定 | `cellIconRadius` | `CGFloat?` | `nil` (0pt) |
-| Section の箱 | `sectionMargin` | `NSDirectionalEdgeInsets?` | `nil` |
-| Section の箱 | `sectionCornerRadius` | `CGFloat?` | `nil` |
-| Section の箱 | `sectionBorderWidth` | `CGFloat?` | `nil` (ボーダーなし) |
-| Section の箱 | `sectionBorderColor` | `UIColor?` | `nil` |
+| Section の Container | `sectionMargin` | `NSDirectionalEdgeInsets?` | `nil` |
+| Section の Container | `sectionCornerRadius` | `CGFloat?` | `nil` |
+| Section の Container | `sectionBorderWidth` | `CGFloat?` | `nil` (Border なし) |
+| Section の Container | `sectionBorderColor` | `UIColor?` | `nil` |
 
 `cellTitleFontSize` は独立したサイズで、解決された title font の pointSize を上書きする。`headerFontSize` / `footerFontSize` も Header / Footer に対して同じ働きをする。3 つとも正の値のときだけ適用される。
 
@@ -74,7 +74,7 @@ KsSettingsView {
 | 定数 | 既定値の対象 |
 |---|---|
 | `defaultSeparatorColor` | 罫線色 |
-| `defaultSelectedColor` | 選択中の行の背景色 |
+| `defaultSelectedColor` | 選択中の Cell の背景色 |
 | `defaultAccentColor` | アクセント色 |
 | `defaultBackgroundColor` | list 背景色 |
 | `defaultDisabledTextColor` | 無効時テキスト色 |
@@ -92,9 +92,9 @@ KsSettingsView {
 | `defaultCellIconSize` | icon サイズ |
 | `defaultCellIconRadius` | icon 角丸半径 |
 
-## 1 行だけ見た目を上書きする
+## Cell 1 つだけ見た目を上書きする
 
-`CellStyle` は 1 行分だけ Theme を上書きする。指定しないフィールドは `nil` のままで、Theme から継承する。
+`CellStyle` は Cell 1 つ分だけ Theme を上書きする。指定しないフィールドは `nil` のままで、Theme から継承する。
 
 ```swift
 LabelCell(
@@ -158,9 +158,9 @@ EntryCell(
 )
 ```
 
-## Classic と Modern を切り替える
+## Section の区切り方を切り替える (Classic の罫線 / Modern の角丸 Container)
 
-style は `KsSettingsViewStyle` で、`.classic` は flat な罫線で行を区切り、`.modern` は Section を角丸の箱にまとめる。style を切り替えても内容と識別子は変わらない。
+style は `KsSettingsViewStyle` で、Section の区切り方を選ぶ。`.classic` は Cell と Section の境界を罫線で引くだけで、Cell は画面の全幅に並ぶ。`.modern` は Section の Cell だけを角丸の Container にまとめ、Section Header / Footer はその Container の外側に置く。style を切り替えても内容と識別子は変わらない。
 
 ```swift
 KsSettingsView {
@@ -171,9 +171,9 @@ KsSettingsView {
 .style(.modern)
 ```
 
-## Modern の Section 箱を調整する
+## Modern の Section Container を調整する
 
-箱は Theme の 4 属性で決まる。未指定なら既定値へ解決し、既定ではボーダーを描かない。
+Container は Theme の 4 属性で決まる。未指定なら既定値へ解決し、既定では Border を描かない。
 
 ```swift
 let boxedTheme = Theme(
@@ -184,17 +184,17 @@ let boxedTheme = Theme(
 )
 ```
 
-箱が覆うのは Section の行だけで、Section Header / Footer は箱の外側、画面全体の Header / Footer は装飾対象外である。`.classic` では Section が全幅になるため、`sectionMargin` の上下成分だけが効く。
+Container が覆うのは Section の Cell だけで、Section Header / Footer は Container の外側、画面全体の Header / Footer は装飾対象外である。`.classic` では Section が全幅になるため、`sectionMargin` の上下成分だけが効く。
 
-## 行の高さを決める
+## Cell の高さを決める
 
-高さは `CellStyle.cellHeight` → `Theme.rowHeight` → platform の最低行高 48pt の順で解決する。`hasUnevenRows` が既定の `true` のときは解決値が最低高になり内容に応じて伸びる。`false` にすると全行が固定される。
+高さは `CellStyle.cellHeight` → `Theme.rowHeight` → platform の最低 Cell 高 48pt の順で解決する。`hasUnevenRows` が既定の `true` のときは解決値が最低高になり内容に応じて伸びる。`false` にすると全 Cell が固定される。
 
 ```swift
 let compactTheme = Theme(rowHeight: 52, hasUnevenRows: false)
 ```
 
-固定高では内容が行を押し広げないため、複数行のテキストが収まる高さを指定する。
+固定高では内容が Cell を押し広げないため、複数行のテキストが収まる高さを指定する。
 
 ## Section に Header / Footer を付ける
 
@@ -240,7 +240,7 @@ store.updateAccessory(
 
 ## 画面全体に Header / Footer を付ける
 
-画面レベルの Header / Footer は設定ツリーではなく View 側が持ち、Modern の箱の装飾対象にはならない。
+画面レベルの Header / Footer は設定ツリーではなく View 側が持ち、Modern の Section Container の装飾対象にはならない。
 
 ```swift
 KsSettingsView {

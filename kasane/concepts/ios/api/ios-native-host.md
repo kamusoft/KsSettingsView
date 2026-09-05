@@ -59,7 +59,7 @@ let controller = KsSettingsViewController(
 
 Controller は Store の初期 root / theme を取り込み、その後の構造変更と Theme 変更を購読する。`SettingsRoot` の公開 setter は持たない。空の Root も有効で、空の `UICollectionView` として表示できる。
 
-`style` は `.classic` と `.modern` を受ける。`.classic` は UIKit の `.plain` list appearance、`.modern` は `.insetGrouped` を使わず compositional layout 上の自前 Section 装飾で箱を描く ([ios/ADR-0003](../../../decisions/ios/0003-modern-self-drawn-section-decoration.md))。装飾の寸法・ボーダーは Theme の Section 装飾4属性から解決する ([設定 list の外観と補助領域](../../core/styling/list-appearance.md))。切替は設定内容や ID を変えず、同じ値の再代入では layout を作り直さない。
+`style` は `.classic` と `.modern` を受ける。`.classic` は UIKit の `.plain` list appearance、`.modern` は `.insetGrouped` を使わず compositional layout 上の自前 Section 装飾で Container を描く ([ios/ADR-0003](../../../decisions/ios/0003-modern-self-drawn-section-decoration.md))。装飾の寸法・Border は Theme の Section 装飾4属性から解決する ([設定 list の外観と補助領域](../../core/styling/list-appearance.md))。切替は設定内容や ID を変えず、同じ値の再代入では layout を作り直さない。
 
 `rootHeader` / `rootFooter` は Root レベルの `RootAccessory` を保持し、`nil` は非表示を表す。`SettingsRoot` には含まれない。Section Header / Footer は各 `Section` の `SectionAccessory` から描画する。text と `KsAnyView.swiftUI` / `.uiKit` の任意 View を利用できる。
 

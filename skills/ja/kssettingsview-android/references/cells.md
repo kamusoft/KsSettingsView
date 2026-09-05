@@ -1,6 +1,6 @@
 # Cell
 
-設定画面に行を置くためのレシピ。このページの例はすべて以下の import を前提とする。Cell 関数は `jp.kamusoft.kssettingsview.compose` にあり 1 つずつ import する。Cell 関数が受け取る値型 (`KsImage`・`DatePickerUIStyle`) は `compose` ではなく `jp.kamusoft.kssettingsview.ui` にある。
+設定画面に Cell を置くためのレシピ。このページの例はすべて以下の import を前提とする。Cell 関数は `jp.kamusoft.kssettingsview.compose` にあり 1 つずつ import する。Cell 関数が受け取る値型 (`KsImage`・`DatePickerUIStyle`) は `compose` ではなく `jp.kamusoft.kssettingsview.ui` にある。
 
 ```kotlin
 import android.text.InputType
@@ -29,11 +29,11 @@ import jp.kamusoft.kssettingsview.ui.DatePickerUIStyle
 import jp.kamusoft.kssettingsview.ui.KsImage
 ```
 
-`var x by remember { mutableStateOf(...) }` の委譲形をコンパイルさせているのが `getValue` と `setValue` で、これがないと委譲が解決できない。行を置くスニペットは、自身で枠を示していない限り `@Composable` 関数の中の `KsSettingsView { Section { ... } }` の内側の断片。
+`var x by remember { mutableStateOf(...) }` の委譲形をコンパイルさせているのが `getValue` と `setValue` で、これがないと委譲が解決できない。Cell を置くスニペットは、自身で枠を示していない限り `@Composable` 関数の中の `KsSettingsView { Section { ... } }` の内側の断片。
 
-## 行を Section にまとめる
+## Cell を Section にまとめる
 
-行は必ず Section の中に置く。`Section` は文字列の header と footer を任意で受ける。
+Cell は必ず Section の中に置く。`Section` は文字列の header と footer を任意で受ける。
 
 ```kotlin
 KsSettingsView {
@@ -54,9 +54,9 @@ KsSettingsView {
 LabelCell(title = "Storage", valueText = "256 GB")
 ```
 
-## 行から処理や画面遷移を起こす
+## Cell から処理や画面遷移を起こす
 
-`CommandCell` はタップを通知し、`hideArrow = true` を渡さない限り Disclosure Indicator (その行が先に進むことを示す、行の trailing 端の山形の矢印) を表示する。
+`CommandCell` はタップを通知し、`hideArrow = true` を渡さない限り Disclosure Indicator (その Cell が先に進むことを示す、Cell の trailing 端の山形の矢印) を表示する。
 
 ```kotlin
 CommandCell(
@@ -65,9 +65,9 @@ CommandCell(
 )
 ```
 
-## 行にボタンを置く
+## Cell にボタンを置く
 
-`ButtonCell` は Disclosure Indicator を表示せず、title は既定で中央寄せになる。`titleAlignment` は `jp.kamusoft.kssettingsview.core` の `CellTitleAlignment` (`START` / `CENTER` / `END`) を取り、視覚に出るのは `valueText` を持たない行だけ。
+`ButtonCell` は Disclosure Indicator を表示せず、title は既定で中央寄せになる。`titleAlignment` は `jp.kamusoft.kssettingsview.core` の `CellTitleAlignment` (`START` / `CENTER` / `END`) を取り、視覚に出るのは `valueText` を持たない Cell だけ。
 
 ```kotlin
 ButtonCell(
@@ -127,9 +127,9 @@ SimpleCheckCell(
 )
 ```
 
-## 複数の行から 1 つを選ぶ
+## 複数の Cell から 1 つを選ぶ
 
-同じ `groupId` を持つ `RadioCell` が 1 つの選択グループになる。`value == selectedValue` の行が選択表示になり、`selectedValue` は利用者が持つ。
+同じ `groupId` を持つ `RadioCell` が 1 つの選択グループになる。`value == selectedValue` の Cell が選択表示になり、`selectedValue` は利用者が持つ。
 
 ```kotlin
 var appearance by remember { mutableStateOf("light") }
@@ -152,7 +152,7 @@ Section(header = "Appearance") {
 }
 ```
 
-選択済みの行を再タップしても `onSelected` は再通知されない。
+選択済みの Cell を再タップしても `onSelected` は再通知されない。
 
 ## テキストを入力させる
 
@@ -171,11 +171,11 @@ EntryCell(
 
 パスワード欄なら `isPassword = true`、数値欄なら `keyboardType = InputType.TYPE_CLASS_NUMBER` を渡す。`textAlignment` は入力テキストの揃えを `CellTitleAlignment` (`START` / `CENTER` / `END`) で決め、既定は `END`。`placeholderColor` は placeholder の文字色を決める。未指定なら `CellStyle.placeholderColor` → `Theme.cellPlaceholderColor` → OS 既定の順で解決し、OS 既定はそれ自体がダークモードに追従する。
 
-フォーカス中の入力欄は自身のテキストの所有者になる。同じ行への内容更新は入力中の文字列を差し替えず、フォーカスを失った時点で最後に供給された値へ再同期する。callback の overload (`text` に `String`、変更通知に `onTextChanged`) を使う場合は受け取った値を Cell へ戻すこと。戻さないとフォーカスが外れた瞬間に表示が巻き戻る。単一行では Enter を「完了」として扱いキーボードを閉じる (フォーカスは維持)。Enter で改行したい場合は `keyboardType` に `InputType.TYPE_TEXT_FLAG_MULTI_LINE` を含める。
+フォーカス中の入力欄は自身のテキストの所有者になる。同じ Cell への内容更新は入力中の文字列を差し替えず、フォーカスを失った時点で最後に供給された値へ再同期する。callback の overload (`text` に `String`、変更通知に `onTextChanged`) を使う場合は受け取った値を Cell へ戻すこと。戻さないとフォーカスが外れた瞬間に表示が巻き戻る。単一行では Enter を「完了」として扱いキーボードを閉じる (フォーカスは維持)。Enter で改行したい場合は `keyboardType` に `InputType.TYPE_TEXT_FLAG_MULTI_LINE` を含める。
 
 ## リストから 1 つ選ぶ
 
-`PickerCell` は行タップでボトムシートを開く。単一選択の overload は `MutableState<Int?>` を取る。確定ボタンは無く、候補をタップした時点で書き戻してシートを閉じる。
+`PickerCell` は Cell のタップでボトムシートを開く。単一選択の overload は `MutableState<Int?>` を取る。確定ボタンは無く、候補をタップした時点で書き戻してシートを閉じる。
 
 ```kotlin
 val themeIndex = remember { mutableStateOf<Int?>(0) }
@@ -187,7 +187,7 @@ PickerCell(
 )
 ```
 
-シートのタイトルは `pageTitle` で指定でき、未指定なら行の `title` が使われる。
+シートのタイトルは `pageTitle` で指定でき、未指定なら Cell の `title` が使われる。
 
 ## リストから object を 1 つ選ぶ
 
@@ -212,7 +212,7 @@ PickerCell(
 )
 ```
 
-行自身に表示されるのは選択中の `displayText` だけで、`subText` は出ない。単一選択では index の state の代わりに要素を直接束ねることもできる。`selectedItem` は `MutableState<T?>` を取り、構築時に候補列から等価な最初の候補へ解決し (リストに無い要素は未選択)、選ばれた要素を書き戻す。
+Cell 自身に表示されるのは選択中の `displayText` だけで、`subText` は出ない。単一選択では index の state の代わりに要素を直接束ねることもできる。`selectedItem` は `MutableState<T?>` を取り、構築時に候補列から等価な最初の候補へ解決し (リストに無い要素は未選択)、選ばれた要素を書き戻す。
 
 ```kotlin
 val plan = remember { mutableStateOf<Plan?>(null) }
@@ -263,11 +263,11 @@ NumberPickerCell(
 )
 ```
 
-シートのタイトルは `pickerTitle` で指定でき、未指定なら行の `title` が使われる。`TimePickerCell` と `DatePickerCell` も同名の引数を持つ。
+シートのタイトルは `pickerTitle` で指定でき、未指定なら Cell の `title` が使われる。`TimePickerCell` と `DatePickerCell` も同名の引数を持つ。
 
 ## 時刻を選ぶ
 
-`TimePickerCell` は `java.time.LocalTime` を編集する。行タップで時・分ホイールのボトムシートが開き、書き戻しは確定操作の 1 回だけ — 他の閉じ方はどれも変更を破棄する。`format` が決めるのは行に出る文字列だけ。
+`TimePickerCell` は `java.time.LocalTime` を編集する。Cell のタップで時・分ホイールのボトムシートが開き、書き戻しは確定操作の 1 回だけ — 他の閉じ方はどれも変更を破棄する。`format` が決めるのは Cell に出る文字列だけ。
 
 ```kotlin
 val alarm = remember { mutableStateOf(LocalTime.of(7, 0)) }
@@ -306,7 +306,7 @@ DatePickerCell(
 )
 ```
 
-ここでも書き戻しは確定操作の 1 回だけで、他の閉じ方はどれも変更を破棄する。カレンダーダイアログは、Activity 再生成の前後で行の ID が安定していれば選択状態を保ったまま回転を生き延びる ([updates.md](updates.md) を参照)。Spinner のシートは他のボトムシートと同じく、回転では何も通知せず閉じる。`androidButtonColor` は `Spinner` のシートのヘッダー操作 (確定・キャンセル) の色だけを上書きし、`Material` のダイアログには効かない。
+ここでも書き戻しは確定操作の 1 回だけで、他の閉じ方はどれも変更を破棄する。カレンダーダイアログは、Activity 再生成の前後で Cell の ID が安定していれば選択状態を保ったまま回転を生き延びる ([updates.md](updates.md) を参照)。Spinner のシートは他のボトムシートと同じく、回転では何も通知せず閉じる。`androidButtonColor` は `Spinner` のシートのヘッダー操作 (確定・キャンセル) の色だけを上書きし、`Material` のダイアログには効かない。
 
 `minDate` と `maxDate` で選べる範囲を制限できる。どちらか一方だけでもよい。現在値が範囲外なら、最も近い範囲端へ丸めて提示される。
 
@@ -319,7 +319,7 @@ DatePickerCell(
 )
 ```
 
-## 行にアイコンを付ける
+## Cell にアイコンを付ける
 
 `icon` は `KsImage` を取る。drawable のリソース ID か `Drawable` インスタンスを渡す。
 
@@ -330,7 +330,7 @@ LabelCell(title = "Avatar", icon = KsImage.Drawable(avatarDrawable))
 
 アイコンは正方形の枠に収めて描くため、字形の幅が違っても title の開始位置は揃う。`KsImage.SystemName` は iOS との API 対称性のために存在し、Android ではアイコンなしへ fallback する。
 
-## 同じ行に説明・値・ヒントを付ける
+## 同じ Cell に説明・値・ヒントを付ける
 
 組み込み Cell はすべて `description` (title の下)、`valueText` (title 行の trailing)、`hintText` (右上) を受ける。例外は 2 つ。`ButtonCell` は `description` を持たず、`EntryCell` は入力欄自身が値を表示するため `valueText` を持たない (代わりに `text` を使う)。
 
@@ -344,19 +344,19 @@ LabelCell(
 )
 ```
 
-行幅が足りないときは title を守り、`valueText` 側を省略表示する。
+Cell の幅が足りないときは title を守り、`valueText` 側を省略表示する。
 
-## 行を無効化する
+## Cell を無効化する
 
-構築時に `isEnabled = false` を渡す。タップと内包コントロールの操作を止め、文字色を無効時の色へ差し替える。handle には `disabled(...)` modifier もあるが、これは意図的に no-op で行をそのまま返すため、構築時の引数の代わりにはならない。
+構築時に `isEnabled = false` を渡す。タップと内包コントロールの操作を止め、文字色を無効時の色へ差し替える。handle には `disabled(...)` modifier もあるが、これは意図的に no-op で Cell をそのまま返すため、構築時の引数の代わりにはならない。
 
 ```kotlin
 CommandCell(title = "Advanced settings", isEnabled = false)
 ```
 
-## 値を保ったまま行を隠す
+## 値を保ったまま Cell を隠す
 
-`isVisible = false` は表示から行を外すだけで値は model に残る。隠れている間に適用した更新は、再表示時に反映済みの値として現れる。
+`isVisible = false` は表示から Cell を外すだけで値は model に残る。隠れている間に適用した更新は、再表示時に反映済みの値として現れる。
 
 ```kotlin
 var showAdvanced by remember { mutableStateOf(false) }
@@ -367,4 +367,4 @@ Section(header = "General") {
 }
 ```
 
-`isVisible` は `Section` にもあり、その Section の Header・Footer と全行をまとめて隠す。
+`isVisible` は `Section` にもあり、その Section の Header・Footer と全 Cell をまとめて隠す。

@@ -1,10 +1,10 @@
 # Cells
 
-Recipes for placing rows in a settings screen. Every example assumes the imports from the minimal example in [SKILL.md](../SKILL.md). UIKit types appear in these examples directly (`UIColor` in `titleColor`, `UIKeyboardType` in `keyboardType`), which needs `import UIKit` in files that do not already get it from `import SwiftUI`.
+Recipes for placing cells in a settings screen. Every example assumes the imports from the minimal example in [SKILL.md](../SKILL.md). UIKit types appear in these examples directly (`UIColor` in `titleColor`, `UIKeyboardType` in `keyboardType`), which needs `import UIKit` in files that do not already get it from `import SwiftUI`.
 
-## Group rows into a section
+## Group cells into a section
 
-Rows always live inside a section. `ksSection` takes an optional string header and footer.
+Cells always live inside a section. `ksSection` takes an optional string header and footer.
 
 ```swift
 KsSettingsView {
@@ -25,7 +25,7 @@ KsSettingsView {
 LabelCell(title: "Storage", valueText: "256 GB")
 ```
 
-## Run an action or navigate from a row
+## Run an action or navigate from a cell
 
 `CommandCell` reports taps and shows a disclosure indicator unless you pass `hideArrow: true`.
 
@@ -36,9 +36,9 @@ CommandCell(
 )
 ```
 
-## Put a button in a row
+## Put a button in a cell
 
-`ButtonCell` never shows a disclosure indicator and centers its title by default. `titleAlignment` takes a `CellTitleAlignment` - `.start`, `.center` or `.end` - and only shows visually on rows that have no `valueText`.
+`ButtonCell` never shows a disclosure indicator and centers its title by default. `titleAlignment` takes a `CellTitleAlignment` - `.start`, `.center` or `.end` - and only shows visually on cells that have no `valueText`.
 
 ```swift
 ButtonCell(
@@ -91,9 +91,9 @@ SimpleCheckCell(
 )
 ```
 
-## Choose one option among rows
+## Choose one option among cells
 
-`RadioCell` rows that share a `groupId` form one selection. The row is drawn as selected when `value == selectedValue`, and you own `selectedValue`.
+`RadioCell` cells that share a `groupId` form one selection. The cell is drawn as selected when `value == selectedValue`, and you own `selectedValue`.
 
 ```swift
 @State private var appearance = "light"
@@ -131,11 +131,11 @@ EntryCell(
 )
 ```
 
-For a password field, set `isPassword: true`; for a numeric field, pass `keyboardType: .numberPad`. `placeholderColor` overrides the placeholder text color - left out, the OS placeholder color is used and adapts to dark mode on its own. The screen-wide default is `Theme.cellPlaceholderColor` - see [styling.md](styling.md). `textAlignment` (a `CellTitleAlignment`, default `.end`) aligns the text inside the field. Instead of the binding there is also a callback form, which takes the current `text` as a plain value plus `onTextChanged` - use it when you own the state yourself or drive the tree from a store. In either form the field keeps what the user has typed: a row that does not feed the callback back into `text` is not rolled back by a later redraw, because the row is drawn from the latest cell value at draw time.
+For a password field, set `isPassword: true`; for a numeric field, pass `keyboardType: .numberPad`. `placeholderColor` overrides the placeholder text color - left out, the OS placeholder color is used and adapts to dark mode on its own. The screen-wide default is `Theme.cellPlaceholderColor` - see [styling.md](styling.md). `textAlignment` (a `CellTitleAlignment`, default `.end`) aligns the text inside the field. Instead of the binding there is also a callback form, which takes the current `text` as a plain value plus `onTextChanged` - use it when you own the state yourself or drive the tree from a store. In either form the field keeps what the user has typed: a cell that does not feed the callback back into `text` is not rolled back by a later redraw, because the cell is drawn from its latest value at draw time.
 
 ## Choose one item from a list
 
-`PickerCell` opens a selection page when the row is tapped. The single-selection form uses `selectedIndex`: tapping a candidate fires the callback once and closes the page - there is no separate confirmation step. Closing the page with Cancel fires nothing, in either selection form.
+`PickerCell` opens a selection page when the cell is tapped. The single-selection form uses `selectedIndex`: tapping a candidate fires the callback once and closes the page - there is no separate confirmation step. Closing the page with Cancel fires nothing, in either selection form.
 
 ```swift
 @State private var themeIndex: Int? = 0
@@ -223,7 +223,7 @@ NumberPickerCell(
 
 ## Choose a time
 
-`TimePickerCell` edits the time part of a `Foundation.Date`, and `format` controls the text shown on the row.
+`TimePickerCell` edits the time part of a `Foundation.Date`, and `format` controls the text shown on the cell.
 
 ```swift
 @State private var alarm = Date()
@@ -235,7 +235,7 @@ TimePickerCell(
 )
 ```
 
-The hour cycle of the picker is decided by `is24Hour` alone (default `true` = 24-hour): `format` only shapes the text on the row, and the device's 24-hour setting is never consulted. For a 12-hour picker pass `is24Hour: false` together with a matching format such as `"h:mm a"` - the library does not validate that the two agree. `pickerTitle` overrides the title of the time picker; left out, `title` is used.
+The hour cycle of the picker is decided by `is24Hour` alone (default `true` = 24-hour): `format` only shapes the text on the cell, and the device's 24-hour setting is never consulted. For a 12-hour picker pass `is24Hour: false` together with a matching format such as `"h:mm a"` - the library does not validate that the two agree. `pickerTitle` overrides the title of the time picker; left out, `title` is used.
 
 ## Choose a date
 
@@ -255,7 +255,7 @@ DatePickerCell(
 
 `minDate` / `maxDate` limit the selectable range, and `pickerTitle` overrides the title of the date picker; left out, `title` is used.
 
-## Add an icon to a row
+## Add an icon to a cell
 
 `icon` takes a `KsImage`: an SF Symbol name (`.systemName(_:)`) or a `UIImage` (`.uiImage(_:)`).
 
@@ -264,9 +264,9 @@ LabelCell(title: "Storage", icon: .systemName("externaldrive"))
 LabelCell(title: "Avatar", icon: .uiImage(avatarImage))
 ```
 
-The icon is drawn inside a square frame, so rows keep their titles aligned regardless of the glyph width.
+The icon is drawn inside a square frame, so cells keep their titles aligned regardless of the glyph width.
 
-## Add description, value and hint to the same row
+## Add description, value and hint to the same cell
 
 Every built-in cell accepts `description` (below the title), `valueText` (trailing on the title row), and `hintText` (top right). There are two exceptions: `ButtonCell` has no `description`, and `EntryCell` has no `valueText` because its text field shows the value itself - use `text` there.
 
@@ -282,19 +282,19 @@ LabelCell(
 )
 ```
 
-When the row is too narrow, the title is kept and `valueText` is truncated.
+When the cell is too narrow, the title is kept and `valueText` is truncated.
 
-## Disable a row
+## Disable a cell
 
-Pass `isEnabled: false` at construction. It blocks taps and the embedded control, and swaps the text color for the disabled color. Cells also offer a `.disabled(_:)` modifier of their own - not SwiftUI's `View.disabled(_:)` - but it is a no-op, so it will not disable a row.
+Pass `isEnabled: false` at construction. It blocks taps and the embedded control, and swaps the text color for the disabled color. Cells also offer a `.disabled(_:)` modifier of their own - not SwiftUI's `View.disabled(_:)` - but it is a no-op, so it will not disable a cell.
 
 ```swift
 CommandCell(title: "Advanced settings", isEnabled: false)
 ```
 
-## Hide a row without dropping its value
+## Hide a cell without dropping its value
 
-`isVisible: false` removes the row from the display while the value stays in the model, so an update applied while hidden is visible again when the row returns.
+`isVisible: false` removes the cell from the display while the value stays in the model, so an update applied while hidden is visible again when the cell returns.
 
 ```swift
 @State private var showAdvanced = false
@@ -305,4 +305,4 @@ ksSection("General") {
 }
 ```
 
-`isVisible` also exists on `ksSection`, where it hides the header, footer and every row of that section.
+`isVisible` also exists on `ksSection`, where it hides the header, footer and every cell of that section.

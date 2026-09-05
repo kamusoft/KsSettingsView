@@ -6,9 +6,9 @@ Agent Skills for building settings screens with KsSettingsView, published in Eng
 
 | Name | For | What it does | en | ja |
 |---|---|---|---|---|
-| `kssettingsview-ios` | iOS (Swift) | Build a settings screen with the SwiftUI declarative DSL or the UIKit host: 12 built-in cells, CustomCell rows, live updates through a store, and `Theme` / `CellStyle` styling. | [en](en/kssettingsview-ios/SKILL.md) | [ja](ja/kssettingsview-ios/SKILL.md) |
-| `kssettingsview-android` | Android (Kotlin) | Build a settings screen with the Jetpack Compose declarative DSL or the View host: 12 built-in cells, CustomCell rows, live updates through a store, and `Theme` / `CellStyle` styling. | [en](en/kssettingsview-android/SKILL.md) | [ja](ja/kssettingsview-android/SKILL.md) |
-| `kssettingsview-maui` | .NET MAUI (XAML / C#) | Build a settings page with the MAUI `SettingsView` control over the native settings list: 12 built-in cells, CustomCell rows, two-way bindings, `ItemsSource` / `ItemTemplate`, headers and footers, and list styling. | [en](en/kssettingsview-maui/SKILL.md) | [ja](ja/kssettingsview-maui/SKILL.md) |
+| `kssettingsview-ios` | iOS (Swift) | Build a settings screen with the SwiftUI declarative DSL or the UIKit host: 12 built-in cells, CustomCell, live updates through a store, and `Theme` / `CellStyle` styling. | [en](en/kssettingsview-ios/SKILL.md) | [ja](ja/kssettingsview-ios/SKILL.md) |
+| `kssettingsview-android` | Android (Kotlin) | Build a settings screen with the Jetpack Compose declarative DSL or the View host: 12 built-in cells, CustomCell, live updates through a store, and `Theme` / `CellStyle` styling. | [en](en/kssettingsview-android/SKILL.md) | [ja](ja/kssettingsview-android/SKILL.md) |
+| `kssettingsview-maui` | .NET MAUI (XAML / C#) | Build a settings page with the MAUI `SettingsView` control over the native settings list: 12 built-in cells, CustomCell, two-way bindings, `ItemsSource` / `ItemTemplate`, headers and footers, and list styling. | [en](en/kssettingsview-maui/SKILL.md) | [ja](ja/kssettingsview-maui/SKILL.md) |
 | `kssettingsview-aiforms-migration` | .NET MAUI migration | Move a settings page off `AiForms.Maui.SettingsView` (the .NET MAUI release): a mapping of the old public API onto KsSettingsView, with the replacement approach for what is gone. Copy it together with `kssettingsview-maui`, which covers the KsSettingsView API itself. | [en](en/kssettingsview-aiforms-migration/SKILL.md) | [ja](ja/kssettingsview-aiforms-migration/SKILL.md) |
 
 ## How to install

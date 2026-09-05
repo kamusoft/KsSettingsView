@@ -1,6 +1,6 @@
 # Styling
 
-Recipes for colors, fonts, sizes, list appearance and the supplementary areas around the rows. Every example assumes the imports from the minimal example in [SKILL.md](../SKILL.md).
+Recipes for colors, fonts, sizes, list appearance and the supplementary areas around the cells. Every example assumes the imports from the minimal example in [SKILL.md](../SKILL.md).
 
 Values resolve in this order: the meaning-specific value of the cell, then `CellStyle`, then `Theme`, then the UIKit default. A meaning-specific value is a field the cell type owns because of what it means on that cell - `ButtonCell.titleColor`, or the `accentColor` of the selection and input cells - and it wins over the same attribute coming from `CellStyle`. UIKit types are used directly - `UIColor`, `UIFont`, `CGFloat` - which needs `import UIKit` in files that do not already get it from `import SwiftUI`.
 
@@ -24,7 +24,7 @@ KsSettingsView {
 .theme(warmTheme)
 ```
 
-`backgroundColor` paints the canvas behind the list and `cellBackgroundColor` paints the rows; they are separate areas, so setting one does not imply the other.
+`backgroundColor` paints the canvas behind the list and `cellBackgroundColor` paints the cells; they are separate areas, so setting one does not imply the other.
 
 These are all the fields of `Theme`, in declaration order. Arguments must be passed in this order.
 
@@ -74,7 +74,7 @@ The built-in defaults behind the "unspecified" values above are published as `pu
 | Constant | Default for |
 |---|---|
 | `defaultSeparatorColor` | separator color |
-| `defaultSelectedColor` | selected-row background |
+| `defaultSelectedColor` | selected-cell background |
 | `defaultAccentColor` | accent color |
 | `defaultBackgroundColor` | list background |
 | `defaultDisabledTextColor` | disabled text color |
@@ -92,9 +92,9 @@ The built-in defaults behind the "unspecified" values above are published as `pu
 | `defaultCellIconSize` | icon size |
 | `defaultCellIconRadius` | icon corner radius |
 
-## Override the look of one row
+## Override the look of one cell
 
-`CellStyle` overrides the theme for a single row. Fields you leave out are `nil` and are inherited from the theme.
+`CellStyle` overrides the theme for a single cell. Fields you leave out are `nil` and are inherited from the theme.
 
 ```swift
 LabelCell(
@@ -143,7 +143,7 @@ LabelCell(title: "Name")
 
 Available modifiers are `font`, `descriptionFont`, `iconSize`, `cellHeight`, `titleColor`, `backgroundColor`, `icon`, `disabled` and `cellID`. `descriptionFont` and `iconSize` are iOS only - the Android DSL has no equivalent - and `disabled` is a no-op on every cell, as noted in [cells.md](cells.md).
 
-## Color the placeholder of entry rows
+## Color the placeholder of entry cells
 
 The placeholder text color of `EntryCell` resolves from `EntryCell.placeholderColor`, then `CellStyle.placeholderColor`, then `Theme.cellPlaceholderColor`, then the OS placeholder color, which adapts to dark mode on its own.
 
@@ -158,9 +158,9 @@ EntryCell(
 )
 ```
 
-## Switch between Classic and Modern list appearance
+## Choose how sections are separated (Classic separators / Modern rounded boxes)
 
-The style is a `KsSettingsViewStyle`: `.classic` separates rows with flat rules, `.modern` groups each section into a rounded box. Switching styles keeps the contents and identifiers untouched.
+The style is a `KsSettingsViewStyle`, and it chooses how sections are separated. `.classic` only draws separator lines between cells and sections, and cells span the full width of the screen. `.modern` wraps just the cells of each section in a rounded box, with the section header and footer outside the box. Switching styles keeps the contents and identifiers untouched.
 
 ```swift
 KsSettingsView {
@@ -184,17 +184,17 @@ let boxedTheme = Theme(
 )
 ```
 
-The box covers only the rows of a section: section headers and footers sit outside it, and the screen header and footer are never boxed. In `.classic` only the vertical parts of `sectionMargin` apply, because a classic section spans the full width.
+The box covers only the cells of a section: section headers and footers sit outside it, and the screen header and footer are never boxed. In `.classic` only the vertical parts of `sectionMargin` apply, because a classic section spans the full width.
 
-## Control row height
+## Control cell height
 
-Height resolves from `CellStyle.cellHeight`, then `Theme.rowHeight`, then the platform minimum of 48pt. With `hasUnevenRows` left at `true` the resolved height is a minimum and rows grow with their content; set it to `false` to pin every row.
+Height resolves from `CellStyle.cellHeight`, then `Theme.rowHeight`, then the platform minimum of 48pt. With `hasUnevenRows` left at `true` the resolved height is a minimum and cells grow with their content; set it to `false` to pin every cell.
 
 ```swift
 let compactTheme = Theme(rowHeight: 52, hasUnevenRows: false)
 ```
 
-With a fixed height, content that does not fit is not allowed to grow the row, so pick a height that fits multi-line text.
+With a fixed height, content that does not fit is not allowed to grow the cell, so pick a height that fits multi-line text.
 
 ## Put a header and footer on a section
 

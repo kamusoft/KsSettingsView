@@ -29,7 +29,7 @@ Android のホイール (`KsWheelView`) は RecyclerView + LinearSnapHelper に�
 - 提示: `isEnabled` な NumberPickerCell の行タップで開く。`isEnabled = false` はタップ無効
 - タイトル: `pickerTitle` があればそれ、なければ `title` で解決する
 - 候補: `min` から `max` まで `step` 刻みで昇順に列挙する。`step <= 0` は 1 へ fallback
-- unit の適用: 候補の表示は `valueText` の有無にかかわらず、常に各候補値へ `NumberPickerCell.format` の規則 (`unit` が空なら数値のみ、非空なら `"<値> <unit>"`) を個別に適用する。`valueText` の優先は Cell 行の表示のみ ([入力 Cell](input-cells.md))
+- unit の適用: 候補の表示は `valueText` の有無にかかわらず、常に各候補値へ `NumberPickerCell.format` の規則 (`unit` が空なら数値のみ、非空なら `"<値> <unit>"`) を個別に適用する。`valueText` の優先は Cell の表示のみ ([入力 Cell](input-cells.md))
 - 初期選択: 開いた時点で `value` に一致する候補が選択中。`value` が候補に含まれない場合は先頭候補
 - 確定のみ反映: 確定操作 (Android の OK / iOS の Done) で、その時点の選択中候補を引数に `onValueChanged` を1回発火して閉じる。非確定の閉じ方はどの経路でも発火せず、変更は破棄される — 選択面は確定まで作業状態を model へ書き戻さない
 
@@ -59,13 +59,13 @@ Android のホイール (`KsWheelView`) は RecyclerView + LinearSnapHelper に�
 
 - 確定 callback は確定操作の1回だけ発火し、非確定 dismiss はどの経路でも発火しない — これが崩れると、利用者アプリの状態が「開いて閉じただけ」で書き換わる
 - 論理上の選択中候補は常に1つであり、静止状態では中央の強調行として他の候補と判別できる形で提示される (移動中の視覚とのずれは「スナップ静止の意味論」を参照)
-- 候補の表示文字列は Cell 行と同じフォーマット規則 (`NumberPickerCell.format`) から生成される — `valueText` 未指定の行に「15 px」と出る Cell の選択面が素の「15」を出すことはない
+- 候補の表示文字列は Cell と同じフォーマット規則 (`NumberPickerCell.format`) から生成される — `valueText` 未指定でも「15 px」と出る Cell の選択面が素の「15」を出すことはない
 
 ## してはいけないこと
 
 - `KsWheelView` を公開 API として利用者に案内しない — internal の内部部品であり、公開契約は Cell model と選択面の挙動だけである
 - 器の差 (ボトムシート / 埋め込み picker) を「プラットフォーム間の揃え漏れ」として片側へ持ち込まない — 差自体が合意済みの判断である (android/ADR-0007)
-- `valueText` を候補表示へ適用しない — `valueText` は Cell 行の表示専用である
+- `valueText` を候補表示へ適用しない — `valueText` は Cell の表示専用である
 
 ## 用語
 

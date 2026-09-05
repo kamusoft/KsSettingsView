@@ -1,6 +1,6 @@
 # Custom cells
 
-Recipes for rows the built-in cells do not cover. Start with `CustomCell`; define your own cell type only when you need a row that takes part in the shared row layout and style resolution.
+Recipes for content the built-in cells do not cover. Start with `CustomCell`; define your own cell type only when you need to take part in the shared cell layout and style resolution.
 
 The Compose recipes on this page assume these imports. `CustomCell` and the modifiers are DSL names from `jp.kamusoft.kssettingsview.compose`; everything else is ordinary Compose.
 
@@ -46,9 +46,9 @@ import jp.kamusoft.kssettingsview.ui.Theme
 import jp.kamusoft.kssettingsview.ui.VisibilityAware
 ```
 
-## Put arbitrary Compose into a row of the list
+## Put arbitrary Compose into a cell of the list
 
-`CustomCell` renders any Composable as one row in the list, with no view holder to write and nothing to register. Pass the values the row displays as `content` and build the row from the builder argument.
+`CustomCell` renders any Composable as one cell in the list, with no view holder to write and nothing to register. Pass the values the cell displays as `content` and build the cell from the builder argument.
 
 ```kotlin
 var volume by remember { mutableStateOf(50) }
@@ -71,13 +71,13 @@ KsSettingsView {
 }
 ```
 
-Anything that affects what the row shows must live in `content`, which needs a real `equals` and `hashCode` and must not be null. The builder and `onTap` lambdas are excluded from the comparison, so changing only a captured value leaves the row as it was.
+Anything that affects what the cell shows must live in `content`, which needs a real `equals` and `hashCode` and must not be null. The builder and `onTap` lambdas are excluded from the comparison, so changing only a captured value leaves the cell as it was.
 
-The builder renders with the theme of your app, not with the bundled theme the library draws its own rows from. That is what keeps `MaterialTheme` working inside it as usual - and it also means a custom row does not pick up the library `Theme` colors on its own.
+The builder renders with the theme of your app, not with the bundled theme the library draws its own cells from. That is what keeps `MaterialTheme` working inside it as usual - and it also means a custom cell does not pick up the library `Theme` colors on its own.
 
-## Show a fixed row with no data
+## Show a fixed cell with no data
 
-When the row displays nothing that changes, drop `content` and pass the builder alone.
+When the cell displays nothing that changes, drop `content` and pass the builder alone.
 
 ```kotlin
 CustomCell {
@@ -90,7 +90,7 @@ CustomCell {
 
 ## Add a tap action or a disclosure indicator
 
-`onTap` fires when the row is tapped, unless something inside the content consumed the tap. `showArrow` draws the same disclosure indicator as `CommandCell`, and the two are independent.
+`onTap` fires when the cell is tapped, unless something inside the content consumed the tap. `showArrow` draws the same disclosure indicator as `CommandCell`, and the two are independent.
 
 ```kotlin
 CustomCell(content = planName, showArrow = true, onTap = { openPlans() }) { name ->
@@ -102,11 +102,11 @@ CustomCell(content = planName, showArrow = true, onTap = { openPlans() }) { name
 }
 ```
 
-`isEnabled = false` blocks both the row tap and the controls inside the content, and dims the whole content. While it is disabled, the content is also dropped from the TalkBack tree.
+`isEnabled = false` blocks both the cell tap and the controls inside the content, and dims the whole content. While it is disabled, the content is also dropped from the TalkBack tree.
 
-## Set the height of a custom row
+## Set the height of a custom cell
 
-The row grows with its content by default. `cellHeight` acts as a minimum while the theme leaves `hasUnevenRows` at `true`, and as a fixed height once it is `false`. Only the background color and the height of `CellStyle` reach a custom row; text colors and fonts do not, and `icon` is a no-op because the row has no icon slot.
+The cell grows with its content by default. `cellHeight` acts as a minimum while the theme leaves `hasUnevenRows` at `true`, and as a fixed height once it is `false`. Only the background color and the height of `CellStyle` reach a custom cell; text colors and fonts do not, and `icon` is a no-op because the cell has no icon slot.
 
 ```kotlin
 CustomCell(content = message) { text ->
@@ -114,11 +114,11 @@ CustomCell(content = message) { text ->
 }.cellHeight(120.dp)
 ```
 
-State held inside the content with `remember` may or may not survive the row scrolling out of view and back, so anything that has to outlive that belongs in `content`.
+State held inside the content with `remember` may or may not survive the cell scrolling out of view and back, so anything that has to outlive that belongs in `content`.
 
-## Make a reusable row out of CustomCell
+## Make a reusable cell out of CustomCell
 
-To reuse a row across screens, write a function that returns a cell instead of placing one. The value it returns is the `CustomCell` class of `jp.kamusoft.kssettingsview.ui`, which is what the DSL function builds underneath. The two share the name, so put this helper in its own file and import `jp.kamusoft.kssettingsview.ui.CustomCell` there rather than the DSL one.
+To reuse a cell across screens, write a function that returns a cell instead of placing one. The value it returns is the `CustomCell` class of `jp.kamusoft.kssettingsview.ui`, which is what the DSL function builds underneath. The two share the name, so put this helper in its own file and import `jp.kamusoft.kssettingsview.ui.CustomCell` there rather than the DSL one.
 
 ```kotlin
 import androidx.compose.foundation.layout.Row
@@ -162,7 +162,7 @@ private fun SliderRow(content: SliderValue, onValueChanged: ((Int) -> Unit)?) {
 }
 ```
 
-The row keeps a local value while the slider is being dragged and reports it once the drag ends, so the row is not rebound on every frame.
+The cell keeps a local value while the slider is being dragged and reports it once the drag ends, so the cell is not rebound on every frame.
 
 A cell built this way - and any cell type of your own, from the next recipe - goes into a section with `cell(...)`, the DSL member that accepts an already-built `Cell`. It returns the same `CellHandle` the built-in cell functions do, so the style modifiers chain onto it as usual. `+cell` is shorthand for the same call.
 
@@ -185,7 +185,7 @@ interface Cell {
 }
 ```
 
-Everything past that is opt-in, one interface at a time. Add `VisibilityAware` if the row should honor `isVisible`; a cell that does not implement it is always treated as visible. `style` is not part of `Cell` either - it arrives with `DSLStyleModifiableCell` in the last recipe on this page.
+Everything past that is opt-in, one interface at a time. Add `VisibilityAware` if the cell should honor `isVisible`; a cell that does not implement it is always treated as visible. `style` is not part of `Cell` either - it arrives with `DSLStyleModifiableCell` in the last recipe on this page.
 
 ```kotlin
 data class ProgressCell(
@@ -196,7 +196,7 @@ data class ProgressCell(
 ) : Cell, VisibilityAware
 ```
 
-The view holder extends `CellViewHolder<T>`. It receives the current cell and theme on every bind, and `reset` releases what belonged to the previous row when the holder is recycled.
+The view holder extends `CellViewHolder<T>`. It receives the current cell and theme on every bind, and `reset` releases what belonged to the previous cell when the holder is recycled.
 
 ```kotlin
 class ProgressCellViewHolder(view: View) : CellViewHolder<ProgressCell>(view) {
@@ -221,7 +221,7 @@ class ProgressCellViewHolder(view: View) : CellViewHolder<ProgressCell>(view) {
 }
 ```
 
-The layout it inflates is yours; here it holds a `TextView` and a `ProgressBar` carrying those two ids. Register the pair before the row is displayed. `KsCellRegistry` is a process-wide singleton, so one registration at startup covers every screen. View types below 100 are reserved for the library, so start yours at `KsCellRegistry.CELL_VIEW_TYPE_MIN`, the constant holding that 100.
+The layout it inflates is yours; here it holds a `TextView` and a `ProgressBar` carrying those two ids. Register the pair before the cell is displayed. `KsCellRegistry` is a process-wide singleton, so one registration at startup covers every screen. View types below 100 are reserved for the library, so start yours at `KsCellRegistry.CELL_VIEW_TYPE_MIN`, the constant holding that 100.
 
 ```kotlin
 KsCellRegistry.register(
@@ -238,7 +238,7 @@ Registering the same cell type again replaces its factory, while giving the same
 
 ## Decide what an unregistered cell does
 
-`strictMode` is `true` by default and does not follow your build type on its own: an unregistered cell throws. Set it to `false` in release builds to fall back to a zero-height placeholder row instead.
+`strictMode` is `true` by default and does not follow your build type on its own: an unregistered cell throws. Set it to `false` in release builds to fall back to a zero-height placeholder cell instead.
 
 ```kotlin
 KsCellRegistry.strictMode = BuildConfig.DEBUG

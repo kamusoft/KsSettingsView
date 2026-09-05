@@ -1,6 +1,6 @@
 ---
 name: kssettingsview-maui
-description: Build .NET MAUI settings screens with KsSettingsView - a public XAML / C# API (SettingsView, Section, CellBase) over the native iOS and Android settings list, with built-in cells (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker) plus CustomCell rows holding any MAUI view, two-way bindings for user edits, ItemsSource / ItemTemplate, header and footer views, and Classic / Modern list styling. Use when adding, changing, or reviewing a settings page in a .NET MAUI app that references KsSettingsView.Maui.
+description: Build .NET MAUI settings screens with KsSettingsView - a public XAML / C# API (SettingsView, Section, CellBase) over the native iOS and Android settings list, with built-in cells (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker) plus CustomCell holding any MAUI view, two-way bindings for user edits, ItemsSource / ItemTemplate, header and footer views, and Classic / Modern list styling. Use when adding, changing, or reviewing a settings page in a .NET MAUI app that references KsSettingsView.Maui.
 license: MIT
 metadata:
   language: en
@@ -9,21 +9,21 @@ metadata:
 
 # KsSettingsView for .NET MAUI
 
-KsSettingsView is a UI library for building settings screens - the list-style screens the iOS Settings app is made of. You declare the screen as a tree of rows (cells) grouped into sections, and that tree is the screen. This Skill covers the .NET MAUI build, which comes as a set of controls you use from XAML and C# (`SettingsView`, `Section`, and the cells). The rows are drawn by the native settings list on each platform; the MAUI types are the data you bind to.
+KsSettingsView is a UI library for building settings screens - the list-style screens the iOS Settings app is made of. You declare the screen as a tree of cells grouped into sections, and that tree is the screen. This Skill covers the .NET MAUI build, which comes as a set of controls you use from XAML and C# (`SettingsView`, `Section`, and the cells). The cells are drawn by the native settings list on each platform; the MAUI types are the data you bind to.
 
 ## What you can do
 
 | What you want to do | Where to look |
 |---|---|
-| Place a row: label, action, button, switch, checkbox, radio, text field, list picker, number, time, date | [references/cells.md](references/cells.md) |
-| Group rows into sections, add icons, descriptions, hints; disable or hide a row | [references/cells.md](references/cells.md) |
+| Place a cell: label, action, button, switch, checkbox, radio, text field, list picker, number, time, date | [references/cells.md](references/cells.md) |
+| Group cells into sections, add icons, descriptions, hints; disable or hide a cell | [references/cells.md](references/cells.md) |
 | Receive the confirmation of a list selection as a command (`PickerCell.SelectedCommand`) | [references/cells.md](references/cells.md) |
-| Change the screen after it is on display: add, remove, move, replace rows and sections | [references/updates.md](references/updates.md) |
-| Receive user edits in a view model, generate rows from a collection, keep state across page visits | [references/updates.md](references/updates.md) |
-| Colors, fonts, row height, Classic / Modern list appearance, section boxes | [references/styling.md](references/styling.md) |
-| Look up the style property list (screen-wide defaults and per-row overrides) | [references/styling.md](references/styling.md) |
+| Change the screen after it is on display: add, remove, move, replace cells and sections | [references/updates.md](references/updates.md) |
+| Receive user edits in a view model, generate cells from a collection, keep state across page visits | [references/updates.md](references/updates.md) |
+| Colors, fonts, cell height, Classic / Modern list appearance, section boxes | [references/styling.md](references/styling.md) |
+| Look up the style property list (screen-wide defaults and per-cell overrides) | [references/styling.md](references/styling.md) |
 | Section and screen headers / footers, including arbitrary views in them, and where to place the control on a page | [references/styling.md](references/styling.md) |
-| Put any MAUI view into a row of the list, or package one as a reusable cell type of your own | [references/custom-cells.md](references/custom-cells.md) |
+| Put any MAUI view into a cell of the list, or package one as a reusable cell type of your own | [references/custom-cells.md](references/custom-cells.md) |
 
 ## Setup
 
@@ -101,7 +101,7 @@ account.Cells.Add(new KsSettingsView.EntryCell { Title = "Name", Placeholder = "
 
 ### Android theming
 
-On Android the rows are drawn inside a Material3 theme the library ships with, so the host app has nothing to provide: any activity type and any XML theme work, a plain `ComponentActivity` on a minimal theme included. The flip side is isolation - the host theme's colors (dynamic color included) do not reach the library's rows, so looks are adjusted through the styling properties of `SettingsView` ([references/styling.md](references/styling.md)). Light and dark follow the device night mode and the app's own uiMode control, not the host theme.
+On Android the cells are drawn inside a Material3 theme the library ships with, so the host app has nothing to provide: any activity type and any XML theme work, a plain `ComponentActivity` on a minimal theme included. The flip side is isolation - the host theme's colors (dynamic color included) do not reach the library's cells, so looks are adjusted through the styling properties of `SettingsView` ([references/styling.md](references/styling.md)). Light and dark follow the device night mode and the app's own uiMode control, not the host theme.
 
 ## Minimal working example
 
@@ -123,7 +123,7 @@ On Android the rows are drawn inside a Material3 theme the library ships with, s
 
 ## Reference files
 
-- [references/cells.md](references/cells.md) - one recipe per built-in cell, plus sections, icons, and the fields every row shares.
+- [references/cells.md](references/cells.md) - one recipe per built-in cell, plus sections, icons, and the fields every cell shares.
 - [references/updates.md](references/updates.md) - changing a screen that is already on display, two-way bindings, `ItemsSource`, and what survives leaving the page.
-- [references/styling.md](references/styling.md) - screen-wide defaults, per-row overrides, list style, section decoration, headers and footers, placement.
+- [references/styling.md](references/styling.md) - screen-wide defaults, per-cell overrides, list style, section decoration, headers and footers, placement.
 - [references/custom-cells.md](references/custom-cells.md) - `CustomCell`, reusable cell subclasses, and the properties that do not apply to it.

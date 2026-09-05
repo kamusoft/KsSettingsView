@@ -1,6 +1,6 @@
 # Styling
 
-Recipes for colors, fonts, sizes, list appearance and the supplementary areas around the rows. Every example on this page assumes the imports below. The style types and the modifiers are split across two packages: `Theme`, `CellStyle`, `KsImage` and `KsSettingsViewStyle` come from `jp.kamusoft.kssettingsview.ui`, while the modifiers you chain onto a handle come from `jp.kamusoft.kssettingsview.compose`.
+Recipes for colors, fonts, sizes, list appearance and the supplementary areas around the cells. Every example on this page assumes the imports below. The style types and the modifiers are split across two packages: `Theme`, `CellStyle`, `KsImage` and `KsSettingsViewStyle` come from `jp.kamusoft.kssettingsview.ui`, while the modifiers you chain onto a handle come from `jp.kamusoft.kssettingsview.compose`.
 
 ```kotlin
 import androidx.compose.foundation.layout.PaddingValues
@@ -59,7 +59,7 @@ KsSettingsView(theme = warmTheme) {
 }
 ```
 
-`backgroundColor` paints the canvas behind the list and `cellBackgroundColor` paints the rows; they are separate areas, so setting one does not imply the other.
+`backgroundColor` paints the canvas behind the list and `cellBackgroundColor` paints the cells; they are separate areas, so setting one does not imply the other.
 
 These are all the fields of `Theme`, in declaration order. `Theme` is a data class, so pass them as named arguments in any order and leave out what you do not change.
 
@@ -109,7 +109,7 @@ The built-in defaults of the table are published as public constants on the `The
 | Constant | Default of |
 |---|---|
 | `DEFAULT_SEPARATOR_COLOR` | separator color |
-| `DEFAULT_SELECTED_COLOR` | selected-row background |
+| `DEFAULT_SELECTED_COLOR` | selected-cell background |
 | `DEFAULT_ACCENT_COLOR` | accent color |
 | `DEFAULT_BACKGROUND_COLOR` | list background |
 | `DEFAULT_DISABLED_TEXT_COLOR` | disabled text color |
@@ -123,9 +123,9 @@ The built-in defaults of the table are published as public constants on the `The
 | `DEFAULT_CELL_ICON_SIZE_DP_VALUE` | icon size (dp value) |
 | `DEFAULT_CELL_ICON_RADIUS_DP_VALUE` | icon corner radius (dp value) |
 
-## Override the look of one row
+## Override the look of one cell
 
-`CellStyle` overrides the theme for a single row. Fields you leave out are inherited from the theme.
+`CellStyle` overrides the theme for a single cell. Fields you leave out are inherited from the theme.
 
 ```kotlin
 LabelCell(
@@ -161,7 +161,7 @@ These are all the fields of `CellStyle`, in declaration order. Every one of them
 
 ## Chain style modifiers on a cell
 
-The same overrides are available as modifiers on the `CellHandle` each cell function returns. Chaining preserves the values set earlier and the row identity.
+The same overrides are available as modifiers on the `CellHandle` each cell function returns. Chaining preserves the values set earlier and the cell identity.
 
 ```kotlin
 LabelCell(title = "Name")
@@ -172,11 +172,11 @@ LabelCell(title = "Name")
     .cellHeight(60.dp)
 ```
 
-Available modifiers on a `CellHandle` are `font`, `cellHeight`, `titleColor`, `backgroundColor`, `icon`, `cellID` and `disabled`. `font` changes the title font only, not the hint text. `disabled` is a no-op that returns the row unchanged - to disable a row, pass `isEnabled = false` to the cell function. A `SectionHandle` takes `sectionHeader`, `sectionFooter` and `sectionID` instead.
+Available modifiers on a `CellHandle` are `font`, `cellHeight`, `titleColor`, `backgroundColor`, `icon`, `cellID` and `disabled`. `font` changes the title font only, not the hint text. `disabled` is a no-op that returns the cell unchanged - to disable a cell, pass `isEnabled = false` to the cell function. A `SectionHandle` takes `sectionHeader`, `sectionFooter` and `sectionID` instead.
 
-## Switch between Classic and Modern list appearance
+## Choose how sections are separated (Classic separators / Modern rounded boxes)
 
-`KsSettingsViewStyle.Classic` separates rows with hairlines; `Modern` groups each section into a rounded box. Switching styles keeps the contents and ids untouched.
+`KsSettingsViewStyle` chooses how sections are separated. `Classic` only draws hairlines between cells and sections, and cells span the full width of the screen. `Modern` wraps just the cells of each section in a rounded box, with the section header and footer outside the box. Switching styles keeps the contents and ids untouched.
 
 ```kotlin
 KsSettingsView(style = KsSettingsViewStyle.Modern) {
@@ -199,23 +199,23 @@ val boxedTheme = Theme(
 )
 ```
 
-The box covers only the rows of a section: section headers and footers sit outside it, and the screen header and footer are never boxed. In `Classic` only the vertical parts of `sectionMargin` apply, because a classic section spans the full width.
+The box covers only the cells of a section: section headers and footers sit outside it, and the screen header and footer are never boxed. In `Classic` only the vertical parts of `sectionMargin` apply, because a classic section spans the full width.
 
-## Control row height
+## Control cell height
 
 Height resolves from `CellStyle.cellHeight`, then `Theme.rowHeight`, then the platform minimum of 60dp. The two are written differently: `CellStyle.cellHeight` is a `Dp?` and takes `80.dp`, while `Theme.rowHeight` is a plain `Int` counted in dp, with `-1` meaning unspecified, so it takes `64` and rejects `64.dp`.
 
-With `hasUnevenRows` left at `true` the resolved height is a minimum and rows grow with their content; set it to `false` to pin every row.
+With `hasUnevenRows` left at `true` the resolved height is a minimum and cells grow with their content; set it to `false` to pin every cell.
 
 ```kotlin
 val compactTheme = Theme(rowHeight = 64, hasUnevenRows = false)
 ```
 
-With a fixed height, content that does not fit is not allowed to grow the row, so pick a height that fits multi-line text. 60dp is also a floor rather than only a fallback: a smaller value resolved from either source is raised back to 60dp, so `Theme(rowHeight = 40)` still gives 60dp rows.
+With a fixed height, content that does not fit is not allowed to grow the cell, so pick a height that fits multi-line text. 60dp is also a floor rather than only a fallback: a smaller value resolved from either source is raised back to 60dp, so `Theme(rowHeight = 40)` still gives 60dp cells.
 
-## Size the icon of a row
+## Size the icon of a cell
 
-`CellStyle.iconSize` and `iconRadius` set the edge length of the icon frame and the rounding of its corners for one row; `Theme.cellIconSize` and `cellIconRadius` do the same for the screen. All four are `Dp?`, and the defaults are 24dp square with square corners.
+`CellStyle.iconSize` and `iconRadius` set the edge length of the icon frame and the rounding of its corners for one cell; `Theme.cellIconSize` and `cellIconRadius` do the same for the screen. All four are `Dp?`, and the defaults are 24dp square with square corners.
 
 ```kotlin
 val avatarTheme = Theme(cellIconSize = 32.dp, cellIconRadius = 16.dp)

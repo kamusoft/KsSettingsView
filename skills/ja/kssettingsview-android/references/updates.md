@@ -1,6 +1,6 @@
 # 表示中の画面の更新
 
-表示中の設定画面を変えるためのレシピと、宣言ツリーの再評価をまたいで行を追跡するためのレシピ。
+表示中の設定画面を変えるためのレシピと、宣言ツリーの再評価をまたいで Cell を追跡するためのレシピ。
 
 このページには 2 つの書き方が出てくるが、1 つのファイルで混ぜることはできない。宣言側のコードは `jp.kamusoft.kssettingsview.compose` の DSL でツリーを組む。Store 側のコードは `jp.kamusoft.kssettingsview.ui` の Cell クラスと `jp.kamusoft.kssettingsview.core` のモデル型で組む。DSL 関数と Cell クラスは名前を共有しているため (`LabelCell` は両方にある)、1 つのファイルで両方をそのまま import することはできない。2 つの書き方はファイルを分けるか、`import jp.kamusoft.kssettingsview.ui.LabelCell as UiLabelCell` のように片方に別名を付ける。
 
@@ -64,9 +64,9 @@ fun SettingsScreen() {
 
 Store の現在値は読み取り専用の `StateFlow` として公開されている — `store.state` が現在の `SettingsRoot`、`store.theme` が現在の `Theme`。ViewModel からの参照や、更新前の現在構造の確認に使える。
 
-## 表示後に行を足す・消す
+## 表示後に Cell を足す・消す
 
-`insertCell` は Section の中へ行を挿し、`removeCell` は行の ID を取る。index は画面上の位置ではなく model 配列上の位置なので、非表示の行も数に入る。
+`insertCell` は Section の中へ Cell を挿し、`removeCell` は Cell の ID を取る。index は画面上の位置ではなく model 配列上の位置なので、非表示の Cell も数に入る。
 
 ```kotlin
 store.insertCell(
@@ -81,7 +81,7 @@ store.removeCell(cellId = "license")
 
 ## 表示後に Section を足す・消す・差し替える
 
-`insertSection` と `removeSection` は、`insertCell` / `removeCell` が行に対してするのと同じことを Section に対してする。`replaceSection` は位置を保ったまま Section を入れ替える。index は非表示の Section も含む `SettingsRoot.sections` 上の位置で、範囲外の値は行の操作と同じく clamp される。
+`insertSection` と `removeSection` は、`insertCell` / `removeCell` が Cell に対してするのと同じことを Section に対してする。`replaceSection` は位置を保ったまま Section を入れ替える。index は非表示の Section も含む `SettingsRoot.sections` 上の位置で、範囲外の値は Cell の操作と同じく clamp される。
 
 ```kotlin
 store.insertSection(
@@ -105,11 +105,11 @@ store.replaceSection(
 store.removeSection(sectionId = "diagnostics")
 ```
 
-未知の Section ID は、行の操作と同じく状態も通知も変えない。差し替える Section には元と同じ ID を持たせること。ID を変えると、その下の行を Section 経由で指定できなくなる。
+未知の Section ID は、Cell の操作と同じく状態も通知も変えない。差し替える Section には元と同じ ID を持たせること。ID を変えると、その下の Cell を Section 経由で指定できなくなる。
 
 ## 画面全体を作り直す
 
-行ごとに当てていくのが割に合わない規模の変更 (アカウントの切り替え、画面全体が新しい応答で決まる場合など) では、`replaceAll` で新しいツリーを丸ごと渡す。
+Cell ごとに当てていくのが割に合わない規模の変更 (アカウントの切り替え、画面全体が新しい応答で決まる場合など) では、`replaceAll` で新しいツリーを丸ごと渡す。
 
 ```kotlin
 store.replaceAll(
@@ -125,11 +125,11 @@ store.replaceAll(
 )
 ```
 
-新旧のツリーに同じ ID が現れれば、その行はそのまま残る。概念的に同じ行には同じ ID を使い回すと、無駄な作り直しを避けられる。
+新旧のツリーに同じ ID が現れれば、その Cell はそのまま残る。概念的に同じ Cell には同じ ID を使い回すと、無駄な作り直しを避けられる。
 
-## 1 行の内容を差し替える
+## Cell 1 つの内容を差し替える
 
-`replaceCell` は行の同一性と ViewHolder を保ったまま内容を更新する。渡す Cell は同じ ID を持たせる。
+`replaceCell` は Cell の同一性と ViewHolder を保ったまま内容を更新する。渡す Cell は同じ ID を持たせる。
 
 ```kotlin
 store.replaceCell(
@@ -138,11 +138,11 @@ store.replaceCell(
 )
 ```
 
-ID 自体を変えたい場合は、行を削除してから新しい行を挿入する。
+ID 自体を変えたい場合は、Cell を削除してから新しい Cell を挿入する。
 
-## 複数行を 1 バッチで更新する
+## 複数の Cell を 1 バッチで更新する
 
-1 回の操作で複数行が変わるとき (ラジオグループなど) はまとめて渡し、1 回の状態更新・1 回の通知に収める。代わりに `replaceCell` をループで呼ぶのは等価ではない。呼び出しごとに再描画が予約され、後の呼び出しが、先の呼び出しがまだ待っていた再描画を捨ててしまうため、一部の行が古い内容のまま残る。
+1 回の操作で複数の Cell が変わるとき (ラジオグループなど) はまとめて渡し、1 回の状態更新・1 回の通知に収める。代わりに `replaceCell` をループで呼ぶのは等価ではない。呼び出しごとに再描画が予約され、後の呼び出しが、先の呼び出しがまだ待っていた再描画を捨ててしまうため、一部の Cell が古い内容のまま残る。
 
 ```kotlin
 store.replaceCells(
@@ -167,16 +167,16 @@ store.replaceCells(
 
 未知の ID は読み飛ばされ、空リストは何もしない。
 
-## Section と行を並べ替える
+## Section と Cell を並べ替える
 
-`moveSection` は全 Section 列上の位置で動く。`moveCell` は行が属する Section を自分で解決し、その中で並べ替える。どちらも `to` は「対象をいったん取り除いた後の挿入 index」として解釈される。
+`moveSection` は全 Section 列上の位置で動く。`moveCell` は Cell が属する Section を自分で解決し、その中で並べ替える。どちらも `to` は「対象をいったん取り除いた後の挿入 index」として解釈される。
 
 ```kotlin
 store.moveSection(from = 2, to = 0)
 store.moveCell(cellId = "version", to = 0)
 ```
 
-別の Section へ行を移す操作は、削除 + 挿入で表す。
+別の Section へ Cell を移す操作は、削除 + 挿入で表す。
 
 ## 表示後に Section の Header / Footer を変える
 
@@ -222,7 +222,7 @@ store.applyTheme(darkTheme)
 
 宣言側では `KsSettingsView` の `theme` 引数が同じ経路を通る。Store overload に `theme` 引数はないので、初期値は `SettingsRootStore(initialTheme = ...)`、以後の変更は `applyTheme` を使う。
 
-## 再評価をまたいで行を追跡する
+## 再評価をまたいで Cell を追跡する
 
 宣言ツリーは Recomposition のたびに作り直されるため、動的コレクションには key が要る。DSL の `forEach` に、item ごとに区別が付く値を返す lambda として渡す。
 
@@ -264,20 +264,20 @@ KsSettingsView {
 }
 ```
 
-安定 ID は `DatePickerCell` (`uiStyle = Material`) のカレンダーダイアログでも効いてくる。ダイアログは回転後に選択状態を保ったまま再表示されるが、それは Activity 再生成の前後で行の ID が同じときに限られる — 一致しなければ閉じたままになり、どこにも値を書き込まない。ボトムシート系のピッカー (Picker・NumberPicker・TimePicker・Spinner 形式の日付) は ID に関わらず回転で閉じる。
+安定 ID は `DatePickerCell` (`uiStyle = Material`) のカレンダーダイアログでも効いてくる。ダイアログは回転後に選択状態を保ったまま再表示されるが、それは Activity 再生成の前後で Cell の ID が同じときに限られる — 一致しなければ閉じたままになり、どこにも値を書き込まない。ボトムシート系のピッカー (Picker・NumberPicker・TimePicker・Spinner 形式の日付) は ID に関わらず回転で閉じる。
 
 ## 2 種類の識別子を区別する
 
 宣言側の識別子と Store が取る識別子は別物で、取り違えることが「更新したのに何も起きない」の主な原因になる。
 
 - DSL で利用者が渡すもの (`forEach` の key、`KsIdentifiable.id`、`cellID` に渡す文字列) は型 `Any` の hint。DSL はそこから安定 ID を導き、その導出結果を `Cell.id` に入れる。導出は internal なので、`.cellID("app-version")` は `"app-version"` という ID を生まないし、実際に生まれる値を利用者が再現することもできない。
-- Store が行と Section を指すのは、`settingsRoot { }` や `SettingsRoot` / `Section` / Cell クラスでツリーを組むときに利用者自身が書いた `String` の ID。`removeCell` / `replaceCell` / `moveCell` / `removeSection` などが期待するのはこちら。
+- Store が Cell と Section を指すのは、`settingsRoot { }` や `SettingsRoot` / `Section` / Cell クラスでツリーを組むときに利用者自身が書いた `String` の ID。`removeCell` / `replaceCell` / `moveCell` / `removeSection` などが期待するのはこちら。
 
 そもそも実行時にこの 2 つが出会うこともない。`KsSettingsView { ... }` の overload は Store を内部で生成して所有し、外へは一切公開しない。`KsSettingsView(store = ...)` の overload は DSL ブロックを取らない。つまり DSL で書いた画面を Store から操作することはできない。Store 操作をしたいなら、明示 ID でツリーを組んで Store overload を使う。
 
-## 状態から行の表示・非表示を切り替える
+## 状態から Cell の表示・非表示を切り替える
 
-`isVisible` の切り替えは、行をその場で作り替えるのではなく、完全な model から表示対象の集合を組み直す。
+`isVisible` の切り替えは、Cell をその場で作り替えるのではなく、完全な model から表示対象の集合を組み直す。
 
 ```kotlin
 var showAdvanced by remember { mutableStateOf(false) }

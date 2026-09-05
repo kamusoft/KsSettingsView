@@ -9,21 +9,21 @@ metadata:
 
 # KsSettingsView for .NET MAUI
 
-KsSettingsView は、iOS の設定アプリのようなリスト形式の設定画面を組み立てる UI ライブラリ。画面は行 (Cell) を Section にまとめたツリーとして宣言し、そのツリーがそのまま画面になる。この Skill が扱うのは .NET MAUI 版で、XAML と C# から使えるコントロール一式 (`SettingsView`・`Section`・各 Cell) として提供される。記述は XAML でも C# でもよい。行を描くのは各 platform の Native 設定 list で、MAUI 側の型はそこへ渡すデータにあたる。
+KsSettingsView は、iOS の設定アプリのようなリスト形式の設定画面を組み立てる UI ライブラリ。画面は Cell を Section にまとめたツリーとして宣言し、そのツリーがそのまま画面になる。この Skill が扱うのは .NET MAUI 版で、XAML と C# から使えるコントロール一式 (`SettingsView`・`Section`・各 Cell) として提供される。記述は XAML でも C# でもよい。Cell を描くのは各 platform の Native 設定 list で、MAUI 側の型はそこへ渡すデータにあたる。
 
 ## できること
 
 | やりたいこと | 参照先 |
 |---|---|
-| 行を置く: ラベル、操作、ボタン、スイッチ、チェックボックス、ラジオ、テキスト入力、リスト選択、数値、時刻、日付 | [references/cells.md](references/cells.md) |
-| 行を Section にまとめる、アイコン・説明・ヒントを付ける、行を無効化・非表示にする | [references/cells.md](references/cells.md) |
+| Cell を置く: ラベル、操作、ボタン、スイッチ、チェックボックス、ラジオ、テキスト入力、リスト選択、数値、時刻、日付 | [references/cells.md](references/cells.md) |
+| Cell を Section にまとめる、アイコン・説明・ヒントを付ける、Cell を無効化・非表示にする | [references/cells.md](references/cells.md) |
 | リスト選択の確定操作を Command で受け取る (`PickerCell.SelectedCommand`) | [references/cells.md](references/cells.md) |
-| 表示中の画面を変える: 行と Section の追加・削除・移動・差し替え | [references/updates.md](references/updates.md) |
-| ユーザーの操作を ViewModel で受け取る、コレクションから行を生成する、ページを離れて戻っても状態を保つ | [references/updates.md](references/updates.md) |
-| 色・フォント・行高さ、Classic / Modern の list 外観、Section の箱 | [references/styling.md](references/styling.md) |
-| スタイルプロパティの一覧を引く (画面全体の既定と行ごとの上書き) | [references/styling.md](references/styling.md) |
+| 表示中の画面を変える: Cell と Section の追加・削除・移動・差し替え | [references/updates.md](references/updates.md) |
+| ユーザーの操作を ViewModel で受け取る、コレクションから Cell を生成する、ページを離れて戻っても状態を保つ | [references/updates.md](references/updates.md) |
+| 色・フォント・Cell の高さ、Classic / Modern の list 外観、Section の Container | [references/styling.md](references/styling.md) |
+| スタイルプロパティの一覧を引く (画面全体の既定と Cell ごとの上書き) | [references/styling.md](references/styling.md) |
 | Section と画面全体の Header / Footer (任意の View も置ける)、ページ上での配置場所 | [references/styling.md](references/styling.md) |
-| 任意の MAUI View を行 (row) として表示する、再利用できる独自 Cell 型にまとめる | [references/custom-cells.md](references/custom-cells.md) |
+| 任意の MAUI View を Cell として表示する、再利用できる独自 Cell 型にまとめる | [references/custom-cells.md](references/custom-cells.md) |
 
 ## 導入
 
@@ -101,7 +101,7 @@ account.Cells.Add(new KsSettingsView.EntryCell { Title = "Name", Placeholder = "
 
 ### Android のテーマ
 
-Android の行はライブラリが同梱する Material3 テーマの中で描画されるので、ホストアプリ側に用意するものはない — 最小テーマの素の `ComponentActivity` を含め、どの Activity 型・XML テーマでも動く。裏返すと隔離でもあり、ホストテーマの色 (dynamic color を含む) はライブラリの行には届かないため、見た目の調整は `SettingsView` のスタイル系プロパティで行う ([references/styling.md](references/styling.md))。ライト / ダークは端末の夜間モードとアプリ自身の uiMode 制御に従い、ホストテーマでは決まらない。
+Android の Cell はライブラリが同梱する Material3 テーマの中で描画されるので、ホストアプリ側に用意するものはない — 最小テーマの素の `ComponentActivity` を含め、どの Activity 型・XML テーマでも動く。裏返すと隔離でもあり、ホストテーマの色 (dynamic color を含む) はライブラリの Cell には届かないため、見た目の調整は `SettingsView` のスタイル系プロパティで行う ([references/styling.md](references/styling.md))。ライト / ダークは端末の夜間モードとアプリ自身の uiMode 制御に従い、ホストテーマでは決まらない。
 
 ## 最小動作コード
 
@@ -125,5 +125,5 @@ Android の行はライブラリが同梱する Material3 テーマの中で描�
 
 - [references/cells.md](references/cells.md) - 組み込み Cell ごとのレシピと、Section・アイコン・全 Cell 共通フィールド。
 - [references/updates.md](references/updates.md) - 表示中の画面の更新、双方向バインド、`ItemsSource`、ページを離れても残るもの。
-- [references/styling.md](references/styling.md) - 画面全体の既定値、行ごとの上書き、list の外観、Section 装飾、Header / Footer、配置。
+- [references/styling.md](references/styling.md) - 画面全体の既定値、Cell ごとの上書き、list の外観、Section 装飾、Header / Footer、配置。
 - [references/custom-cells.md](references/custom-cells.md) - `CustomCell`、再利用のための派生クラス、CustomCell に効かないプロパティ。

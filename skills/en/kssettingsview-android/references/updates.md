@@ -1,6 +1,6 @@
 # Updating the screen while it is shown
 
-Recipes for changing a settings screen that is already on display, and for keeping rows identified while the declarative tree is re-evaluated.
+Recipes for changing a settings screen that is already on display, and for keeping cells identified while the declarative tree is re-evaluated.
 
 Two forms appear on this page and they do not mix in one file. Declarative snippets build the tree with the DSL of `jp.kamusoft.kssettingsview.compose`. Store snippets build it from the cell classes of `jp.kamusoft.kssettingsview.ui` and the model types of `jp.kamusoft.kssettingsview.core`. A DSL function and a cell class share each name - `LabelCell` is both - so a single file cannot import both directly. Keep the two forms in separate files, or import one side under an alias such as `import jp.kamusoft.kssettingsview.ui.LabelCell as UiLabelCell`.
 
@@ -64,9 +64,9 @@ The `settingsRoot` builder is a plain function that takes explicit ids; it is a 
 
 The current values of the store are exposed as read-only `StateFlow`s: `store.state` holds the current `SettingsRoot` and `store.theme` the current `Theme`. Use them to observe from a view model or to inspect the current structure before an update.
 
-## Add or remove a row after display
+## Add or remove a cell after display
 
-`insertCell` places a row inside a section, `removeCell` takes the row id. Indices count hidden rows too, because they are positions in the full model rather than on screen.
+`insertCell` places a cell inside a section, `removeCell` takes the cell id. Indices count hidden cells too, because they are positions in the full model rather than on screen.
 
 ```kotlin
 store.insertCell(
@@ -81,7 +81,7 @@ Operations whose target id does not exist change nothing and notify nothing, and
 
 ## Add, remove or replace a whole section after display
 
-`insertSection` and `removeSection` do for sections what `insertCell` and `removeCell` do for rows, and `replaceSection` swaps one out while keeping its position. The index is a position in `SettingsRoot.sections`, hidden sections included, and out-of-range values are clamped the same way.
+`insertSection` and `removeSection` do for sections what `insertCell` and `removeCell` do for cells, and `replaceSection` swaps one out while keeping its position. The index is a position in `SettingsRoot.sections`, hidden sections included, and out-of-range values are clamped the same way.
 
 ```kotlin
 store.insertSection(
@@ -105,11 +105,11 @@ store.replaceSection(
 store.removeSection(sectionId = "diagnostics")
 ```
 
-An unknown section id changes nothing and notifies nothing, as with the row operations. Give the replacement the same id as the section it replaces, or the rows underneath it can no longer be addressed by their section.
+An unknown section id changes nothing and notifies nothing, as with the cell operations. Give the replacement the same id as the section it replaces, or the cells underneath it can no longer be addressed by their section.
 
 ## Rebuild the whole screen at once
 
-When a change is large enough that patching it row by row makes no sense - the user switched account, or the whole screen is driven by a fresh response - hand the store a new tree with `replaceAll`.
+When a change is large enough that patching it cell by cell makes no sense - the user switched account, or the whole screen is driven by a fresh response - hand the store a new tree with `replaceAll`.
 
 ```kotlin
 store.replaceAll(
@@ -125,11 +125,11 @@ store.replaceAll(
 )
 ```
 
-Ids that appear in both the old and the new tree keep their rows, so reusing them where the row is conceptually the same avoids a needless rebuild of that row.
+Ids that appear in both the old and the new tree keep their cells, so reusing them where the cell is conceptually the same avoids a needless rebuild of that cell.
 
-## Replace the contents of one row
+## Replace the contents of one cell
 
-`replaceCell` updates a row in place, keeping its identity and its view holder. Pass a new cell that carries the same id.
+`replaceCell` updates a cell in place, keeping its identity and its view holder. Pass a new cell that carries the same id.
 
 ```kotlin
 store.replaceCell(
@@ -138,11 +138,11 @@ store.replaceCell(
 )
 ```
 
-To change the id itself, remove the row and insert a new one instead.
+To change the id itself, remove the cell and insert a new one instead.
 
-## Update several rows in one batch
+## Update several cells in one batch
 
-When one user action changes several rows - a radio group, for instance - send them together so they land in a single state update and a single notification. Calling `replaceCell` in a loop instead is not equivalent: each call schedules its own redraw, and the later calls discard the redraws the earlier ones were still waiting for, so some rows keep showing their old contents.
+When one user action changes several cells - a radio group, for instance - send them together so they land in a single state update and a single notification. Calling `replaceCell` in a loop instead is not equivalent: each call schedules its own redraw, and the later calls discard the redraws the earlier ones were still waiting for, so some cells keep showing their old contents.
 
 ```kotlin
 store.replaceCells(
@@ -167,16 +167,16 @@ store.replaceCells(
 
 Unknown ids are skipped, and an empty list does nothing.
 
-## Move or reorder sections and rows
+## Move or reorder sections and cells
 
-`moveSection` works on positions in the full section list; `moveCell` finds the row's own section and reorders it there. Both read `to` as the insertion index after the element has been taken out.
+`moveSection` works on positions in the full section list; `moveCell` finds the cell's own section and reorders it there. Both read `to` as the insertion index after the element has been taken out.
 
 ```kotlin
 store.moveSection(from = 2, to = 0)
 store.moveCell(cellId = "version", to = 0)
 ```
 
-Moving a row to a different section is expressed as a remove plus an insert.
+Moving a cell to a different section is expressed as a remove plus an insert.
 
 ## Change a section header or footer after display
 
@@ -222,7 +222,7 @@ store.applyTheme(darkTheme)
 
 In the declarative form the `theme` parameter of `KsSettingsView` goes through the same path. The store overload has no `theme` parameter: pass the initial value to `SettingsRootStore(initialTheme = ...)` and change it with `applyTheme`.
 
-## Keep rows identified across re-evaluations
+## Keep cells identified across re-evaluations
 
 A declarative tree is rebuilt on every recomposition, so dynamic collections need a key. Pass one to the DSL `forEach` as a lambda that returns something distinguishing per item.
 
@@ -264,20 +264,20 @@ KsSettingsView {
 }
 ```
 
-A stable id also matters for the calendar dialog of `DatePickerCell` (`uiStyle = Material`): it comes back after a rotation with its selection intact, but only when the row keeps the same id across the activity being recreated - otherwise it stays closed and writes nothing. The bottom-sheet pickers (Picker, NumberPicker, TimePicker, the Spinner date picker) close on rotation regardless.
+A stable id also matters for the calendar dialog of `DatePickerCell` (`uiStyle = Material`): it comes back after a rotation with its selection intact, but only when the cell keeps the same id across the activity being recreated - otherwise it stays closed and writes nothing. The bottom-sheet pickers (Picker, NumberPicker, TimePicker, the Spinner date picker) close on rotation regardless.
 
 ## Tell the two kinds of identifier apart
 
 The identifiers of the declarative side and the identifiers a store takes are not the same thing, and mistaking one for the other is the usual reason an update quietly does nothing.
 
 - In the DSL, what you supply - a `forEach` key, a `KsIdentifiable.id`, the string given to `cellID` - is a hint of type `Any`. The DSL derives a stable id from it and puts that derived value into `Cell.id`. The derivation is internal, so `.cellID("app-version")` does not produce the id `"app-version"` and you cannot reproduce the value it does produce.
-- A store addresses rows and sections by the `String` id you wrote yourself when you built the tree with `settingsRoot { }` or the `SettingsRoot` / `Section` / cell classes. That is the id `removeCell`, `replaceCell`, `moveCell`, `removeSection` and the rest expect.
+- A store addresses cells and sections by the `String` id you wrote yourself when you built the tree with `settingsRoot { }` or the `SettingsRoot` / `Section` / cell classes. That is the id `removeCell`, `replaceCell`, `moveCell`, `removeSection` and the rest expect.
 
 The two also never meet at runtime: the `KsSettingsView { ... }` overload creates and owns its store internally and never exposes it, and the `KsSettingsView(store = ...)` overload takes no DSL block. So a screen written with the DSL cannot be driven from a store at all. If you want store operations, build the tree with explicit ids and use the store overload.
 
-## Show and hide rows from state
+## Show and hide cells from state
 
-Toggling `isVisible` rebuilds the set of displayed rows from the full model, instead of reconfiguring rows in place.
+Toggling `isVisible` rebuilds the set of displayed cells from the full model, instead of reconfiguring cells in place.
 
 ```kotlin
 var showAdvanced by remember { mutableStateOf(false) }

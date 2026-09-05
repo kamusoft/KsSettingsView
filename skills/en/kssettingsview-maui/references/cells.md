@@ -1,10 +1,10 @@
 # Cells
 
-Recipes for placing rows in a settings screen. Every XAML example assumes the `ks` namespace declaration from the minimal example in [SKILL.md](../SKILL.md). A fragment that starts with `<ks:Section>` goes directly inside a `<ks:SettingsView>` element; a fragment that is a bare cell goes inside a `<ks:Section>`, because `Root` - the content property of `SettingsView` - holds sections, not cells. Bindings resolve against the page `BindingContext`; the properties they name are yours to declare on a view model.
+Recipes for placing cells in a settings screen. Every XAML example assumes the `ks` namespace declaration from the minimal example in [SKILL.md](../SKILL.md). A fragment that starts with `<ks:Section>` goes directly inside a `<ks:SettingsView>` element; a fragment that is a bare cell goes inside a `<ks:Section>`, because `Root` - the content property of `SettingsView` - holds sections, not cells. Bindings resolve against the page `BindingContext`; the properties they name are yours to declare on a view model.
 
-## Group rows into a section
+## Group cells into a section
 
-Rows always live inside a section. A section takes optional header and footer text.
+Cells always live inside a section. A section takes optional header and footer text.
 
 ```xml
 <ks:Section HeaderText="Account" FooterText="Signing out keeps local data.">
@@ -23,7 +23,7 @@ Rows always live inside a section. A section takes optional header and footer te
 <ks:LabelCell Title="Storage" ValueText="256 GB" />
 ```
 
-## Run an action or navigate from a row
+## Run an action or navigate from a cell
 
 `CommandCell` shows a disclosure indicator and runs a command when tapped. Set `HideArrow="True"` to drop the indicator.
 
@@ -34,7 +34,7 @@ Rows always live inside a section. A section takes optional header and footer te
                 CommandParameter="license" />
 ```
 
-The row is tappable while `IsEnabled` is true and `Command.CanExecute(CommandParameter)` returns true, and it follows `CanExecuteChanged`. The `Tapped` event fires first, then the command executes.
+The cell is tappable while `IsEnabled` is true and `Command.CanExecute(CommandParameter)` returns true, and it follows `CanExecuteChanged`. The `Tapped` event fires first, then the command executes.
 
 Subscribe to `Tapped` when the notification alone is what you want. The attribute names a method in the code-behind of the page; `ButtonCell` and `CustomCell` expose the same event.
 
@@ -49,9 +49,9 @@ private void OnOpenLogTapped(object? sender, EventArgs e)
 }
 ```
 
-## Put a button in a row
+## Put a button in a cell
 
-`ButtonCell` never shows a disclosure indicator. `TitleAlignment` only shows visually on rows that carry no `ValueText`, because a row with a value text gives the title only the width it needs.
+`ButtonCell` never shows a disclosure indicator. `TitleAlignment` only shows visually on cells that carry no `ValueText`, because a cell with a value text gives the title only the width it needs.
 
 ```xml
 <ks:ButtonCell Title="Sign out"
@@ -79,9 +79,9 @@ private void OnOpenLogTapped(object? sender, EventArgs e)
 <ks:SimpleCheckCell Title="Send crash reports" Checked="{Binding SendReports}" />
 ```
 
-## Pick one row out of a group
+## Pick one cell out of a group
 
-Rows that share a `GroupId` form one selection. Each row carries its own `Value`, and every row in the group binds `SelectedValue` to the same property.
+Cells that share a `GroupId` form one selection. Each cell carries its own `Value`, and every cell in the group binds `SelectedValue` to the same property.
 
 ```xml
 <ks:Section HeaderText="Theme">
@@ -90,9 +90,9 @@ Rows that share a `GroupId` form one selection. Each row carries its own `Value`
 </ks:Section>
 ```
 
-## Edit text in a row
+## Edit text in a cell
 
-`EntryCell` turns the row itself into the editor, so `ValueText` is not a separate display slot here: it is the edited string, and it is two-way by default. From C#, write the type as `KsSettingsView.EntryCell` or through a using alias - the bare name collides with the MAUI type of the same name ([SKILL.md](../SKILL.md)).
+`EntryCell` turns the cell itself into the editor, so `ValueText` is not a separate display slot here: it is the edited string, and it is two-way by default. From C#, write the type as `KsSettingsView.EntryCell` or through a using alias - the bare name collides with the MAUI type of the same name ([SKILL.md](../SKILL.md)).
 
 ```xml
 <ks:EntryCell Title="Name"
@@ -106,7 +106,7 @@ Rows that share a `GroupId` form one selection. Each row carries its own `Value`
               IsPassword="True" />
 ```
 
-`Keyboard` takes the standard MAUI keyboards (`Default`, `Plain`, `Text`, `Chat`, `Url`, `Email`, `Numeric`, `Telephone`). `TextAlignment` sets the alignment of the input text; unset (null) it keeps the native default, trailing. There is no value-changed event: the two-way binding is the only way values come back. `PlaceholderColor` colors the placeholder of one row; unset, it inherits `SettingsView.CellPlaceholderColor` and then the OS default, which adapts to dark mode on its own.
+`Keyboard` takes the standard MAUI keyboards (`Default`, `Plain`, `Text`, `Chat`, `Url`, `Email`, `Numeric`, `Telephone`). `TextAlignment` sets the alignment of the input text; unset (null) it keeps the native default, trailing. There is no value-changed event: the two-way binding is the only way values come back. `PlaceholderColor` colors the placeholder of one cell; unset, it inherits `SettingsView.CellPlaceholderColor` and then the OS default, which adapts to dark mode on its own.
 
 ## Choose one item from a list
 
@@ -136,7 +136,7 @@ Switch the mode to `Multiple` and bind `SelectedIndices` instead. `MaxSelectedNu
 
 ## Show object items with a readable text
 
-`DisplayMember` names the property whose value becomes the item text, on the row and in the selection surface; leave it unset (or name a property that does not resolve) and the item's `ToString()` is shown instead. `SubDisplayMember` adds a second line under each candidate, in the selection surface only. Both resolve public instance properties by name through reflection, so keep those properties preserved when trimming. The former `DisplayFormatter` delegate is gone - use `DisplayMember` instead.
+`DisplayMember` names the property whose value becomes the item text, on the cell and in the selection surface; leave it unset (or name a property that does not resolve) and the item's `ToString()` is shown instead. `SubDisplayMember` adds a second line under each candidate, in the selection surface only. Both resolve public instance properties by name through reflection, so keep those properties preserved when trimming. The former `DisplayFormatter` delegate is gone - use `DisplayMember` instead.
 
 ```xml
 <ks:PickerCell Title="Plan"
@@ -149,7 +149,7 @@ Switch the mode to `Multiple` and bind `SelectedIndices` instead. `MaxSelectedNu
 
 ## Work in items instead of indices
 
-`SelectedItem` (single selection) and `SelectedItems` (multiple selection) are two-way and kept in step with `SelectedIndex` / `SelectedIndices` and `ItemsSource`; the index side stays the source of truth. Setting an item that is not among the candidates leaves the row unselected (in a multiple selection, elements that are not found are simply dropped) - the lookup uses value equality and takes the first match. An item bound before `ItemsSource` arrives is held and resolved once the candidates are set, so the order of XAML attributes and bindings does not matter.
+`SelectedItem` (single selection) and `SelectedItems` (multiple selection) are two-way and kept in step with `SelectedIndex` / `SelectedIndices` and `ItemsSource`; the index side stays the source of truth. Setting an item that is not among the candidates leaves the cell unselected (in a multiple selection, elements that are not found are simply dropped) - the lookup uses value equality and takes the first match. An item bound before `ItemsSource` arrives is held and resolved once the candidates are set, so the order of XAML attributes and bindings does not matter.
 
 ```xml
 <ks:PickerCell Title="Theme"
@@ -202,7 +202,7 @@ public SettingsViewModel()
 
 ## Choose a time
 
-`Time` is a `TimeSpan`. `Is24Hour` alone decides the hour cycle of the picker: `True` (the default) opens a 24-hour picker, `False` a 12-hour one with an AM/PM column - on every device, because neither the device's 24-hour setting nor `Format` takes part. `Format` only shapes the value text on the row, and it is carried through to the platform date and time formatter that draws it - `DateFormatter` on iOS, `DateTimeFormatter` on Android - so write a pattern those accept, not a .NET format specifier, and keep it consistent with `Is24Hour` yourself (nothing validates the pair).
+`Time` is a `TimeSpan`. `Is24Hour` alone decides the hour cycle of the picker: `True` (the default) opens a 24-hour picker, `False` a 12-hour one with an AM/PM column - on every device, because neither the device's 24-hour setting nor `Format` takes part. `Format` only shapes the value text on the cell, and it is carried through to the platform date and time formatter that draws it - `DateFormatter` on iOS, `DateTimeFormatter` on Android - so write a pattern those accept, not a .NET format specifier, and keep it consistent with `Is24Hour` yourself (nothing validates the pair).
 
 ```xml
 <ks:TimePickerCell Title="Alarm"
@@ -231,15 +231,15 @@ On Android the picker is a bottom sheet with hour and minute wheels on every hos
 
 `Calendar` on Android opens a Material 3 calendar dialog that also offers a text input mode the user can switch to; it works on any host activity and theme. `AndroidButtonColor` colors the OK and CANCEL actions of the `Wheels` surface on Android and falls back to the `AccentColor` resolution when unset - it is an Android-only setting and does not affect the display on other platforms.
 
-## Rules the picker rows share
+## Rules the picker cells share
 
 `PickerCell`, `NumberPickerCell`, `TimePickerCell`, and `DatePickerCell` write back only when the user confirms: the Done button on iOS, the OK button on Android, or the tap on a candidate row in a single-selection `PickerCell`. Cancelling, tapping outside, going Back, and swiping a sheet away throw the work in progress away and leave the bound property as it was - a multiple-selection `PickerCell` holds its working set the same way and does not touch `SelectedIndices` until the confirmation. Only `PickerCell` carries a path that reports the confirmation itself - `SelectedCommand`, above.
 
-All four also carry `ValueText`. Leave it unset and the row shows the current selection on its own; set it and your string is shown instead.
+All four also carry `ValueText`. Leave it unset and the cell shows the current selection on its own; set it and your string is shown instead.
 
-## Add an icon to a row
+## Add an icon to a cell
 
-`IconSource` is a normal MAUI `ImageSource`, so file names, `MauiImage` assets, URIs, and embedded resources all work. The image is resolved asynchronously; a source that fails to resolve leaves the row without an icon.
+`IconSource` is a normal MAUI `ImageSource`, so file names, `MauiImage` assets, URIs, and embedded resources all work. The image is resolved asynchronously; a source that fails to resolve leaves the cell without an icon.
 
 ```xml
 <ks:CommandCell Title="Profile"
@@ -248,7 +248,7 @@ All four also carry `ValueText`. Leave it unset and the row shows the current se
                 Command="{Binding OpenProfileCommand}" />
 ```
 
-## Add supporting text to a row
+## Add supporting text to a cell
 
 `Description` sits under the title on every cell except `ButtonCell` and `CustomCell`. `HintText`, the secondary note, has a narrower exception: every cell except `CustomCell` carries it, `ButtonCell` included. Both are hidden while null.
 
@@ -259,9 +259,9 @@ All four also carry `ValueText`. Leave it unset and the row shows the current se
               ValueText="256 GB" />
 ```
 
-## Disable or hide a row
+## Disable or hide a cell
 
-`IsEnabled="False"` keeps the row visible but stops it reacting and draws it in the disabled text color. `IsVisible="False"` drops it from the screen while keeping its value in the model, so the binding keeps working and the row comes back in place.
+`IsEnabled="False"` keeps the cell visible but stops it reacting and draws it in the disabled text color. `IsVisible="False"` drops it from the screen while keeping its value in the model, so the binding keeps working and the cell comes back in place.
 
 ```xml
 <ks:CommandCell Title="Sync now" IsEnabled="{Binding IsOnline}" />

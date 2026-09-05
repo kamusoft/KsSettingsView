@@ -1,8 +1,8 @@
 # Custom cells
 
-Recipes for rows the built-in cells cannot express. `CustomCell` shows an arbitrary MAUI view as one row in the list; the content fills the row except for the disclosure indicator, and none of the shared row slots (title, description, icon) are drawn. XAML fragments assume the `ks` namespace declaration from the minimal example in [SKILL.md](../SKILL.md).
+Recipes for content the built-in cells cannot express. `CustomCell` shows an arbitrary MAUI view as one cell in the list; the content fills the cell except for the disclosure indicator, and none of the shared cell slots (title, description, icon) are drawn. XAML fragments assume the `ks` namespace declaration from the minimal example in [SKILL.md](../SKILL.md).
 
-## Put a view into a row of the list
+## Put a view into a cell of the list
 
 `Content` is the content property, so the view is written directly inside the cell.
 
@@ -18,9 +18,9 @@ Recipes for rows the built-in cells cannot express. `CustomCell` shows an arbitr
 </ks:Section>
 ```
 
-## Make the row react to a tap
+## Make the cell react to a tap
 
-`Command`, `CommandParameter`, and the `Tapped` event behave exactly as they do on `CommandCell`, and `ShowArrowIndicator` adds the same disclosure indicator. A row with neither a command nor a `Tapped` handler has no tap behavior at all, so controls inside the content keep working.
+`Command`, `CommandParameter`, and the `Tapped` event behave exactly as they do on `CommandCell`, and `ShowArrowIndicator` adds the same disclosure indicator. A cell with neither a command nor a `Tapped` handler has no tap behavior at all, so controls inside the content keep working.
 
 ```xml
 <ks:CustomCell ShowArrowIndicator="True" Command="{Binding OpenDetailCommand}">
@@ -28,11 +28,11 @@ Recipes for rows the built-in cells cannot express. `CustomCell` shows an arbitr
 </ks:CustomCell>
 ```
 
-When a control inside the content consumes the tap, the row command does not also fire.
+When a control inside the content consumes the tap, the cell command does not also fire.
 
-## Keep controls inside the row usable
+## Keep controls inside the cell usable
 
-Leave the row without a command and the content owns every gesture. The value comes back through the control's own events or bindings.
+Leave the cell without a command and the content owns every gesture. The value comes back through the control's own events or bindings.
 
 ```xml
 <ks:CustomCell>
@@ -44,9 +44,9 @@ Leave the row without a command and the content owns every gesture. The value co
 </ks:CustomCell>
 ```
 
-`IsEnabled="False"` suppresses both the row tap and the controls inside the content, and dims the whole content.
+`IsEnabled="False"` suppresses both the cell tap and the controls inside the content, and dims the whole content.
 
-## Package a row as a reusable cell type
+## Package a CustomCell as a reusable cell type
 
 Derive from `CustomCell`, build the content in the constructor, and expose the parts callers set as bindable properties. In XAML it is placed like any other cell and needs no registration. Declare the namespace that holds it on the page root next to `ks` - `xmlns:local="clr-namespace:MyApp.Cells"` for a type in the same assembly as the page, or `xmlns:local="clr-namespace:MyApp.Cells;assembly=MyApp.Cells"` for one in another assembly.
 
@@ -86,9 +86,9 @@ public class SliderCell : CustomCell
 </ks:Section>
 ```
 
-## Generate custom rows from a collection
+## Generate custom cells from a collection
 
-A `CustomCell` works inside a `DataTemplate` like any other cell. Each generated row gets its own view instance with the item as `BindingContext`.
+A `CustomCell` works inside a `DataTemplate` like any other cell. Each generated cell gets its own view instance with the item as `BindingContext`.
 
 ```xml
 <ks:Section HeaderText="Devices" ItemsSource="{Binding Devices}">
@@ -105,13 +105,13 @@ A `CustomCell` works inside a `DataTemplate` like any other cell. Each generated
 </ks:Section>
 ```
 
-## Let the row height follow the content
+## Let the cell height follow the content
 
-The row is sized by the content, including while the screen is on display, so an expander or a wrapping label changes the row height on its own. Nothing has to be remeasured by hand.
+The cell is sized by the content, including while the screen is on display, so an expander or a wrapping label changes the cell height on its own. Nothing has to be remeasured by hand.
 
-## Update what the row shows
+## Update what the cell shows
 
-Changes inside the same view instance - a bound value, a label text, a child added - reach the screen without touching `Content`. The row is only rebuilt when `Content` is set to a different instance.
+Changes inside the same view instance - a bound value, a label text, a child added - reach the screen without touching `Content`. The cell is only rebuilt when `Content` is set to a different instance.
 
 ```csharp
 cell.Content = BuildRow(newState);
@@ -119,6 +119,6 @@ cell.Content = BuildRow(newState);
 
 ## What does not apply to a custom cell
 
-`Title`, `Description`, `HintText`, `IconSource`, and the text style properties inherited from `CellBase` do not affect the row. Setting them is ignored silently rather than throwing, so one shared style can be applied to a mixed set of cells. What does apply is the row itself - `IsEnabled`, `IsVisible`, `BackgroundColor`, `Height` - and what `CustomCell` adds of its own: `Content`, `Command`, `CommandParameter`, the `Tapped` event, and `ShowArrowIndicator`.
+`Title`, `Description`, `HintText`, `IconSource`, and the text style properties inherited from `CellBase` do not affect the cell. Setting them is ignored silently rather than throwing, so one shared style can be applied to a mixed set of cells. What does apply is the cell itself - `IsEnabled`, `IsVisible`, `BackgroundColor`, `Height` - and what `CustomCell` adds of its own: `Content`, `Command`, `CommandParameter`, the `Tapped` event, and `ShowArrowIndicator`.
 
 A single view instance belongs to one place: using it as the `Content` of two cells, or as both a content and a header or footer view, throws `InvalidOperationException`. Registering a cell type of your own with its own renderer is not offered in MAUI - a `CustomCell` subclass is the reusable unit.

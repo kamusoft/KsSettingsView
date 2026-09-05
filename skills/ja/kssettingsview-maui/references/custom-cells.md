@@ -1,8 +1,8 @@
 # CustomCell
 
-組み込み Cell では表せない行のためのレシピ。`CustomCell` は任意の MAUI View を設定リストの 1 つの行として表示する。内容は Disclosure Indicator を除く行の全域を占め、共通行レイアウトのスロット (title / description / icon) は描かれない。XAML の断片は [SKILL.md](../SKILL.md) の最小動作コードにある `ks` 名前空間宣言を前提とする。
+組み込み Cell では表せない内容のためのレシピ。`CustomCell` は任意の MAUI View を設定リストの 1 つの Cell として表示する。内容は Disclosure Indicator を除く Cell の全域を占め、共通 Cell レイアウトのスロット (title / description / icon) は描かれない。XAML の断片は [SKILL.md](../SKILL.md) の最小動作コードにある `ks` 名前空間宣言を前提とする。
 
-## View を行 (row) として表示する
+## View を Cell として表示する
 
 `Content` が content property なので、View は Cell の直下に書く。
 
@@ -18,9 +18,9 @@
 </ks:Section>
 ```
 
-## 行タップに反応させる
+## Cell のタップに反応させる
 
-`Command` / `CommandParameter` と `Tapped` イベントの挙動は `CommandCell` と同じで、`ShowArrowIndicator` は同じ Disclosure Indicator を出す。Command も `Tapped` も持たない行はタップ動作そのものを持たないので、内容の中のコントロールの操作を妨げない。
+`Command` / `CommandParameter` と `Tapped` イベントの挙動は `CommandCell` と同じで、`ShowArrowIndicator` は同じ Disclosure Indicator を出す。Command も `Tapped` も持たない Cell はタップ動作そのものを持たないので、内容の中のコントロールの操作を妨げない。
 
 ```xml
 <ks:CustomCell ShowArrowIndicator="True" Command="{Binding OpenDetailCommand}">
@@ -28,9 +28,9 @@
 </ks:CustomCell>
 ```
 
-内容の中の要素がタップを消費したときは、行の Command は発火しない。
+内容の中の要素がタップを消費したときは、Cell の Command は発火しない。
 
-## 行の中のコントロールを操作させる
+## Cell の中のコントロールを操作させる
 
 Command を持たせなければ、ジェスチャは内容側が受け取る。値はそのコントロール自身のイベントやバインドで戻ってくる。
 
@@ -44,7 +44,7 @@ Command を持たせなければ、ジェスチャは内容側が受け取る。
 </ks:CustomCell>
 ```
 
-`IsEnabled="False"` は行タップと内容の中の操作の両方を抑止し、内容全体を淡色化する。
+`IsEnabled="False"` は Cell のタップと内容の中の操作の両方を抑止し、内容全体を淡色化する。
 
 ## 再利用できる Cell 型にまとめる
 
@@ -88,7 +88,7 @@ public class SliderCell : CustomCell
 
 ## コレクションから CustomCell を生成する
 
-`CustomCell` も他の Cell と同じように `DataTemplate` の中で使える。生成された行はそれぞれ独立した View 実体を持ち、`BindingContext` は対応する item になる。
+`CustomCell` も他の Cell と同じように `DataTemplate` の中で使える。生成された Cell はそれぞれ独立した View 実体を持ち、`BindingContext` は対応する item になる。
 
 ```xml
 <ks:Section HeaderText="Devices" ItemsSource="{Binding Devices}">
@@ -105,13 +105,13 @@ public class SliderCell : CustomCell
 </ks:Section>
 ```
 
-## 行の高さを内容に追従させる
+## Cell の高さを内容に追従させる
 
-行の高さは内容が決める。表示中の内容のサイズ変化にも追従するので、開閉するブロックや折り返すラベルを置いても高さは自動で変わる。手動での再計測は要らない。
+Cell の高さは内容が決める。表示中の内容のサイズ変化にも追従するので、開閉するブロックや折り返すラベルを置いても高さは自動で変わる。手動での再計測は要らない。
 
-## 行の表示を更新する
+## Cell の表示を更新する
 
-同じ View インスタンスの内部の変化 — バインド値の更新、ラベル文言の変更、子要素の追加 — は `Content` に触れずに表示へ届く。行が作り直されるのは `Content` を別インスタンスに差し替えたときだけ。
+同じ View インスタンスの内部の変化 — バインド値の更新、ラベル文言の変更、子要素の追加 — は `Content` に触れずに表示へ届く。Cell が作り直されるのは `Content` を別インスタンスに差し替えたときだけ。
 
 ```csharp
 cell.Content = BuildRow(newState);
@@ -119,6 +119,6 @@ cell.Content = BuildRow(newState);
 
 ## CustomCell に効かないもの
 
-`CellBase` から継承する `Title` / `Description` / `HintText` / `IconSource` とテキスト系のスタイルプロパティは行に影響しない。設定しても例外にはならず黙って無視される — 同じスタイル指定を種類の違う Cell へまとめて当てられるようにするため。効くのは行そのものに掛かる `IsEnabled` / `IsVisible` / `BackgroundColor` / `Height` と、`CustomCell` 固有の `Content` / `Command` / `CommandParameter` / `Tapped` イベント / `ShowArrowIndicator`。
+`CellBase` から継承する `Title` / `Description` / `HintText` / `IconSource` とテキスト系のスタイルプロパティは Cell に影響しない。設定しても例外にはならず黙って無視される — 同じスタイル指定を種類の違う Cell へまとめて当てられるようにするため。効くのは Cell そのものに掛かる `IsEnabled` / `IsVisible` / `BackgroundColor` / `Height` と、`CustomCell` 固有の `Content` / `Command` / `CommandParameter` / `Tapped` イベント / `ShowArrowIndicator`。
 
 View インスタンスは同時に 1 箇所にしか置けない。同じインスタンスを 2 つの Cell の `Content` にしたり、`Content` と Header / Footer の View に同時に使ったりすると `InvalidOperationException` になる。独自の Cell 型と描画を登録する機構は MAUI では公開していない — 再利用の単位は `CustomCell` の派生クラスになる。

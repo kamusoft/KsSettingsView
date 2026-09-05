@@ -1,6 +1,6 @@
 # スタイル
 
-色・フォント・寸法・list 外観と、行の周りの補助領域のためのレシピ。このページの例はすべて以下の import を前提とする。スタイルの型と modifier は 2 つの package に分かれている — `Theme` / `CellStyle` / `KsImage` / `KsSettingsViewStyle` は `jp.kamusoft.kssettingsview.ui` に、Handle に chain する modifier は `jp.kamusoft.kssettingsview.compose` にある。
+色・フォント・寸法・list 外観と、Cell の周りの補助領域のためのレシピ。このページの例はすべて以下の import を前提とする。スタイルの型と modifier は 2 つの package に分かれている — `Theme` / `CellStyle` / `KsImage` / `KsSettingsViewStyle` は `jp.kamusoft.kssettingsview.ui` に、Handle に chain する modifier は `jp.kamusoft.kssettingsview.compose` にある。
 
 ```kotlin
 import androidx.compose.foundation.layout.PaddingValues
@@ -59,7 +59,7 @@ KsSettingsView(theme = warmTheme) {
 }
 ```
 
-`backgroundColor` は list 全体の下地、`cellBackgroundColor` は行の背景を塗る。別々の領域なので、片方を指定してももう片方は決まらない。
+`backgroundColor` は list 全体の下地、`cellBackgroundColor` は Cell の背景を塗る。別々の領域なので、片方を指定してももう片方は決まらない。
 
 `Theme` のフィールドは以下がすべてで、並びは宣言順である。`Theme` は data class なので、名前付き引数として順不同で渡し、変えないものは省略する。
 
@@ -94,10 +94,10 @@ KsSettingsView(theme = warmTheme) {
 | Cell 既定値 | `cellHintFont` | `TextStyle?` | `null` |
 | Cell 既定値 | `cellIconSize` | `Dp?` | `null` (24dp) |
 | Cell 既定値 | `cellIconRadius` | `Dp?` | `null` (0dp) |
-| Section の箱 | `sectionMargin` | `PaddingValues?` | `null` |
-| Section の箱 | `sectionCornerRadius` | `Dp?` | `null` |
-| Section の箱 | `sectionBorderWidth` | `Dp?` | `null` (ボーダーなし) |
-| Section の箱 | `sectionBorderColor` | `Color?` | `null` |
+| Section の Container | `sectionMargin` | `PaddingValues?` | `null` |
+| Section の Container | `sectionCornerRadius` | `Dp?` | `null` |
+| Section の Container | `sectionBorderWidth` | `Dp?` | `null` (Border なし) |
+| Section の Container | `sectionBorderColor` | `Color?` | `null` |
 | Cell 既定値 | `cellPlaceholderColor` | `Color?` | `null` (OS 既定) |
 
 `cellTitleFontSize` は独立したサイズで、解決された title font のサイズを上書きする。`headerFontSize` / `footerFontSize` も Header / Footer に対して同じ働きをする。3 つとも正の値のときだけ適用される。
@@ -123,9 +123,9 @@ KsSettingsView(theme = warmTheme) {
 | `DEFAULT_CELL_ICON_SIZE_DP_VALUE` | icon サイズ (dp 値) |
 | `DEFAULT_CELL_ICON_RADIUS_DP_VALUE` | icon 角丸半径 (dp 値) |
 
-## 1 行だけ見た目を上書きする
+## Cell 1 つだけ見た目を上書きする
 
-`CellStyle` は 1 行に対して Theme を上書きする。指定しなかったフィールドは Theme から継承する。
+`CellStyle` は Cell 1 つに対して Theme を上書きする。指定しなかったフィールドは Theme から継承する。
 
 ```kotlin
 LabelCell(
@@ -161,7 +161,7 @@ LabelCell(
 
 ## Cell に style modifier を chain する
 
-同じ上書きは、各 Cell 関数が返す `CellHandle` 上の modifier としても使える。chain しても先に指定した値と行の同一性は保たれる。
+同じ上書きは、各 Cell 関数が返す `CellHandle` 上の modifier としても使える。chain しても先に指定した値と Cell の同一性は保たれる。
 
 ```kotlin
 LabelCell(title = "Name")
@@ -172,11 +172,11 @@ LabelCell(title = "Name")
     .cellHeight(60.dp)
 ```
 
-`CellHandle` で使える modifier は `font` / `cellHeight` / `titleColor` / `backgroundColor` / `icon` / `cellID` / `disabled`。`font` が変えるのは title のフォントだけで、hintText のフォントは変えない。`disabled` は行をそのまま返す no-op なので、行を無効化するには Cell 関数へ `isEnabled = false` を渡す。`SectionHandle` の側は代わりに `sectionHeader` / `sectionFooter` / `sectionID` を取る。
+`CellHandle` で使える modifier は `font` / `cellHeight` / `titleColor` / `backgroundColor` / `icon` / `cellID` / `disabled`。`font` が変えるのは title のフォントだけで、hintText のフォントは変えない。`disabled` は Cell をそのまま返す no-op なので、Cell を無効化するには Cell 関数へ `isEnabled = false` を渡す。`SectionHandle` の側は代わりに `sectionHeader` / `sectionFooter` / `sectionID` を取る。
 
-## Classic と Modern の list 外観を切り替える
+## Section の区切り方を切り替える (Classic の罫線 / Modern の角丸 Container)
 
-`KsSettingsViewStyle.Classic` は細線で行を区切り、`Modern` は Section ごとに角丸の箱でまとめる。style を切り替えても内容と ID は変わらない。
+`KsSettingsViewStyle` は Section の区切り方を選ぶ。`Classic` は Cell と Section の境界を細線で引くだけで、Cell は画面の全幅に並ぶ。`Modern` は Section の Cell だけを角丸の Container にまとめ、Section Header / Footer はその Container の外側に置く。style を切り替えても内容と ID は変わらない。
 
 ```kotlin
 KsSettingsView(style = KsSettingsViewStyle.Modern) {
@@ -186,9 +186,9 @@ KsSettingsView(style = KsSettingsViewStyle.Modern) {
 }
 ```
 
-## Modern の Section の箱を調整する
+## Modern の Section Container を調整する
 
-箱は Theme の 4 属性で決まる。未指定ならライブラリ既定へ解決し、既定ではボーダーを描かない。
+Container は Theme の 4 属性で決まる。未指定ならライブラリ既定へ解決し、既定では Border を描かない。
 
 ```kotlin
 val boxedTheme = Theme(
@@ -199,23 +199,23 @@ val boxedTheme = Theme(
 )
 ```
 
-箱が覆うのは Section の Cell 行だけ。Section の Header / Footer は箱の外に置かれ、画面全体の Header / Footer は装飾対象にならない。`Classic` では `sectionMargin` の上下成分だけが効く (Classic の Section は全幅のため)。
+Container が覆うのは Section の Cell だけ。Section の Header / Footer は Container の外に置かれ、画面全体の Header / Footer は装飾対象にならない。`Classic` では `sectionMargin` の上下成分だけが効く (Classic の Section は全幅のため)。
 
-## 行の高さを決める
+## Cell の高さを決める
 
 高さは `CellStyle.cellHeight` → `Theme.rowHeight` → platform の最低値 60dp の順で解決する。この 2 つは書き方が違う。`CellStyle.cellHeight` は `Dp?` で `80.dp` を取り、`Theme.rowHeight` は dp を単位とする素の `Int` で未指定が `-1`、つまり `64` を取り `64.dp` は受け付けない。
 
-`hasUnevenRows` が既定の `true` のままなら解決値は最低高として働き、内容に応じて伸びる。`false` にすると全行を固定する。
+`hasUnevenRows` が既定の `true` のままなら解決値は最低高として働き、内容に応じて伸びる。`false` にすると全 Cell を固定する。
 
 ```kotlin
 val compactTheme = Theme(rowHeight = 64, hasUnevenRows = false)
 ```
 
-固定高では内容がはみ出しても行は伸びないので、複数行のテキストが入る高さを選ぶ。60dp は fallback であるだけでなく下限でもある。どちらの経路から解決した値でもこれを下回れば 60dp へ引き上げられるため、`Theme(rowHeight = 40)` としても行の高さは 60dp になる。
+固定高では内容がはみ出しても Cell は伸びないので、複数行のテキストが入る高さを選ぶ。60dp は fallback であるだけでなく下限でもある。どちらの経路から解決した値でもこれを下回れば 60dp へ引き上げられるため、`Theme(rowHeight = 40)` としても Cell の高さは 60dp になる。
 
-## 行のアイコンの大きさを決める
+## Cell のアイコンの大きさを決める
 
-`CellStyle.iconSize` と `iconRadius` は 1 行分のアイコン枠の一辺と角の丸めを決め、`Theme.cellIconSize` と `cellIconRadius` が画面全体に同じことをする。4 つとも `Dp?` で、既定は 24dp 四方・角丸なし。
+`CellStyle.iconSize` と `iconRadius` は Cell 1 つ分のアイコン枠の一辺と角の丸めを決め、`Theme.cellIconSize` と `cellIconRadius` が画面全体に同じことをする。4 つとも `Dp?` で、既定は 24dp 四方・角丸なし。
 
 ```kotlin
 val avatarTheme = Theme(cellIconSize = 32.dp, cellIconRadius = 16.dp)
@@ -268,7 +268,7 @@ Composable の Header は内容で比較されないため、lambda の中身を
 
 ## 画面全体に Header / Footer を付ける
 
-画面全体の Header / Footer は設定ツリーではなく View 側に属し、Modern の箱に覆われることはない。
+画面全体の Header / Footer は設定ツリーではなく View 側に属し、Modern の Section Container に覆われることはない。
 
 ```kotlin
 KsSettingsView(

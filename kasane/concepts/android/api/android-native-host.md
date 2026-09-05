@@ -119,7 +119,7 @@ Theme 属性の未指定時に使われるライブラリ既定値は、`Theme` 
 | `DEFAULT_CELL_ICON_SIZE_DP_VALUE` | icon サイズ (dp 値) |
 | `DEFAULT_CELL_ICON_RADIUS_DP_VALUE` | icon 角丸半径 (dp 値) |
 
-`Classic` は Cell 行へ1物理 pixelの hairline を描き、Section 内の中間線だけ左16dp inset とする。`Modern` は Theme の Section 装飾4属性 (`sectionMargin` 等。未指定はライブラリ既定) に従い、Section の Cell 行のみを角丸背景・ボーダーの箱でまとめ、Section H/F 行は箱の外に置く ([設定 list の外観と補助領域](../../core/styling/list-appearance.md))。Style の切替は model、stable ID、Registry を変えない。Theme の変更時は現在の Style の装飾も再構築される。
+`Classic` は Cell へ1物理 pixelの hairline を描き、Section 内の中間線だけ左16dp inset とする。`Modern` は Theme の Section 装飾4属性 (`sectionMargin` 等。未指定はライブラリ既定) に従い、Section の Cell のみを角丸背景・Border の Container でまとめ、Section H/F 行は Container の外に置く ([設定 list の外観と補助領域](../../core/styling/list-appearance.md))。Style の切替は model、stable ID、Registry を変えない。Theme の変更時は現在の Style の装飾も再構築される。
 
 ## ホストのテーマと Activity 型 (前提なし)
 

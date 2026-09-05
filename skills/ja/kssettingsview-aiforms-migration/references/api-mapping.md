@@ -12,7 +12,7 @@ XAML と C# から参照するものはすべて 1 つの namespace に移り、
 | `AiForms.Maui.SettingsView` NuGet パッケージ | `KsSettingsView.Maui` NuGet パッケージ | 変わるのはパッケージ名だけで、binding パッケージは推移的に入る |
 | `MauiAppBuilder.UseSettingsView(bool)` | `MauiAppBuilder.AddKsSettingsView()` | 引数の `bool` はリーク回避策の有効化だったが、その仕組み自体が無くなった |
 | `IMauiHandlersCollection.AddSettingsViewHandler()` | 提供しない | 登録すべき Handler は 1 件だけで、`AddKsSettingsView()` が行う |
-| Cell 種別ごとの Handler 登録 | 提供しない | Cell は Native の行へ変換されるデータであり、Handler を持つ View ではない |
+| Cell 種別ごとの Handler 登録 | 提供しない | Cell は Native の Cell へ変換されるデータであり、Handler を持つ View ではない |
 
 `AiForms.Settings` には無かった注意点が新 namespace には 1 つある。`KsSettingsView.SwitchCell` と `KsSettingsView.EntryCell` は `Microsoft.Maui.Controls` の型と同名である。XAML は `ks:` prefix が namespace を示すので影響しない。C# — AiForms からの移植で Cell を手で組む場面 — では、`using KsSettingsView;` と MAUI の暗黙 using が同居するファイルで型名だけを書くと解決できず、コンパイラが CS0104 (あいまい参照) を報告する。`KsSettingsView.SwitchCell` / `KsSettingsView.EntryCell` と完全修飾で書くか、そのファイルに `using SwitchCell = KsSettingsView.SwitchCell;` のような using alias を宣言する。詳細は kssettingsview-maui Skill の SKILL.md にある「MAUI 本体の Cell との名前衝突」節を参照。
 
@@ -39,7 +39,7 @@ XAML と C# から参照するものはすべて 1 つの namespace に移り、
 | `CellBase.Section` | 提供しない | Cell は親 Section への参照を持たない |
 | `CellBase.Reload()` | 提供しない | プロパティ変更はそのまま画面に届く。強制再描画の呼び出しは無い |
 | `CellBase.SetEnabledAppearance(bool)` | `CellBase.IsEnabled` | 見た目はプロパティに追従する |
-| `CellBase.Tapped` (全 Cell が公開する public イベント) | `CommandCell` / `ButtonCell` / `CustomCell` の `Tapped` イベントのみ | 範囲が狭まった。発火は `Command` より先。`LabelCell` や `SwitchCell` などで購読していた場合は、その行を `CommandCell` または `CustomCell` に置き換える |
+| `CellBase.Tapped` (全 Cell が公開する public イベント) | `CommandCell` / `ButtonCell` / `CustomCell` の `Tapped` イベントのみ | 範囲が狭まった。発火は `Command` より先。`LabelCell` や `SwitchCell` などで購読していた場合は、その Cell を `CommandCell` または `CustomCell` に置き換える |
 | `CellBase.OnTapped()` (internal) | 提供しない | `CellBase` を継承して呼び出す・override していた場合にのみ関わる。タップは `Command` か `Tapped` で受ける |
 
 Section と Cell は logical tree に載らないため、`{Binding}` は解決するが `x:Reference` と `DynamicResource` は届かない。Header / Footer の View と `CustomCell.Content` だけは例外で、logical tree に接続され所有者の `BindingContext` を継承する。
@@ -83,16 +83,16 @@ AiForms で `LabelCell` (および `EntryCell`) に宣言されていた `ValueT
 | `LabelCell.ValueTextColor` と値文字列のフォント系プロパティ | `CellBase.ValueTextColor` と同名のフォント系プロパティ | 基底型へ移動した |
 | `LabelCell.IgnoreUseDescriptionAsValue` | 提供しない | `UseDescriptionAsValue` 自体が無くなったので除外指定も要らない。`Description` と `ValueText` をそれぞれ設定する |
 
-## 行から操作を起こす (CommandCell / ButtonCell)
+## Cell から操作を起こす (CommandCell / ButtonCell)
 
 | AiForms | KsSettingsView | 備考 |
 |---|---|---|
 | `CommandCell.Command` / `CommandParameter` | `CommandCell.Command` / `CommandParameter` | 実効有効状態は `IsEnabled && Command.CanExecute(CommandParameter)` で `CanExecuteChanged` に追従する。発火順は `Tapped` → `Command` |
 | `CommandCell.HideArrowIndicator` (`bool`) | `CommandCell.HideArrow` (`bool`) | |
 | `CommandCell.KeepSelectedUntilBack` | 提供しない | 選択ハイライトは platform 既定に従う |
-| `ButtonCell.TitleAlignment` (`TextAlignment`、`Center`) | `ButtonCell.TitleAlignment` (`TextAlignment?`) | null で platform 既定。`ValueText` の無い行で効く。値文字列があるとタイトルには必要な幅しか残らない |
+| `ButtonCell.TitleAlignment` (`TextAlignment`、`Center`) | `ButtonCell.TitleAlignment` (`TextAlignment?`) | null で platform 既定。`ValueText` の無い Cell で効く。値文字列があるとタイトルには必要な幅しか残らない |
 | `ButtonCell.Command` / `CommandParameter` | `ButtonCell.Command` / `CommandParameter` | |
-| `SettingsView.ShowArrowIndicatorForAndroid` | 提供しない | 矢印の挙動は両 platform で同じ。行ごとに消すなら `HideArrow` |
+| `SettingsView.ShowArrowIndicatorForAndroid` | 提供しない | 矢印の挙動は両 platform で同じ。Cell ごとに消すなら `HideArrow` |
 
 AiForms は `ButtonCell` で `Description` とそのフォント系プロパティを `private new` で隠していた。KsSettingsView も同じ理由で `ButtonCell` の `Description` は受け付けたうえで黙って無視する。違うのは `HintText` で、こちらは `ButtonCell` でも表示される。
 
@@ -114,8 +114,8 @@ AiForms は `ButtonCell` で `Description` とそのフォント系プロパテ�
 
 | AiForms | KsSettingsView | 備考 |
 |---|---|---|
-| `RadioCell.SelectedValue` (添付・`object`・双方向・`Section` などの親に付ける) | `RadioCell.SelectedValue` (`string`・双方向・各 Cell に付ける) | 同名だが形が違う。旧アクセサは `RadioCell.GetSelectedValue` / `SetSelectedValue` で、新 API に添付プロパティは無い。行を選ぶと同じ `GroupId` の全 Cell に書き込まれる |
-| (Cell が置かれた Section が暗黙に表していた) | `RadioCell.GroupId` (`string`) | グループの識別子。異なる Section の行が同じ値を共有してもよい |
+| `RadioCell.SelectedValue` (添付・`object`・双方向・`Section` などの親に付ける) | `RadioCell.SelectedValue` (`string`・双方向・各 Cell に付ける) | 同名だが形が違う。旧アクセサは `RadioCell.GetSelectedValue` / `SetSelectedValue` で、新 API に添付プロパティは無い。Cell を選ぶと同じ `GroupId` の全 Cell に書き込まれる |
+| (Cell が置かれた Section が暗黙に表していた) | `RadioCell.GroupId` (`string`) | グループの識別子。異なる Section の Cell が同じ値を共有してもよい |
 | `RadioCell.Value` (`object`) | `RadioCell.Value` (`string`) | 文字列のみ。enum や id は文字列へ写像する |
 | `RadioCell.AccentColor` (`Color`) | `RadioCell.AccentColor` (`Color?`) | |
 
@@ -137,7 +137,7 @@ AiForms は `ButtonCell` で `Description` とそのフォント系プロパテ�
 </ks:Section>
 ```
 
-コレクションから行を生成する場合はもう一手要る。生成された Cell の `BindingContext` は対応する item であり、Cell には `x:Reference` が届かないため、グループの選択値を item 側から辿れるようにする。item の ViewModel に、所有者側の値を読み書きするプロパティを持たせ、それを `SelectedValue` にバインドする。
+コレクションから Cell を生成する場合はもう一手要る。生成された Cell の `BindingContext` は対応する item であり、Cell には `x:Reference` が届かないため、グループの選択値を item 側から辿れるようにする。item の ViewModel に、所有者側の値を読み書きするプロパティを持たせ、それを `SelectedValue` にバインドする。
 
 ```xml
 <ks:Section ItemsSource="{Binding ThemeOptions}">
@@ -166,7 +166,7 @@ AiForms は `ButtonCell` で `Description` とそのフォント系プロパテ�
 | `EntryCell.IsPassword` | `EntryCell.IsPassword` | |
 | `EntryCell.Completed` (public イベント) と `CompletedCommand` | 提供しない | どちらも無くなったので、Command だけでなくイベントハンドラーも削除する。値が出ていく経路は `ValueText` の双方向バインドのみで、その裏のプロパティ setter で受ける |
 | `EntryCell.SendCompleted()` | 提供しない | `Completed` の発火と `CompletedCommand` の実行を行うメソッドだった |
-| `EntryCell.SetFocus()` | 提供しない | MAUI 側からフォーカスを操作する経路は無い。行をタップしたときにフォーカスが移る |
+| `EntryCell.SetFocus()` | 提供しない | MAUI 側からフォーカスを操作する経路は無い。Cell をタップしたときにフォーカスが移る |
 | `EntryCell.ShowDoneButtonOnIOS` (`bool`) | 提供しない | iOS のキーボード上のアクセサリは platform 既定に従う |
 | `EntryCell.ValueTextColor` と値文字列のフォント系プロパティ | `CellBase.ValueTextColor` と同名のフォント系プロパティ | |
 
@@ -178,10 +178,10 @@ AiForms は `ButtonCell` で `Description` とそのフォント系プロパテ�
 |---|---|---|
 | `PickerCell.ItemsSource` (`IList`) | `PickerCell.ItemsSource` (`IList?`) | 任意の object のまま。null 要素は `ArgumentException` で拒否される。許すと `SelectedItem == null` が「未選択」と区別できなくなるため。設定時に要素と表示文字列が写し取られ、コレクションの in-place 変更は観測されない。更新はリストの差し替えで行う |
 | `PickerCell.DisplayMember` (プロパティ名) | `PickerCell.DisplayMember` (`string?`) | 考え方は同じ: 要素の実行時型が持つ public instance の引数なし readable プロパティをリフレクションで解決する。ドット区切りのパスは非対応。未指定・未解決は `ToString()` へフォールバックする。trimming 時は、この文字列でしか参照されないプロパティを利用者側で保全しないと `ToString()` フォールバックに落ちる |
-| `PickerCell.SubDisplayMember` | `PickerCell.SubDisplayMember` (`string?`) | 選択面の候補行の副表示。null・未解決の名前・値が null・空文字列はいずれも副表示なしになる。行の `ValueText` には含まれない |
+| `PickerCell.SubDisplayMember` | `PickerCell.SubDisplayMember` (`string?`) | 選択面の候補行の副表示。null・未解決の名前・値が null・空文字列はいずれも副表示なしになる。Cell の `ValueText` には含まれない |
 | `PickerCell.SelectedItem` (`object`、双方向) | `PickerCell.SelectedItem` (`object?`、双方向) | 双方向のまま残ったが導出になった: 単一選択の正は `SelectedIndex` (`int?`、双方向)。`SelectedItem` の設定は値等価で最初に一致した要素へ逆引きされ、候補に無い値は未選択になる。`ItemsSource` 到着前の設定値は捨てずに保持され、候補が届いた時点で解決されるため、XAML の属性順で初期選択は失われない |
 | `PickerCell.SelectedItems` (`IList`、双方向) | `PickerCell.SelectedItems` (`IList?`、双方向) | `SelectedIndices` (`IList<int>?`、双方向。昇順・重複除去) からの導出。候補に無い要素は落ち、重複は 1 つの index に畳まれ、null は選択なしを意味する。設定した並びがそのまま返るとは限らない |
-| `PickerCell.SelectionMode` (`Microsoft.Maui.Controls.SelectionMode`、`Multiple`) | `PickerCell.SelectionMode` (`PickerSelectionMode`、`Single`) | **既定が反転している**。`SelectionMode` を書いていなかった行は単一選択になる。旧側の型は MAUI 標準のもので、その `None` に対応先は無い。`Single` と `Multiple` は同名で引き継がれる |
+| `PickerCell.SelectionMode` (`Microsoft.Maui.Controls.SelectionMode`、`Multiple`) | `PickerCell.SelectionMode` (`PickerSelectionMode`、`Single`) | **既定が反転している**。`SelectionMode` を書いていなかった Cell は単一選択になる。旧側の型は MAUI 標準のもので、その `None` に対応先は無い。`Single` と `Multiple` は同名で引き継がれる |
 | `PickerCell.MaxSelectedNumber` | `PickerCell.MaxSelectedNumber` | 0 が制限なしなのも同じ |
 | `PickerCell.PageTitle` | `PickerCell.PageTitle` (`string?`) | |
 | `PickerCell.AccentColor` (`Color`) | `PickerCell.AccentColor` (`Color?`) | |
@@ -191,7 +191,7 @@ AiForms は `ButtonCell` で `Description` とそのフォント系プロパテ�
 | `PickerCell.UseAutoValueText` | 提供しない | `ValueText` が null の間は現在の選択が表示される。明示設定すればそちらが優先される |
 | `PickerCell.UsePickToClose` (`bool`) | 提供しない | 選択面を閉じる条件は platform 自身の規則に従う |
 | `PickerCell.Padding` (`Thickness`) | 提供しない | 選択面の余白は Native のレイアウトに従う |
-| `PickerCell.ShowCommand` (`Command`、get のみ) | 提供しない | コードから選択面を開くための Command だった。行をタップすると開く |
+| `PickerCell.ShowCommand` (`Command`、get のみ) | 提供しない | コードから選択面を開くための Command だった。Cell をタップすると開く |
 
 移行前 (AiForms):
 
@@ -211,7 +211,7 @@ AiForms は `ButtonCell` で `Description` とそのフォント系プロパテ�
                SelectedItem="{Binding SelectedCountry}" />
 ```
 
-変わるのは namespace の接頭辞だけである。挙動の注意が 1 つ: ユーザーが行を選んだとき ViewModel に書き戻されるのは候補 snapshot 側の要素で、かつて設定したインスタンスと値等価ではあるが同一インスタンスとは限らない。
+変わるのは namespace の接頭辞だけである。挙動の注意が 1 つ: ユーザーが Cell を選んだとき ViewModel に書き戻されるのは候補 snapshot 側の要素で、かつて設定したインスタンスと値等価ではあるが同一インスタンスとは限らない。
 
 ## TextPickerCell を置き換える
 
@@ -231,16 +231,16 @@ AiForms は `ButtonCell` で `Description` とそのフォント系プロパテ�
 | AiForms | KsSettingsView | 備考 |
 |---|---|---|
 | `NumberPickerCell.Number` (`int?`、null) | `NumberPickerCell.Number` (`int`、0) | 双方向なのは両者同じだが nullable ではなくなった。`int?` の ViewModel プロパティはそのままではバインドできない。「未設定」を何で表すかを決めて初期値を入れる |
-| `NumberPickerCell.Min` (`int`、0) / `Max` (`int`、9999) | `NumberPickerCell.Min` (`int`、0) / `Max` (`int`、100) | **`Max` の既定が変わった**。`Max` を書いていなかった行は上限が 9999 から 100 になる |
+| `NumberPickerCell.Min` (`int`、0) / `Max` (`int`、9999) | `NumberPickerCell.Min` (`int`、0) / `Max` (`int`、100) | **`Max` の既定が変わった**。`Max` を書いていなかった Cell は上限が 9999 から 100 になる |
 | `NumberPickerCell.Unit` (`string`、空文字列) | `NumberPickerCell.Unit` (`string`) | 値に添える単位文字列。変更なし |
 | `NumberPickerCell.PickerTitle` | `NumberPickerCell.PickerTitle` (`string?`) | |
 | `NumberPickerCell.SelectedCommand` | 提供しない | `Number` の双方向バインドの裏の setter で受ける |
 | (新規) | `NumberPickerCell.Step` (`int`、1) | 選べる数値の刻み幅 |
 | `TimePickerCell.Time` (`TimeSpan`) | `TimePickerCell.Time` (`TimeSpan`) | 既定で双方向 |
-| `TimePickerCell.Format` | `TimePickerCell.Format` (`string?`) | 表示専用: 行に見せる値の書式であり、選択面には影響しない |
-| (時制は端末設定が決めていた) | `TimePickerCell.Is24Hour` (`bool`、true) | 選択面の 12/24 時間制を決める唯一の値。`Format` も端末の地域・24時間表示設定も関与しない。**既定は 24 時間制**なので、端末設定に追従していた行で 12 時間制の選択を出すには `Is24Hour="False"` を明示する |
+| `TimePickerCell.Format` | `TimePickerCell.Format` (`string?`) | 表示専用: Cell に見せる値の書式であり、選択面には影響しない |
+| (時制は端末設定が決めていた) | `TimePickerCell.Is24Hour` (`bool`、true) | 選択面の 12/24 時間制を決める唯一の値。`Format` も端末の地域・24時間表示設定も関与しない。**既定は 24 時間制**なので、端末設定に追従していた Cell で 12 時間制の選択を出すには `Is24Hour="False"` を明示する |
 | `TimePickerCell.PickerTitle` | `TimePickerCell.PickerTitle` (`string?`) | |
-| `DatePickerCell.Date` (`DateTime?`、null) | `DatePickerCell.Date` (`DateTime`、1970-01-01) | 双方向なのは両者同じだが nullable ではなくなった。`DateTime?` の ViewModel プロパティはそのままではバインドできない。未設定の行に見せる日付を決めて初期値を入れる。意味を持つのは日付部分のみ |
+| `DatePickerCell.Date` (`DateTime?`、null) | `DatePickerCell.Date` (`DateTime`、1970-01-01) | 双方向なのは両者同じだが nullable ではなくなった。`DateTime?` の ViewModel プロパティはそのままではバインドできない。未設定の Cell に見せる日付を決めて初期値を入れる。意味を持つのは日付部分のみ |
 | `DatePickerCell.MinimumDate` (`DateTime`、1900-01-01) / `MaximumDate` (`DateTime`、2100-12-31) | `DatePickerCell.MinimumDate` / `MaximumDate` (`DateTime?`) | null が無制限を表し、固定値だった 2 つの番兵日付を置き換える |
 | `DatePickerCell.Format` | `DatePickerCell.Format` (`string?`) | |
 | `DatePickerCell.TodayText` | `DatePickerCell.TodayText` (`string?`) | |
@@ -248,20 +248,20 @@ AiForms は `ButtonCell` で `Description` とそのフォント系プロパテ�
 | `DatePickerCell.IsAndroidSpinnerStyle` (`bool`、Android のみ) | `DatePickerCell.UIStyle` (`DatePickerUIStyle?`、両 platform) | `Wheels` が旧 spinner、`Calendar` がカレンダー面、null が platform 既定。Android の `Calendar` は Material date picker 固有の挙動 (テキスト入力モードへの切替) を伴うが、ホスト Activity の型・テーマへの要求はない |
 | `DatePickerCell.AndroidButtonColor` (`Color`) | `DatePickerCell.AndroidButtonColor` (`Color?`) | |
 
-## 独自の View を行に置く (CustomCell)
+## 独自の View を Cell に置く (CustomCell)
 
 | AiForms | KsSettingsView | 備考 |
 |---|---|---|
 | `CustomCell.Content` (`View`) | `CustomCell.Content` (`View?`) | 従来どおり content property なので、XAML では Cell の直下に View を直書きする |
 | `CustomCell.ShowArrowIndicator` | `CustomCell.ShowArrowIndicator` | |
-| `CustomCell.Command` / `CommandParameter` | `CustomCell.Command` / `CommandParameter` | これらも `Tapped` も持たない行はタップ動作そのものを持たないため、content 内のコントロールの操作を妨げない |
+| `CustomCell.Command` / `CommandParameter` | `CustomCell.Command` / `CommandParameter` | これらも `Tapped` も持たない Cell はタップ動作そのものを持たないため、content 内のコントロールの操作を妨げない |
 | `CustomCell.IsSelectable` | 提供しない | タップ可否は `Command` または `Tapped` の有無で決まる |
-| `CustomCell.IsMeasureOnce` | 提供しない | 行高さは content に追従し、表示中のサイズ変化も追う |
-| `CustomCell.UseFullSize` | 提供しない | content 領域はもともと Disclosure Indicator を除く行の全域 |
+| `CustomCell.IsMeasureOnce` | 提供しない | Cell の高さは content に追従し、表示中のサイズ変化も追う |
+| `CustomCell.UseFullSize` | 提供しない | content 領域はもともと Disclosure Indicator を除く Cell の全域 |
 | `CustomCell.LongCommand` | 提供しない | 長押しの hook は無い。引数は `SendLongCommand()` が渡す `BindingContext` であり、`LongCommandParameter` というメンバーは旧 API にも無い |
 | (AiForms では `CommandCell` / `LabelCell` から継承) | `CustomCell` に `ValueText` は無い | 旧 `CustomCell` は `CommandCell` 派生で `ValueText` を持っていたが、新 `CustomCell` は `CellBase` の直接の派生で持たない |
 
-`CustomCell` では、`CellBase` から継承する `Title` / `Description` / `HintText` / `IconSource` とテキスト系のスタイルプロパティは受け付けたうえで黙って無視される。効くのは `Content` / `Command` / `CommandParameter` / `Tapped` / `ShowArrowIndicator` と、行単位の `IsEnabled` / `IsVisible` / `BackgroundColor` / `Height` である。Native SDK にある独自 Cell 型の登録機構は MAUI では公開していない。再利用する行は `CustomCell` の派生クラスかファクトリメソッドとして組み立てる。
+`CustomCell` では、`CellBase` から継承する `Title` / `Description` / `HintText` / `IconSource` とテキスト系のスタイルプロパティは受け付けたうえで黙って無視される。効くのは `Content` / `Command` / `CommandParameter` / `Tapped` / `ShowArrowIndicator` と、Cell 単位の `IsEnabled` / `IsVisible` / `BackgroundColor` / `Height` である。Native SDK にある独自 Cell 型の登録機構は MAUI では公開していない。再利用する Cell は `CustomCell` の派生クラスかファクトリメソッドとして組み立てる。
 
 ## 画面全体のスタイルを移す
 
@@ -276,16 +276,16 @@ AiForms は `ButtonCell` で `Description` とそのフォント系プロパテ�
 | `CellDescriptionColor` / `CellDescriptionFontSize` / `CellDescriptionFontFamily` / `CellDescriptionFontAttributes` | 同名・nullable | |
 | `CellValueTextColor` / `CellValueTextFontSize` / `CellValueTextFontFamily` / `CellValueTextFontAttributes` | 同名・nullable | |
 | `CellHintTextColor` / `CellHintFontSize` / `CellHintFontFamily` / `CellHintFontAttributes` | 同名・nullable | |
-| (新規) | `CellPlaceholderColor` (`Color?`) | Entry の placeholder 色の画面全体既定。行単位の `EntryCell.PlaceholderColor` が優先し、null は OS 既定へ抜ける |
+| (新規) | `CellPlaceholderColor` (`Color?`) | Entry の placeholder 色の画面全体既定。Cell 単位の `EntryCell.PlaceholderColor` が優先し、null は OS 既定へ抜ける |
 | `CellBackgroundColor` (`Color`) | `CellBackgroundColor` (`Color?`) | |
 | `CellAccentColor` (`Color`) | `CellAccentColor` (`Color?`) | |
 | `CellIconSize` (`Size`) | `CellIconSize` (`double?`) | Cell 側と同じく 1 つの数値 |
 | `CellIconRadius` (`double`) | `CellIconRadius` (`double?`) | |
 | `RowHeight` (`int`, -1) | `RowHeight` (`int?`) | 旧は -1 が自動、新は null が自動 |
 | `HasUnevenRows` (`bool`) | `HasUnevenRows` (`bool?`) | |
-| `ShowSectionTopBottomBorder` (`bool`、true、Android のみ) | `ListStyle` (`SettingsViewStyle`) と `SectionMargin` / `SectionCornerRadius` / `SectionBorderWidth` / `SectionBorderColor` | Section の装飾は list の style の一部になり、両 platform で効く。`Classic` は平坦なグループ list、`Modern` は Section を内側に寄せた箱として描き、4 プロパティで形を整える |
+| `ShowSectionTopBottomBorder` (`bool`、true、Android のみ) | `ListStyle` (`SettingsViewStyle`) と `SectionMargin` / `SectionCornerRadius` / `SectionBorderWidth` / `SectionBorderColor` | Section の装飾は list の style の一部になり、両 platform で効く。`Classic` は平坦なグループ list、`Modern` は Section の Cell を内側に寄せた角丸の Container として描き、4 プロパティで形を整える |
 | `SettingsView.ClearCache()` (public static) | 提供しない | 描画側のアイコンキャッシュを空にするメソッドだった。アイコンは MAUI の image source service 経由で解決され、ライブラリ側に消すべきキャッシュは無い |
-| (新規) | `DisabledTextColor` (`Color?`) | 無効な行のテキスト色 |
+| (新規) | `DisabledTextColor` (`Color?`) | 無効な Cell のテキスト色 |
 | (新規) | `ScrollIndicatorVisible` (`bool?`) | |
 
 `SectionMargin` は `Thickness?` だが、`Left` / `Right` は leading / trailing として読まれ、RTL の左右解決は Native 側に委ねられる。`Classic` では上下成分だけが効く。
@@ -305,26 +305,26 @@ AiForms は `ButtonCell` で `Description` とそのフォント系プロパテ�
 | (新規) | `RootHeaderText` / `RootFooterText` | 最初の Section の上、最後の Section の下に置くテキスト |
 | (新規) | `RootHeaderView` / `RootFooterView` (`View?`) | 同じ 2 箇所に任意の View を置く。テキストと併設された間は View が優先される |
 
-## コレクションから行を生成する
+## コレクションから Cell を生成する
 
 | AiForms | KsSettingsView | 備考 |
 |---|---|---|
 | `SettingsView.ItemsSource` (`IEnumerable`) / `ItemTemplate` / `TemplateStartIndex` | 同名 (`IEnumerable?` / `DataTemplate?` / `int`) | `SettingsView` 直下のテンプレートは Section を生成する |
 | `Section.ItemsSource` (`IList`) / `ItemTemplate` / `TemplateStartIndex` | 同名。ただし `ItemsSource` は `IEnumerable?` | `Section` 配下は Cell を生成する。受け取る型が広がったので、既にバインドしている `IList` はそのまま動く |
-| `ItemTemplate` への `DataTemplateSelector` | 利用できる | 行の生成直前に解決される。null・入れ子の selector・テンプレート化できない型を返すと `InvalidOperationException` |
+| `ItemTemplate` への `DataTemplateSelector` | 利用できる | Cell の生成直前に解決される。null・入れ子の selector・テンプレート化できない型を返すと `InvalidOperationException` |
 
 observable なソースの Add / Remove / Replace / Move はミラーされる。Reset と null 化はテンプレート生成分だけを取り除き、手で書いた Section と Cell は残す。
 
 ## Handler と PropertyMapper のカスタマイズを削除する
 
-AiForms は Cell 種別ごとに Handler を公開しており、そこが描画をカスタマイズする継ぎ目だった。KsSettingsView は Cell のデータから Native 側が行を描くため、この層は残らず、必要でもない。
+AiForms は Cell 種別ごとに Handler を公開しており、そこが描画をカスタマイズする継ぎ目だった。KsSettingsView は Cell のデータから Native 側が Cell を描くため、この層は残らず、必要でもない。
 
 | AiForms | KsSettingsView | 備考 |
 |---|---|---|
 | `SettingsViewHandler` とその platform 別 partial | `SettingsViewHandler` (public、`KsSettingsView.Handlers`) | `AddKsSettingsView()` が登録する。担うのは Native Host の生成と解放だけで、設定ツリーの反映は `KsSettingsView.Maui` アセンブリ内部の変換経路が受け持つため、Cell 描画のカスタマイズ点にはならない。`Mapper` と `SettingsViewHandler(IPropertyMapper?)` コンストラクタで差し替えられるのは View 共通の対応付けであり、Cell 単位ではない |
 | `CellBaseHandler<TCell, TNativeCell>` | 提供しない | |
 | `LabelCellBaseHandler` / `EntryCellBaseHandler` と Cell ごとの Handler | 提供しない | |
-| `BasePropertyMapper` と Cell ごとの `PropertyMapper` エントリ | 提供しない | Cell へプロパティを足せるのは、対応する状態を Native の行が既に持っている場合に限る |
+| `BasePropertyMapper` と Cell ごとの `PropertyMapper` エントリ | 提供しない | Cell へプロパティを足せるのは、対応する状態を Native の Cell が既に持っている場合に限る |
 | `MapXxx` 内の `handler.IsDisconnect` ガード | 提供しない | 守るべき Cell 単位の mapper が存在しない |
 | `UpdateXxx()` の PlatformView 拡張メソッド | 提供しない | |
 
@@ -350,11 +350,11 @@ AiForms は Cell 種別ごとに Handler を公開しており、そこが描画
 | `SettingsView.ItemDroppedCommand`、`ItemDropped` イベントとその `DropEventArgs`、`Section.UseDragSort` | ドラッグによる並べ替えはまだ提供していない | 並べ替えは設定 list の外で提供する。提供までその画面だけ旧ライブラリに残す判断もあり得る |
 | `SettingsView.ScrollToTop` / `ScrollToBottom` | スクロール制御はまだ公開していない | - |
 | `SettingsView.VisibleContentHeight` | 内容の高さを返す経路が無い | 大きさがレイアウト側で決まる配置にする |
-| `SettingsView.UseDescriptionAsValue` | Description と値表示は常に別物 | 必要な行に `ValueText` を明示的に設定する |
+| `SettingsView.UseDescriptionAsValue` | Description と値表示は常に別物 | 必要な Cell に `ValueText` を明示的に設定する |
 | `SettingsView.ClearCache()` | 消すべきライブラリ側のアイコンキャッシュが無い | - |
 | `SettingsView.Model` / `ModelChanged` と `SettingsModel` | 描画側へ渡すモデル層が無くなった | `ItemsSource` / `ItemTemplate` へバインドする |
 | `LabelCell.IgnoreUseDescriptionAsValue` | 上記に伴う | - |
-| `CommandCell` / `ButtonCell` / `CustomCell` 以外の `CellBase.Tapped` | タップを起こすのはこの 3 型のみになった | その行を `CommandCell` または `CustomCell` に置き換える |
+| `CommandCell` / `ButtonCell` / `CustomCell` 以外の `CellBase.Tapped` | タップを起こすのはこの 3 型のみになった | その Cell を `CommandCell` または `CustomCell` に置き換える |
 | `CellBase.Section` / `Reload()` / `SetEnabledAppearance()` | Cell が描画側を動かす経路が無くなった | 見た目の無効化は `IsEnabled` が担う |
 | `CommandCell.KeepSelectedUntilBack` | 選択ハイライトは platform に従う | - |
 | `CustomCell.LongCommand` | 長押しの hook が無い | content の View 側でジェスチャーを扱う |
@@ -367,7 +367,7 @@ AiForms は Cell 種別ごとに Handler を公開しており、そこが描画
 | `Section.TextColor` | Section 単位の見出し色は提供しない | 画面全体の `SettingsView.HeaderTextColor` を使う |
 | `CellBase.IsLoading` / `IsAnimationPlaying` / `UpdateIsLoading()`、`SettingsView.OnCollectionChanged()` / `OnSectionCollectionChanged()`、`SettingsModel` の `GetCell()` ほかの問い合わせメソッド群 | AiForms が public にしていた描画側の内部配線 | - |
 | `Section.HeaderPadding` / `FooterPadding`、`HeaderTextVerticalAlign` | Header / Footer のレイアウトは Native 側が決める | `HeaderView` / `FooterView` を使う |
-| 独自 Cell 型の登録 | MAUI ではまだ公開していない | その行を `CustomCell` として組み立てる |
+| 独自 Cell 型の登録 | MAUI ではまだ公開していない | その Cell を `CustomCell` として組み立てる |
 | Mac Catalyst ターゲット | 対象は iOS と Android のみ | - |
 
 ## platform の要件を確認する
@@ -387,7 +387,7 @@ AiForms は Cell 種別ごとに Handler を公開しており、そこが描画
 
 API 版なしの `net10.0-android` / `net10.0-ios` を優先する。この形なら正しい native binding パッケージが選ばれる。API 版を明示する場合は `net10.0-android36.0` / `net10.0-ios26.0` 以上にする。それより低い版では警告なく restore が成功しても platform 中立の `lib/net10.0` asset へフォールバックし、iOS / Android の native binding 依存が静かに欠ける。この挙動は SDK 10.0.300 で検証済み。
 
-Android では行・Header・選択面はホストテーマから視覚的に隔離されている: ライブラリは同梱の Material3 (DayNight) テーマでそれらをラップするため、ホストテーマの色 (dynamic color を含む) では変わらず、ホスト Activity の型・テーマへの要求もない。AiForms がホストテーマで描いていた画面は既定の見た目が変わり得るので、調整は `SettingsView` のプロパティと Cell 単位の上書きで行う。ライト / ダークは端末の夜間モードとアプリ自身の uiMode 制御で決まり、ホストテーマの親宣言では決まらない。埋め込む View (`CustomCell.Content`・Header / Footer の View) は従来どおりホストテーマで解決される。
+Android では Cell・Header・選択面はホストテーマから視覚的に隔離されている: ライブラリは同梱の Material3 (DayNight) テーマでそれらをラップするため、ホストテーマの色 (dynamic color を含む) では変わらず、ホスト Activity の型・テーマへの要求もない。AiForms がホストテーマで描いていた画面は既定の見た目が変わり得るので、調整は `SettingsView` のプロパティと Cell 単位の上書きで行う。ライト / ダークは端末の夜間モードとアプリ自身の uiMode 制御で決まり、ホストテーマの親宣言では決まらない。埋め込む View (`CustomCell.Content`・Header / Footer の View) は従来どおりホストテーマで解決される。
 
 `SettingsView` とその配下 (Section・Cell) への操作はすべて UI スレッドから行う (ライブラリ側で marshal しない)。
 

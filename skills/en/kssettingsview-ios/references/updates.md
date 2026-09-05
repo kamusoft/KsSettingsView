@@ -1,6 +1,6 @@
 # Updating the screen while it is shown
 
-Recipes for changing a settings screen that is already on display, and for keeping rows identified while the declarative tree is re-evaluated. Unless a snippet carries its own imports, it assumes the imports from the minimal example in [SKILL.md](../SKILL.md).
+Recipes for changing a settings screen that is already on display, and for keeping cells identified while the declarative tree is re-evaluated. Unless a snippet carries its own imports, it assumes the imports from the minimal example in [SKILL.md](../SKILL.md).
 
 ## Own the settings tree with a store
 
@@ -44,15 +44,15 @@ These are the main public operations of `SettingsRootStore`. The recipes below w
 |---|---|
 | Whole root | `replaceAll(_:)` |
 | Section | `insertSection(_:at:)`, `removeSection(sectionID:)`, `moveSection(from:to:)`, `replaceSection(sectionID:new:)` |
-| Row | `insertCell(_:in:at:)`, `removeCell(cellID:)`, `replaceCell(cellID:new:)`, `replaceCells(_:)`, `moveCell(cellID:to:)` |
+| Cell | `insertCell(_:in:at:)`, `removeCell(cellID:)`, `replaceCell(cellID:new:)`, `replaceCells(_:)`, `moveCell(cellID:to:)` |
 | Header / footer | `updateAccessory(target:accessory:)`, `invalidateAccessoryMeasurement(target:)` |
 | Theme | `applyTheme(_:)` |
 
 The store recipes below are written as members of that `SettingsModel`, so `store` and `generalSectionID` refer to its two properties.
 
-## Add or remove a row after display
+## Add or remove a cell after display
 
-`insertCell` places a row inside a section, `removeCell` takes the row identifier. That identifier is a `KsCellID`, a wrapper built from the cell's `id` (`UUID`) and nothing else: rows with the same `id` are the same row no matter how their contents changed. Indices count hidden rows too, because they are positions in the full model rather than on screen.
+`insertCell` places a cell inside a section, `removeCell` takes the cell identifier. That identifier is a `KsCellID`, a wrapper built from the cell's `id` (`UUID`) and nothing else: cells with the same `id` are the same cell no matter how their contents changed. Indices count hidden cells too, because they are positions in the full model rather than on screen.
 
 ```swift
 func appendUser(_ name: String) {
@@ -68,20 +68,20 @@ func removeLastUser() {
 
 Operations whose target identifier does not exist change nothing and notify nothing.
 
-## Replace the contents of one row
+## Replace the contents of one cell
 
-`replaceCell` updates a row in place: the row keeps its identity and its position, and is reconfigured rather than removed and re-inserted. Pass a new cell that carries the same identifier.
+`replaceCell` updates a cell in place: the cell keeps its identity and its position, and is reconfigured rather than removed and re-inserted. Pass a new cell that carries the same identifier.
 
 ```swift
 let updated = LabelCell(id: cell.id, title: "Version", valueText: "1.1.0")
 store.replaceCell(cellID: KsCellID(cell: cell), new: updated)
 ```
 
-The new cell may even be of a different type - a `LabelCell` replaced by a `SwitchCell`, say: the row keeps its identity and position, and the native cell behind it is swapped. To change the identifier itself, remove the row and insert a new one instead.
+The new cell may even be of a different type - a `LabelCell` replaced by a `SwitchCell`, say: the cell keeps its identity and position, and the native cell behind it is swapped. To change the identifier itself, remove the cell and insert a new one instead.
 
-## Update several rows in one batch
+## Update several cells in one batch
 
-When one user action changes several rows - a radio group, for instance - send them together so they land in a single state update and a single notification.
+When one user action changes several cells - a radio group, for instance - send them together so they land in a single state update and a single notification.
 
 ```swift
 store.replaceCells([
@@ -110,16 +110,16 @@ store.replaceCells([
 
 Unknown identifiers are skipped, and an empty list does nothing.
 
-## Move or reorder sections and rows
+## Move or reorder sections and cells
 
-`moveSection` works on positions in the full section list; `moveCell` finds the row's own section and reorders it there. Both read `to` as the insertion index after the element has been taken out.
+`moveSection` works on positions in the full section list; `moveCell` finds the cell's own section and reorders it there. Both read `to` as the insertion index after the element has been taken out.
 
 ```swift
 store.moveSection(from: 2, to: 0)
 store.moveCell(cellID: KsCellID(cell: cell), to: 0)
 ```
 
-Moving a row to a different section is expressed as a remove plus an insert.
+Moving a cell to a different section is expressed as a remove plus an insert.
 
 ## Change a section header or footer after display
 
@@ -142,7 +142,7 @@ store.applyTheme(darkTheme)
 
 In the declarative form, the `.theme(_:)` modifier goes through the same path.
 
-## Keep rows identified across re-evaluations
+## Keep cells identified across re-evaluations
 
 A declarative tree is rebuilt on every evaluation, so dynamic collections need a key. Use the DSL `ForEach`, which takes `Identifiable` elements or an `id:` key path.
 
@@ -174,9 +174,9 @@ ksSection("General") {
 .sectionID("general")
 ```
 
-## Show and hide rows from state
+## Show and hide cells from state
 
-Toggling `isVisible` rebuilds the set of displayed rows, so the change lands as rows being added and removed rather than as an in-place update of an existing row.
+Toggling `isVisible` rebuilds the set of displayed cells, so the change lands as cells being added and removed rather than as an in-place update of an existing cell.
 
 ```swift
 @State private var showAdvanced = false
