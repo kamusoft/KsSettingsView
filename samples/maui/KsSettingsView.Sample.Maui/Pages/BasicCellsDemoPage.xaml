@@ -8,7 +8,6 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:ks="clr-namespace:KsSettingsView;assembly=KsSettingsView.Maui"
-             xmlns:local="clr-namespace:KsSettingsView.Sample.Maui"
              xmlns:vm="clr-namespace:KsSettingsView.Sample.Maui.ViewModels"
              x:Class="KsSettingsView.Sample.Maui.Pages.BasicCellsDemoPage"
              x:DataType="vm:BasicCellsDemoViewModel">
@@ -74,8 +73,9 @@
       </ks:Section>
 
       <ks:Section HeaderText="ButtonCell">
-        <ks:ButtonCell Title="ログアウト"
-                       TitleColor="{x:Static local:SampleTheme.MauiTitleText}"
+        <!-- タイトル色は実効外観で変わるため、コードビハインドが Theme と同じ経路で与える -->
+        <ks:ButtonCell x:Name="LogoutButton"
+                       Title="ログアウト"
                        TitleAlignment="Center"
                        Command="{Binding Tap}"
                        CommandParameter="ログアウト" />

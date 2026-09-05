@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -26,10 +27,20 @@ import androidx.compose.ui.unit.dp
  * iOS Sample の `ContentView`（`List` + `Section("デモ")` + `NavigationLink`）に対応する。
  * 項目文言・並び順は [SampleScreen.demos] を参照するため、遷移先の画面タイトルと同一定義になる。
  * iOS の「検証」グループ（Minimal Diffable 検証）は platform 固有画面のため Android には設けない。
+ *
+ * 先頭の「外観」の項目群でアプリ全体の外観を選ぶ。選択中の項目にはチェックが付く。
+ *
+ * @param appearance 現在の外観の選択
+ * @param onSelectAppearance 外観の項目をタップしたときの通知
+ * @param onSelect デモ画面の項目をタップしたときの通知
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MenuScreen(onSelect: (SampleScreen) -> Unit) {
+fun MenuScreen(
+    appearance: SampleAppearance,
+    onSelectAppearance: (SampleAppearance) -> Unit,
+    onSelect: (SampleScreen) -> Unit,
+) {
     Scaffold(
         topBar = {
             TopAppBar(title = { Text(text = stringResource(R.string.app_name)) })
@@ -39,6 +50,31 @@ fun MenuScreen(onSelect: (SampleScreen) -> Unit) {
             modifier = Modifier.fillMaxSize(),
             contentPadding = innerPadding,
         ) {
+            // 外観の見出し（iOS の Section("外観") ヘッダに対応）。
+            item {
+                Text(
+                    text = SampleAppearance.SECTION_TITLE,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
+                )
+            }
+            items(items = SampleAppearance.entries, key = { it.name }) { entry ->
+                ListItem(
+                    headlineContent = { Text(text = entry.title) },
+                    trailingContent = {
+                        if (entry == appearance) {
+                            Icon(
+                                imageVector = Icons.Filled.Check,
+                                contentDescription = SampleAppearance.SELECTED_LABEL,
+                            )
+                        }
+                    },
+                    modifier = Modifier.clickable { onSelectAppearance(entry) },
+                )
+                HorizontalDivider(modifier = Modifier.padding(start = 16.dp))
+            }
+
             // デモ群の見出し（iOS の Section("デモ") ヘッダに対応）。
             item {
                 Text(

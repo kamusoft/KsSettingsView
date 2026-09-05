@@ -74,6 +74,9 @@ struct CustomCellDemoView: View {
     // ⑤ スクロール耐性（タップ済みのダミー行）
     @State private var tappedDummyIndices: Set<Int> = []
 
+    /// 実効外観。ダークのとき Theme の dark 側を渡す。
+    @Environment(\.colorScheme) private var colorScheme
+
     /// ⑤ のダミー行データ。アクセント 6 色を循環させる。
     private var dummyItems: [SampleDummyItem] {
         (1...40).map { index in
@@ -233,7 +236,7 @@ struct CustomCellDemoView: View {
                 }
             }
         }
-        .theme(SampleTheme.maui)
+        .theme(SampleTheme.maui(dark: colorScheme == .dark))
         .ignoresSafeArea(.container, edges: .bottom)
         .navigationTitle(SampleScreen.customCell.title)
     }

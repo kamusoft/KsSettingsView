@@ -113,6 +113,14 @@ internal final class DatePickerCellView: KsListCellBase, @MainActor KsCellRender
         // 既に提示中なら多重提示を防ぐ
         if currentCalendarController != nil { return }
         guard let presenter = KeyWindowResolver.topPresentedViewController() else { return }
+        let vc = makeCalendarSheetController(for: cell)
+        self.currentCalendarController = vc
+        presenter.present(vc, animated: true)
+    }
+
+    /// カレンダーシートの VC を組み立てる。提示元の外観の引き継ぎもここで済ませ、
+    /// 提示経路とテストの検証 seam が同じ結果を共有する。
+    private func makeCalendarSheetController(for cell: DatePickerCell) -> DatePickerCalendarSheetController {
         let vc = DatePickerCalendarSheetController(
             initial: cell.date,
             minimumDate: cell.minDate,
@@ -128,8 +136,8 @@ internal final class DatePickerCellView: KsListCellBase, @MainActor KsCellRender
                 self?.currentCalendarController = nil
             }
         )
-        self.currentCalendarController = vc
-        presenter.present(vc, animated: true)
+        PresentationAppearance.inherit(from: self, to: vc)
+        return vc
     }
 
     /// Wheels モード用 Toolbar を組み立て直して `embeddedField.inputAccessoryView` に紐づける。
@@ -227,6 +235,11 @@ internal final class DatePickerCellView: KsListCellBase, @MainActor KsCellRender
     // MARK: - test hook
 
     internal func _simulateTap() { tapHandler?() }
+    /// テスト用: 提示経路と同一の組み立てでカレンダーシートの VC を生成する（配線の検証 seam）。
+    internal func _makeCalendarSheetControllerForTesting() -> DatePickerCalendarSheetController? {
+        guard let cell = lastCell else { return nil }
+        return makeCalendarSheetController(for: cell)
+    }
     internal var _lastCell: DatePickerCell? { lastCell }
     internal var _currentWheelsDate: Date { wheelsPicker.date }
     internal func _simulateWheelsChange(to newDate: Date) { wheelsPicker.date = newDate }

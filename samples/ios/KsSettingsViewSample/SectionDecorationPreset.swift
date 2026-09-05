@@ -34,17 +34,21 @@ enum SectionDecorationPreset: String, CaseIterable, Identifiable {
     }
 
     /// プリセットに対応する Theme。
-    var theme: Theme {
+    ///
+    /// - Parameter dark: 実効外観がダークなら `true`
+    func theme(dark: Bool) -> Theme {
         switch self {
         case .standard:
-            SampleTheme.sectionDecorationDemo()
+            SampleTheme.sectionDecorationDemo(dark: dark)
         case .wideMargin:
             SampleTheme.sectionDecorationDemo(
+                dark: dark,
                 sectionMargin: NSDirectionalEdgeInsets(top: 32, leading: 32, bottom: 0, trailing: 32),
                 sectionCornerRadius: 8
             )
         case .bordered:
             SampleTheme.sectionDecorationDemo(
+                dark: dark,
                 sectionBorderWidth: 2,
                 sectionBorderColor: SampleTheme.demoSectionBorder
             )

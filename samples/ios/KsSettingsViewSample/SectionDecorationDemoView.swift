@@ -32,6 +32,9 @@ struct SectionDecorationDemoView: View {
     @State private var autoAppearance: Bool = true
     @State private var trueTone: Bool = true
 
+    /// 実効外観。ダークのとき Theme の dark 側を渡す。
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
         VStack(spacing: 0) {
             SectionDecorationDemoControls(style: $style, preset: $preset)
@@ -92,7 +95,7 @@ struct SectionDecorationDemoView: View {
                     LabelCell(title: "sectionBorderColor: gray")
                 }
             }
-            .theme(preset.theme)
+            .theme(preset.theme(dark: colorScheme == .dark))
         }
         .navigationTitle(SampleScreen.sectionDecoration.title)
         .navigationBarTitleDisplayMode(.inline)

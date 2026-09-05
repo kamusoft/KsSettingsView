@@ -1,5 +1,6 @@
 package jp.kamusoft.kssettingsview.samples.android
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -33,6 +34,7 @@ import jp.kamusoft.kssettingsview.ui.KsSettingsViewStyle
  */
 @Composable
 fun SectionDecorationDemoScreen() {
+    val dark = isSystemInDarkTheme()
     var style by remember { mutableStateOf(KsSettingsViewStyle.Modern) }
     var preset by remember { mutableStateOf(SectionDecorationPreset.Standard) }
 
@@ -54,7 +56,7 @@ fun SectionDecorationDemoScreen() {
         KsSettingsView(
             modifier = Modifier.fillMaxSize(),
             style = style,
-            theme = preset.theme,
+            theme = preset.theme(dark),
         ) {
             // 1. Header / Footer なし・icon 付き Cell の Section
             Section {

@@ -10,7 +10,7 @@ public partial class MauiSpecificCellFeaturesDemoPage : ContentPage
     public MauiSpecificCellFeaturesDemoPage()
     {
         InitializeComponent();
-        SampleTheme.Apply(Settings);
         BindingContext = new MauiSpecificCellFeaturesDemoViewModel();
+        SampleThemeFollower.Attach(this, dark => SampleTheme.Apply(Settings, dark));
     }
 }
