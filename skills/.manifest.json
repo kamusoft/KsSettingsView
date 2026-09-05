@@ -48,7 +48,9 @@
       "core/styling/list-appearance.md",
       "core/styling/style-resolution.md",
       "cross/reference/aiforms-spec-summary.md",
-      "maui/api/maui-facade.md"
+      "maui/api/maui-facade.md",
+      "maui/api/maui-cells.md",
+      "maui/api/maui-styling.md"
     ],
     "kssettingsview-android/SKILL.md": [
       "android/api/android-compose.md",
@@ -155,12 +157,14 @@
       "core/core-model/settings-tree.md",
       "core/styling/cell-row-layout.md",
       "core/styling/cell-visual-states.md",
-      "maui/api/maui-facade.md"
+      "maui/api/maui-facade.md",
+      "maui/api/maui-cells.md"
     ],
     "kssettingsview-maui/references/custom-cells.md": [
       "core/cells/custom-cell.md",
       "core/styling/cell-visual-states.md",
       "maui/api/maui-facade.md",
+      "maui/api/maui-cells.md",
       "maui/architecture/view-materialization.md"
     ],
     "kssettingsview-maui/references/styling.md": [
@@ -169,7 +173,9 @@
       "core/styling/cell-visual-states.md",
       "core/styling/list-appearance.md",
       "core/styling/style-resolution.md",
-      "maui/api/maui-facade.md"
+      "maui/api/maui-facade.md",
+      "maui/api/maui-styling.md",
+      "maui/api/maui-rendering-lifecycle.md"
     ],
     "kssettingsview-maui/references/updates.md": [
       "core/architecture/display-state-synchronization.md",
@@ -177,6 +183,8 @@
       "core/core-model/settings-tree.md",
       "core/core-model/structural-changes.md",
       "maui/api/maui-facade.md",
+      "maui/api/maui-cells.md",
+      "maui/api/maui-rendering-lifecycle.md",
       "maui/api/native-bridge.md"
     ]
   },

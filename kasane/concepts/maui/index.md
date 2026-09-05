@@ -4,8 +4,11 @@
 
 ## api/
 
-- [api/maui-facade.md](api/maui-facade.md) — XAML / C# から SettingsView を利用する facade 層の公開契約 (導入と前提 — NuGet 座標・要件・型名衝突、公開 API・CustomCell・双方向バインド・更新の意味論・lifecycle・配置制約)
-- [api/native-bridge.md](api/native-bridge.md) — C# から Native SettingsView を操作する Bridge 層の interop 境界 (内部所有 Store・ID 採番・操作通知・lifecycle・binding 構成)
+- [api/maui-facade.md](api/maui-facade.md) — XAML / C# から SettingsView を利用する facade 層の入口 (経路・導入と前提・型名衝突・Root / Section / Cell 階層と header / footer・ItemsSource / ItemTemplate・禁止事項と現時点の範囲)
+- [api/maui-cells.md](api/maui-cells.md) — core の Cell 意味論を MAUI の型でどう表すか (公開プロパティの型・PickerCell の候補と選択・ユーザー操作の書き戻し (TwoWay)・CustomCell)
+- [api/maui-styling.md](api/maui-styling.md) — native の Theme / CellStyle / style 切替の MAUI 表現 (個別プロパティへの展開・ListStyle・Section 装飾 4 属性・プロパティ一覧)
+- [api/maui-rendering-lifecycle.md](api/maui-rendering-lifecycle.md) — facade への変更がいつどう表示へ届き、Host の解放と再生成をまたいで何が保たれるか (更新の意味論・lifecycle の保証・Android の measure 契約による配置の制約)
+- [api/native-bridge.md](api/native-bridge.md) — C# から Native SettingsView を操作する Bridge 層の interop 境界 (内部所有 Store・更新 API と DTO の輸送規約・ID 採番・lifecycle・操作通知)
 
 ## architecture/
 
