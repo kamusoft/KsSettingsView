@@ -1,0 +1,61 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>案B: ライトの色同士の関係を保つ</title>
+<style>
+body{margin:0;padding:20px;font-family:-apple-system,"Hiragino Sans",sans-serif;background:#e9e9ee;color:#222;font-size:14px}
+h1{font-size:18px;margin:0 0 4px} p.lead{margin:0 0 14px;color:#555}
+.row{display:flex;gap:20px;align-items:flex-start}
+.panel{width:340px;border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.25);padding-bottom:16px}
+.plabel{font-size:12px;padding:10px 16px 4px}
+.hf{font-size:13px;padding:14px 16px 6px}
+.cell{display:flex;justify-content:space-between;align-items:center;min-height:44px;padding:0 16px;font-size:16px}
+.desc{font-size:12px;margin-top:2px}
+.sw{width:44px;height:26px;border-radius:13px;position:relative;display:inline-block} .sw i{position:absolute;right:2px;top:2px;width:22px;height:22px;border-radius:11px;background:#fff}
+.chk{width:20px;height:20px;border:2px solid;border-radius:4px;color:#fff;font-size:14px;line-height:20px;text-align:center}
+table{border-collapse:collapse;margin-top:18px;background:#fff;font-size:12px} td,th{border:1px solid #ccc;padding:5px 8px;text-align:left;vertical-align:top}
+.sw2{display:inline-block;width:14px;height:14px;border:1px solid #999;vertical-align:middle;margin-right:6px}
+</style></head><body>
+<h1>案B: ライトの色同士の関係を保つ</h1><p class="lead">ライトでは canvas = Cell 背景 (白) で Header / Footer 背景だけ僅かに暗い。その関係を反転して保ち、accent はライトと同じ値を維持する。 ライト側は現行の既定値のまま (変更なし)。3 platform とも同じ生値。</p>
+<div class="row">
+<div class="panel" style="background:#FFFFFF">
+  <div class="plabel" style="color:#6D6D72">ライト (現行のまま)</div>
+  <div class="hf" style="background:#F2F2F7;color:#6D6D72">一般</div>
+  <div class="cell" style="background:#FFFFFF;border-bottom:1px solid #C8C7CC">
+    <span style="color:#000000">機内モード</span><span class="sw" style="background:#007AFF"><i></i></span></div>
+  <div class="cell" style="background:#FFFFFF;border-bottom:1px solid #C8C7CC">
+    <div><div style="color:#000000">Wi-Fi</div><div class="desc" style="color:#6D6D72">自宅のネットワークに接続中</div></div><span style="color:#000000">Home &gt;</span></div>
+  <div class="cell" style="background:#D9D9D9;border-bottom:1px solid #C8C7CC">
+    <span style="color:#000000">Bluetooth (押下中)</span><span style="color:#000000">オン &gt;</span></div>
+  <div class="cell" style="background:#FFFFFF">
+    <span style="color:#999999">モバイル通信 (無効)</span><span style="color:#999999">オフ</span></div>
+  <div class="hf" style="background:#F2F2F7;color:#6D6D72">ネットワーク設定は再起動後に反映されます。</div>
+  <div class="hf" style="background:#F2F2F7;color:#6D6D72">アカウント</div>
+  <div class="cell" style="background:#FFFFFF;border-bottom:1px solid #C8C7CC">
+    <span style="color:#000000">通知を受け取る</span><span class="chk" style="border-color:#007AFF;background:#007AFF">✓</span></div>
+  <div class="cell" style="background:#FFFFFF;border-bottom:1px solid #C8C7CC">
+    <span style="color:#000000">名前</span><span style="color:#007AFF">未入力</span></div>
+  <div class="cell" style="background:#FFFFFF">
+    <span style="color:#007AFF">ログアウト</span></div>
+</div>
+<div class="panel" style="background:#000000">
+  <div class="plabel" style="color:#8E8E93">ダーク (新規)</div>
+  <div class="hf" style="background:#1C1C1E;color:#8E8E93">一般</div>
+  <div class="cell" style="background:#000000;border-bottom:1px solid #38383A">
+    <span style="color:#FFFFFF">機内モード</span><span class="sw" style="background:#007AFF"><i></i></span></div>
+  <div class="cell" style="background:#000000;border-bottom:1px solid #38383A">
+    <div><div style="color:#FFFFFF">Wi-Fi</div><div class="desc" style="color:#8E8E93">自宅のネットワークに接続中</div></div><span style="color:#FFFFFF">Home &gt;</span></div>
+  <div class="cell" style="background:#2C2C2E;border-bottom:1px solid #38383A">
+    <span style="color:#FFFFFF">Bluetooth (押下中)</span><span style="color:#FFFFFF">オン &gt;</span></div>
+  <div class="cell" style="background:#000000">
+    <span style="color:#636366">モバイル通信 (無効)</span><span style="color:#636366">オフ</span></div>
+  <div class="hf" style="background:#1C1C1E;color:#8E8E93">ネットワーク設定は再起動後に反映されます。</div>
+  <div class="hf" style="background:#1C1C1E;color:#8E8E93">アカウント</div>
+  <div class="cell" style="background:#000000;border-bottom:1px solid #38383A">
+    <span style="color:#FFFFFF">通知を受け取る</span><span class="chk" style="border-color:#007AFF;background:#007AFF">✓</span></div>
+  <div class="cell" style="background:#000000;border-bottom:1px solid #38383A">
+    <span style="color:#FFFFFF">名前</span><span style="color:#007AFF">未入力</span></div>
+  <div class="cell" style="background:#000000">
+    <span style="color:#007AFF">ログアウト</span></div>
+</div></div>
+<h2 style="font-size:15px;margin:22px 0 0">色ロール対応表 (値の正)</h2>
+<table><tr><th>ロール</th><th>Theme フィールド</th><th>light (現行)</th><th>dark (B 案)</th><th>dark 値の出所</th></tr><tr><td>list 下地</td><td><code>backgroundColor</code></td><td><span class=sw2 style='background:#FFFFFF'></span>#FFFFFF</td><td><span class=sw2 style='background:#000000'></span>#000000</td><td>iOS systemBackground</td></tr><tr><td>Cell 背景</td><td><code>cellBackgroundColor</code></td><td><span class=sw2 style='background:#FFFFFF'></span>#FFFFFF</td><td><span class=sw2 style='background:#000000'></span>#000000</td><td>iOS secondarySystemGroupedBackground (案A) / systemBackground (案B)</td></tr><tr><td>separator</td><td><code>separatorColor</code></td><td><span class=sw2 style='background:#C8C7CC'></span>#C8C7CC</td><td><span class=sw2 style='background:#38383A'></span>#38383A</td><td>iOS separator の不透明近似</td></tr><tr><td>選択中の背景</td><td><code>selectedColor</code></td><td><span class=sw2 style='background:#D9D9D9'></span>#D9D9D9</td><td><span class=sw2 style='background:#2C2C2E'></span>#2C2C2E</td><td>iOS systemGray5</td></tr><tr><td>accent</td><td><code>cellAccentColor</code></td><td><span class=sw2 style='background:#007AFF'></span>#007AFF</td><td><span class=sw2 style='background:#007AFF'></span>#007AFF</td><td>iOS systemBlue (dark は案A のみ明るい側)</td></tr><tr><td>disabled 文字</td><td><code>disabledTextColor</code></td><td><span class=sw2 style='background:#999999'></span>#999999</td><td><span class=sw2 style='background:#636366'></span>#636366</td><td>iOS systemGray2</td></tr><tr><td>Header / Footer 背景</td><td><code>headerBackgroundColor / footerBackgroundColor</code></td><td><span class=sw2 style='background:#F2F2F7'></span>#F2F2F7</td><td><span class=sw2 style='background:#1C1C1E'></span>#1C1C1E</td><td>iOS systemGroupedBackground (案A) / secondarySystemGroupedBackground (案B)</td></tr><tr><td>Header / Footer 文字</td><td><code>headerTextColor / footerTextColor</code></td><td><span class=sw2 style='background:#6D6D72'></span>#6D6D72</td><td><span class=sw2 style='background:#8E8E93'></span>#8E8E93</td><td>iOS systemGray (secondaryLabel の不透明近似)</td></tr><tr><td>Cell title (Android のみ。iOS は .label)</td><td><code>cellTitleColor 既定</code></td><td><span class=sw2 style='background:#000000'></span>#000000</td><td><span class=sw2 style='background:#FFFFFF'></span>#FFFFFF</td><td>iOS label</td></tr><tr><td>Cell description (Android のみ。iOS は .secondaryLabel)</td><td><code>cellDescriptionColor 既定</code></td><td><span class=sw2 style='background:#6D6D72'></span>#6D6D72</td><td><span class=sw2 style='background:#8E8E93'></span>#8E8E93</td><td>iOS systemGray (secondaryLabel の不透明近似)</td></tr><tr><td>ButtonCell title (Android のみ。iOS は .systemBlue)</td><td><code>ButtonCell 既定</code></td><td><span class=sw2 style='background:#007AFF'></span>#007AFF</td><td><span class=sw2 style='background:#007AFF'></span>#007AFF</td><td>iOS systemBlue</td></tr></table>
+<p style="font-size:12px;color:#555">valueText は title へ、hintText は accent へフォールバック (既存契約)。placeholder は platform 既定のまま。iOS の title / description / ButtonCell title はシステム色 (dynamic) を維持し、表の値は Android 用の近似値。ライトの Header / Footer 文字は iOS が #6E6E73 相当 (0.43/0.43/0.45)、Android が #6D6D72 で現状の platform 差のまま。</p>
+</body></html>
