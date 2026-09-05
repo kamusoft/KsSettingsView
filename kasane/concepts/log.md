@@ -382,3 +382,4 @@
 ## 2026-09-05
 
 - updated: 用語統一 (proofread-skills-wording) — Section の Cell 群を囲む領域の呼称を「箱」から **Container**、その縁線を「ボーダー」から **Border** へ統一 (skills/ja の利用者向け語彙に正本を揃える)。あわせて Cell を指す「行」を「Cell」へ整えた。対象: `core/styling/list-appearance.md` (節見出し「Modern の Section Container」を含む 20 箇所)、`ios/api/ios-native-host.md`、`android/api/android-native-host.md`、`maui/api/maui-facade.md`、`core/cells/number-picker-selection-surface.md`。契約の意味・公開 API 名・既定値は変更していないため各ファイルの timestamp (最終検証日) は据え置き。
+- distilled: proofread-skills-wording (ライブ調整 S 級・ADR / handbook なし — concepts は change 内で更新済み (上記 updated エントリ)。lessons 捕捉 2 件 (paraphrase-reintroduces-term-unified-in-same-change / paired-doc-edit-leaves-sibling-language-unaligned)、昇格なし / deviation なし / 媒体 0 件)
