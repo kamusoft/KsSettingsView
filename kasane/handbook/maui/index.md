@@ -5,4 +5,4 @@
 | 文書 | 適用のきっかけ | 種別 |
 |---|---|---|
 | [integration-host-verification.md](integration-host-verification.md) | `maui/` の binding 層・facade 層に触れ、C# から Native 表示までの end-to-end 疎通を確認するとき | rule |
-| [performance-verification.md](performance-verification.md) | 描画性能を評価・計測するとき・「カクつく」という報告を裏取りするとき | rule |
+| [performance-verification.md](performance-verification.md) | 描画性能を評価・計測するとき・「カクつく」という報告を裏取りするとき・CustomCell content の重さと端末クラスの目安を知りたいとき | rule |
