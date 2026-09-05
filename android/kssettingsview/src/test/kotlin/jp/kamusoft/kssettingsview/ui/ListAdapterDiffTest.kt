@@ -92,7 +92,7 @@ class ListAdapterDiffTest {
         assertTrue(CellListItemDiffCallback.areItemsTheSame(a, b))
         assertFalse(CellListItemDiffCallback.areContentsTheSame(a, b))
         assertEquals(
-            KsSettingsListAdapter.PAYLOAD_CONTENT,
+            KsSettingsView.PAYLOAD_CONTENT,
             CellListItemDiffCallback.getChangePayload(a, b),
         )
     }
@@ -132,7 +132,7 @@ class ListAdapterDiffTest {
         assertTrue(CellListItemDiffCallback.areItemsTheSame(a, b))
         assertFalse(CellListItemDiffCallback.areContentsTheSame(a, b))
         assertEquals(
-            KsSettingsListAdapter.PAYLOAD_CONTENT,
+            KsSettingsView.PAYLOAD_CONTENT,
             CellListItemDiffCallback.getChangePayload(a, b),
         )
     }
@@ -157,7 +157,7 @@ class ListAdapterDiffTest {
         assertTrue(CellListItemDiffCallback.areItemsTheSame(a, b))
         assertFalse(CellListItemDiffCallback.areContentsTheSame(a, b))
         assertEquals(
-            KsSettingsListAdapter.PAYLOAD_HEADER_HEIGHT,
+            KsSettingsView.PAYLOAD_HEADER_HEIGHT,
             CellListItemDiffCallback.getChangePayload(a, b),
         )
     }
@@ -178,7 +178,7 @@ class ListAdapterDiffTest {
         )
         assertFalse(CellListItemDiffCallback.areContentsTheSame(a, b))
         assertEquals(
-            KsSettingsListAdapter.PAYLOAD_CONTENT,
+            KsSettingsView.PAYLOAD_CONTENT,
             CellListItemDiffCallback.getChangePayload(a, b),
         )
     }
@@ -199,7 +199,7 @@ class ListAdapterDiffTest {
         assertTrue(CellListItemDiffCallback.areItemsTheSame(a, b))
         assertFalse(CellListItemDiffCallback.areContentsTheSame(a, b))
         assertEquals(
-            KsSettingsListAdapter.PAYLOAD_CONTENT,
+            KsSettingsView.PAYLOAD_CONTENT,
             CellListItemDiffCallback.getChangePayload(a, b),
         )
     }
@@ -240,7 +240,7 @@ class ListAdapterDiffTest {
         assertTrue(CellListItemDiffCallback.areItemsTheSame(a, b))
         assertFalse(CellListItemDiffCallback.areContentsTheSame(a, b))
         assertEquals(
-            KsSettingsListAdapter.PAYLOAD_CONTENT,
+            KsSettingsView.PAYLOAD_CONTENT,
             CellListItemDiffCallback.getChangePayload(a, b),
         )
     }
@@ -262,7 +262,7 @@ class ListAdapterDiffTest {
         assertTrue(CellListItemDiffCallback.areItemsTheSame(a, b))
         assertFalse(CellListItemDiffCallback.areContentsTheSame(a, b))
         assertEquals(
-            KsSettingsListAdapter.PAYLOAD_CONTENT,
+            KsSettingsView.PAYLOAD_CONTENT,
             CellListItemDiffCallback.getChangePayload(a, b),
         )
     }

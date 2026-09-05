@@ -57,7 +57,8 @@ public sealed interface SettingsRootDiff {
      *
      * - iOS: `applyReplaceCell` が `cellIndex` の当該 Cell を差し替えてから
      *   `snapshot.reconfigureItems([cellID])`（iOS 15+、同一セルインスタンスを破棄せず再構成）で反映する。
-     * - Android: アダプタが id → position を解決し `notifyItemChanged(position)`（再生成なしの再 bind）で反映する。
+     * - Android: アダプタが id → position を解決し payload 付きの `notifyItemChanged(position, payload)`
+     *   （同一 ViewHolder への再 bind。payload なしでは既定の ItemAnimator が ViewHolder を作り直す）で反映する。
      *   `submitList` による行差し替え（フルリバインド）は起こさない。
      *
      * なお Android の Compose DSL 経路（`DSLDiffCalculator`）は「表示状態同期の三層分離」原則に従い、

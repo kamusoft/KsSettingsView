@@ -1,7 +1,9 @@
 package jp.kamusoft.kssettingsview.ui
 
+import android.view.View
 import androidx.recyclerview.widget.RecyclerView
 import androidx.test.core.app.ApplicationProvider
+import jp.kamusoft.kssettingsview.core.KsAnyView
 import jp.kamusoft.kssettingsview.core.RootAccessory
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -13,6 +15,10 @@ import org.robolectric.annotation.Config
  * `RootHeaderFooterAdapter` の itemCount / 通知挙動 / 予約 ID 確認。
  *
  * `RootHeaderFooterAdapter.view` の有無に応じて項目数と変更通知が正しく出ることを保証する。
+ * 非 null 同士の差し替えでは、Cell の内容更新と同じ payload 付きの変更通知が出ることも保証する
+ * (既定の ItemAnimator 下では payload なしで `SimpleItemAnimator.canReuseUpdatedViewHolder` が
+ * false を返し ViewHolder が新規生成されて旧行とクロスフェードする。`KsSettingsView` 側の
+ * change アニメーション無効化と合わせた二重担保。android/ADR-0001)。
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
@@ -75,6 +81,28 @@ class RootHeaderFooterAdapterTest {
         adapter.registerAdapterDataObserver(observer)
         adapter.view = RootAccessory.Text("v2")
         assertEquals(1, observer.changedCount)
+    }
+
+    @Test
+    fun `Text 形式の置換は内容 payload 付きで通知される`() {
+        val adapter = RootHeaderFooterAdapter(role = RootHeaderFooterAdapter.Role.HEADER)
+        adapter.view = RootAccessory.Text("v1")
+        val observer = ChangeRecordingObserver()
+        adapter.registerAdapterDataObserver(observer)
+        adapter.view = RootAccessory.Text("v2")
+        assertEquals(listOf(0), observer.changedPositions)
+        assertEquals(listOf<Any?>(KsSettingsView.PAYLOAD_CONTENT), observer.payloads)
+    }
+
+    @Test
+    fun `View 形式の置換は内容 payload 付きで通知される`() {
+        val adapter = RootHeaderFooterAdapter(role = RootHeaderFooterAdapter.Role.FOOTER)
+        adapter.view = RootAccessory.View(KsAnyView.AndroidView { ctx -> View(ctx) })
+        val observer = ChangeRecordingObserver()
+        adapter.registerAdapterDataObserver(observer)
+        adapter.view = RootAccessory.View(KsAnyView.AndroidView { ctx -> View(ctx) })
+        assertEquals(listOf(0), observer.changedPositions)
+        assertEquals(listOf<Any?>(KsSettingsView.PAYLOAD_CONTENT), observer.payloads)
     }
 
     @Suppress("UNUSED_PARAMETER")

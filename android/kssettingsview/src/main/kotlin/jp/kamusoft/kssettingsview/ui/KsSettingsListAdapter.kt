@@ -44,7 +44,7 @@ internal class KsSettingsListAdapter :
      * 同一 id の Cell の **内容更新（reconfigure 相当）** を、セルを再生成せずに反映する。
      *
      * 「表示状態同期の三層分離」原則に従い、`ReplaceCell`（同一 id の内容更新）は `submitList` による
-     * 行差し替えではなく、該当 position への `notifyItemChanged(position, [PAYLOAD_CONTENT])` で反映する。
+     * 行差し替えではなく、該当 position への `notifyItemChanged(position, [KsSettingsView.PAYLOAD_CONTENT])` で反映する。
      *
      * payload は省略できない。payload なしの `notifyItemChanged(position)` では
      * `SimpleItemAnimator.canReuseUpdatedViewHolder` が false を返し、RecyclerView が更新行の
@@ -56,7 +56,7 @@ internal class KsSettingsListAdapter :
      * 内部リスト（differ の current list）と新 Cell を整合させるため、まず `submitList(newList)` で
      * リスト参照を差し替える。`CellListItem.CellRow` の `areContentsTheSame` は常に true を返すため
      * DiffUtil は当該行を「変化なし」と見なし再 bind しない。そこで本メソッドが明示的に
-     * `notifyItemChanged(position, [PAYLOAD_CONTENT])` を発行して当該行のみ部分更新する。
+     * `notifyItemChanged(position, [KsSettingsView.PAYLOAD_CONTENT])` を発行して当該行のみ部分更新する。
      *
      * @param newList 当該 Cell 群を差し替え済みの新しい平坦リスト
      * @param cellIds 内容更新対象の Cell の id 群（複数同時更新に対応）
@@ -82,7 +82,7 @@ internal class KsSettingsListAdapter :
      * 構造（挿入・削除・移動）と Section H/F の内容差は `submitList` の DiffUtil が拾う。一方
      * `CellListItem.CellRow` の `areContentsTheSame` は常に true のため、更新をまたいで残る同一 id の
      * Cell の内容差は DiffUtil に現れない。そこでコミット完了後に [contentCellIds] の行へ
-     * `notifyItemChanged(position, [PAYLOAD_CONTENT])` を発行して内容を反映する。
+     * `notifyItemChanged(position, [KsSettingsView.PAYLOAD_CONTENT])` を発行して内容を反映する。
      *
      * [contentCellIds] が空でも `submitList` は必ず実行する。空 root や Section H/F だけを持つ root への
      * 更新のように、内容通知の対象が 1 件もなくても構造の反映は必要だからである。
@@ -110,7 +110,7 @@ internal class KsSettingsListAdapter :
             // submitList のコミット完了後に position を解決して部分更新する。
             for ((position, item) in currentList.withIndex()) {
                 if (item is CellListItem.CellRow && item.cell.id in targetIds) {
-                    notifyItemChanged(position, PAYLOAD_CONTENT)
+                    notifyItemChanged(position, KsSettingsView.PAYLOAD_CONTENT)
                 }
             }
         }
@@ -194,7 +194,7 @@ internal class KsSettingsListAdapter :
     /**
      * payload 付きの変更通知を、payload の種類に応じた反映へ振り分ける。
      *
-     * [PAYLOAD_HEADER_HEIGHT] だけが届いた View accessory の Section Header は、固定高さの
+     * [KsSettingsView.PAYLOAD_HEADER_HEIGHT] だけが届いた View accessory の Section Header は、固定高さの
      * 反映だけを行って中身の再構築を行わない。`KsAnyView.AndroidView` の View は factory から
      * 作り直すと内部状態（入力中のテキスト等）を失うため、高さのみの変更で中身に触れない。
      *
@@ -202,7 +202,7 @@ internal class KsSettingsListAdapter :
      * 中身に触れず、Theme が決める寸法（`Theme.headerHeight`）だけを反映する。View accessory は
      * Theme が決める文字を持たないため、中身を作り直しても見た目は変わらず内部状態だけを失う。
      *
-     * それ以外（[PAYLOAD_CONTENT] を含む・payload なし・text accessory・Cell）は既定動作に委ね、
+     * それ以外（[KsSettingsView.PAYLOAD_CONTENT] を含む・payload なし・text accessory・Cell）は既定動作に委ね、
      * 2 引数版 [onBindViewHolder] のフル bind へ落とす。フル bind でも固定高さは反映される。
      * Theme と内容が同じ描画機会に重なった場合は payload に両方が載るため、この分岐には入らず
      * 中身が正しく作り直される。
@@ -213,7 +213,7 @@ internal class KsSettingsListAdapter :
         payloads: List<Any>,
     ) {
         val item = getItem(position)
-        val heightOnly = payloads.isNotEmpty() && payloads.all { it == PAYLOAD_HEADER_HEIGHT }
+        val heightOnly = payloads.isNotEmpty() && payloads.all { it == KsSettingsView.PAYLOAD_HEADER_HEIGHT }
         if (heightOnly && holder is SectionAnyViewAccessoryViewHolder && item is CellListItem.SectionHeader) {
             holder.applyHeaderHeight(theme = theme, isHeader = true, headerHeight = item.headerHeight)
             return
@@ -256,28 +256,6 @@ internal class KsSettingsListAdapter :
          * 値域を確保するため、安定キーの Long ハッシュに本値を加算する。
          */
         const val CELL_ID_OFFSET: Long = 100L
-
-        /**
-         * Cell の内容更新時の `notifyItemChanged` payload キー。
-         *
-         * 値そのものは参照されない。payload が**非空であること**に意味があり、それによって
-         * `SimpleItemAnimator.canReuseUpdatedViewHolder` が true を返して同一 ViewHolder への
-         * 再 bind が保証される。3 引数版 [onBindViewHolder] は本 payload を振り分け対象外として
-         * `super` へ委譲し、2 引数版のフル bind に落ちるため内容は完全に反映される。
-         *
-         * 設計判断: android/ADR-0001（change アニメーション無効化との二重担保）。
-         */
-        const val PAYLOAD_CONTENT: String = "ks-content"
-
-        /**
-         * View accessory の Section Header で **固定高さだけが変わった**ときの
-         * `notifyItemChanged` payload キー。
-         *
-         * この payload だけが届いた行は、3 引数版 [onBindViewHolder] が高さの反映だけを行い、
-         * `KsAnyView` の中身を作り直さない。`KsAnyView.AndroidView` の View は factory から
-         * 再生成すると内部状態を失うため、高さのみの変更を内容の再バインドと区別する。
-         */
-        const val PAYLOAD_HEADER_HEIGHT: String = "ks-header-height"
 
         /**
          * [CellListItem] の **id ベースの安定キー** から、内容非依存の Long 値を算出する。
@@ -375,12 +353,12 @@ internal object CellListItemDiffCallback : DiffUtil.ItemCallback<CellListItem>()
     /**
      * 内容差が検出された行へ渡す payload。
      *
-     * Section H/F の内容差では [KsSettingsListAdapter.PAYLOAD_CONTENT] を返し、payload 付きの変更通知
+     * Section H/F の内容差では [KsSettingsView.PAYLOAD_CONTENT] を返し、payload 付きの変更通知
      * として発行させる。payload が非空であることで `SimpleItemAnimator.canReuseUpdatedViewHolder` が
      * true を返し、同一 ViewHolder への再 bind に落ちる（android/ADR-0001）。
      *
      * View accessory の Header で accessory の中身が同一のまま固定高さだけが変わった場合は
-     * [KsSettingsListAdapter.PAYLOAD_HEADER_HEIGHT] を返す。この payload を受けた行は高さだけが
+     * [KsSettingsView.PAYLOAD_HEADER_HEIGHT] を返す。この payload を受けた行は高さだけが
      * 更新され、`KsAnyView` の中身は作り直されない（内部状態が維持される）。
      *
      * 同一 ViewHolder への再 bind が成立するのは view type が変わらない場合に限る。
@@ -396,13 +374,13 @@ internal object CellListItemDiffCallback : DiffUtil.ItemCallback<CellListItem>()
                 val heightOnly = oldItem.accessory is SectionAccessory.View &&
                     isSameAccessoryContent(oldItem.accessory, newItem.accessory)
                 if (heightOnly) {
-                    KsSettingsListAdapter.PAYLOAD_HEADER_HEIGHT
+                    KsSettingsView.PAYLOAD_HEADER_HEIGHT
                 } else {
-                    KsSettingsListAdapter.PAYLOAD_CONTENT
+                    KsSettingsView.PAYLOAD_CONTENT
                 }
             }
 
-            is CellListItem.SectionFooter -> KsSettingsListAdapter.PAYLOAD_CONTENT
+            is CellListItem.SectionFooter -> KsSettingsView.PAYLOAD_CONTENT
 
             is CellListItem.CellRow -> null
         }

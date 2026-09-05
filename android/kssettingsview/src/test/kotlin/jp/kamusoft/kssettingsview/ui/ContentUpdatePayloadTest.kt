@@ -1,7 +1,6 @@
 package jp.kamusoft.kssettingsview.ui
 
 import android.widget.FrameLayout
-import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SimpleItemAnimator
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
@@ -56,7 +55,7 @@ class ContentUpdatePayloadTest {
 
         assertEquals(listOf(0), observer.changedPositions)
         // payload が非空であることが canReuseUpdatedViewHolder = true の条件。
-        assertEquals(listOf<Any?>(KsSettingsListAdapter.PAYLOAD_CONTENT), observer.payloads)
+        assertEquals(listOf<Any?>(KsSettingsView.PAYLOAD_CONTENT), observer.payloads)
     }
 
     @Test
@@ -81,7 +80,7 @@ class ContentUpdatePayloadTest {
 
         assertEquals(listOf(0, 1), observer.changedPositions)
         assertEquals(
-            listOf<Any?>(KsSettingsListAdapter.PAYLOAD_CONTENT, KsSettingsListAdapter.PAYLOAD_CONTENT),
+            listOf<Any?>(KsSettingsView.PAYLOAD_CONTENT, KsSettingsView.PAYLOAD_CONTENT),
             observer.payloads,
         )
     }
@@ -104,7 +103,7 @@ class ContentUpdatePayloadTest {
 
         // 内容 payload は 3 引数版 onBindViewHolder から 2 引数版へ委譲され、
         // フル bind となる（内容は完全に反映される）。
-        adapter.onBindViewHolder(holder, 0, listOf(KsSettingsListAdapter.PAYLOAD_CONTENT))
+        adapter.onBindViewHolder(holder, 0, listOf(KsSettingsView.PAYLOAD_CONTENT))
         assertEquals("あ", holder.editText.text?.toString())
     }
 
@@ -114,21 +113,5 @@ class ContentUpdatePayloadTest {
         val animator = view.internalRecyclerView().itemAnimator
         assertNotNull(animator)
         assertFalse((animator as SimpleItemAnimator).supportsChangeAnimations)
-    }
-
-    /**
-     * `onItemRangeChanged` の position と payload を記録する Observer。
-     *
-     * payload なしの `notifyItemChanged(position)` も 3 引数版へ payload = null で届くため、
-     * 記録された payload が非 null であることが「payload 付き通知」の証拠になる。
-     */
-    private class ChangeRecordingObserver : RecyclerView.AdapterDataObserver() {
-        val changedPositions = mutableListOf<Int>()
-        val payloads = mutableListOf<Any?>()
-
-        override fun onItemRangeChanged(positionStart: Int, itemCount: Int, payload: Any?) {
-            changedPositions += positionStart
-            payloads += payload
-        }
     }
 }

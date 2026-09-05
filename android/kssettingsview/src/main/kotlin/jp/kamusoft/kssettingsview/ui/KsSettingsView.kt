@@ -1112,6 +1112,31 @@ public class KsSettingsView @JvmOverloads constructor(
         public const val PAYLOAD_THEME: String = "ks-theme"
 
         /**
+         * 内容更新時の `notifyItemChanged` payload キー。
+         *
+         * Cell の内容更新 (`KsSettingsListAdapter.submitContentUpdate`)・Section H/F の内容差
+         * (`CellListItemDiffCallback.getChangePayload`)・Root H/F の差し替え
+         * (`RootHeaderFooterAdapter.view`) が共通で付与する。値そのものは参照されない。
+         * payload が**非空であること**に意味があり、それによって
+         * `SimpleItemAnimator.canReuseUpdatedViewHolder` が true を返して同一 ViewHolder への
+         * 再 bind が保証される。各 Adapter の 3 引数版 `onBindViewHolder` は本 payload を
+         * 振り分け対象外として `super` へ委譲し、2 引数版のフル bind に落ちるため内容は完全に反映される。
+         *
+         * 設計判断: android/ADR-0001（change アニメーション無効化との二重担保）。
+         */
+        internal const val PAYLOAD_CONTENT: String = "ks-content"
+
+        /**
+         * View accessory の Section Header で **固定高さだけが変わった**ときの
+         * `notifyItemChanged` payload キー。
+         *
+         * この payload だけが届いた行は、`KsSettingsListAdapter` の 3 引数版 `onBindViewHolder` が
+         * 高さの反映だけを行い、`KsAnyView` の中身を作り直さない。`KsAnyView.AndroidView` の View は
+         * factory から再生成すると内部状態を失うため、高さのみの変更を内容の再バインドと区別する。
+         */
+        internal const val PAYLOAD_HEADER_HEIGHT: String = "ks-header-height"
+
+        /**
          * `SettingsRoot.sections` を `CellListItem` の平坦リストに展開する。
          *
          * # 可視性フィルタ（visible projection の構築）

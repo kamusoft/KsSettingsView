@@ -4,16 +4,18 @@ import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.recyclerview.widget.RecyclerView
 import jp.kamusoft.kssettingsview.core.SectionAccessory
 import org.junit.Assert.fail
 import org.robolectric.Shadows.shadowOf
 import java.util.concurrent.TimeUnit
 
 /*
- * KsSettingsView の Robolectric テストが共有する、メインループの待機と表示内容の観測ユーティリティ。
+ * KsSettingsView の Robolectric テストが共有する、メインループの待機・表示内容の観測・変更通知の記録ユーティリティ。
  *
- * 待機 (idle / awaitConvergence / awaitDifferCommit) と観測 (committedTexts / visibleRowTexts) は、
- * Store 更新が表示へ届くまでの非同期経路を扱うどのテストでも同じ形になるため、ここに 1 つだけ置く。
+ * 待機 (idle / awaitConvergence / awaitDifferCommit)・観測 (committedTexts / visibleRowTexts)・
+ * 変更通知の記録 (ChangeRecordingObserver) は、Store 更新が表示へ届くまでの非同期経路を扱う
+ * どのテストでも同じ形になるため、ここに 1 つだけ置く。
  */
 
 /** メインスレッドのキューに溜まっているメッセージを流し切る。 */
@@ -161,4 +163,20 @@ private fun collectTexts(view: View): List<String> = when (view) {
     is TextView -> listOfNotNull(view.text?.toString()?.takeIf { it.isNotBlank() })
     is ViewGroup -> (0 until view.childCount).flatMap { collectTexts(view.getChildAt(it)) }
     else -> emptyList()
+}
+
+/**
+ * `onItemRangeChanged` の position と payload を記録する Observer。
+ *
+ * payload なしの `notifyItemChanged(position)` も 3 引数版へ payload = null で届くため、
+ * 記録された payload が非 null であることが「payload 付き通知」の証拠になる。
+ */
+internal class ChangeRecordingObserver : RecyclerView.AdapterDataObserver() {
+    val changedPositions = mutableListOf<Int>()
+    val payloads = mutableListOf<Any?>()
+
+    override fun onItemRangeChanged(positionStart: Int, itemCount: Int, payload: Any?) {
+        changedPositions += positionStart
+        payloads += payload
+    }
 }
