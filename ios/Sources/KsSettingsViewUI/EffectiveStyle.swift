@@ -20,60 +20,60 @@ import UIKit
 ///
 /// `CellStyle.titleColor` のように `nil` 可のフィールドは `Theme` から補完される。
 /// 本構造体は UI 描画コード内で安全に nil チェック不要に各値を読めるようにするためのもの。
-public struct EffectiveStyle {
+internal struct EffectiveStyle {
     /// iOS の最低行高さ（pt）。`Theme.rowHeight` / `CellStyle.cellHeight` の下限として用いる。
-    public static let minRowHeight: CGFloat = 48
+    static let minRowHeight: CGFloat = 48
 
     /// タイトル文字色（Theme.headerTextColor 等とは独立。Cell 本体タイトル用）
-    public let titleColor: UIColor
+    let titleColor: UIColor
     /// タイトルフォント（`cellTitleFontSize > 0` のとき pointSize を上書き済み）
-    public let titleFont: UIFont
+    let titleFont: UIFont
     /// 説明文色
-    public let descriptionColor: UIColor
+    let descriptionColor: UIColor
     /// 説明文フォント
-    public let descriptionFont: UIFont
+    let descriptionFont: UIFont
     /// ヒントテキスト色
-    public let hintTextColor: UIColor
+    let hintTextColor: UIColor
     /// ヒントテキストフォント
-    public let hintTextFont: UIFont
+    let hintTextFont: UIFont
     /// Cell 背景色
-    public let cellBackgroundColor: UIColor
+    let cellBackgroundColor: UIColor
     /// セパレータ色
-    public let separatorColor: UIColor
+    let separatorColor: UIColor
     /// 選択背景色
-    public let selectedBackgroundColor: UIColor
+    let selectedBackgroundColor: UIColor
     /// アイコン辺長（pt）
-    public let iconSize: CGFloat
+    let iconSize: CGFloat
     /// アイコン角丸（pt）
-    public let iconRadius: CGFloat
+    let iconRadius: CGFloat
     /// Cell 高さ（pt、指定がなければ `nil`）。Auto Layout 計算ベースのため通常 nil で十分。
-    public let cellHeight: CGFloat?
+    let cellHeight: CGFloat?
 
     // MARK: - refine-basic-cells-style で追加された合成プロパティ
 
     /// accent 色（`CellStyle.accentColor ?? Theme.cellAccentColor`）。
-    public let accentColor: UIColor
+    let accentColor: UIColor
     /// 値テキスト色（`CellStyle.valueTextColor ?? Theme.cellValueTextColor ?? Theme.cellTitleColor ?? .label`）。
-    public let valueTextColor: UIColor
+    let valueTextColor: UIColor
     /// 値テキストフォント（`CellStyle.valueTextFont ?? Theme.cellValueTextFont ?? Theme.cellTitleFont ?? body`）。
-    public let valueTextFont: UIFont
+    let valueTextFont: UIFont
     /// 無効時テキスト色（`Theme.disabledTextColor`）。
-    public let disabledTextColor: UIColor
+    let disabledTextColor: UIColor
     /// placeholder 文字色（`CellStyle.placeholderColor ?? Theme.cellPlaceholderColor`）。
     /// `nil` はどの段にも指定がないことを表し、プラットフォーム既定で描画する。
-    public let placeholderColor: UIColor?
+    let placeholderColor: UIColor?
     /// 実効行高さ（pt）。`CellStyle.cellHeight ?? Theme.rowHeight` を MinRowHeight で下限ガード。
-    public let effectiveCellHeight: CGFloat
+    let effectiveCellHeight: CGFloat
     /// 固定高さモードか（`!Theme.hasUnevenRows`）。
-    public let isFixedHeight: Bool
+    let isFixedHeight: Bool
     /// タイトル色が CellStyle / Theme いずれかで「明示指定」されたかを示すフラグ。
-    public let titleColorIsExplicit: Bool
+    let titleColorIsExplicit: Bool
 
     /// `Theme` と `CellStyle` を合成して `EffectiveStyle` を生成する。
     /// - Parameters:
     ///   - theme: 全体テーマ
     ///   - cellStyle: 個別 Cell スタイル
-    public init(theme: Theme, cellStyle: CellStyle) {
+    init(theme: Theme, cellStyle: CellStyle) {
         self.titleColor = Self.effectiveTitleColor(cellStyle: cellStyle, theme: theme)
         self.titleFont = Self.effectiveTitleFont(cellStyle: cellStyle, theme: theme)
         self.titleColorIsExplicit = (cellStyle.titleColor != nil) || (theme.cellTitleColor != nil)
@@ -111,7 +111,7 @@ public struct EffectiveStyle {
 extension EffectiveStyle {
     /// タイトル文字色を解決する。
     /// 解決順序: `cellStyle.titleColor` → `theme.cellTitleColor` → `UIColor.label`
-    public static func effectiveTitleColor(cellStyle: CellStyle, theme: Theme) -> UIColor {
+    static func effectiveTitleColor(cellStyle: CellStyle, theme: Theme) -> UIColor {
         if let c = cellStyle.titleColor { return c }
         if let c = theme.cellTitleColor { return c }
         return Theme.defaultCellTitleColor
@@ -120,7 +120,7 @@ extension EffectiveStyle {
     /// タイトルフォントを解決する。
     /// 解決順序: `cellStyle.titleFont` → `theme.cellTitleFont` → body フォント。
     /// `theme.cellTitleFontSize > 0` のとき、最終フォントの pointSize を上書きする。
-    public static func effectiveTitleFont(cellStyle: CellStyle, theme: Theme) -> UIFont {
+    static func effectiveTitleFont(cellStyle: CellStyle, theme: Theme) -> UIFont {
         let baseFont: UIFont
         if let f = cellStyle.titleFont {
             baseFont = f
@@ -140,7 +140,7 @@ extension EffectiveStyle {
 
     /// description 色を解決する。
     /// 解決順序: `cellStyle.descriptionColor` → `theme.cellDescriptionColor` → `UIColor.secondaryLabel`
-    public static func effectiveDescriptionColor(cellStyle: CellStyle, theme: Theme) -> UIColor {
+    static func effectiveDescriptionColor(cellStyle: CellStyle, theme: Theme) -> UIColor {
         if let c = cellStyle.descriptionColor { return c }
         if let c = theme.cellDescriptionColor { return c }
         return Theme.defaultCellDescriptionColor
@@ -148,7 +148,7 @@ extension EffectiveStyle {
 
     /// description フォントを解決する。
     /// 解決順序: `cellStyle.descriptionFont` → `theme.cellDescriptionFont` → footnote フォント
-    public static func effectiveDescriptionFont(cellStyle: CellStyle, theme: Theme) -> UIFont {
+    static func effectiveDescriptionFont(cellStyle: CellStyle, theme: Theme) -> UIFont {
         if let f = cellStyle.descriptionFont { return f }
         if let f = theme.cellDescriptionFont { return f }
         return Theme.defaultCellDescriptionFont
@@ -156,7 +156,7 @@ extension EffectiveStyle {
 
     /// valueText 色を解決する。
     /// 解決順序: `cellStyle.valueTextColor` → `theme.cellValueTextColor` → `theme.cellTitleColor` → `UIColor.label`
-    public static func effectiveValueTextColor(cellStyle: CellStyle, theme: Theme) -> UIColor {
+    static func effectiveValueTextColor(cellStyle: CellStyle, theme: Theme) -> UIColor {
         if let c = cellStyle.valueTextColor { return c }
         if let c = theme.cellValueTextColor { return c }
         if let c = theme.cellTitleColor { return c }
@@ -165,7 +165,7 @@ extension EffectiveStyle {
 
     /// valueText フォントを解決する。
     /// 解決順序: `cellStyle.valueTextFont` → `theme.cellValueTextFont` → `theme.cellTitleFont` → body フォント
-    public static func effectiveValueTextFont(cellStyle: CellStyle, theme: Theme) -> UIFont {
+    static func effectiveValueTextFont(cellStyle: CellStyle, theme: Theme) -> UIFont {
         if let f = cellStyle.valueTextFont { return f }
         if let f = theme.cellValueTextFont { return f }
         if let f = theme.cellTitleFont { return f }
@@ -174,7 +174,7 @@ extension EffectiveStyle {
 
     /// hintText 色を解決する。
     /// 解決順序: `cellStyle.hintTextColor` → `theme.cellHintTextColor` → `theme.cellAccentColor`
-    public static func effectiveHintTextColor(cellStyle: CellStyle, theme: Theme) -> UIColor {
+    static func effectiveHintTextColor(cellStyle: CellStyle, theme: Theme) -> UIColor {
         if let c = cellStyle.hintTextColor { return c }
         if let c = theme.cellHintTextColor { return c }
         return theme.cellAccentColor
@@ -182,7 +182,7 @@ extension EffectiveStyle {
 
     /// hintText フォントを解決する。
     /// 解決順序: `cellStyle.hintTextFont` → `theme.cellHintFont` → footnote フォント
-    public static func effectiveHintFont(cellStyle: CellStyle, theme: Theme) -> UIFont {
+    static func effectiveHintFont(cellStyle: CellStyle, theme: Theme) -> UIFont {
         if let f = cellStyle.hintTextFont { return f }
         if let f = theme.cellHintFont { return f }
         return Theme.defaultCellHintFont
@@ -192,7 +192,7 @@ extension EffectiveStyle {
     /// 解決順序: `cellStyle.iconSize` → `theme.cellIconSize` → 24pt
     ///
     /// 有効な指定は正の有限値のみで、それ以外（0 以下 / 非有限値）は未指定として次の段へ送る。
-    public static func effectiveIconSize(cellStyle: CellStyle, theme: Theme) -> CGFloat {
+    static func effectiveIconSize(cellStyle: CellStyle, theme: Theme) -> CGFloat {
         if let v = cellStyle.iconSize, isValidIconSize(v) { return v }
         if let v = theme.cellIconSize, isValidIconSize(v) { return v }
         return Theme.defaultCellIconSize
@@ -202,7 +202,7 @@ extension EffectiveStyle {
     /// 解決順序: `cellStyle.iconRadius` → `theme.cellIconRadius` → 0pt（角丸なし）
     ///
     /// 有効な指定は 0 以上の有限値のみで、それ以外（負値 / 非有限値）は未指定として次の段へ送る。
-    public static func effectiveIconRadius(cellStyle: CellStyle, theme: Theme) -> CGFloat {
+    static func effectiveIconRadius(cellStyle: CellStyle, theme: Theme) -> CGFloat {
         if let v = cellStyle.iconRadius, isValidIconRadius(v) { return v }
         if let v = theme.cellIconRadius, isValidIconRadius(v) { return v }
         return Theme.defaultCellIconRadius
@@ -229,7 +229,7 @@ extension EffectiveStyle {
     ///
     /// 戻り値の `nil` は「どの段にも指定がない」ことを表し、描画側はプラットフォーム既定の
     /// placeholder 表示をそのまま使う（ライブラリ独自の既定色を持ち込まない）。
-    public static func effectivePlaceholderColor(cellStyle: CellStyle, theme: Theme) -> UIColor? {
+    static func effectivePlaceholderColor(cellStyle: CellStyle, theme: Theme) -> UIColor? {
         if let c = cellStyle.placeholderColor { return c }
         return theme.cellPlaceholderColor
     }
@@ -241,7 +241,7 @@ extension EffectiveStyle {
     ///   2. `cellStyle.placeholderColor`
     ///   3. `theme.cellPlaceholderColor`
     ///   4. プラットフォーム既定（`nil`）
-    public static func effectivePlaceholderColor(
+    static func effectivePlaceholderColor(
         entryPlaceholderColor: UIColor?,
         cellStyle: CellStyle,
         theme: Theme
@@ -252,14 +252,14 @@ extension EffectiveStyle {
 
     /// Cell 背景色を解決する。
     /// 解決順序: `cellStyle.backgroundColor` → `theme.cellBackgroundColor`
-    public static func effectiveBackgroundColor(cellStyle: CellStyle, theme: Theme) -> UIColor {
+    static func effectiveBackgroundColor(cellStyle: CellStyle, theme: Theme) -> UIColor {
         if let c = cellStyle.backgroundColor { return c }
         return theme.cellBackgroundColor
     }
 
     /// accent 色を解決する。
     /// 解決順序: `cellStyle.accentColor` → `theme.cellAccentColor`
-    public static func effectiveAccentColor(cellStyle: CellStyle, theme: Theme) -> UIColor {
+    static func effectiveAccentColor(cellStyle: CellStyle, theme: Theme) -> UIColor {
         if let c = cellStyle.accentColor { return c }
         return theme.cellAccentColor
     }
@@ -267,7 +267,7 @@ extension EffectiveStyle {
     /// 実効行高さを解決する。
     /// 解決順序: `cellStyle.cellHeight` → `theme.rowHeight`（> 0）→ `minRowHeight`。
     /// 最終値は `minRowHeight` で下限ガードする。
-    public static func effectiveCellHeight(cellStyle: CellStyle, theme: Theme) -> CGFloat {
+    static func effectiveCellHeight(cellStyle: CellStyle, theme: Theme) -> CGFloat {
         let baseHeight: CGFloat
         if let h = cellStyle.cellHeight {
             baseHeight = h
@@ -290,7 +290,7 @@ extension EffectiveStyle {
     /// Note: 通常 Cell のタイトル色既定は `UIColor.label` だが、ButtonCell は
     /// 「ボタンとして tappable に見える慣習色」を採用するため 4 段目だけ `.systemBlue` とする。
     /// 本ヘルパは `ButtonCellView` の本番描画から直接呼ばれ、Source of Truth として一本化する。
-    public static func effectiveButtonTitleColor(
+    static func effectiveButtonTitleColor(
         buttonCellTitleColor: UIColor?,
         cellStyle: CellStyle,
         theme: Theme
@@ -310,7 +310,7 @@ extension EffectiveStyle {
     ///
     /// 本ヘルパは `KsSettingsViewController` の Section / Root Header 描画経路から呼ばれ、
     /// 「size 上書き」「フォントフォールバック」の責務を 1 箇所に集約する。
-    public static func effectiveHeaderFont(theme: Theme) -> UIFont {
+    static func effectiveHeaderFont(theme: Theme) -> UIFont {
         let base = theme.headerFont ?? Theme.defaultHeaderFooterFont
         if theme.headerFontSize > 0 {
             return base.withSize(CGFloat(theme.headerFontSize))
@@ -321,7 +321,7 @@ extension EffectiveStyle {
     /// Section / Root Footer のテキストフォントを解決する。
     ///
     /// 解決順序は `effectiveHeaderFont` と同形で、`footerFont` / `footerFontSize` を参照する。
-    public static func effectiveFooterFont(theme: Theme) -> UIFont {
+    static func effectiveFooterFont(theme: Theme) -> UIFont {
         let base = theme.footerFont ?? Theme.defaultHeaderFooterFont
         if theme.footerFontSize > 0 {
             return base.withSize(CGFloat(theme.footerFontSize))

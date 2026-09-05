@@ -25,8 +25,8 @@ import UIKit
 /// 各フィールドについて `isEqual(_:)` ベースの手動実装で判定する。
 ///
 /// 「Cell 全体既定」フィールド群（`cellTitleColor` / `cellDescriptionColor` 等）は
-/// 個別 Cell の `CellStyle.X` が `nil` のときの **フォールバック値** として `EffectiveStyle`
-/// 経由で参照される（解決順序: `CellStyle.X` → `Theme.cellX` → プラットフォーム既定）。
+/// 個別 Cell の `CellStyle.X` が `nil` のときの **フォールバック値** として参照される
+/// （解決順序: `CellStyle.X` → `Theme.cellX` → プラットフォーム既定）。
 ///
 /// `cellTitleFontSize` は `cellTitleFont` と並立する独立 `Double` フィールドで、
 /// `> 0` のとき `cellTitleFont.pointSize` を **上書き** する（オリジナル
@@ -277,7 +277,7 @@ extension Theme {
     /// `isEnabled = false` 時のテキスト色（やや薄い灰色、おおよそ #999999）
     public static let defaultDisabledTextColor = UIColor(red: 0.6, green: 0.6, blue: 0.6, alpha: 1.0)
 
-    // MARK: - Cell 全体既定 / フォールバック先既定値（EffectiveStyle と共有）
+    // MARK: - Cell 全体既定 / フォールバック先既定値（内部の実効値解決と共有）
 
     /// `cellTitleColor` 未指定時のフォールバック色（`UIColor.label`）。
     public static let defaultCellTitleColor: UIColor = .label
@@ -297,11 +297,12 @@ extension Theme {
     ///
     /// 通常 Cell の `cellTitleColor` 既定 (`UIColor.label`) と異なり、ButtonCell は
     /// 「tappable に見えるよう慣習的に青色を使う」運用のためここで分離する。
-    /// `EffectiveStyle.effectiveButtonTitleColor` の 4 段目フォールバック値として参照される。
+    /// ButtonCell の title 色は `ButtonCell.titleColor` → `CellStyle.titleColor` → `Theme.cellTitleColor` → 本値
+    /// の順で解決される。
     public static let defaultButtonTitleColor: UIColor = .systemBlue
     /// Section / Root Header / Footer のテキストフォントの既定（`UIListContentConfiguration.cell()` の
     /// text 既定相当 = footnote スタイル）。`Theme.headerFont` / `Theme.footerFont` が `nil` のときの
-    /// フォールバック先で、`EffectiveStyle.effectiveHeaderFont` / `effectiveFooterFont` から参照される。
+    /// フォールバック先。`headerFontSize` / `footerFontSize` が `> 0` のときは pointSize が上書きされる。
     public static let defaultHeaderFooterFont: UIFont = UIFont.preferredFont(forTextStyle: .footnote)
 }
 
