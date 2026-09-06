@@ -149,7 +149,7 @@ jobs:
               ;;
           esac
 
-      - name: Verify README install examples
+      - name: Verify install examples (README + Skills)
         env:
           KS_VERSION: ${{ inputs.version }}
         run: python3 scripts/release/set-readme-version.py --check "${KS_VERSION}"

@@ -5,7 +5,7 @@ applies-when:
   tasks: [リリースの実施, release workflow の secrets / Environment の設定, リリースの再実行, リリースのリハーサル]
 title: リリース手順
 description: main ブランチと branch protection の用意、Environment release と secrets の登録、配信リポジトリの deploy key、リリース PR と dispatch、失敗時の再実行、dry-run によるリハーサル
-timestamp: 2026-09-04
+timestamp: 2026-09-06
 ---
 
 # リリース手順
@@ -118,10 +118,10 @@ nuget.org 側には、この monorepo の `release.yml` と Environment `release
 ### リリース PR
 
 1. `docs-refresh` をオーナーが依頼し、`skills/` と README 群を現状へ追随させる
-2. `python3 scripts/release/set-readme-version.py <version>` で README 2 枚のインストール例を新しい version に揃える
+2. `python3 scripts/release/set-readme-version.py <version>` で README 2 枚と利用者向け Skill 8 枚 (4 本 × 2 言語) のインストール例を新しい version に揃える
 3. 1 と 2 を含む pull request を `develop` → `main` で作り、7 件の check が通ったらマージする
 
-version の置換を忘れると release workflow の validate が README の不一致で止まる。手元で `python3 scripts/release/set-readme-version.py --check <version>` を先に通しておくと早く気づける。
+version の置換を忘れると release workflow の validate がインストール例の不一致で止まる。手元で `python3 scripts/release/set-readme-version.py --check <version>` を先に通しておくと早く気づける。
 
 ### 起動
 

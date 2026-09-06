@@ -179,10 +179,10 @@ jobs:
         run: scripts/spm-snapshot/sync-snapshot-test.sh
 
       # リリース用スクリプトの自己テスト。Central Portal の API 呼び出しはモックへ
-      # 差し替わり、README の置換は一時コピーに対して行うので、ネットワークにも
-      # 作業ツリーにも触らない。bash と python3 だけで回る。
+      # 差し替わり、README / Skill のインストール例の置換は一時コピーに対して
+      # 行うので、ネットワークにも作業ツリーにも触らない。bash と python3 だけで回る。
       - name: Central Portal script selftest
         run: scripts/release/central-portal.sh --selftest
 
-      - name: README version script selftest
+      - name: Install example version script selftest
         run: python3 scripts/release/set-readme-version.py --selftest
