@@ -2,7 +2,7 @@
 
 ### Requirement: Cell 単位の色プロパティの変更は表示中の Cell に届く
 
-MAUI の Cell の色プロパティのうち、その Cell が内容 (snapshot) に写す項目 (`CellBase` の `TitleColor` / `DescriptionColor` / `ValueTextColor` / `HintTextColor` / `BackgroundColor`、Cell 固有の `AccentColor` / `PlaceholderColor` / `AndroidButtonColor`) を表示中に変更すると、その Cell の内容更新として facade → snapshot → bridge → native の Cell 置換まで届く (SHALL)。届いた色のうち、その Cell がその platform で描画に使う項目は表示中の行が新しい色で描き直される (SHALL)。描画に使わない項目 (`AndroidButtonColor` の iOS、対応するスロットを表示していない Cell の色) は届いても見た目を変えない (SHALL — 本 change 前と同じ)。`CustomCell` はタイトル・説明文・ヒント系の style を snapshot に写さない現行契約のままで、それらの変更は内容更新にならない (SHALL — 本 change 前と同じ)。`AppThemeBinding` を設定したプロパティは、アプリの外観変更で供給される新しい値によって同じ経路で届く (SHALL)。未指定 (`null`) に戻したプロパティは native の未指定表現へ写され、Theme または外観既定へ継承する (SHALL)。両外観で異なる色を使いたい利用者の手段は Cell の色プロパティに `AppThemeBinding` を書くことであり、facade は外観を受け取る別の型やイベントを持たない (SHALL NOT)。
+MAUI の Cell の色プロパティのうち、その Cell が内容 (snapshot) に写す項目 (`CellBase` の `TitleColor` / `DescriptionColor` / `ValueTextColor` / `HintTextColor` / `BackgroundColor`、Cell 固有の `AccentColor` / `PlaceholderColor` / `AndroidButtonColor`) を表示中に変更すると、その Cell の内容更新として facade → snapshot → bridge → native の Cell 置換まで届く (SHALL)。届いた色のうち、その Cell がその platform で描画に使う項目は表示中の行が新しい色で描き直される (SHALL)。描画に使わない項目 (`AndroidButtonColor` の iOS、対応するスロットを表示していない Cell の色) は届いても見た目を変えない (SHALL — 本 change 前と同じ)。`CustomCell` はタイトル・説明文・ヒント系の style を snapshot に写さない現行契約のままで、それらの変更は内容更新にならない (SHALL — 本 change 前と同じ)。アプリの外観変更を受けて利用者が同じプロパティへ再代入した値も、同じ経路で表示中の Cell に届く (SHALL)。Cell の色プロパティに書いた `AppThemeBinding` は外観変更で再評価されず、その経路の到達は本 change の契約に含めない (理由と証跡は proposal.md / tasks.md 0.1)。未指定 (`null`) に戻したプロパティは native の未指定表現へ写され、Theme または外観既定へ継承する (SHALL)。両外観で異なる色を使いたい利用者の手段は、アプリの外観変更 (`Application.RequestedThemeChanged`) を購読して Cell の色プロパティへ現在の外観の値を再代入することであり、facade は外観を受け取る別の型やイベントを持たない (SHALL NOT)。
 
 #### Scenario: 表示中の Cell の TitleColor 変更が Cell 置換として配信される
 - **GIVEN** 表示中の LabelCell (色プロパティ未設定)
@@ -24,10 +24,10 @@ MAUI の Cell の色プロパティのうち、その Cell が内容 (snapshot) 
 - **WHEN** `TitleColor` に色を設定する
 - **THEN** 置換は配信されず、`BackgroundColor` を設定したときだけ行 style の置換が配信される
 
-#### Scenario: Cell プロパティの AppThemeBinding の値が native まで届く
-- **GIVEN** `TitleColor` に `AppThemeBinding` (light / dark の値) を設定した ButtonCell を持つ SettingsView を表示中
+#### Scenario: 外観変更を受けて再代入した Cell の色が native まで届く
+- **GIVEN** アプリの外観変更を購読し、外観に応じた値を ButtonCell の `TitleColor` へ再代入する SettingsView を表示中 (ライトの値で描画済み)
 - **WHEN** アプリの外観をダークへ切り替える
-- **THEN** ButtonCell の title は binding の dark 側の値で描き直される (iOS / Android 両方)
+- **THEN** ButtonCell の title は同じ画面・同じ行のまま dark 側の値で描き直される (iOS / Android 両方)
 
 ### Requirement: Android bridge の Cell 固有色の変換
 

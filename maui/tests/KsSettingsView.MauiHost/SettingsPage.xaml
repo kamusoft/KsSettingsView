@@ -43,6 +43,10 @@
         <ks:LabelCell Title="文字サイズ"
                       HintText="端末の設定に従う"
                       ValueText="標準" />
+        <!-- TitleColor は外観の変化を購読して code-behind から入れ直す -->
+        <ks:ButtonCell x:Name="ThemeFollowingButton"
+                       Title="外観追随ボタン"
+                       ValueText="ライトで緑・ダークでマゼンタ" />
       </ks:Section>
 
       <ks:Section HeaderText="{Binding SectionHeader}">

@@ -1,7 +1,6 @@
 package jp.kamusoft.kssettingsview.bridge
 
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import jp.kamusoft.kssettingsview.ui.Theme
 
@@ -152,45 +151,42 @@ class KsBridgeTheme {
     internal fun resolve(): Theme {
         val base = Theme()
         return Theme(
-            separatorColor = color(separatorColor),
-            backgroundColor = color(backgroundColor),
-            cellBackgroundColor = color(cellBackgroundColor),
-            selectedColor = color(selectedColor),
-            cellAccentColor = color(cellAccentColor),
-            disabledTextColor = color(disabledTextColor),
+            separatorColor = KsBridgeColor.color(separatorColor),
+            backgroundColor = KsBridgeColor.color(backgroundColor),
+            cellBackgroundColor = KsBridgeColor.color(cellBackgroundColor),
+            selectedColor = KsBridgeColor.color(selectedColor),
+            cellAccentColor = KsBridgeColor.color(cellAccentColor),
+            disabledTextColor = KsBridgeColor.color(disabledTextColor),
             scrollIndicatorVisible = scrollIndicatorVisible ?: base.scrollIndicatorVisible,
             rowHeight = rowHeight ?: base.rowHeight,
             hasUnevenRows = hasUnevenRows ?: base.hasUnevenRows,
-            headerTextColor = color(headerTextColor),
-            headerBackgroundColor = color(headerBackgroundColor),
+            headerTextColor = KsBridgeColor.color(headerTextColor),
+            headerBackgroundColor = KsBridgeColor.color(headerBackgroundColor),
             headerFontSize = headerFontSize ?: base.headerFontSize,
             headerFont = headerFont?.resolve(),
             headerHeight = headerHeight ?: base.headerHeight,
-            footerTextColor = color(footerTextColor),
-            footerBackgroundColor = color(footerBackgroundColor),
+            footerTextColor = KsBridgeColor.color(footerTextColor),
+            footerBackgroundColor = KsBridgeColor.color(footerBackgroundColor),
             footerFontSize = footerFontSize ?: base.footerFontSize,
             footerFont = footerFont?.resolve(),
-            cellTitleColor = color(cellTitleColor),
+            cellTitleColor = KsBridgeColor.color(cellTitleColor),
             cellTitleFont = cellTitleFont?.resolve(),
             cellTitleFontSize = cellTitleFontSize ?: base.cellTitleFontSize,
-            cellValueTextColor = color(cellValueTextColor),
+            cellValueTextColor = KsBridgeColor.color(cellValueTextColor),
             cellValueTextFont = cellValueTextFont?.resolve(),
-            cellDescriptionColor = color(cellDescriptionColor),
+            cellDescriptionColor = KsBridgeColor.color(cellDescriptionColor),
             cellDescriptionFont = cellDescriptionFont?.resolve(),
-            cellHintTextColor = color(cellHintTextColor),
+            cellHintTextColor = KsBridgeColor.color(cellHintTextColor),
             cellHintFont = cellHintFont?.resolve(),
-            cellPlaceholderColor = color(cellPlaceholderColor),
+            cellPlaceholderColor = KsBridgeColor.color(cellPlaceholderColor),
             cellIconSize = cellIconSize?.dp,
             cellIconRadius = cellIconRadius?.dp,
             sectionMargin = resolveSectionMargin(),
             sectionCornerRadius = sectionCornerRadius?.dp,
             sectionBorderWidth = sectionBorderWidth?.dp,
-            sectionBorderColor = color(sectionBorderColor),
+            sectionBorderColor = KsBridgeColor.color(sectionBorderColor),
         )
     }
-
-    /** ARGB を詰めた整数を色へ写す。`null`（未指定）は `Color.Unspecified` になる。 */
-    private fun color(argb: Int?): Color = KsBridgeColor.color(argb) ?: Color.Unspecified
 
     /**
      * margin の論理 4 成分から方向対応型を組み立てる。

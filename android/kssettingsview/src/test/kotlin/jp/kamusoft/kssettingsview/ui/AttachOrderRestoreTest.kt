@@ -181,7 +181,7 @@ class AttachOrderRestoreTest {
         )
         assertEquals(
             "表示中の Cell も Store の現在 Theme の配色で描かれる",
-            newTheme.cellTitleColor?.toArgb(),
+            newTheme.cellTitleColor.toArgb(),
             rowTextColor(view, "A2"),
         )
     }

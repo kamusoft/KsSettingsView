@@ -52,7 +52,7 @@ internal final class KsCheckBoxView: UIView {
     }
 
     /// 有効／無効状態。`false` のとき枠・塗り・チェックマークの色を薄く描画する。
-    /// `UIView` 標準には `isEnabled` がないため独自定義（refine-basic-cells-style Suggestion-1 対応）。
+    /// `UIView` 標準には `isEnabled` がないため独自定義。
     var isEnabled: Bool = true {
         didSet {
             guard isEnabled != oldValue else { return }

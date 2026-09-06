@@ -6,6 +6,7 @@ import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.util.TypedValue
 import android.view.View
+import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.compose.ui.graphics.Color
@@ -285,13 +286,13 @@ class ThemeAppearanceResolutionTest {
         for (darkTheme in listOf(false, true)) {
             val resolved = Theme().resolvedFor(darkTheme)
             val compose = EffectiveStyle.effectiveButtonTitleColor(
-                buttonCellTitleColor = null,
+                buttonCellTitleColor = Color.Unspecified,
                 cellStyle = CellStyle(),
                 theme = resolved,
                 darkTheme = darkTheme,
             )
             val argb = EffectiveStyle.effectiveButtonTitleColorArgb(
-                buttonCellTitleColor = null,
+                buttonCellTitleColor = Color.Unspecified,
                 cellStyle = CellStyle(),
                 theme = resolved,
                 darkTheme = darkTheme,
@@ -337,6 +338,109 @@ class ThemeAppearanceResolutionTest {
 
         assertEquals(explicitBackground.toArgb(), listBackground(view))
         assertEquals("未指定の色だけが dark セットへ変わる", dark.separatorColor, decorationTheme(view).separatorColor)
+    }
+
+    /**
+     * 利用者が `CellStyle` に明示した色は、ライブラリが外観の既定へ置き換えない。
+     *
+     * 同じ行の未指定の色（Cell 背景）だけが dark 既定へ再解決されることを同時に観測して、
+     * 「切替そのものが起きていないから変わらなかった」という空振りを弾く。
+     */
+    @Test
+    @Config(qualifiers = "notnight")
+    fun `明示した CellStyle 色は夜間モードへの切替後も変わらない`() {
+        val explicitTitle = Color(0xFF3366CC)
+        val root = SettingsRoot(
+            sections = listOf(
+                Section(
+                    id = "s1",
+                    cells = listOf(
+                        LabelCell(id = "styled", title = "明示", style = CellStyle(titleColor = explicitTitle)),
+                        LabelCell(id = "plain", title = "未指定"),
+                    ),
+                ),
+            ),
+        )
+        val view = showView(root = root)
+        assertEquals(explicitTitle.toArgb(), labelTitleColor(view, "明示"))
+        assertEquals(KsThemePalette.Light.cellTitle.toArgb(), labelTitleColor(view, "未指定"))
+
+        switchToNight(view)
+
+        assertEquals("明示した title 色は変わらない", explicitTitle.toArgb(), labelTitleColor(view, "明示"))
+        assertEquals(
+            "未指定の title 色だけが dark 既定へ変わる",
+            KsThemePalette.Dark.cellTitle.toArgb(),
+            labelTitleColor(view, "未指定"),
+        )
+    }
+
+    /**
+     * Cell 固有値として明示した accent も外観の切替で置き換えない。
+     *
+     * 観測点は Switch のオン Track（実効 accent がそのまま出る位置）と、同じ行の背景
+     * （未指定なので dark 既定へ変わる）。
+     */
+    @Test
+    @Config(qualifiers = "notnight")
+    fun `明示した Cell 固有色は夜間モードへの切替後も変わらない`() {
+        val explicitAccent = Color(0xFFCC3366)
+        val root = SettingsRoot(
+            sections = listOf(
+                Section(
+                    id = "s1",
+                    cells = listOf(
+                        SwitchCell(id = "sw", title = "通知", isOn = true, accentColor = explicitAccent),
+                    ),
+                ),
+            ),
+        )
+        val view = showView(root = root)
+        assertEquals(explicitAccent.toArgb(), switchOnTrackColor(view))
+        assertEquals(light.cellBackgroundColor.toArgb(), switchRowBackgroundColor(view))
+
+        switchToNight(view)
+
+        assertEquals("明示した accent は変わらない", explicitAccent.toArgb(), switchOnTrackColor(view))
+        assertEquals(
+            "未指定の行背景だけが dark 既定へ変わる",
+            dark.cellBackgroundColor.toArgb(),
+            switchRowBackgroundColor(view),
+        )
+    }
+
+    /** [title] を表示している LabelCell 行のタイトル文字色（実描画値）。 */
+    private fun labelTitleColor(view: KsSettingsView, title: String): Int {
+        val holder = rowHolders(view).filterIsInstance<LabelCellViewHolder>()
+            .single { it.views.titleView.text == title }
+        return holder.views.titleView.currentTextColor
+    }
+
+    /** SwitchCell 行のオン状態 Track 色（実効 accent がそのまま出る位置）。 */
+    private fun switchOnTrackColor(view: KsSettingsView): Int {
+        val holder = rowHolders(view).filterIsInstance<SwitchCellViewHolder>().single()
+        val sw = requireNotNull(findMaterialSwitch(holder.itemView as ViewGroup)) {
+            "MaterialSwitch が行に見つからない"
+        }
+        return sw.trackTintList!!.getColorForState(intArrayOf(android.R.attr.state_checked), 0)
+    }
+
+    /** SwitchCell 行の背景色（未指定なら外観の既定が出る位置）。 */
+    private fun switchRowBackgroundColor(view: KsSettingsView): Int {
+        val holder = rowHolders(view).filterIsInstance<SwitchCellViewHolder>().single()
+        val ripple = holder.itemView.background as android.graphics.drawable.RippleDrawable
+        return (ripple.getDrawable(0) as ColorDrawable).color
+    }
+
+    private fun findMaterialSwitch(root: ViewGroup): MaterialSwitch? {
+        for (index in 0 until root.childCount) {
+            when (val child: View = root.getChildAt(index)) {
+                is MaterialSwitch -> return child
+                is ViewGroup -> findMaterialSwitch(child)?.let { return it }
+                else -> Unit
+            }
+        }
+        return null
     }
 
     @Test

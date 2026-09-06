@@ -5,7 +5,6 @@ import android.graphics.Color
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
-import androidx.compose.ui.graphics.toArgb
 import androidx.core.graphics.ColorUtils
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.materialswitch.MaterialSwitch
@@ -152,7 +151,7 @@ internal class SwitchCellViewHolder(
         switchView.isChecked = cell.isOn
 
         // accent 色: SwitchCell.accentColor → effective.accentColor（CellStyle.accentColor ?? Theme.cellAccentColor）
-        val accent = cell.accentColor?.toArgb() ?: effective.accentColor
+        val accent = cell.accentColor.toArgbOrElse(effective.accentColor)
 
         // オン thumb は accent に対するコントラスト色として決める（テーマ attr は参照しない）。
         val onThumbColor = onThumbColorFrom(accent)

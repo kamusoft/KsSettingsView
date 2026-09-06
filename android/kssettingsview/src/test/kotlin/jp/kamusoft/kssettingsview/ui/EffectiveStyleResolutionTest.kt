@@ -186,7 +186,7 @@ class EffectiveStyleResolutionTest {
     @Test
     fun `effectivePlaceholderColor は Theme フォールバック`() {
         val result = EffectiveStyle.effectivePlaceholderColor(
-            entryPlaceholderColor = null,
+            entryPlaceholderColor = Color.Unspecified,
             cellStyle = CellStyle(),
             theme = Theme(cellPlaceholderColor = Color.Blue),
         )
@@ -198,7 +198,7 @@ class EffectiveStyleResolutionTest {
         assertEquals(
             Color.Unspecified,
             EffectiveStyle.effectivePlaceholderColor(
-                entryPlaceholderColor = null,
+                entryPlaceholderColor = Color.Unspecified,
                 cellStyle = CellStyle(),
                 theme = Theme(),
             ),
@@ -404,7 +404,7 @@ class EffectiveStyleResolutionTest {
     @Test
     fun `effectiveButtonTitleColor は ButtonCell 未指定なら CellStyle 採用`() {
         val result = EffectiveStyle.effectiveButtonTitleColor(
-            buttonCellTitleColor = null,
+            buttonCellTitleColor = Color.Unspecified,
             cellStyle = CellStyle(titleColor = Color.Green),
             theme = Theme(cellTitleColor = Color.Blue),
             darkTheme = false,
@@ -415,7 +415,7 @@ class EffectiveStyleResolutionTest {
     @Test
     fun `effectiveButtonTitleColor は ButtonCell と CellStyle が未指定なら Theme 採用`() {
         val result = EffectiveStyle.effectiveButtonTitleColor(
-            buttonCellTitleColor = null,
+            buttonCellTitleColor = Color.Unspecified,
             cellStyle = CellStyle(),
             theme = Theme(cellTitleColor = Color.Blue),
             darkTheme = false,
@@ -427,7 +427,7 @@ class EffectiveStyleResolutionTest {
     fun `effectiveButtonTitleColor は全て未指定ならライトの ButtonCell 既定`() {
         // ButtonCell.titleColor は 4 段優先で解決し、4 段目は外観に対応する Button 慣習色となる。
         val result = EffectiveStyle.effectiveButtonTitleColor(
-            buttonCellTitleColor = null,
+            buttonCellTitleColor = Color.Unspecified,
             cellStyle = CellStyle(),
             theme = Theme(),
             darkTheme = false,
@@ -438,7 +438,7 @@ class EffectiveStyleResolutionTest {
     @Test
     fun `effectiveButtonTitleColor は全て未指定ならダークの ButtonCell 既定`() {
         val result = EffectiveStyle.effectiveButtonTitleColor(
-            buttonCellTitleColor = null,
+            buttonCellTitleColor = Color.Unspecified,
             cellStyle = CellStyle(),
             theme = Theme(),
             darkTheme = true,

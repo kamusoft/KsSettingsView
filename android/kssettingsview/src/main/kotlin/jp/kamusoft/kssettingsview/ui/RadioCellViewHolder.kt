@@ -2,7 +2,6 @@ package jp.kamusoft.kssettingsview.ui
 
 import android.view.ViewGroup
 import android.widget.FrameLayout
-import androidx.compose.ui.graphics.toArgb
 
 /**
  * [RadioCell] 描画用 ViewHolder。
@@ -30,7 +29,7 @@ internal class RadioCellViewHolder(
         applyCellBackground(views.root, effective)
 
         // 解決順序: RadioCell.accentColor → CellStyle.accentColor → Theme.cellAccentColor
-        val resolvedAccent: Int = cell.accentColor?.toArgb() ?: effective.accentColor
+        val resolvedAccent: Int = cell.accentColor.toArgbOrElse(effective.accentColor)
         checkView.color = resolvedAccent
         checkView.isChecked = cell.value == cell.selectedValue
         checkView.isEnabled = cell.isEnabled

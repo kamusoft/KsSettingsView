@@ -20,10 +20,12 @@ import java.time.LocalDate
  *   iOS 側 `DatePickerCell` も同名 `uiStyle` プロパティを持つ（ケースは別、`wheels` / `calendar`）。
  * @property todayText 「今日」へジャンプする操作のラベル（任意）。`null` / 空文字で非表示
  *   （iOS と同じオプトイン）
- * @property androidButtonColor ホイール型（[DatePickerUIStyle.Spinner]）選択面のヘッダー操作色（任意）。
+ * @property androidButtonColor ホイール型（[DatePickerUIStyle.Spinner]）選択面のヘッダー操作色。
+ *   `Color.Unspecified` は未指定を意味し、解決済みの強調色（[accentColor] の段階解決の結果）へ倒れる。
  *   カレンダー型（[DatePickerUIStyle.Material]）には効かず、そちらの操作色は強調ロール
  *   （[accentColor]）に従う
- * @property accentColor 強調色（任意）
+ * @property accentColor 強調色。`Color.Unspecified` は未指定を意味し、
+ *   `CellStyle.accentColor` → `Theme.cellAccentColor` の順に解決する
  * @property valueText 明示指定の valueText（`null` で `format` に従って自動表示）
  * @property onValueChanged 日付変更 callback
  */
@@ -42,8 +44,8 @@ public data class DatePickerCell(
     val pickerTitle: String? = null,
     val uiStyle: DatePickerUIStyle = DatePickerUIStyle.Material,
     val todayText: String? = null,
-    val androidButtonColor: Color? = null,
-    val accentColor: Color? = null,
+    val androidButtonColor: Color = Color.Unspecified,
+    val accentColor: Color = Color.Unspecified,
     val onValueChanged: ((LocalDate) -> Unit)? = null,
     val isEnabled: Boolean = true,
     override val isVisible: Boolean = true,
@@ -90,8 +92,8 @@ public data class DatePickerCell(
         result = 31 * result + (pickerTitle?.hashCode() ?: 0)
         result = 31 * result + uiStyle.hashCode()
         result = 31 * result + (todayText?.hashCode() ?: 0)
-        result = 31 * result + (androidButtonColor?.hashCode() ?: 0)
-        result = 31 * result + (accentColor?.hashCode() ?: 0)
+        result = 31 * result + androidButtonColor.hashCode()
+        result = 31 * result + accentColor.hashCode()
         result = 31 * result + isEnabled.hashCode()
         result = 31 * result + isVisible.hashCode()
         return result

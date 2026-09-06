@@ -120,6 +120,8 @@ cd samples/android
 adb shell am start -n jp.kamusoft.kssettingsview.samples.android/.MainActivity
 ```
 
+`./gradlew :app:installDebug` は接続中の**全端末** (実機を含む) に配備する。`ANDROID_SERIAL` も `-Pandroid.injected.device.serial` も Gradle の install 対象を絞らないため、Emulator と実機を同時に繋いでいるときは `adb -s <serial> install -r app/build/outputs/apk/debug/app-debug.apk` で対象を指定して配備する (`adb devices` で serial を確認)。
+
 ### MAUI iOS
 
 利用可能な Simulator の UDID を `xcrun simctl list devices available` で確認し、起動してから実行する。**接続先は UDID で明示する** — `booted` 指定は起動中の Simulator が 2 台以上あると宛先が定まらない。

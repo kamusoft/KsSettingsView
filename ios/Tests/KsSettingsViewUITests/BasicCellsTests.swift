@@ -546,6 +546,68 @@ final class BasicCellsTests: XCTestCase {
         XCTAssertTrue(v.isEnabled)
     }
 
+    /// KsCheckBoxView: `CheckboxCell.accentColor` に渡した dynamic 色は、外観が変わると
+    /// その色の dark 値へ再解決される。
+    ///
+    /// 塗り (`layer.backgroundColor`) と枠 (`layer.borderColor`) は `CGColor` で保持され、
+    /// `CGColor` は外観を持たないため trait の変更を受けて解決し直す必要がある。観測点は
+    /// その `CGColor` の成分そのものに取る。
+    func test_KsCheckBoxView_dynamicなaccent色が外観切替でdark値へ再解決される() {
+        let userColor = UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor(red: 0.2, green: 0.4, blue: 0.6, alpha: 1.0)
+                : UIColor(red: 0.9, green: 0.8, blue: 0.7, alpha: 1.0)
+        }
+        let view = CheckboxCellView()
+        view.render(
+            cell: CheckboxCell(title: "X", isChecked: true, accentColor: userColor),
+            theme: Theme()
+        )
+
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 320, height: 60))
+        window.overrideUserInterfaceStyle = .light
+        view.frame = window.bounds
+        window.addSubview(view)
+        window.makeKeyAndVisible()
+        window.layoutIfNeeded()
+        defer { window.isHidden = true }
+
+        guard let checkBox = view.accessoryHolder.arrangedSubviews
+            .compactMap({ $0 as? KsCheckBoxView }).first else {
+            return XCTFail("角丸チェックボックスが accessoryHolder に無い")
+        }
+
+        assertCGColor(checkBox.layer.backgroundColor, isCloseTo: (0.9, 0.8, 0.7), "切替前の塗り")
+        assertCGColor(checkBox.layer.borderColor, isCloseTo: (0.9, 0.8, 0.7), "切替前の枠")
+
+        window.overrideUserInterfaceStyle = .dark
+        window.layoutIfNeeded()
+
+        assertCGColor(checkBox.layer.backgroundColor, isCloseTo: (0.2, 0.4, 0.6), "切替後の塗り")
+        assertCGColor(checkBox.layer.borderColor, isCloseTo: (0.2, 0.4, 0.6), "切替後の枠")
+    }
+
+    /// `CGColor` の RGB 成分が期待値に十分近いことを検査する。
+    private func assertCGColor(
+        _ color: CGColor?,
+        isCloseTo expected: (r: CGFloat, g: CGFloat, b: CGFloat),
+        _ label: String,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        guard let color else {
+            return XCTFail("\(label): 色が設定されていない", file: file, line: line)
+        }
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        UIColor(cgColor: color).getRed(&r, green: &g, blue: &b, alpha: &a)
+        let distance = abs(r - expected.r) + abs(g - expected.g) + abs(b - expected.b)
+        XCTAssertLessThan(
+            distance, 1.0 / 512.0,
+            "\(label): 期待 \(expected) に対し実測 (\(r), \(g), \(b))",
+            file: file, line: line
+        )
+    }
+
     /// KsCheckmarkAccessoryView: 同上 + tint 色が isEnabled でアルファ低下することを確認する。
     func test_KsCheckmarkAccessoryView_isEnabled_でtint色アルファが下がる() {
         let v = KsCheckmarkAccessoryView()

@@ -11,8 +11,8 @@ fix-default-colors-dark-appearance ([core/ADR-0030](../../decisions/core/0030-th
 ## What Changes
 
 - **Android の Cell 固有色 12 本を `Color = Color.Unspecified` に揃える** (Cell の data class、対応する Compose DSL 関数の引数、`PickerCellItemProjection` の引数、`EffectiveStyle` の Cell 固有段を受ける解決関数、ViewHolder の `?.toArgb() ?:` 読み出し、bridge の DTO → Cell 変換)。解決順 (Cell 固有値 → CellStyle → Theme → 外観既定) と描画結果は変えない
-- **明示した CellStyle 色 / Cell 固有色の外観に対する契約を 3 platform で明文化し、テストで固定する**: ライブラリは明示色を置き換えない。両外観で変えたいときの手段は各 platform の慣用 (iOS: dynamic `UIColor` / Android Compose: 構築時分岐 / Android Store: 外観変更時の `replaceCell` / MAUI: Cell プロパティの `AppThemeBinding`)。ライブラリに新しい型・API・コールバックは足さない (ADR-0030 Decision 3 の延長)
-- **MAUI の Cell 単位プロパティが native の Cell 再適用まで届くことを spike で実証する** (実装の先頭、承認ゲート)。届けば net10 のユニットテストでプロパティ変更 → snapshot の style 更新の配信を固定する
+- **明示した CellStyle 色 / Cell 固有色の外観に対する契約を 3 platform で明文化し、テストで固定する**: ライブラリは明示色を置き換えない。両外観で変えたいときの手段は各 platform の慣用 (iOS: dynamic `UIColor` / Android Compose: 構築時分岐 / Android Store: 外観変更時の `replaceCell` / MAUI: 外観変更 (`RequestedThemeChanged`) を購読して Cell の色プロパティへ再代入)。ライブラリに新しい型・API・コールバックは足さない (ADR-0030 Decision 3 の延長)
+- **MAUI の Cell 単位プロパティの変更が native の Cell 置換まで届くことを spike で実証する** (実装の先頭、承認ゲート。tasks 0.1 で実施済み)。結果: プロパティへの直接代入は iOS / Android とも表示中の行に届いた。一方 Cell プロパティに書いた `AppThemeBinding` は外観変更で再評価されず (facade の Section / Cell が MAUI の element ツリーに属さないため)、当初の手段「Cell プロパティの `AppThemeBinding`」は成立しなかった。2026-09-06 オーナー裁定: MAUI の手段を「外観変更を購読して再代入」に改めて続行する。net10 のユニットテストでプロパティ変更 → snapshot の style 更新の配信を固定する
 - **bridge / snapshot の DTO 記述を実態に合わせる**: `KsBridgeCellStyle` (iOS / Android) と `KsCellStyleSnapshot` の「1 対 1」の doc コメントを、輸送している項目の実態 (CellStyle 段の placeholder は輸送せず、MAUI の `EntryCell.PlaceholderColor` は Cell 固有段で届く) に書き換える。wire 形式は変えない (下記 Non-Goals)
 - **tests**: Android (Cell 固有色の `Unspecified` 解決、明示 CellStyle 色は uiMode 変更で不変・未指定は追随、Compose DSL の style 差分が行の再 bind まで届く)、iOS (CellStyle の dynamic `UIColor` は dark 値へ解決、固定色は不変)、MAUI (Cell プロパティ変更が style 更新として配信される)、bridge (Android の Cell 固有色 DTO null → `Unspecified`)
 - **付随修正**: 型変更で触る Android の Cell ファイル (`ButtonCell.kt` / `RadioCell.kt` 等) の公開 doc コメントに残る ADR 参照の除去 (前回 change の deviation.md が「別途起票判断待ち」とした据え置き分のうち、本 change が触るファイルの範囲)
@@ -26,6 +26,7 @@ fix-default-colors-dark-appearance ([core/ADR-0030](../../decisions/core/0030-th
 - **Sample 3 面の変更** — 探索時に「MAUI サンプルの固定 `x:Static` 色が非追随」を穴として挙げたが、提案作成時の照合で誤りと判明した。共通フィールド統合デモ・入力 Cell デモの accent / placeholder は iOS / Android サンプルでも固定値 (`SampleTheme.demoAccentXxx` / `demoPlaceholderOrange`) で、handbook cross/sample-parity.md の「dark mode 追随のような platform らしさより一致を優先する」どおり 3 面一致している。唯一外観分岐している基本 Cell デモの ButtonCell title は MAUI も code-behind (`SampleThemeFollower`) で追随済み。MAUI の spike は前回と同じく一時改変で行い、Sample には残さない
 - **色以外の nullable フィールドの `Unspecified` 化** — 前回 change と同じ理由 (Compose 自身も `TextStyle` は既定値式で扱う)
 - **`skills/` (利用者向け Agent Skills) と README の追従** — 契約と利用コード例は蒸留で concepts (`core/styling/style-resolution.md` と platform 別 api 文書) に書き、docs-refresh スキルの既存経路 (`skills/.manifest.json` の `targets`) でユーザーの明示依頼により別途追従する
+- **MAUI facade の Section / Cell を MAUI の element ツリーへ繋ぎ、Cell プロパティの `AppThemeBinding` を外観変更で再評価させる改修** — tasks 0.1 の spike で `AppThemeBinding` が Cell では再評価されないと判明した (2026-09-06)。親子付けは BindingContext の継承など他の挙動へ波及する設計判断で、本 change の主題 (型統一と契約固定) と切り離す。`maui-appthemebinding-coverage` (簡易起票済み) に発見を合流させ、別途探索する
 - **前回 deviation.md の据え置き分のうち本 change が触らないファイル (`CellBaseLayout.kt` 等) の doc コメント掃除** — 触るファイルの範囲を超える。別途判断のまま
 
 ## Impact
@@ -37,8 +38,8 @@ fix-default-colors-dark-appearance ([core/ADR-0030](../../decisions/core/0030-th
 - **MAUI**: facade の公開面・wire 形式の変更なし。Android bridge の DTO → Cell 変換が `Unspecified` へ写る形に追随する
 - **利用者可視の変更**: なし (描画結果は 3 platform とも変えない)。Android の利用者が Cell 固有色に `null` を渡していた場合はコンパイルエラーになる
 - **リスク**: Android の `Color?` 読み出し箇所の追随漏れが `Unspecified.toArgb()` (透明な黒) として現れる。前回 change の付随修正で同型の漏れ (`EntryCellViewHolder` の placeholder) が実際に起きているため、tasks で消費者 (ViewHolder 6 箇所・`EffectiveStyle` 3 関数・DatePicker の sheet 色) を列挙し、`Unspecified` が ARGB へ落ちないことをテストで固定する
-- **ゲート**: MAUI の Cell 単位プロパティ (`AppThemeBinding`) が native の Cell 再適用まで届くかは未検証。tasks 0.1 の spike を実装の先頭で行い、届かなければ MAUI の契約 (手段 = `AppThemeBinding`) を書けないため探索へ戻す
-- 長命層: ADR-0030 の Context / Revisit When の前提訂正 (上記)。`core/styling/style-resolution.md` (未指定表現の記述を Cell 固有色まで正確に、明示色の追随手段を 4 経路で、`KsCheckBoxView` の CGColor 再解決の追記)、`android/api/android-native-host.md` / `android-compose.md` (Cell 固有色の型と Store 経路の差し替え例)、`ios/api/ios-native-host.md` (CellStyle の dynamic 色の例)、`maui/api/maui-styling.md` (Cell プロパティの `AppThemeBinding`)、`maui/api/native-bridge.md` (CellStyle DTO の輸送項目)。ADR-0030 Decision 3 に CellStyle への適用を一文追記 (蒸留で追随)
+- **ゲート**: tasks 0.1 の spike で MAUI の Cell 単位プロパティの直接代入が native の Cell 置換まで届くことは実証済み (iOS / Android)。`AppThemeBinding` は届かず、契約を「購読して再代入」に改めた (上記 Non-Goals)。ゲートは通過扱い (2026-09-06)
+- 長命層: ADR-0030 の Context / Revisit When の前提訂正 (上記)。`core/styling/style-resolution.md` (未指定表現の記述を Cell 固有色まで正確に、明示色の追随手段を 4 経路で、`KsCheckBoxView` の CGColor 再解決の追記)、`android/api/android-native-host.md` / `android-compose.md` (Cell 固有色の型と Store 経路の差し替え例)、`ios/api/ios-native-host.md` (CellStyle の dynamic 色の例)、`maui/api/maui-styling.md` (Cell プロパティの外観追随は `RequestedThemeChanged` 購読 + 再代入、`AppThemeBinding` は Cell では効かない旨)、`maui/api/native-bridge.md` (CellStyle DTO の輸送項目)。ADR-0030 Decision 3 に CellStyle への適用を一文追記 (蒸留で追随)
 
 ## 級: M
 

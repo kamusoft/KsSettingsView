@@ -128,7 +128,7 @@ internal class DatePickerCellViewHolder(
             todayText = cell.todayText,
             today = todayProvider,
             sheetStyle = sheetStyle,
-            actionColor = cell.androidButtonColor?.toArgb() ?: sheetStyle.accentColor,
+            actionColor = cell.androidButtonColor.toArgbOrElse(sheetStyle.accentColor),
             onConfirmed = { newDate -> cell.onValueChanged?.invoke(newDate) },
         ).showAnchoredTo(views.root)
     }
@@ -221,6 +221,6 @@ internal fun resolveDatePickerDialogColors(
     effective: EffectiveStyle,
 ): PickerDialogColors = PickerDialogColors(
     background = theme.backgroundColor.toArgb(),
-    accent = cell.accentColor?.toArgb() ?: effective.accentColor,
+    accent = cell.accentColor.toArgbOrElse(effective.accentColor),
     text = effective.titleColor,
 )

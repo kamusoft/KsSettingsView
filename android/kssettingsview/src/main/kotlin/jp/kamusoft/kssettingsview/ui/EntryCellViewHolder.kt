@@ -234,7 +234,7 @@ internal class EntryCellViewHolder(
 
         // accent 色: cell.accentColor → effective.accentColor。
         // API 29+ で textCursorDrawable に tint を適用する。
-        val accent = cell.accentColor?.toArgb() ?: effective.accentColor
+        val accent = cell.accentColor.toArgbOrElse(effective.accentColor)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             try {
                 val cursorDrawable = editText.textCursorDrawable

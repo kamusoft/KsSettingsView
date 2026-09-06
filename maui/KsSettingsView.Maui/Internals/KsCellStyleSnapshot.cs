@@ -4,8 +4,13 @@ namespace KsSettingsView.Internals;
 /// Cell 個別のスタイル上書きを interop 境界へ運ぶために写し取った値。
 /// </summary>
 /// <remarks>
-/// 項目は Native の CellStyle と 1 対 1 で対応する。色は ARGB を詰めた 32bit 整数、寸法は数値で表し、
+/// 写し取るのは Cell が CellStyle 段として公開する項目 — title / description / valueText / hint の
+/// 色とフォント、icon の寸法、行の高さ、行の背景色。色は ARGB を詰めた 32bit 整数、寸法は数値で表し、
 /// null は「未指定 → Theme から継承」を意味する。全項目が未指定の Cell では写し自体を作らない。
+///
+/// Native の CellStyle が持つ accent と placeholder の CellStyle 段はここに写らない。Cell の
+/// <c>AccentColor</c> / <c>PlaceholderColor</c> / <c>AndroidButtonColor</c> は Cell 固有段の値として
+/// Cell 種別ごとの写し (<see cref="KsSwitchCellSnapshot"/> / <see cref="KsEntryCellSnapshot"/> 等) が運ぶ。
 /// </remarks>
 internal sealed record KsCellStyleSnapshot
 {

@@ -265,7 +265,82 @@ class KsBridgeCellConversionTest {
         val bridge = KsBridgeFixture.withCells(listOf(KsBridgeEntryCell(title = "入力")))
 
         val cell: EntryCell? = KsBridgeFixture.storedCell(bridge)
-        assertNull(cell?.placeholderColor)
+        assertEquals(Color.Unspecified, cell?.placeholderColor)
+    }
+
+    // MARK: - Cell 固有色の未指定表現
+
+    /**
+     * 色項目が全て `null` の DTO は、Native 側の未指定表現（`Color.Unspecified`）へ写る。
+     *
+     * `null` を素の `Color(0)` へ写すと透明な黒になり、Theme / 外観の既定へ進む段が Cell 固有段で
+     * 止まる。Cell 固有色を 2 本持つ EntryCell / DatePickerCell を観測点にする。
+     */
+    @Test
+    fun `色項目が全て null の Cell DTO は Native の未指定になる`() {
+        val bridge = KsBridgeFixture.withCells(listOf(KsBridgeEntryCell(title = "入力")))
+        val entry: EntryCell? = KsBridgeFixture.storedCell(bridge)
+        assertEquals(Color.Unspecified, entry?.placeholderColor)
+        assertEquals(Color.Unspecified, entry?.accentColor)
+
+        val dateBridge = KsBridgeFixture.withCells(
+            listOf(KsBridgeDatePickerCell(title = "日付").apply { date = "2026-08-10" }),
+        )
+        val date: DatePickerCell? = KsBridgeFixture.storedCell(dateBridge)
+        assertEquals(Color.Unspecified, date?.accentColor)
+        assertEquals(Color.Unspecified, date?.androidButtonColor)
+    }
+
+    /** 明示された ARGB は同じ値の Native 色として保たれる。 */
+    @Test
+    fun `Cell DTO の明示 ARGB は同値の色として保たれる`() {
+        val dto = KsBridgeSwitchCell(title = "通知").apply { accentColor = opaqueGreen }
+        val bridge = KsBridgeFixture.withCells(listOf(dto))
+
+        val cell: SwitchCell? = KsBridgeFixture.storedCell(bridge)
+        assertEquals(opaqueGreenColor, cell?.accentColor)
+    }
+
+    /**
+     * MAUI の `PlaceholderColor` は Cell 固有段として届き、Theme の `cellPlaceholderColor` より
+     * 優先して解決される。
+     *
+     * placeholder は CellStyle 段を DTO で運ばないため、Cell 固有段と Theme 段の優先関係が
+     * 崩れると MAUI 側の指定が Theme に負ける。変換と解決を通しで観測する。
+     */
+    @Test
+    fun `MAUI の PlaceholderColor は Cell 固有段として Theme より優先する`() {
+        val themePlaceholder = 0xFF0000FF.toInt()
+        val dto = KsBridgeEntryCell(title = "入力").apply {
+            placeholder = "未入力"
+            placeholderColor = opaqueGreen
+        }
+        val bridge = KsBridgeFixture.withCells(listOf(dto))
+        bridge.setTheme(KsBridgeTheme().apply { cellPlaceholderColor = themePlaceholder })
+
+        val cell = requireNotNull(KsBridgeFixture.storedCell<EntryCell>(bridge))
+        assertEquals("Cell 固有段へ届いていない", opaqueGreenColor, cell.placeholderColor)
+
+        val host = KsBridgeTestHost.attach(bridge).also { attachment = it }
+        val editText = requireNotNull(findEditText(host.recyclerView)) { "EntryCell の入力欄が見つからない" }
+
+        assertEquals(
+            "Theme の placeholder が Cell 固有段より優先している",
+            opaqueGreen,
+            editText.currentHintTextColor,
+        )
+    }
+
+    /** 行の View ツリーから最初の入力欄を取り出す。 */
+    private fun findEditText(root: android.view.ViewGroup): android.widget.EditText? {
+        for (index in 0 until root.childCount) {
+            when (val child: android.view.View = root.getChildAt(index)) {
+                is android.widget.EditText -> return child
+                is android.view.ViewGroup -> findEditText(child)?.let { return it }
+                else -> Unit
+            }
+        }
+        return null
     }
 
     /** 単一選択モードの PickerCell DTO が index 輸送で Native へ写される。 */

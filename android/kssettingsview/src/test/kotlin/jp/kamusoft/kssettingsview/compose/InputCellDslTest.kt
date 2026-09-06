@@ -105,14 +105,14 @@ class InputCellDslTest {
     }
 
     @Test
-    fun `EntryCell DSL placeholderColor 未指定は null のまま`() {
+    fun `EntryCell DSL placeholderColor 未指定は Unspecified のまま`() {
         val text = mutableStateOf("")
         val scope = DSLSettingsRootScope()
         scope.Section {
             EntryCell(title = "x", text = text, placeholder = "p")
         }
         val tree = scope.build()
-        assertNull((tree[0].cellNodes[0].cell as EntryCell).placeholderColor)
+        assertEquals(Color.Unspecified, (tree[0].cellNodes[0].cell as EntryCell).placeholderColor)
     }
 
     // MARK: - PickerCell single
@@ -324,5 +324,70 @@ class InputCellDslTest {
         assertTrue(cells[2] is NumberPickerCell)
         assertTrue(cells[3] is TimePickerCell)
         assertTrue(cells[4] is DatePickerCell)
+    }
+
+    // MARK: - 色引数の省略
+
+    /**
+     * DSL の色引数は省略すると未指定（`Color.Unspecified`）になる。
+     *
+     * 既定値が具体色へ退行すると、`CellStyle` / `Theme` / 外観の既定へ進む段が Cell 固有段で
+     * 止まる。入力系が持つ 7 本すべてを観測する。
+     */
+    @Test
+    fun `入力系 Cell の DSL は色引数を省略すると未指定になる`() {
+        val text = mutableStateOf("")
+        val selSingle = mutableStateOf<Int?>(0)
+        val volume = mutableStateOf(0)
+        val time = mutableStateOf(LocalTime.NOON)
+        val date = mutableStateOf(LocalDate.of(2026, 1, 1))
+        val scope = DSLSettingsRootScope()
+        scope.Section(header = "省略") {
+            EntryCell(title = "entry", text = text)
+            PickerCell(title = "picker", items = listOf("A"), selectedIndex = selSingle)
+            NumberPickerCell(title = "number", value = volume)
+            TimePickerCell(title = "time", time = time)
+            DatePickerCell(title = "date", date = date)
+        }
+        val cells = scope.build()[0].cellNodes.map { it.cell }
+
+        val entry = cells[0] as EntryCell
+        assertEquals(Color.Unspecified, entry.accentColor)
+        assertEquals(Color.Unspecified, entry.placeholderColor)
+        assertEquals(Color.Unspecified, (cells[1] as PickerCell).accentColor)
+        assertEquals(Color.Unspecified, (cells[2] as NumberPickerCell).accentColor)
+        assertEquals(Color.Unspecified, (cells[3] as TimePickerCell).accentColor)
+        val datePicker = cells[4] as DatePickerCell
+        assertEquals(Color.Unspecified, datePicker.accentColor)
+        assertEquals(Color.Unspecified, datePicker.androidButtonColor)
+    }
+
+    @Test
+    fun `入力系 Cell の DSL は明示した色引数をそのまま渡す`() {
+        val explicit = Color(0xFF12AB34)
+        val text = mutableStateOf("")
+        val selSingle = mutableStateOf<Int?>(0)
+        val volume = mutableStateOf(0)
+        val time = mutableStateOf(LocalTime.NOON)
+        val date = mutableStateOf(LocalDate.of(2026, 1, 1))
+        val scope = DSLSettingsRootScope()
+        scope.Section(header = "明示") {
+            EntryCell(title = "entry", text = text, accentColor = explicit, placeholderColor = explicit)
+            PickerCell(title = "picker", items = listOf("A"), selectedIndex = selSingle, accentColor = explicit)
+            NumberPickerCell(title = "number", value = volume, accentColor = explicit)
+            TimePickerCell(title = "time", time = time, accentColor = explicit)
+            DatePickerCell(title = "date", date = date, accentColor = explicit, androidButtonColor = explicit)
+        }
+        val cells = scope.build()[0].cellNodes.map { it.cell }
+
+        val entry = cells[0] as EntryCell
+        assertEquals(explicit, entry.accentColor)
+        assertEquals(explicit, entry.placeholderColor)
+        assertEquals(explicit, (cells[1] as PickerCell).accentColor)
+        assertEquals(explicit, (cells[2] as NumberPickerCell).accentColor)
+        assertEquals(explicit, (cells[3] as TimePickerCell).accentColor)
+        val datePicker = cells[4] as DatePickerCell
+        assertEquals(explicit, datePicker.accentColor)
+        assertEquals(explicit, datePicker.androidButtonColor)
     }
 }

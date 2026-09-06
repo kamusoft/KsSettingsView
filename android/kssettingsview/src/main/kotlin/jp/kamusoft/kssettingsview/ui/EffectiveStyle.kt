@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Typeface
 import androidx.annotation.ColorInt
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.TextStyle
@@ -329,13 +330,10 @@ internal data class EffectiveStyle(
          *   4. プラットフォーム既定（`Color.Unspecified`）
          */
         fun effectivePlaceholderColor(
-            entryPlaceholderColor: Color?,
+            entryPlaceholderColor: Color,
             cellStyle: CellStyle,
             theme: Theme,
-        ): Color {
-            entryPlaceholderColor?.let { return it }
-            return effectivePlaceholderColor(cellStyle, theme)
-        }
+        ): Color = entryPlaceholderColor.takeOrElse { effectivePlaceholderColor(cellStyle, theme) }
 
         /**
          * アイコンサイズ（正方形の一辺 dp）を解決する。
@@ -434,16 +432,14 @@ internal data class EffectiveStyle(
          * View 系 (TextView 等) の本番描画では [effectiveButtonTitleColorArgb] を使うこと。
          */
         fun effectiveButtonTitleColor(
-            buttonCellTitleColor: Color?,
+            buttonCellTitleColor: Color,
             cellStyle: CellStyle,
             theme: Theme,
             darkTheme: Boolean,
-        ): Color {
-            buttonCellTitleColor?.let { return it }
-            return cellStyle.titleColor
-                .takeOrElse { theme.cellTitleColor }
-                .takeOrElse { KsThemePalette.buttonTitle(darkTheme) }
-        }
+        ): Color = buttonCellTitleColor
+            .takeOrElse { cellStyle.titleColor }
+            .takeOrElse { theme.cellTitleColor }
+            .takeOrElse { KsThemePalette.buttonTitle(darkTheme) }
 
         /**
          * `ButtonCell.titleColor` 用の 4 段優先タイトル色解決（Android View 系、ARGB Int を返す）。
@@ -459,7 +455,7 @@ internal data class EffectiveStyle(
          */
         @ColorInt
         fun effectiveButtonTitleColorArgb(
-            buttonCellTitleColor: Color?,
+            buttonCellTitleColor: Color,
             cellStyle: CellStyle,
             theme: Theme,
             darkTheme: Boolean,
@@ -510,6 +506,17 @@ internal data class EffectiveStyle(
             if (isHeader) effectiveHeaderFont(theme) else effectiveFooterFont(theme)
     }
 }
+
+/**
+ * Cell 固有の色を View 系の ARGB へ落とす。
+ *
+ * 未指定（`Color.Unspecified`）の色は ARGB へ変換せず、次の段で解決済みの [fallbackArgb] を返す。
+ * `Color.Unspecified` をそのまま `toArgb()` に掛けると透明な黒になり、未指定の意味が失われるため、
+ * Cell 固有色を ARGB で消費する箇所はこのヘルパを通す。
+ */
+@ColorInt
+internal fun Color.toArgbOrElse(@ColorInt fallbackArgb: Int): Int =
+    if (isSpecified) toArgb() else fallbackArgb
 
 /**
  * Compose `TextStyle` から Android `Typeface` を解決する。

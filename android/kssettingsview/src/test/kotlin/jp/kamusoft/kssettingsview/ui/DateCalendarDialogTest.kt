@@ -517,7 +517,7 @@ class DateCalendarDialogTest {
     fun `アクセント色は Cell 未指定なら CellStyle へフォールバックする`() {
         val theme = Theme(cellAccentColor = ComposeColor(0xFF00FF00))
         val cellStyle = CellStyle(accentColor = ComposeColor(0xFF0000FF))
-        val cell = DatePickerCell(title = "予約日", style = cellStyle, accentColor = null)
+        val cell = DatePickerCell(title = "予約日", style = cellStyle, accentColor = ComposeColor.Unspecified)
         val effective = EffectiveStyle.from(theme, cellStyle, darkTheme = false)
 
         val resolved = viewHolder().resolveDialogColors(cell, theme, effective)
@@ -529,7 +529,7 @@ class DateCalendarDialogTest {
     fun `アクセント色は CellStyle 未指定なら Theme へフォールバックする`() {
         val theme = Theme(cellAccentColor = ComposeColor(0xFF00FF00))
         val cellStyle = CellStyle()
-        val cell = DatePickerCell(title = "予約日", accentColor = null)
+        val cell = DatePickerCell(title = "予約日", accentColor = ComposeColor.Unspecified)
         val effective = EffectiveStyle.from(theme, cellStyle, darkTheme = false)
 
         val resolved = viewHolder().resolveDialogColors(cell, theme, effective)

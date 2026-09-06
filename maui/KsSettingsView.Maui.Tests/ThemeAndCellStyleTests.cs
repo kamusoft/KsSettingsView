@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using KsSettingsView.Internals;
 using KsSettingsView.Tests.Fakes;
@@ -278,5 +279,102 @@ public class ThemeAndCellStyleTests
         Assert.That(
             scope.Single<GatewayCall.SetTheme>().Theme.CellPlaceholderColor,
             Is.EqualTo(unchecked((int)0xFF008000)));
+    }
+
+    // ---- 表示中の色プロパティの変更 ----
+
+    /// <summary>表示中に設定したタイトル色は、その Cell だけの置き換えとして色ごと届く。</summary>
+    [Test]
+    public void TitleColorChangeWhileConnectedIsDeliveredAsCellReplacement()
+    {
+        LabelCell cell = new() { Title = "label" };
+        Section section = new() { Cells = { cell } };
+        SettingsView view = new() { Root = { section } };
+        GatewayScope scope = GatewayScope.Connect(view).Reset();
+        string cellId = view.Controller.FindCellId(cell)!;
+
+        cell.TitleColor = Colors.Red;
+        scope.Flush();
+
+        GatewayCall.ReplaceCell call = scope.Single<GatewayCall.ReplaceCell>();
+        Assert.That(call.CellId, Is.EqualTo(cellId));
+        Assert.That(call.Snapshot.Style!.TitleColor, Is.EqualTo(KsWireValues.Color(Colors.Red)));
+        Assert.That(scope.All<GatewayCall.ReplaceCells>(), Is.Empty);
+    }
+
+    /// <summary>タイトル色を未指定へ戻すと、継承だけを意味する内容として届く。</summary>
+    [Test]
+    public void ClearedTitleColorIsDeliveredAsUnspecified()
+    {
+        LabelCell cell = new() { Title = "label", TitleColor = Colors.Red };
+        Section section = new() { Cells = { cell } };
+        SettingsView view = new() { Root = { section } };
+        GatewayScope scope = GatewayScope.Connect(view).Reset();
+
+        cell.TitleColor = null;
+        scope.Flush();
+
+        // 他に指定が無いので、写しの style そのものが作られない (= 全項目が未指定)。
+        Assert.That(scope.Single<GatewayCall.ReplaceCell>().Snapshot.Style, Is.Null);
+    }
+
+    /// <summary>表示中に設定した Cell 固有色も、それぞれの Cell の置き換えとして色ごと届く。</summary>
+    [Test]
+    public void CellSpecificColorChangeWhileConnectedIsDeliveredAsCellReplacement()
+    {
+        SwitchCell switchCell = new();
+        EntryCell entry = new();
+        DatePickerCell datePicker = new();
+        Section section = new() { Cells = { switchCell, entry, datePicker } };
+        SettingsView view = new() { Root = { section } };
+        GatewayScope scope = GatewayScope.Connect(view).Reset();
+
+        switchCell.AccentColor = Colors.Red;
+        entry.PlaceholderColor = Colors.Blue;
+        datePicker.AndroidButtonColor = Colors.Green;
+        scope.Flush();
+
+        IReadOnlyList<GatewayCall.CellUpdate> updates = scope.Single<GatewayCall.ReplaceCells>().Updates;
+        Assert.That(
+            updates.Select(update => update.CellId),
+            Is.EqualTo(new[]
+            {
+                view.Controller.FindCellId(switchCell)!,
+                view.Controller.FindCellId(entry)!,
+                view.Controller.FindCellId(datePicker)!,
+            }));
+        Assert.That(
+            ((KsSwitchCellSnapshot)updates[0].Snapshot).AccentColor,
+            Is.EqualTo(KsWireValues.Color(Colors.Red)));
+        Assert.That(
+            ((KsEntryCellSnapshot)updates[1].Snapshot).PlaceholderColor,
+            Is.EqualTo(KsWireValues.Color(Colors.Blue)));
+        Assert.That(
+            ((KsDatePickerCellSnapshot)updates[2].Snapshot).AndroidButtonColor,
+            Is.EqualTo(KsWireValues.Color(Colors.Green)));
+    }
+
+    /// <summary>CustomCell のテキスト系の色は配信を起こさず、行の背景色だけが届く。</summary>
+    [Test]
+    public void CustomCellTextStyleChangeIsNotDeliveredButRowStyleIs()
+    {
+        CustomCell cell = new() { Content = new Label() };
+        Section section = new() { Cells = { cell } };
+        SettingsView view = new() { Root = { section } };
+        GatewayScope scope = GatewayScope.Connect(view);
+        scope.Attach();
+        scope.Reset();
+
+        cell.TitleColor = Colors.Red;
+        scope.Flush();
+
+        Assert.That(scope.Calls, Is.Empty);
+
+        cell.BackgroundColor = Colors.Blue;
+        scope.Flush();
+
+        Assert.That(
+            scope.Single<GatewayCall.ReplaceCell>().Snapshot.Style!.BackgroundColor,
+            Is.EqualTo(KsWireValues.Color(Colors.Blue)));
     }
 }

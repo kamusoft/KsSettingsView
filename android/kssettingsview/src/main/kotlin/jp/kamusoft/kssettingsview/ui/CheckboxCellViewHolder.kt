@@ -3,7 +3,6 @@ package jp.kamusoft.kssettingsview.ui
 import android.content.res.ColorStateList
 import android.view.ViewGroup
 import android.widget.FrameLayout
-import androidx.compose.ui.graphics.toArgb
 import com.google.android.material.checkbox.MaterialCheckBox
 
 /**
@@ -38,7 +37,7 @@ internal class CheckboxCellViewHolder(
         checkBox.setOnCheckedChangeListener(null)
         checkBox.isChecked = cell.isChecked
 
-        val accent = cell.accentColor?.toArgb() ?: effective.accentColor
+        val accent = cell.accentColor.toArgbOrElse(effective.accentColor)
         checkBox.buttonTintList = ColorStateList.valueOf(accent)
 
         currentHandler = cell.onValueChanged

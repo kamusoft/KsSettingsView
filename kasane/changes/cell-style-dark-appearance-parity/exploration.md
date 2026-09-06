@@ -66,7 +66,7 @@ A で利用者が書く形 (concepts の利用コード例の材料):
 
 - (解決済み 2026-09-06) 「ライブラリは未配信」の前提は誤りで、Android は `0.1.0-beta.1` (2026-09-04) 配信済みだった (相方レビューの指摘)。オーナー裁定: beta 期間中の破壊的変更として受容、互換経路は作らない (proposal Impact)
 
-- MAUI の Cell 側 `AppThemeBinding` の到達性 (spike で確定)
+- (解決済み 2026-09-06) MAUI の Cell 側 `AppThemeBinding` の到達性: tasks 0.1 の spike で「届かない」(Section / Cell が element ツリー外のため再評価されない。直接代入は届く)。オーナー裁定で MAUI の手段を「`RequestedThemeChanged` 購読 + 再代入」に改めて続行、`AppThemeBinding` を効かせる改修は `maui-appthemebinding-coverage` へ合流
 - `KsBridgeCellStyle` に placeholderColor を足すとき、MAUI facade 側 (`KsCellStyleSnapshot`) に CellStyle 段の placeholder を持たせるか、Cell 固有の `EntryCell.PlaceholderColor` だけで足りるとして DTO のみ埋めるか (propose で決める。MAUI は CellStyle 段と Cell 固有段を区別しない設計なので後者が有力)
 - 前回 deviation.md:21 の据え置き (ButtonCell.kt / CellBaseLayout.kt / RadioCell.kt 等の doc コメントの ADR 参照除去) を、同じファイルに触るついでに含めるか
 - iOS の Store / UIKit 直接利用で固定色を渡した場合の挙動 (固定のまま) をテストで固定するか (自明のため契約文のみでよい可能性)
@@ -76,6 +76,9 @@ A で利用者が書く形 (concepts の利用コード例の材料):
 なし (新規デザインなし。MAUI サンプルの追随は既存の見た目に合わせる視覚照合のみで、承認モックは不要)
 
 ## 変更級の推奨: M (2026-09-06 オーナー確定)
+
+(以下は探索時点の見積もり。propose で `placeholderColor` の DTO 追加と MAUI Sample の `AppThemeBinding` 化は Non-Goal に外れ、spike と裁定で MAUI の手段は再代入に改まった — 現行スコープは proposal.md が正)
+
 
 - 触る能力: Android UI (12 本の型変更 + 解決関数)、bridge (Android 変換 + placeholderColor DTO 欠落を iOS / Android DTO と MAUI snapshot に追加)、samples-maui (XAML を `AppThemeBinding` に)、tests 3 面 (明示 CellStyle 色 × 外観)、concepts 4〜5 文書。複数能力横断
 - 公開 API: Android の Cell 固有色の型変更 (破壊的、未配信前提)。MAUI facade・iOS は変更なし

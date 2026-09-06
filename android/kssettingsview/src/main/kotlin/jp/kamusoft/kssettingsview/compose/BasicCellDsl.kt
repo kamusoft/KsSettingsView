@@ -23,8 +23,8 @@ import jp.kamusoft.kssettingsview.ui.SwitchCell
  * Cell modifier chain が可能。
  *
  * `CellStyle` / `KsImage` は Core ではなく UI 層（`jp.kamusoft.kssettingsview.ui` パッケージ）に
- * 属し、色の引数は
- * Compose の [Color]? をそのまま受ける（core/ADR-0009）。
+ * 属し、色の引数は Compose の [Color] をそのまま受ける。省略した色引数は
+ * [Color.Unspecified]（未指定）になり、`CellStyle` / `Theme` / 外観の既定へ順に解決する。
  */
 
 // =============================================================================
@@ -80,7 +80,7 @@ private fun buildButtonCell(
     valueText: String?,
     icon: KsImage?,
     hintText: String?,
-    titleColor: Color?,
+    titleColor: Color,
     style: CellStyle,
     onTap: (() -> Unit)?,
     titleAlignment: CellTitleAlignment,
@@ -106,7 +106,7 @@ private fun buildSwitchCell(
     icon: KsImage?,
     hintText: String?,
     isOn: Boolean,
-    accentColor: Color?,
+    accentColor: Color,
     style: CellStyle,
     onValueChanged: ((Boolean) -> Unit)?,
     isEnabled: Boolean,
@@ -132,7 +132,7 @@ private fun buildCheckboxCell(
     icon: KsImage?,
     hintText: String?,
     isChecked: Boolean,
-    accentColor: Color?,
+    accentColor: Color,
     style: CellStyle,
     onValueChanged: ((Boolean) -> Unit)?,
     isEnabled: Boolean,
@@ -160,7 +160,7 @@ private fun buildRadioCell(
     groupId: String,
     value: String,
     selectedValue: String,
-    accentColor: Color?,
+    accentColor: Color,
     style: CellStyle,
     onSelected: ((String) -> Unit)?,
     isEnabled: Boolean,
@@ -188,7 +188,7 @@ private fun buildSimpleCheckCell(
     icon: KsImage?,
     hintText: String?,
     isChecked: Boolean,
-    accentColor: Color?,
+    accentColor: Color,
     style: CellStyle,
     onValueChanged: ((Boolean) -> Unit)?,
     isEnabled: Boolean,
@@ -267,7 +267,7 @@ public fun DSLSectionScope.ButtonCell(
     valueText: String? = null,
     icon: KsImage? = null,
     hintText: String? = null,
-    titleColor: Color? = null,
+    titleColor: Color = Color.Unspecified,
     style: CellStyle = CellStyle(),
     onTap: (() -> Unit)? = null,
     titleAlignment: CellTitleAlignment = CellTitleAlignment.CENTER,
@@ -300,7 +300,7 @@ public fun DSLSectionScope.SwitchCell(
     valueText: String? = null,
     icon: KsImage? = null,
     hintText: String? = null,
-    accentColor: Color? = null,
+    accentColor: Color = Color.Unspecified,
     style: CellStyle = CellStyle(),
     isEnabled: Boolean = true,
     isVisible: Boolean = true,
@@ -328,7 +328,7 @@ public fun DSLSectionScope.SwitchCell(
     valueText: String? = null,
     icon: KsImage? = null,
     hintText: String? = null,
-    accentColor: Color? = null,
+    accentColor: Color = Color.Unspecified,
     style: CellStyle = CellStyle(),
     onValueChanged: ((Boolean) -> Unit)? = null,
     isEnabled: Boolean = true,
@@ -357,7 +357,7 @@ public fun DSLSectionScope.CheckboxCell(
     valueText: String? = null,
     icon: KsImage? = null,
     hintText: String? = null,
-    accentColor: Color? = null,
+    accentColor: Color = Color.Unspecified,
     style: CellStyle = CellStyle(),
     onValueChanged: ((Boolean) -> Unit)? = null,
     isEnabled: Boolean = true,
@@ -388,7 +388,7 @@ public fun DSLSectionScope.RadioCell(
     valueText: String? = null,
     icon: KsImage? = null,
     hintText: String? = null,
-    accentColor: Color? = null,
+    accentColor: Color = Color.Unspecified,
     style: CellStyle = CellStyle(),
     onSelected: ((String) -> Unit)? = null,
     isEnabled: Boolean = true,
@@ -419,7 +419,7 @@ public fun DSLSectionScope.SimpleCheckCell(
     valueText: String? = null,
     icon: KsImage? = null,
     hintText: String? = null,
-    accentColor: Color? = null,
+    accentColor: Color = Color.Unspecified,
     style: CellStyle = CellStyle(),
     onValueChanged: ((Boolean) -> Unit)? = null,
     isEnabled: Boolean = true,

@@ -166,17 +166,48 @@ private fun collectTexts(view: View): List<String> = when (view) {
 }
 
 /**
- * `onItemRangeChanged` の position と payload を記録する Observer。
+ * Adapter が発行した変更通知を、種別込みで発行順に記録する Observer。
  *
  * payload なしの `notifyItemChanged(position)` も 3 引数版へ payload = null で届くため、
  * 記録された payload が非 null であることが「payload 付き通知」の証拠になる。
+ *
+ * 内容更新の経路が構造 Diff（remove + insert）へ退行したかどうかは、行の `ViewHolder` の
+ * インスタンス同一性では観測できない。旧 `ViewHolder` は `RecycledViewPool` へ戻り、同じ
+ * viewType の insert がそこから同じインスタンスを引き当てるうえ、`KsSettingsView` は
+ * `supportsChangeAnimations = false` を設定しているため payload の有無に関わらず
+ * `ViewHolder` は再利用される。観測できるのは Adapter が発行した通知の種別そのものなので、
+ * [notifications] に内容更新以外（挿入・削除・移動・全体更新）が混ざっていないことで判定する。
  */
 internal class ChangeRecordingObserver : RecyclerView.AdapterDataObserver() {
     val changedPositions = mutableListOf<Int>()
     val payloads = mutableListOf<Any?>()
 
+    /** 受け取った通知を発行順に並べた要約。内容更新だけが `changed(...)` で始まる。 */
+    val notifications = mutableListOf<String>()
+
+    /** 内容更新 (`changed(...)`) 以外の通知。空であれば行は作り直されていない。 */
+    val structuralNotifications: List<String>
+        get() = notifications.filterNot { it.startsWith("changed(") }
+
+    override fun onChanged() {
+        notifications += "reset"
+    }
+
     override fun onItemRangeChanged(positionStart: Int, itemCount: Int, payload: Any?) {
         changedPositions += positionStart
         payloads += payload
+        notifications += "changed($positionStart,$itemCount,payload=$payload)"
+    }
+
+    override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
+        notifications += "inserted($positionStart,$itemCount)"
+    }
+
+    override fun onItemRangeRemoved(positionStart: Int, itemCount: Int) {
+        notifications += "removed($positionStart,$itemCount)"
+    }
+
+    override fun onItemRangeMoved(fromPosition: Int, toPosition: Int, itemCount: Int) {
+        notifications += "moved($fromPosition,$toPosition,$itemCount)"
     }
 }

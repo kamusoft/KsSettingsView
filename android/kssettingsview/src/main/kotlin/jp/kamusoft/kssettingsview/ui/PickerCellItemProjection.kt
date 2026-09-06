@@ -6,7 +6,7 @@ import androidx.compose.ui.graphics.Color
  * 任意の要素型 `T` を候補として渡すためのジェネリック factory 群と、その String 特殊化。
  *
  * 縁は構築時に要素列をコピーして捕捉し、表示用の [PickerItem] 列へ射影する。要素型はここから
- * 外（モデル・描画・equality・輸送）へは現れず、選択の正は index のままである（core/ADR-0029）。
+ * 外（モデル・描画・equality・輸送）へは現れず、選択の正は index のままである。
  * 確定操作では index の書き戻し（index callback）が先、元要素の callback が後に走る。
  */
 
@@ -37,7 +37,7 @@ public fun <T> PickerCell(
     subText: ((T) -> String?)? = null,
     selectedIndex: Int? = null,
     pageTitle: String? = null,
-    accentColor: Color? = null,
+    accentColor: Color = Color.Unspecified,
     onSelectionChanged: ((Int) -> Unit)? = null,
     onItemSelected: ((T) -> Unit)? = null,
     isEnabled: Boolean = true,
@@ -87,7 +87,7 @@ public fun <T> PickerCell(
     selectedIndices: Set<Int>,
     maxSelectedNumber: Int = 0,
     pageTitle: String? = null,
-    accentColor: Color? = null,
+    accentColor: Color = Color.Unspecified,
     onMultiSelectionChanged: ((Set<Int>) -> Unit)? = null,
     onItemsSelected: ((List<T>) -> Unit)? = null,
     isEnabled: Boolean = true,
@@ -131,7 +131,7 @@ public fun PickerCell(
     subText: ((String) -> String?)? = null,
     selectedIndex: Int? = null,
     pageTitle: String? = null,
-    accentColor: Color? = null,
+    accentColor: Color = Color.Unspecified,
     onSelectionChanged: ((Int) -> Unit)? = null,
     onItemSelected: ((String) -> Unit)? = null,
     isEnabled: Boolean = true,
@@ -170,7 +170,7 @@ public fun PickerCell(
     selectedIndices: Set<Int>,
     maxSelectedNumber: Int = 0,
     pageTitle: String? = null,
-    accentColor: Color? = null,
+    accentColor: Color = Color.Unspecified,
     onMultiSelectionChanged: ((Set<Int>) -> Unit)? = null,
     onItemsSelected: ((List<String>) -> Unit)? = null,
     isEnabled: Boolean = true,
