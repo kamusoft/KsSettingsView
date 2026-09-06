@@ -160,7 +160,7 @@ AiForms は `ButtonCell` で `Description` とそのフォント系プロパテ�
 | `EntryCell.MaxLength` (`int`, -1) | `EntryCell.MaxLength` (`int?`) | 旧は -1 が無制限、新は null が無制限 |
 | `EntryCell.Keyboard` | `EntryCell.Keyboard` (`Keyboard?`) | `Microsoft.Maui.Keyboard` のまま |
 | `EntryCell.Placeholder` | `EntryCell.Placeholder` | |
-| `EntryCell.PlaceholderColor` | `EntryCell.PlaceholderColor` (`Color?`) | この値 → `SettingsView.CellPlaceholderColor` → OS 既定の順で解決する。OS 既定はダークモードに自動追従する |
+| `EntryCell.PlaceholderColor` | `EntryCell.PlaceholderColor` (`Color?`) | この値 → `SettingsView.CellPlaceholderColor` → platform の既定の順で解決する。最終段は iOS が `UITextField` の既定 placeholder 色、Android はライブラリ同梱テーマ (Material3 の DayNight 派生) の hint 色で、どちらも外観 (ダークモード) に追随する。Android の既定はホストアプリの XML テーマからは引かないので、ホスト側で Dark 系テーマを指定しても placeholder の色はそれには追随せず、端末の夜間モードとアプリの uiMode 制御 (`AppCompatDelegate.setDefaultNightMode` 等) で切り替わる |
 | `EntryCell.TextAlignment` (`TextAlignment`、`End`) | `EntryCell.TextAlignment` (`TextAlignment?`) | 旧の既定は `End`。新は null で platform 既定 |
 | `EntryCell.AccentColor` (`Color`) | `EntryCell.AccentColor` (`Color?`) | |
 | `EntryCell.IsPassword` | `EntryCell.IsPassword` | |
@@ -276,7 +276,7 @@ AiForms は `ButtonCell` で `Description` とそのフォント系プロパテ�
 | `CellDescriptionColor` / `CellDescriptionFontSize` / `CellDescriptionFontFamily` / `CellDescriptionFontAttributes` | 同名・nullable | |
 | `CellValueTextColor` / `CellValueTextFontSize` / `CellValueTextFontFamily` / `CellValueTextFontAttributes` | 同名・nullable | |
 | `CellHintTextColor` / `CellHintFontSize` / `CellHintFontFamily` / `CellHintFontAttributes` | 同名・nullable | |
-| (新規) | `CellPlaceholderColor` (`Color?`) | Entry の placeholder 色の画面全体既定。Cell 単位の `EntryCell.PlaceholderColor` が優先し、null は OS 既定へ抜ける |
+| (新規) | `CellPlaceholderColor` (`Color?`) | Entry の placeholder 色の画面全体既定。Cell 単位の `EntryCell.PlaceholderColor` が優先し、null は platform の既定へ抜ける (最終段の出どころは `EntryCell.PlaceholderColor` の行を参照) |
 | `CellBackgroundColor` (`Color`) | `CellBackgroundColor` (`Color?`) | |
 | `CellAccentColor` (`Color`) | `CellAccentColor` (`Color?`) | |
 | `CellIconSize` (`Size`) | `CellIconSize` (`double?`) | Cell 側と同じく 1 つの数値 |
@@ -294,7 +294,7 @@ AiForms は `ButtonCell` で `Description` とそのフォント系プロパテ�
 
 AiForms では色を設定しないときの既定は固定値だった — `Section.TextColor` の既定は `Colors.Black` で、他のプロパティの裏にある画面全体の既定値も固定値である。KsSettingsView では null のままの色が端末の外観 — iOS のライト / ダーク、Android の夜間モード — に応じたライブラリ既定へ解決される。そのため色を 1 つも設定していない移行後の画面も、こちらで何も足さずにダークで判読できる配色で描かれる。設定した色は両方の外観でそのまま描かれ、ライブラリが別の既定値へ置き換えることはない。
 
-注意が要るのは、XAML にライト向けの配色を持ち込んでいる画面 — AiForms の見た目を固定するために `Cell*` の色を書き写した画面である。その値はダークでも適用され、ダーク端末でライト画面のまま見える。外観に追随する既定に任せるならプロパティを消し、自分で決めるなら `AppThemeBinding` で両外観を書く。この markup extension は AiForms のプロパティに使えたのと同じようにこれらのプロパティにも効くので、すでに使っている画面は prefix の変更だけで移せる。ライブラリの既定色は AiForms の配色ではないため、旧来の見た目を再現するなら色を明示し、そのうえでダークに何を見せるかを決めることになる。
+注意が要るのは、XAML にライト向けの配色を持ち込んでいる画面 — AiForms の見た目を固定するために `Cell*` や Cell 側の色を書き写した画面である。その値はダークでも適用され、ダーク端末でライト画面のまま見える。外観に追随する既定に任せるならプロパティを消し、自分で決めるなら両外観の値を与える。`SettingsView` の画面全体の色プロパティ (`Cell*` など) は `AppThemeBinding` で書ける。この markup extension は AiForms の同名プロパティに使えたのと同じようにここでも効くので、画面全体の色に使っていた画面は prefix の変更だけで移せる。ライブラリの既定色は AiForms の配色ではないため、旧来の見た目を再現するなら色を明示し、そのうえでダークに何を見せるかを決めることになる。
 
 ```xml
 <ks:SettingsView BackgroundColor="{AppThemeBinding Light=#F2F2F7, Dark=#000000}"
@@ -307,7 +307,7 @@ AiForms では色を設定しないときの既定は固定値だった — `Sec
 </ks:SettingsView>
 ```
 
-同じ markup extension は Cell ごとの上書きにも `AccentColor` にも使える。新規に書く画面向けの同じ話題は kssettingsview-maui Skill のスタイル reference の「ライト / ダーク外観に追随させる」が扱う。
+Cell 側の色プロパティ (`TitleColor` などの `CellBase` の色と、`AccentColor` / `PlaceholderColor` / `AndroidButtonColor` のように Cell 種別が意味として持つ色) は事情が違う。ここに書いた `AppThemeBinding` は外観が切り替わっても評価し直されない — `Section` と Cell はコントロールへ渡すデータであってページのツリーの要素ではなく、ツリーの外にあるバインドには外観の変化が伝わらないためである。AiForms の Cell で `AppThemeBinding` を使っていた画面は、`Application.RequestedThemeChanged` を購読して現在の外観の色をプロパティへ入れ直す形へ書き換える。入れ直しはその Cell の内容更新として表示中の行まで届く。完動するコードは kssettingsview-maui Skill のスタイル reference の「Cell 1 つの色を外観に合わせて変える」にある。新規に書く画面向けの画面全体の話題は同 reference の「ライト / ダーク外観に追随させる」が扱う。
 
 ## Header / Footer の設定を移す
 

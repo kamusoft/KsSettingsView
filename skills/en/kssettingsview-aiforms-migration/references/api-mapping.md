@@ -160,7 +160,7 @@ Cells generated from a collection need one more step. Each generated cell takes 
 | `EntryCell.MaxLength` (`int`, -1) | `EntryCell.MaxLength` (`int?`) | -1 meant no limit; null means no limit |
 | `EntryCell.Keyboard` | `EntryCell.Keyboard` (`Keyboard?`) | Still `Microsoft.Maui.Keyboard` |
 | `EntryCell.Placeholder` | `EntryCell.Placeholder` | |
-| `EntryCell.PlaceholderColor` | `EntryCell.PlaceholderColor` (`Color?`) | Resolved as this value, then `SettingsView.CellPlaceholderColor`, then the OS default - which follows dark mode on its own |
+| `EntryCell.PlaceholderColor` | `EntryCell.PlaceholderColor` (`Color?`) | Resolved as this value, then `SettingsView.CellPlaceholderColor`, then the platform default. That last step is the `UITextField` default placeholder color on iOS and the hint color of the theme the library bundles (derived from Material3 DayNight) on Android; both follow the appearance (dark mode). The Android default is not read from the host app's XML theme, so declaring a dark theme there does not move the placeholder color; it switches with the device night mode and the app's own uiMode control (`AppCompatDelegate.setDefaultNightMode` and the like) instead |
 | `EntryCell.TextAlignment` (`TextAlignment`, `End`) | `EntryCell.TextAlignment` (`TextAlignment?`) | The old default was `End`; null now takes the platform default |
 | `EntryCell.AccentColor` (`Color`) | `EntryCell.AccentColor` (`Color?`) | |
 | `EntryCell.IsPassword` | `EntryCell.IsPassword` | |
@@ -276,7 +276,7 @@ The `Cell*` defaults keep their names one for one. As on the cells, the sentinel
 | `CellDescriptionColor` / `CellDescriptionFontSize` / `CellDescriptionFontFamily` / `CellDescriptionFontAttributes` | same names, nullable | |
 | `CellValueTextColor` / `CellValueTextFontSize` / `CellValueTextFontFamily` / `CellValueTextFontAttributes` | same names, nullable | |
 | `CellHintTextColor` / `CellHintFontSize` / `CellHintFontFamily` / `CellHintFontAttributes` | same names, nullable | |
-| (new) | `CellPlaceholderColor` (`Color?`) | Screen-wide default for the entry placeholder color; `EntryCell.PlaceholderColor` overrides it per cell, and null falls through to the OS default |
+| (new) | `CellPlaceholderColor` (`Color?`) | Screen-wide default for the entry placeholder color; `EntryCell.PlaceholderColor` overrides it per cell, and null falls through to the platform default (see the `EntryCell.PlaceholderColor` row for where that comes from) |
 | `CellBackgroundColor` (`Color`) | `CellBackgroundColor` (`Color?`) | |
 | `CellAccentColor` (`Color`) | `CellAccentColor` (`Color?`) | |
 | `CellIconSize` (`Size`) | `CellIconSize` (`double?`) | One number, as on the cell |
@@ -294,7 +294,7 @@ The `Cell*` defaults keep their names one for one. As on the cells, the sentinel
 
 An unset color meant a fixed value in AiForms - `Section.TextColor` defaulted to `Colors.Black`, and the screen-wide defaults behind the other properties were fixed values too. In KsSettingsView a color left null resolves to the library default for the appearance the device is in - light and dark on iOS, night mode on Android - so a migrated screen that sets no colors is drawn readably in dark without you adding anything. A color you do set is drawn as you gave it in both appearances; the library does not swap your value for a default of its own.
 
-That is what to watch for in a screen carrying a light palette in its XAML - a set of `Cell*` colors copied in to pin the AiForms look. Those values now apply in dark as well, where they read as a light screen. Delete the property to take the appearance-following default, or state both appearances with `AppThemeBinding`, which applies to these properties as it did to the AiForms ones - a screen that already used it moves over on the prefix change alone. The library defaults are not the AiForms palette, so reproducing the old look means setting the colors explicitly, and then deciding what dark should show.
+That is what to watch for in a screen carrying a light palette in its XAML - `Cell*` and per-cell colors copied in to pin the AiForms look. Those values now apply in dark as well, where they read as a light screen. Delete the property to take the appearance-following default, or state both appearances yourself. The screen-wide color properties of `SettingsView` (`Cell*` and the rest) take `AppThemeBinding`, which works here as it did on the AiForms properties of the same names - a screen that used it for the screen-wide colors moves over on the prefix change alone. The library defaults are not the AiForms palette, so reproducing the old look means setting the colors explicitly, and then deciding what dark should show.
 
 ```xml
 <ks:SettingsView BackgroundColor="{AppThemeBinding Light=#F2F2F7, Dark=#000000}"
@@ -307,7 +307,7 @@ That is what to watch for in a screen carrying a light palette in its XAML - a s
 </ks:SettingsView>
 ```
 
-The same markup extension works on a per-cell override and on `AccentColor`. The kssettingsview-maui Skill covers the same ground for a screen written from scratch, under "Follow the light and dark appearance" in its styling reference.
+The color properties on a cell are a different story - the `CellBase` colors such as `TitleColor`, and the colors a cell type owns by meaning such as `AccentColor`, `PlaceholderColor` and `AndroidButtonColor`. `AppThemeBinding` written on one of them is not re-evaluated when the appearance changes: a `Section` and a cell are data you hand to the control rather than elements of the page's tree, and a binding outside that tree is not told about the change. A screen that used `AppThemeBinding` on AiForms cells becomes a subscription to `Application.RequestedThemeChanged` that assigns the color of the current appearance to the property; the assignment reaches the row on display as a content update. Working code is in the kssettingsview-maui Skill's styling reference under "Change the colors of one cell with the appearance"; the screen-wide side of the same ground, for a screen written from scratch, is under "Follow the light and dark appearance" there.
 
 ## Move the header and footer settings
 

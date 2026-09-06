@@ -19,7 +19,7 @@ KsSettingsView is a UI library for building settings screens - the list-style sc
 | Group cells into sections, add icons, descriptions, hints; disable or hide a cell | [references/cells.md](references/cells.md) |
 | Change the screen after it is on display: insert, remove, move, replace cells, batch updates, direct driving with `SettingsRootDiff` | [references/updates.md](references/updates.md) |
 | Keep cells identified across re-evaluations, drive visibility from state, host the screen from XML | [references/updates.md](references/updates.md) |
-| Colors, fonts, cell height, Classic / Modern list appearance, section boxes, the light / dark default colors of `KsSettingsViewDefaults` | [references/styling.md](references/styling.md) |
+| Colors, fonts, cell height, Classic / Modern list appearance, section boxes, the light / dark default colors of `KsSettingsViewDefaults`, giving an explicit color a value per appearance | [references/styling.md](references/styling.md) |
 | Section and screen headers / footers, including arbitrary Composables in them | [references/styling.md](references/styling.md) |
 | Put any Composable into a cell of the list, or define your own cell type with its own view holder | [references/custom-cells.md](references/custom-cells.md) |
 
@@ -66,7 +66,8 @@ The library puts no prerequisites on the host application's theme or activity ty
 
 - The colors of your app theme (custom colors and dynamic color included) do not reach the library UI. Restyling is done with the library's own `Theme` / `CellStyle` - see [references/styling.md](references/styling.md). Only content you own - a `CustomCell` body, a view passed through `KsAnyView` - still renders with the theme of the host.
 - Light and dark switch with the device night mode and the app's uiMode APIs (`AppCompatDelegate.setDefaultNightMode` / `UiModeManager.setApplicationNightMode`). Merely declaring a dark XML theme in the app does not switch the library UI.
-- Colors you leave at `Color.Unspecified` follow that switch on their own, out of the light and dark default sets the library owns and publishes through `KsSettingsViewDefaults` (`lightTheme()` / `darkTheme()`), so a screen that passes no `Theme` is legible in dark mode. To pick the colors of both appearances yourself, choose the `Theme` where you build it with `isSystemInDarkTheme()` - see [references/styling.md](references/styling.md).
+- Colors you leave at `Color.Unspecified` follow that switch on their own, out of the light and dark default sets the library owns and publishes through `KsSettingsViewDefaults` (`lightTheme()` / `darkTheme()`), so a screen that passes no `Theme` is legible in dark mode. `Color.Unspecified` is the one mark of "not set" for the colors of `Theme`, of `CellStyle` and of the color arguments a cell takes for its own meaning alike; none of them is a nullable `Color?`.
+- A color you do state is kept as written in both appearances. To pick the colors of both appearances yourself, choose them where you build the theme or the cell, with `isSystemInDarkTheme()` in Compose or the night mode of the configuration in a view host - see [references/styling.md](references/styling.md).
 
 ## Minimal working example
 

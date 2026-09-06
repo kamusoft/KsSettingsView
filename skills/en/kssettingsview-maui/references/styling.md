@@ -50,9 +50,9 @@ Interactive cells add `AccentColor` for the color of their control - the switch 
 
 ## Follow the light and dark appearance
 
-A color you leave unset is drawn from the library default, and those defaults follow the appearance of the device - light and dark on iOS, night mode on Android - so a screen that sets no colors at all stays readable in dark. A color you do set is drawn as you gave it in both appearances; the library does not swap your value for a default of its own.
+A color you leave unset is drawn from the library default, and those defaults follow the appearance of the device - light and dark on iOS, night mode on Android - so a screen that sets no colors at all stays readable in dark. A color you do set is drawn as you gave it in both appearances; the library does not swap your value for a default of its own, and when the appearance changes only the colors left unset are resolved again. Setting a color back to null hands it back to the next level - the screen-wide default, and then the library default for the current appearance.
 
-To decide both appearances yourself, write the color properties with `AppThemeBinding`. Switching the appearance supplies the new value to the property, and it reaches the screen while the page is on display.
+To decide both appearances yourself, write the color properties of `SettingsView` with `AppThemeBinding`. Switching the appearance supplies the new value to the property, and it reaches the screen while the page is on display.
 
 ```xml
 <ks:SettingsView BackgroundColor="{AppThemeBinding Light=#F2F2F7, Dark=#000000}"
@@ -65,7 +65,61 @@ To decide both appearances yourself, write the color properties with `AppThemeBi
 </ks:SettingsView>
 ```
 
-The same markup extension works on a per-cell override and on `AccentColor`.
+## Change the colors of one cell with the appearance
+
+`AppThemeBinding` written on a cell property is not re-evaluated when the appearance changes: a `Section` and a cell are data you hand to the control rather than elements of the page's tree, and a binding outside that tree is not told about the change. Subscribe to `Application.RequestedThemeChanged` and assign the color of the current appearance to the property instead. The assignment reaches the row on display as a content update, so the row is redrawn where it is.
+
+```xml
+<ks:ButtonCell x:Name="LogoutButton" Title="Log out" />
+```
+
+```csharp
+public partial class SettingsPage : ContentPage
+{
+    private Application? _subscribedTo;
+
+    public SettingsPage()
+    {
+        InitializeComponent();
+
+        Loaded += OnLoaded;
+        Unloaded += OnUnloaded;
+        ApplyThemeColors(Application.Current?.RequestedTheme == AppTheme.Dark);
+    }
+
+    private void ApplyThemeColors(bool isDark)
+        => LogoutButton.TitleColor = isDark ? Colors.Magenta : Colors.Green;
+
+    private void OnLoaded(object? sender, EventArgs e)
+    {
+        ApplyThemeColors(Application.Current?.RequestedTheme == AppTheme.Dark);
+
+        if (_subscribedTo is not null || Application.Current is not { } application)
+        {
+            return;
+        }
+
+        application.RequestedThemeChanged += OnRequestedThemeChanged;
+        _subscribedTo = application;
+    }
+
+    private void OnUnloaded(object? sender, EventArgs e)
+    {
+        if (_subscribedTo is not { } application)
+        {
+            return;
+        }
+
+        application.RequestedThemeChanged -= OnRequestedThemeChanged;
+        _subscribedTo = null;
+    }
+
+    private void OnRequestedThemeChanged(object? sender, AppThemeChangedEventArgs e)
+        => ApplyThemeColors(e.RequestedTheme == AppTheme.Dark);
+}
+```
+
+Re-assignment is how every color that sits on the cell is switched - the text colors and `BackgroundColor` of `CellBase`, and the colors a cell type owns by meaning such as `AccentColor`, `PlaceholderColor`, and `AndroidButtonColor`.
 
 ## Style property list
 

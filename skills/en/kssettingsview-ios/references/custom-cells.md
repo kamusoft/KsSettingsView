@@ -211,6 +211,8 @@ final class ProgressCellView: UICollectionViewListCell, KsCellRenderer {
 }
 ```
 
+A `UIColor` assigned in `render` - a text color, a tint - is resolved by UIKit against the appearance in effect when it is drawn, so a dynamic color coming from the theme or from a color field of your own cell follows light and dark with nothing else to do. A color put on a layer as a `CGColor` does not: keep the `UIColor` and resolve it again when the trait collection changes, the way the library does for the colors it draws through a layer.
+
 Register the pair into the shared registry before the cell is displayed. This is the only route for the SwiftUI `KsSettingsView`, which has no registry parameter and always uses `KsCellRegistry.shared`.
 
 ```swift

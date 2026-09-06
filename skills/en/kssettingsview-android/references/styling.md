@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import jp.kamusoft.kssettingsview.compose.KsSettingsView
 import jp.kamusoft.kssettingsview.compose.LabelCell
+import jp.kamusoft.kssettingsview.compose.SwitchCell
 import jp.kamusoft.kssettingsview.compose.backgroundColor
 import jp.kamusoft.kssettingsview.compose.cellHeight
 import jp.kamusoft.kssettingsview.compose.font
@@ -42,7 +43,7 @@ import jp.kamusoft.kssettingsview.ui.Theme
 
 Values resolve in this order: the meaning-specific value of the cell, then `CellStyle`, then `Theme`, then the library default for the current appearance, then the platform default. Compose types are used directly - `androidx.compose.ui.graphics.Color`, `androidx.compose.ui.text.TextStyle`, `androidx.compose.ui.unit.Dp`.
 
-A color you did not set is `Color.Unspecified`, which is the default of every color field of `Theme` and `CellStyle` (fonts, sizes and paddings mark the same thing with `null`). The library fills those in when it draws, from its own light or dark default set, so a screen that passes no `Theme` is legible in dark mode with nothing extra on your side. A color you did pass is never replaced by another value, in either appearance.
+A color you did not set is `Color.Unspecified`. That is the one spelling of "unset" for colors: it is the default of every color field of `Theme` and `CellStyle`, and also of every color argument a cell takes for its own meaning, none of which is a nullable `Color?` (fonts, sizes and paddings do mark the unset state with `null`). The library fills unspecified colors in when it draws, from its own light or dark default set, so a screen that passes no `Theme` is legible in dark mode with nothing extra on your side. A color you did pass is never replaced by another value, in either appearance - the recipes below cover how to give such a color an appearance of its own.
 
 Where the resolution does reach a platform default it lands on a Material3-derived theme the library bundles, not on the theme of your app: neither the XML theme nor a Compose `MaterialTheme` recolors the library UI, so everything on this page is the way to restyle it. Light and dark come from the device night mode and the uiMode APIs, since the bundled theme is a DayNight one.
 
@@ -151,6 +152,34 @@ KsSettingsView(theme = theme) {
 ```
 
 Colors you leave unspecified keep following the appearance on their own: the view host re-resolves them when the night mode changes under it, even in an activity that handles `uiMode` itself instead of being recreated. Colors you state explicitly, like the accent above, are yours to switch - which is what the branch does here.
+
+## Give an explicit cell color its own light and dark values
+
+A color stated on a cell - a `CellStyle` field, or a color argument the cell takes for its own meaning - is kept as written when the appearance changes, just like an explicit `Theme` color. In the declarative DSL, branch on the appearance where the cell is built: the recomposition that follows a night-mode change reaches the row as a content update, so the row is re-bound with the new colors rather than rebuilt, and ids and scroll position stay.
+
+```kotlin
+val notifications = remember { mutableStateOf(true) }
+val accent = if (isSystemInDarkTheme()) Color(0xFFFFD54F) else Color(0xFFFFBF00)
+
+KsSettingsView {
+    Section(header = "General") {
+        LabelCell(
+            title = "Version",
+            valueText = "1.0.0",
+            style = CellStyle(titleColor = accent),
+        )
+        SwitchCell(
+            title = "Push notifications",
+            isOn = notifications,
+            accentColor = accent,
+        )
+    }
+}
+```
+
+The cells with a color of their own are `ButtonCell` (`titleColor`), `EntryCell` (`placeholderColor`, `accentColor`), `DatePickerCell` (`androidButtonColor`, `accentColor`) and the switch, checkbox, simple check, radio, picker, number picker and time picker cells (`accentColor`). Left at `Color.Unspecified`, such a color falls through to `CellStyle`, then the theme, then the default of the current appearance.
+
+Outside the declarative DSL nothing recomposes to carry the branch. An activity that keeps `uiMode` in its own `configChanges` is not recreated either, so it hands the store cells carrying the new colors when the appearance changes - see [updates.md](updates.md).
 
 ## Override the look of one cell
 

@@ -50,9 +50,9 @@
 
 ## ライト / ダーク外観に追随させる
 
-未指定の色はライブラリ既定で描かれ、その既定は端末の外観 — iOS のライト / ダーク、Android の夜間モード — に追随する。そのため色を 1 つも設定していない画面も、ダーク端末で判読できる配色で描かれる。設定した色は両方の外観でそのまま描かれ、ライブラリが別の既定値へ置き換えることはない。
+未指定の色はライブラリ既定で描かれ、その既定は端末の外観 — iOS のライト / ダーク、Android の夜間モード — に追随する。そのため色を 1 つも設定していない画面も、ダーク端末で判読できる配色で描かれる。設定した色は両方の外観でそのまま描かれ、ライブラリが別の既定値へ置き換えることはない。外観が切り替わったとき描き直されるのは、未指定のままにした色だけになる。色を null に戻すと次の段 — 画面全体の既定、その先は現在の外観のライブラリ既定 — へ継承が戻る。
 
-両方の外観の色を自分で決めるなら、色プロパティを `AppThemeBinding` で書く。外観が切り替わると新しい値がプロパティへ供給され、表示中の画面まで届く。
+両方の外観の色を自分で決めるなら、`SettingsView` の色プロパティを `AppThemeBinding` で書く。外観が切り替わると新しい値がプロパティへ供給され、表示中の画面まで届く。
 
 ```xml
 <ks:SettingsView BackgroundColor="{AppThemeBinding Light=#F2F2F7, Dark=#000000}"
@@ -65,7 +65,61 @@
 </ks:SettingsView>
 ```
 
-同じマークアップ拡張は Cell ごとの上書きにも `AccentColor` にも使える。
+## Cell 1 つの色を外観に合わせて変える
+
+Cell のプロパティに書いた `AppThemeBinding` は、外観が切り替わっても評価し直されない。`Section` と Cell はコントロールへ渡すデータであってページのツリーの要素ではなく、ツリーの外にあるバインドには外観の変化が伝わらないため。代わりに `Application.RequestedThemeChanged` を購読し、現在の外観の色をプロパティへ入れ直す。入れ直しはその Cell の内容更新として表示中の行まで届き、行はその場で描き直される。
+
+```xml
+<ks:ButtonCell x:Name="LogoutButton" Title="Log out" />
+```
+
+```csharp
+public partial class SettingsPage : ContentPage
+{
+    private Application? _subscribedTo;
+
+    public SettingsPage()
+    {
+        InitializeComponent();
+
+        Loaded += OnLoaded;
+        Unloaded += OnUnloaded;
+        ApplyThemeColors(Application.Current?.RequestedTheme == AppTheme.Dark);
+    }
+
+    private void ApplyThemeColors(bool isDark)
+        => LogoutButton.TitleColor = isDark ? Colors.Magenta : Colors.Green;
+
+    private void OnLoaded(object? sender, EventArgs e)
+    {
+        ApplyThemeColors(Application.Current?.RequestedTheme == AppTheme.Dark);
+
+        if (_subscribedTo is not null || Application.Current is not { } application)
+        {
+            return;
+        }
+
+        application.RequestedThemeChanged += OnRequestedThemeChanged;
+        _subscribedTo = application;
+    }
+
+    private void OnUnloaded(object? sender, EventArgs e)
+    {
+        if (_subscribedTo is not { } application)
+        {
+            return;
+        }
+
+        application.RequestedThemeChanged -= OnRequestedThemeChanged;
+        _subscribedTo = null;
+    }
+
+    private void OnRequestedThemeChanged(object? sender, AppThemeChangedEventArgs e)
+        => ApplyThemeColors(e.RequestedTheme == AppTheme.Dark);
+}
+```
+
+Cell に載る色はいずれもこの入れ直しで切り替える — `CellBase` のテキスト系の色と `BackgroundColor`、それに `AccentColor` / `PlaceholderColor` / `AndroidButtonColor` のように Cell 種別が意味として持つ色。
 
 ## スタイルプロパティの一覧
 

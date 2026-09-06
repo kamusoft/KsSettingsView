@@ -19,7 +19,7 @@ KsSettingsView は、iOS の設定アプリのようなリスト形式の設定�
 | Cell を Section にまとめる、アイコン・説明・ヒントを付ける、Cell を無効化・非表示にする | [references/cells.md](references/cells.md) |
 | 表示中の画面を変える: Cell の挿入・削除・移動・差し替え、複数 Cell のバッチ更新、`SettingsRootDiff` での直接駆動 | [references/updates.md](references/updates.md) |
 | 再評価をまたいで Cell を追跡する、状態から表示・非表示を切り替える、XML から画面を組み込む | [references/updates.md](references/updates.md) |
-| 色・フォント・Cell の高さ、Classic / Modern の list 外観、Section の Container、`KsSettingsViewDefaults` のライト / ダーク既定色 | [references/styling.md](references/styling.md) |
+| 色・フォント・Cell の高さ、Classic / Modern の list 外観、Section の Container、`KsSettingsViewDefaults` のライト / ダーク既定色、明示色に外観ごとの値を与える | [references/styling.md](references/styling.md) |
 | Section と画面全体の Header / Footer (任意の Composable も置ける) | [references/styling.md](references/styling.md) |
 | 任意の Composable を Cell として表示する、独自の Cell 型と ViewHolder を定義する | [references/custom-cells.md](references/custom-cells.md) |
 
@@ -66,7 +66,8 @@ artifact は Compose runtime / ui / foundation-layout・kotlinx-coroutines-core�
 
 - アプリ側テーマの色 (カスタム色・dynamic color を含む) はライブラリ UI に届かない。見た目の調整はライブラリ自身の `Theme` / `CellStyle` で行う — [references/styling.md](references/styling.md) を参照。利用者所有のコンテンツ (`CustomCell` の中身、`KsAnyView` 経由で渡した View) だけは従来どおりホストのテーマで描画される。
 - ライト / ダークは端末の夜間モードとアプリの uiMode 制御 (`AppCompatDelegate.setDefaultNightMode` / `UiModeManager.setApplicationNightMode`) で切り替わる。アプリが XML テーマで Dark 系を宣言するだけでは、ライブラリ UI は切り替わらない。
-- `Color.Unspecified` のままにした色は、ライブラリが所有し `KsSettingsViewDefaults` (`lightTheme()` / `darkTheme()`) として公開する light / dark の既定セットから、この切り替えに自動で追随する。`Theme` を渡さない画面もダークで判読できる。両方の外観の色を自分で決めるなら、Theme を組み立てる場所で `isSystemInDarkTheme()` を使って選ぶ — [references/styling.md](references/styling.md) を参照。
+- `Color.Unspecified` のままにした色は、ライブラリが所有し `KsSettingsViewDefaults` (`lightTheme()` / `darkTheme()`) として公開する light / dark の既定セットから、この切り替えに自動で追随する。`Theme` を渡さない画面もダークで判読できる。色の未指定はこの `Color.Unspecified` の 1 流儀で、`Theme` / `CellStyle` の色も、Cell が意味上の固有値として受け取る色引数も同じであり、どれも nullable な `Color?` ではない。
+- 明示して渡した色は、どちらの外観でも書いたままの値で描かれる。両方の外観の色を自分で決めるなら、Theme や Cell を組み立てる場所で選ぶ (Compose なら `isSystemInDarkTheme()`、View ホストなら Configuration の夜間モード) — [references/styling.md](references/styling.md) を参照。
 
 ## 最小動作コード
 

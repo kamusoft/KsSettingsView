@@ -144,6 +144,8 @@ store.applyTheme(darkTheme)
 
 新しい Theme は表示中の Cell と、text 形式の Header / Footer へ届き、その場で色が塗り直される。View 形式の Header / Footer は意図的に対象外である — 再 bind すると View の factory が再実行され、hosted view が持っていた状態が失われるため。Theme に追随させたい View 形式の accessory は、`store.updateAccessory(target:accessory:)` で自分で差し替える。
 
+`applyTheme` が動かすのは画面全体の既定値だけである。Cell に明示した色 — `CellStyle` に渡した色と、その Cell 型が持つ色フィールドに渡した色 — は Theme の一部ではないため、この経路でも、ライト / ダーク外観が変わったときも、渡した値のまま残る。これらを外観に追随させたいときは、Cell を差し替えるのではなく dynamic な `UIColor` を渡す ([styling.md](styling.md) を参照)。自分で色を決める場合、識別子が同じ Cell でその色だけが変わった再評価は、削除と挿入ではなくその場の内容更新として届く (同じ識別子での `replaceCell` も同様)。
+
 ## 再評価をまたいで Cell を追跡する
 
 宣言ツリーは評価のたびに作り直されるため、動的なコレクションには key が要る。`Identifiable` の要素または `id:` KeyPath を受ける DSL の `ForEach` を使う。

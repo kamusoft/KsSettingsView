@@ -114,6 +114,25 @@ Spelling out the raw value of a default as a fixed color is not the same as leav
 
 The `sectionBorderColor` of the Modern section box reaches the layer as a `CGColor`, and the library re-resolves it when the appearance changes, so a dynamic border color does not stay behind in the previous appearance.
 
+## Make the colors of one cell follow the appearance
+
+The same rule holds for the two levels below the theme: a color passed to `CellStyle`, and a color passed to a field the cell type owns because of what it means there (`ButtonCell.titleColor`, the `accentColor` of the selection and input cells, `EntryCell.placeholderColor`). A dynamic `UIColor` there is resolved to its own value for the current appearance, and a fixed color is drawn as that color in both. The library publishes no type or callback that hands the appearance to a cell - pass a dynamic `UIColor` and the cell itself does not have to be swapped out.
+
+```swift
+let brandTitle = UIColor { trait in
+    trait.userInterfaceStyle == .dark
+        ? UIColor(red: 0.65, green: 0.80, blue: 1.00, alpha: 1.0)
+        : UIColor(red: 0.10, green: 0.30, blue: 0.65, alpha: 1.0)
+}
+
+ksSection("Account") {
+    LabelCell(style: CellStyle(titleColor: brandTitle), title: "Plan", valueText: "Pro")
+    SwitchCell(title: "Sync", isOn: true, accentColor: brandTitle)
+}
+```
+
+When the appearance changes while the list is on screen, the row is not rebuilt: it keeps its identity, the colors you set explicitly are drawn unchanged, and only the colors left unspecified on that row are resolved again against the new appearance. The accent fill and border of the checkbox indicator reach the layer as a `CGColor`, and the library re-resolves them on the appearance change just as it does the section border.
+
 ## Override the look of one cell
 
 `CellStyle` overrides the theme for a single cell. Fields you leave out are `nil` and are inherited from the theme.

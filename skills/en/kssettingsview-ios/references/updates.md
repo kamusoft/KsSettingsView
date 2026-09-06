@@ -144,6 +144,8 @@ In the declarative form, the `.theme(_:)` modifier goes through the same path.
 
 The new theme reaches the cells on display and the text headers and footers, which are recolored in place. Headers and footers holding a view are deliberately left alone - re-binding them would run the view factory again and lose whatever state the hosted view held - so a view accessory that should follow the theme has to be updated by you, with `store.updateAccessory(target:accessory:)`.
 
+`applyTheme` moves the screen-wide defaults only. Colors set explicitly on a cell - through `CellStyle`, or through a color field the cell type owns - are not part of the theme and are left untouched, in this path and when the light / dark appearance changes. To have those follow the appearance, pass a dynamic `UIColor` instead of pushing a new cell (see [styling.md](styling.md)). If you do compute a color yourself, a re-evaluation that changes only that color, on a cell keeping its identifier, is delivered as an in-place content update rather than as a removal plus an insertion - as is `replaceCell` with the same identifier.
+
 ## Keep cells identified across re-evaluations
 
 A declarative tree is rebuilt on every evaluation, so dynamic collections need a key. Use the DSL `ForEach`, which takes `Identifiable` elements or an `id:` key path.

@@ -211,6 +211,8 @@ final class ProgressCellView: UICollectionViewListCell, KsCellRenderer {
 }
 ```
 
+`render` の中で代入した `UIColor` は、描画時点の外観に対して UIKit が解決する。Theme から来た色も、独自 Cell の色フィールドから来た色も、dynamic な `UIColor` であればそれだけでライト / ダークに追随する。`CGColor` として layer に載せた色は追随しないため、元の `UIColor` を保持しておき、trait の変化を受けて解決し直す (ライブラリが layer 経由で描く色に対して行っているのと同じ)。
+
 Cell を表示する前に、この 2 つを対応付けて共有 Registry へ登録する。SwiftUI の `KsSettingsView` は registry の引数を持たず常に `KsCellRegistry.shared` を使うため、SwiftUI 経路ではこれが唯一の登録手段になる。
 
 ```swift

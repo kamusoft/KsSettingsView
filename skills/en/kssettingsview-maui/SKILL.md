@@ -21,7 +21,7 @@ KsSettingsView is a UI library for building settings screens - the list-style sc
 | Change the screen after it is on display: add, remove, move, replace cells and sections | [references/updates.md](references/updates.md) |
 | Receive user edits in a view model, generate cells from a collection, keep state across page visits | [references/updates.md](references/updates.md) |
 | Colors, fonts, cell height, Classic / Modern list appearance, section boxes | [references/styling.md](references/styling.md) |
-| Follow the light and dark appearance of the device, or decide the colors of both yourself | [references/styling.md](references/styling.md) |
+| Follow the light and dark appearance of the device, decide the colors of both yourself, or switch the colors of one cell with the appearance | [references/styling.md](references/styling.md) |
 | Look up the style property list (screen-wide defaults and per-cell overrides) | [references/styling.md](references/styling.md) |
 | Section and screen headers / footers, including arbitrary views in them, and where to place the control on a page | [references/styling.md](references/styling.md) |
 | Put any MAUI view into a cell of the list, or package one as a reusable cell type of your own | [references/custom-cells.md](references/custom-cells.md) |

@@ -23,8 +23,10 @@ import jp.kamusoft.kssettingsview.compose.sectionID
 Store 側のコードは以下を前提とする。
 
 ```kotlin
+import android.content.res.Configuration
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.Color
 import jp.kamusoft.kssettingsview.compose.KsSettingsView
 import jp.kamusoft.kssettingsview.compose.settingsRoot
 import jp.kamusoft.kssettingsview.core.AccessoryTarget
@@ -32,6 +34,7 @@ import jp.kamusoft.kssettingsview.core.Section
 import jp.kamusoft.kssettingsview.core.SectionAccessory
 import jp.kamusoft.kssettingsview.core.SettingsAccessory
 import jp.kamusoft.kssettingsview.core.SettingsRoot
+import jp.kamusoft.kssettingsview.ui.CellStyle
 import jp.kamusoft.kssettingsview.ui.KsSettingsViewDefaults
 import jp.kamusoft.kssettingsview.ui.LabelCell
 import jp.kamusoft.kssettingsview.ui.RadioCell
@@ -224,6 +227,29 @@ store.applyTheme(KsSettingsViewDefaults.darkTheme())
 宣言側では `KsSettingsView` の `theme` 引数が同じ経路を通る。Store overload に `theme` 引数はないので、初期値は `SettingsRootStore(initialTheme = ...)`、以後の変更は `applyTheme` を使う。
 
 これは自分で選んだ Theme を切り替える場合の話である。端末のライト / ダークに追随するだけなら呼び出しは要らない。`Color.Unspecified` のままの色 (素の `Theme()` の全色がそうである) は Cell を描く時点で外観に対して解決され、足元で夜間モードが変わったときには View が解決し直す。ライブラリが埋める色と、既定セットを名指しする方法は [styling.md](styling.md) を参照。
+
+## 外観の変化に合わせて Cell の明示色を切り替える
+
+Theme は `applyTheme` が受け持つが、Cell に明示した色 — `CellStyle` のフィールドや、`accentColor` のように Cell 種別が意味上の固有値として受け取る色引数 — は設定ツリーの側にあり、外観が変わっても書いたままの値で描かれる。外観ごとの値を与えるには、新しい色を載せた Cell へ置き換える。`uiMode` を自前の `configChanges` で処理して再生成されない Activity では、`onConfigurationChanged` で行う。
+
+```kotlin
+override fun onConfigurationChanged(newConfig: Configuration) {
+    super.onConfigurationChanged(newConfig)
+    val isDark =
+        newConfig.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+    store.replaceCell(
+        cellId = "version",
+        new = LabelCell(
+            id = "version",
+            title = "Version",
+            valueText = "1.0.0",
+            style = CellStyle(titleColor = if (isDark) Color(0xFFFFD54F) else Color(0xFFB26A00)),
+        ),
+    )
+}
+```
+
+色だけが違う置換は内容更新として表示中の行に届くので、行は作り直されずに再 bind される。1 回の外観変化で複数の Cell に触れるなら、上のバッチ更新の理由のとおり `replaceCells` でまとめて渡す。
 
 ## 再評価をまたいで Cell を追跡する
 

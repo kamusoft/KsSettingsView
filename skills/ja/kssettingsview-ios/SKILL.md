@@ -21,7 +21,7 @@ KsSettingsView は、iOS の設定アプリのようなリスト形式の設定�
 | 再評価をまたいで Cell を追跡する、状態から表示・非表示を切り替える、UIKit から画面を組み込む | [references/updates.md](references/updates.md) |
 | 変更を `SettingsRootDiff` として表す、Diff や Theme を Controller へ直接適用する | [references/updates.md](references/updates.md) |
 | 色・フォント・Cell の高さ、Classic / Modern の list 外観、Section の Container | [references/styling.md](references/styling.md) |
-| ライブラリ既定色や自分で指定した色をライト / ダーク外観に追随させる | [references/styling.md](references/styling.md) |
+| ライブラリ既定色・自分の Theme・Cell 1 つに指定した色をライト / ダーク外観に追随させる | [references/styling.md](references/styling.md) |
 | Section と画面全体の Header / Footer (任意の SwiftUI View も置ける) | [references/styling.md](references/styling.md) |
 | 任意の SwiftUI View を Cell として表示する、独自の Cell 型と Renderer を定義する | [references/custom-cells.md](references/custom-cells.md) |
 

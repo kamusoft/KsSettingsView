@@ -23,8 +23,10 @@ import jp.kamusoft.kssettingsview.compose.sectionID
 Store snippets assume these.
 
 ```kotlin
+import android.content.res.Configuration
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.Color
 import jp.kamusoft.kssettingsview.compose.KsSettingsView
 import jp.kamusoft.kssettingsview.compose.settingsRoot
 import jp.kamusoft.kssettingsview.core.AccessoryTarget
@@ -32,6 +34,7 @@ import jp.kamusoft.kssettingsview.core.Section
 import jp.kamusoft.kssettingsview.core.SectionAccessory
 import jp.kamusoft.kssettingsview.core.SettingsAccessory
 import jp.kamusoft.kssettingsview.core.SettingsRoot
+import jp.kamusoft.kssettingsview.ui.CellStyle
 import jp.kamusoft.kssettingsview.ui.KsSettingsViewDefaults
 import jp.kamusoft.kssettingsview.ui.LabelCell
 import jp.kamusoft.kssettingsview.ui.RadioCell
@@ -224,6 +227,29 @@ store.applyTheme(KsSettingsViewDefaults.darkTheme())
 In the declarative form the `theme` parameter of `KsSettingsView` goes through the same path. The store overload has no `theme` parameter: pass the initial value to `SettingsRootStore(initialTheme = ...)` and change it with `applyTheme`.
 
 This is for themes you choose yourself. Following the device between light and dark needs no call at all: a color left at `Color.Unspecified` - which is what every color of a bare `Theme()` is - is resolved against the appearance when the row is drawn, and the view resolves it again when the night mode changes under it. See [styling.md](styling.md) for what the library fills in and how to name a default set explicitly.
+
+## Switch explicit cell colors when the appearance changes
+
+`applyTheme` covers the theme, but a color stated on a cell - a `CellStyle` field, or a color argument the cell takes for its own meaning, such as `accentColor` - belongs to the settings tree, and is kept as written when the appearance changes. Give it a value per appearance by replacing the cell with one carrying the new color. In an activity that keeps `uiMode` in its own `configChanges` and is therefore not recreated, do that from `onConfigurationChanged`.
+
+```kotlin
+override fun onConfigurationChanged(newConfig: Configuration) {
+    super.onConfigurationChanged(newConfig)
+    val isDark =
+        newConfig.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+    store.replaceCell(
+        cellId = "version",
+        new = LabelCell(
+            id = "version",
+            title = "Version",
+            valueText = "1.0.0",
+            style = CellStyle(titleColor = if (isDark) Color(0xFFFFD54F) else Color(0xFFB26A00)),
+        ),
+    )
+}
+```
+
+A replacement that changes nothing but the color reaches the displayed row as a content update, so the row is re-bound rather than rebuilt. When one appearance change touches several cells, send them together with `replaceCells` for the reason given above under batching.
 
 ## Keep cells identified across re-evaluations
 

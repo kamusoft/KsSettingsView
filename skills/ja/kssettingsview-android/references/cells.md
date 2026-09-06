@@ -31,6 +31,8 @@ import jp.kamusoft.kssettingsview.ui.KsImage
 
 `var x by remember { mutableStateOf(...) }` の委譲形をコンパイルさせているのが `getValue` と `setValue` で、これがないと委譲が解決できない。Cell を置くスニペットは、自身で枠を示していない限り `@Composable` 関数の中の `KsSettingsView { Section { ... } }` の内側の断片。
 
+一部の Cell が意味上の固有値として受け取る色引数 — `titleColor` / `accentColor` / `placeholderColor` / `androidButtonColor` — は nullable ではない `Color` で、既定値は `Color.Unspecified`。これが「未指定」の印で、`CellStyle` → `Theme` → 現在の外観の既定へ順に倒れる。明示して渡した色はライト / ダークが変わっても書いたままの値で描かれる。外観ごとの値を与える方法は [styling.md](styling.md) を参照。
+
 ## Cell を Section にまとめる
 
 Cell は必ず Section の中に置く。`Section` は文字列の header と footer を任意で受ける。

@@ -114,6 +114,25 @@ let adaptiveTheme = Theme(
 
 Modern の Section Container の `sectionBorderColor` は `CGColor` として layer に載るが、外観の変化を受けてライブラリが再解決するため、dynamic な Border 色だけが前の外観のまま残ることはない。
 
+## Cell 1 つの色を外観に追随させる
+
+同じ規則が Theme の下の 2 段 — `CellStyle` に渡した色と、その Cell にとっての意味からその型が持つフィールド (`ButtonCell.titleColor`、選択系・入力系 Cell の `accentColor`、`EntryCell.placeholderColor`) に渡した色 — にも当てはまる。そこに渡した dynamic な `UIColor` はその色自身の現在の外観の値へ解決され、固定色はどちらの外観でもその色のまま描かれる。Cell へ外観を渡す型やコールバックは公開していない。dynamic な `UIColor` を渡せばよく、Cell そのものを差し替える必要はない。
+
+```swift
+let brandTitle = UIColor { trait in
+    trait.userInterfaceStyle == .dark
+        ? UIColor(red: 0.65, green: 0.80, blue: 1.00, alpha: 1.0)
+        : UIColor(red: 0.10, green: 0.30, blue: 0.65, alpha: 1.0)
+}
+
+ksSection("Account") {
+    LabelCell(style: CellStyle(titleColor: brandTitle), title: "Plan", valueText: "Pro")
+    SwitchCell(title: "Sync", isOn: true, accentColor: brandTitle)
+}
+```
+
+表示中に外観が変わっても行は作り直されない。identity は維持され、明示した色はそのまま描かれ、その行で未指定のままにした色だけが新しい外観に対して解決し直される。チェックボックスの accent の塗りと枠は `CGColor` として layer に載るが、Section の Border と同じく外観の変化を受けてライブラリが再解決する。
+
 ## Cell 1 つだけ見た目を上書きする
 
 `CellStyle` は Cell 1 つ分だけ Theme を上書きする。指定しないフィールドは `nil` のままで、Theme から継承する。

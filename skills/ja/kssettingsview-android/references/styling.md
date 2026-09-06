@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import jp.kamusoft.kssettingsview.compose.KsSettingsView
 import jp.kamusoft.kssettingsview.compose.LabelCell
+import jp.kamusoft.kssettingsview.compose.SwitchCell
 import jp.kamusoft.kssettingsview.compose.backgroundColor
 import jp.kamusoft.kssettingsview.compose.cellHeight
 import jp.kamusoft.kssettingsview.compose.font
@@ -42,7 +43,7 @@ import jp.kamusoft.kssettingsview.ui.Theme
 
 値の解決順は、Cell 種別の意味上の固有値 → `CellStyle` → `Theme` → 現在の外観のライブラリ既定 → platform 既定値。Compose の型をそのまま使う (`androidx.compose.ui.graphics.Color` / `androidx.compose.ui.text.TextStyle` / `androidx.compose.ui.unit.Dp`)。
 
-指定しなかった色は `Color.Unspecified` で、これが `Theme` / `CellStyle` の全色フィールドの既定値である (フォント・寸法・余白は同じ意味を `null` で表す)。未指定の色は描画時にライブラリ自身の light / dark の既定セットから埋められるので、`Theme` を渡さない画面もダークで判読できる。渡した色が別の値へ置き換わることは、どちらの外観でも起きない。
+指定しなかった色は `Color.Unspecified` である。色の未指定はこの 1 流儀で表され、`Theme` / `CellStyle` の全色フィールドに加えて、Cell 種別が意味上の固有値として受け取る色引数の既定値もこれで、どれも nullable な `Color?` ではない (フォント・寸法・余白の未指定は `null` で表す)。未指定の色は描画時にライブラリ自身の light / dark の既定セットから埋められるので、`Theme` を渡さない画面もダークで判読できる。渡した色が別の値へ置き換わることは、どちらの外観でも起きない — その色に外観ごとの値を与える方法は以下のレシピで扱う。
 
 platform 既定値の段まで落ちる場合、その先はアプリのテーマではなくライブラリが同梱する Material3 派生テーマである。XML テーマも Compose の `MaterialTheme` もライブラリ UI の色を変えないので、見た目を調整する手段はこのページに書かれたものがすべてになる。同梱テーマは DayNight 派生のため、ライト / ダークは端末の夜間モードと uiMode 制御で決まる。
 
@@ -151,6 +152,34 @@ KsSettingsView(theme = theme) {
 ```
 
 未指定のままにした色は自動で外観に追随する。View ホストは足元で夜間モードが変わったときに未指定色を解決し直すので、`uiMode` を自前で処理して再生成されない Activity でも切り替わる。上の accent のように明示指定した色は利用者側の持ち物で、切り替えるならこの例のように自分で分岐する。
+
+## Cell に明示した色にライト / ダークの値を与える
+
+Cell に明示した色 — `CellStyle` のフィールド、または Cell 種別が意味上の固有値として受け取る色引数 — は、`Theme` の明示色と同じく、外観が変わっても書いたままの値で描かれる。宣言的 DSL では Cell を組み立てる場所で外観によって分岐する。夜間モードの変化に続く再 composition は内容更新として行へ届くので、行は作り直されずに新しい色で再 bind され、id もスクロール位置も保たれる。
+
+```kotlin
+val notifications = remember { mutableStateOf(true) }
+val accent = if (isSystemInDarkTheme()) Color(0xFFFFD54F) else Color(0xFFFFBF00)
+
+KsSettingsView {
+    Section(header = "General") {
+        LabelCell(
+            title = "Version",
+            valueText = "1.0.0",
+            style = CellStyle(titleColor = accent),
+        )
+        SwitchCell(
+            title = "Push notifications",
+            isOn = notifications,
+            accentColor = accent,
+        )
+    }
+}
+```
+
+固有の色を持つ Cell は `ButtonCell` (`titleColor`)、`EntryCell` (`placeholderColor` / `accentColor`)、`DatePickerCell` (`androidButtonColor` / `accentColor`)、およびスイッチ・チェックボックス・簡易チェック・ラジオ・リスト選択・数値・時刻の各 Cell (`accentColor`)。`Color.Unspecified` のままにすると `CellStyle` → `Theme` → 現在の外観の既定へ順に倒れる。
+
+宣言的 DSL の外側では、分岐を運ぶ再 composition が起きない。`uiMode` を自前の `configChanges` で処理する Activity は再生成もされないので、外観が変わったときに新しい色を載せた Cell を Store へ渡す — [updates.md](updates.md) を参照。
 
 ## Cell 1 つだけ見た目を上書きする
 

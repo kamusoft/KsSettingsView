@@ -31,6 +31,8 @@ import jp.kamusoft.kssettingsview.ui.KsImage
 
 `getValue` and `setValue` are what make `var x by remember { mutableStateOf(...) }` compile; without them the delegate form fails to resolve. Snippets that place cells are fragments of a `KsSettingsView { Section { ... } }` body inside a `@Composable` function, unless they show that frame themselves.
 
+The color arguments some cells take for their own meaning - `titleColor`, `accentColor`, `placeholderColor`, `androidButtonColor` - are non-null `Color` parameters whose default is `Color.Unspecified`, the mark of "not set" that lets the color fall through to `CellStyle`, then the theme, then the default of the current appearance. A color passed explicitly is kept as written when light and dark change; [styling.md](styling.md) covers how to give such a color a value per appearance.
+
 ## Group cells into a section
 
 Cells always live inside a section. `Section` takes an optional string header and footer.
