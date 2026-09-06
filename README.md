@@ -41,7 +41,7 @@ The platform [Agent Skills](https://github.com/kamusoft/KsSettingsView/blob/main
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/kamusoft/KsSettingsView-SPM", exact: "0.1.0-beta.1")
+    .package(url: "https://github.com/kamusoft/KsSettingsView-SPM", exact: "0.1.0-beta.2")
 ]
 ```
 
@@ -53,7 +53,7 @@ Publication status: the package is served from the `KsSettingsView-SPM` distribu
 
 ```kotlin
 dependencies {
-    implementation("jp.kamusoft:kssettingsview:0.1.0-beta.1")
+    implementation("jp.kamusoft:kssettingsview:0.1.0-beta.2")
 }
 ```
 
@@ -63,7 +63,7 @@ To select a prerelease, use a version such as `X.Y.Z-alpha.N`, `X.Y.Z-beta.N`, o
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="KsSettingsView.Maui" Version="0.1.0-beta.1" />
+  <PackageReference Include="KsSettingsView.Maui" Version="0.1.0-beta.2" />
 </ItemGroup>
 ```
 

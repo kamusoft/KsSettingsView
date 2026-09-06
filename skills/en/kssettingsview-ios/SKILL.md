@@ -37,7 +37,7 @@ let package = Package(
     name: "MyApp",
     platforms: [.iOS(.v16)],
     dependencies: [
-        .package(url: "https://github.com/kamusoft/KsSettingsView-SPM", exact: "0.1.0-beta.1")
+        .package(url: "https://github.com/kamusoft/KsSettingsView-SPM", exact: "0.1.0-beta.2")
     ],
     targets: [
         .target(

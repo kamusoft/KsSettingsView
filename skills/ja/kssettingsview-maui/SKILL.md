@@ -34,7 +34,7 @@ KsSettingsView は、iOS の設定アプリのようなリスト形式の設定�
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="KsSettingsView.Maui" Version="0.1.0-beta.1" />
+  <PackageReference Include="KsSettingsView.Maui" Version="0.1.0-beta.2" />
 </ItemGroup>
 ```
 
