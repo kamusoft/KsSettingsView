@@ -506,7 +506,7 @@ class DateCalendarDialogTest {
             style = cellStyle,
             accentColor = ComposeColor(0xFFFF0000),
         )
-        val effective = EffectiveStyle.from(ctx, theme, cellStyle)
+        val effective = EffectiveStyle.from(theme, cellStyle, darkTheme = false)
 
         val resolved = viewHolder().resolveDialogColors(cell, theme, effective)
 
@@ -518,7 +518,7 @@ class DateCalendarDialogTest {
         val theme = Theme(cellAccentColor = ComposeColor(0xFF00FF00))
         val cellStyle = CellStyle(accentColor = ComposeColor(0xFF0000FF))
         val cell = DatePickerCell(title = "予約日", style = cellStyle, accentColor = null)
-        val effective = EffectiveStyle.from(ctx, theme, cellStyle)
+        val effective = EffectiveStyle.from(theme, cellStyle, darkTheme = false)
 
         val resolved = viewHolder().resolveDialogColors(cell, theme, effective)
 
@@ -530,7 +530,7 @@ class DateCalendarDialogTest {
         val theme = Theme(cellAccentColor = ComposeColor(0xFF00FF00))
         val cellStyle = CellStyle()
         val cell = DatePickerCell(title = "予約日", accentColor = null)
-        val effective = EffectiveStyle.from(ctx, theme, cellStyle)
+        val effective = EffectiveStyle.from(theme, cellStyle, darkTheme = false)
 
         val resolved = viewHolder().resolveDialogColors(cell, theme, effective)
 
@@ -546,7 +546,7 @@ class DateCalendarDialogTest {
         )
         val cellStyle = CellStyle()
         val cell = DatePickerCell(title = "予約日")
-        val effective = EffectiveStyle.from(ctx, theme, cellStyle)
+        val effective = EffectiveStyle.from(theme, cellStyle, darkTheme = false)
 
         val resolved = viewHolder().resolveDialogColors(cell, theme, effective)
 

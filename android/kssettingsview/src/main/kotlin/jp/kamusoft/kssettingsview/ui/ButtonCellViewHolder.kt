@@ -86,7 +86,9 @@ internal class ButtonCellViewHolder(
     }
 
     override fun bind(cell: ButtonCell, theme: Theme) {
-        val effective = EffectiveStyle.from(views.root.context, theme, cell.style)
+        // 実効スタイルとボタン文字色は同じ外観から解決する必要があるため、判定は 1 回だけ引く。
+        val darkTheme = views.root.context.isKsDarkAppearance()
+        val effective = EffectiveStyle.from(theme, cell.style, darkTheme)
         val hasAux = cell.icon != null || cell.valueText != null || cell.hintText != null
 
         // ボタン文字色の 4 段階優先順位（SoT は EffectiveStyle.effectiveButtonTitleColorArgb に一本化）。
@@ -94,6 +96,7 @@ internal class ButtonCellViewHolder(
             buttonCellTitleColor = cell.titleColor,
             cellStyle = cell.style,
             theme = theme,
+            darkTheme = darkTheme,
         )
         // isEnabled = false 時は disabledTextColor に置換
         val titleColor = if (cell.isEnabled) baseColor else effective.disabledTextColor

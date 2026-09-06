@@ -8,6 +8,7 @@ import jp.kamusoft.kssettingsview.core.KsAnyView
 import jp.kamusoft.kssettingsview.core.RootAccessory
 import jp.kamusoft.kssettingsview.core.SettingsRoot
 import jp.kamusoft.kssettingsview.core.SettingsRootDiff
+import jp.kamusoft.kssettingsview.ui.KsSettingsViewDefaults
 import jp.kamusoft.kssettingsview.ui.SettingsRootStore
 import jp.kamusoft.kssettingsview.ui.Theme
 import jp.kamusoft.kssettingsview.ui.KsSettingsView as KsSettingsViewLayout
@@ -54,7 +55,8 @@ public fun KsSettingsView(
  *
  * @param modifier Compose Modifier
  * @param style 見た目スタイル（既定 [KsSettingsViewStyle.Classic]）
- * @param theme UI 層 [Theme]（Compose `Color` / `TextStyle` を直接保持）
+ * @param theme UI 層 [Theme]（Compose `Color` / `TextStyle` を直接保持）。既定は現在の外観
+ *   （ライト / ダーク）に対応するライブラリ既定色
  * @param rootHeader Root Header
  * @param rootFooter Root Footer
  * @param content DSL レシーバラムダ
@@ -63,7 +65,7 @@ public fun KsSettingsView(
 public fun KsSettingsView(
     modifier: Modifier = Modifier,
     style: KsSettingsViewStyle = KsSettingsViewStyle.Classic,
-    theme: Theme = Theme(),
+    theme: Theme = KsSettingsViewDefaults.theme(),
     rootHeader: (@Composable () -> Unit)? = null,
     rootFooter: (@Composable () -> Unit)? = null,
     content: DSLSettingsRootScope.() -> Unit,

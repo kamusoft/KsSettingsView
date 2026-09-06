@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sample の単色アイコン (Material Symbols 由来の vector drawable) の tint。外観ごとに values-night/ で切り替える。 -->
+<resources>
+    <!-- ライト: 暗いグレー (白い Cell 背景上で判読できる) -->
+    <color name="sample_icon_tint">#FF666666</color>
+</resources>

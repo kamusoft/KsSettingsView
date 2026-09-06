@@ -20,7 +20,7 @@ internal class CheckboxCellViewHolder(
     private var currentHandler: ((Boolean) -> Unit)? = null
 
     override fun bind(cell: CheckboxCell, theme: Theme) {
-        val effective = EffectiveStyle.from(views.root.context, theme, cell.style)
+        val effective = EffectiveStyle.from(theme, cell.style, views.root.context.isKsDarkAppearance())
         applyCellBaseLayout(
             views = views,
             title = cell.title,

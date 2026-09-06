@@ -21,7 +21,7 @@ internal class TimePickerCellViewHolder(
 ) : CellViewHolder<TimePickerCell>(views.root) {
 
     override fun bind(cell: TimePickerCell, theme: Theme) {
-        val effective = EffectiveStyle.from(views.root.context, theme, cell.style)
+        val effective = EffectiveStyle.from(theme, cell.style, views.root.context.isKsDarkAppearance())
         val displayValueText: String = cell.valueText ?: formatTime(cell.time, cell.format)
 
         applyCellBaseLayout(

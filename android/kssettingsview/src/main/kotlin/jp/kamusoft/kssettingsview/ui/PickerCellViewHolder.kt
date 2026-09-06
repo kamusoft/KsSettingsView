@@ -19,7 +19,7 @@ internal class PickerCellViewHolder(
 ) : CellViewHolder<PickerCell>(views.root) {
 
     override fun bind(cell: PickerCell, theme: Theme) {
-        val effective = EffectiveStyle.from(views.root.context, theme, cell.style)
+        val effective = EffectiveStyle.from(theme, cell.style, views.root.context.isKsDarkAppearance())
 
         // valueText 自動生成。明示指定があればそれを優先する。
         val displayValueText: String? = cell.valueText ?: cell.autoValueText().ifEmpty { null }

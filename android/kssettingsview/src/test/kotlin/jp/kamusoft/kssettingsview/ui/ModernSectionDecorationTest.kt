@@ -71,7 +71,7 @@ class ModernSectionDecorationTest {
         sectionMargin: PaddingValues? = null,
         sectionCornerRadius: androidx.compose.ui.unit.Dp? = null,
         sectionBorderWidth: androidx.compose.ui.unit.Dp? = null,
-        sectionBorderColor: Color? = null,
+        sectionBorderColor: Color = Color.Unspecified,
     ) = Theme(
         backgroundColor = Color(0xFFEFEFF4),
         cellBackgroundColor = Color(0xFFFFFFFF),

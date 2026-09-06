@@ -20,7 +20,7 @@ internal class NumberPickerCellViewHolder(
 ) : CellViewHolder<NumberPickerCell>(views.root) {
 
     override fun bind(cell: NumberPickerCell, theme: Theme) {
-        val effective = EffectiveStyle.from(views.root.context, theme, cell.style)
+        val effective = EffectiveStyle.from(theme, cell.style, views.root.context.isKsDarkAppearance())
         // valueText 明示指定を優先し、未指定なら unit を適用した自動表示にする。
         val displayValueText: String = cell.effectiveValueText()
 

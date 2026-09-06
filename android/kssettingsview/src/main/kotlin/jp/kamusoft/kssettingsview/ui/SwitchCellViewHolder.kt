@@ -134,7 +134,7 @@ internal class SwitchCellViewHolder(
     private var currentHandler: ((Boolean) -> Unit)? = null
 
     override fun bind(cell: SwitchCell, theme: Theme) {
-        val effective = EffectiveStyle.from(views.root.context, theme, cell.style)
+        val effective = EffectiveStyle.from(theme, cell.style, views.root.context.isKsDarkAppearance())
         applyCellBaseLayout(
             views = views,
             title = cell.title,
@@ -158,13 +158,17 @@ internal class SwitchCellViewHolder(
         val onThumbColor = onThumbColorFrom(accent)
         // オフ状態の明度の土台にするテーマ attr。素の MaterialSwitch と同じ attr を使うことで、
         // ダークテーマでの明度の反転にそのまま追従する。
+        // 解決元は View の Context ではなく現在の外観の同梱テーマ付き Context にする。行の View が
+        // 持つ Context は生成時に組み立てたテーマを保持し続けるため、Activity を再生成せずに外観が
+        // 変わるホストでは切替前の値を返してしまう。
+        val themedContext = views.root.context.ksThemedContext()
         val surfaceColor = MaterialColors.getColor(
-            switchView,
+            themedContext,
             com.google.android.material.R.attr.colorSurfaceContainerHighest,
             Color.LTGRAY,
         )
         val outlineColor = MaterialColors.getColor(
-            switchView,
+            themedContext,
             com.google.android.material.R.attr.colorOutline,
             Color.GRAY,
         )

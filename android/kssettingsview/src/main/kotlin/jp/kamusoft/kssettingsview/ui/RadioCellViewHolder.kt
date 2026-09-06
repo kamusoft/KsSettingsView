@@ -16,7 +16,7 @@ internal class RadioCellViewHolder(
 ) : CellViewHolder<RadioCell>(views.root) {
 
     override fun bind(cell: RadioCell, theme: Theme) {
-        val effective = EffectiveStyle.from(views.root.context, theme, cell.style)
+        val effective = EffectiveStyle.from(theme, cell.style, views.root.context.isKsDarkAppearance())
         applyCellBaseLayout(
             views = views,
             title = cell.title,

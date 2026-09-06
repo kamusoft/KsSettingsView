@@ -26,7 +26,15 @@ final class ThemeRenameTests: XCTestCase {
 
     func test_backgroundColor_既定値はdefaultBackgroundColor() {
         let theme = Theme()
-        XCTAssertTrue(theme.backgroundColor.isEqual(Theme.defaultBackgroundColor))
+        // 既定色は両外観の値を持つため、同一性ではなく外観ごとに解決した値で突き合わせる。
+        for style in [UIUserInterfaceStyle.light, .dark] {
+            let traits = UITraitCollection(userInterfaceStyle: style)
+            XCTAssertTrue(
+                theme.backgroundColor.resolvedColor(with: traits)
+                    .isEqual(Theme.defaultBackgroundColor.resolvedColor(with: traits)),
+                "\(style) で既定 Theme の backgroundColor は defaultBackgroundColor に一致する"
+            )
+        }
     }
 
     // MARK: - cellTitleColor（旧 titleColor）

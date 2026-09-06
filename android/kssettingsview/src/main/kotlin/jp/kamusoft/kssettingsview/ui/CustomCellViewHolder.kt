@@ -193,7 +193,7 @@ internal class CustomCellViewHolder(context: Context) : ComposeCellViewHolder<Cu
     }
 
     override fun bind(cell: CustomCell<*>, theme: Theme) {
-        val effective = EffectiveStyle.from(composeView.context, theme, cell.style)
+        val effective = EffectiveStyle.from(theme, cell.style, composeView.context.isKsDarkAppearance())
 
         // 行レベルの style（背景色 / 選択時色）を適用する。テキスト色・フォント等の
         // コンテンツ内装項目は builder の出力が持つため、ここでは適用先を持たない。

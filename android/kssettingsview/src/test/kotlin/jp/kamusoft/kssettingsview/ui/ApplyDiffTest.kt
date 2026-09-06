@@ -235,7 +235,7 @@ class ApplyDiffTest {
         val newTheme = Theme(separatorColor = Color.Red)
         view.theme = newTheme
 
-        assertEquals(newTheme, view.internalTheme())
+        assertEquals(newTheme.resolvedFor(darkTheme = false), view.internalTheme())
     }
 
     // MARK: - エラーハンドリング（strictMode = false 相当）
