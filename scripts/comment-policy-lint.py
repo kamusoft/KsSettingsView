@@ -16,6 +16,8 @@
 検出は 2 段階:
   BLOCKING  機械的に一意判定できる禁止参照。hook はこれの新規混入を拒否する
   ADVISORY  履歴記述など文脈依存で誤検知しうる類型。報告のみで止めない
+            (公開メンバー直前の doc コメントに ADR ID がある場合もここに入る —
+             ADR ID は許容参照だが、公開 doc コメントでは内部用語として禁止)
 
 hook は**ラチェット方式**: その書き込みで新しく増えるコメント行だけを検査する。
 書き込み前から在った違反は既存債務として見逃すため、違反を抱えたファイルの編集は
@@ -87,6 +89,19 @@ ADVISORY_PATTERNS = [
     (r"旧(?:実装|方式|仕様|API|設計|バージョン)", "履歴記述 (現在形の仕様説明に書き換える)"),
     (r"全面刷新|から移植|へ移行|を撤去|撤去した|廃止された|だった", "履歴記述 (現在形の仕様説明に書き換える)"),
 ]
+
+# 公開メンバーの doc コメントに ADR ID が書かれている類型 (ADVISORY)。
+# ADR ID は許容参照だが、公開 doc コメントでは内部用語として禁止される。
+# 可視性は宣言行の修飾子から推定するヒューリスティックなので報告のみに留める
+PUBLIC_DOC_ADR_LABEL = "公開 doc コメント内の ADR 参照 (設計根拠は非公開の実装側コメントへ移す)"
+_ADR_ID_RE = re.compile(r"\bADR-[0-9]{4}\b")
+# 非公開を示す修飾子。これが宣言行に無ければ公開とみなす (Kotlin / Swift は既定が public)
+_NON_PUBLIC_RE = re.compile(r"\b(?:private|internal|protected|fileprivate|file)\b")
+# 既定が非公開の言語では明示の public が無い限り公開とみなさない
+_EXPLICIT_PUBLIC_EXT = {".cs", ".java"}
+_PUBLIC_RE = re.compile(r"\bpublic\b")
+# doc コメント判定の対象拡張子 (XML 系・ProGuard は doc コメント構文を持たない)
+_DOC_COMMENT_EXT = {".swift", ".kt", ".kts", ".cs", ".java"}
 
 _BLOCKING = [(re.compile(p), label) for p, label in BLOCKING_PATTERNS]
 _ADVISORY = [(re.compile(p), label) for p, label in ADVISORY_PATTERNS]
@@ -223,6 +238,64 @@ def scan_text(text: str, ext: str):
                 if regex.search(target):
                     findings.append(("advisory", lineno, label, comment[:160]))
                     break
+    findings.extend(scan_public_doc_adr(text, ext))
+    return findings
+
+
+def _is_public_decl(line: str, ext: str) -> bool:
+    if _NON_PUBLIC_RE.search(line):
+        return False
+    if ext in _EXPLICIT_PUBLIC_EXT:
+        return bool(_PUBLIC_RE.search(line))
+    return True
+
+
+def scan_public_doc_adr(text: str, ext: str):
+    """公開メンバー直前の doc コメント (/** */ または /// の連なり) に ADR ID があれば advisory を返す。
+
+    doc コメントの直後にある最初の宣言行 (空行・注釈 `@...` / 属性 `[...]` は読み飛ばす) の
+    修飾子で可視性を推定する。宣言行が見つからないコメントは判定しない。
+    """
+    if ext not in _DOC_COMMENT_EXT:
+        return []
+    lines = text.splitlines()
+    findings = []
+    i = 0
+    n = len(lines)
+    while i < n:
+        stripped = lines[i].strip()
+        start = i
+        doc: list[str] = []
+        if stripped.startswith("/**"):
+            while i < n:
+                doc.append(lines[i])
+                if "*/" in lines[i]:
+                    break
+                i += 1
+            i += 1
+        elif stripped.startswith("///"):
+            while i < n and lines[i].strip().startswith("///"):
+                doc.append(lines[i])
+                i += 1
+        else:
+            i += 1
+            continue
+        body = "\n".join(doc)
+        if ALLOW_MARKER in body or not _ADR_ID_RE.search(body):
+            continue
+        # 直後の宣言行を探す
+        j = i
+        while j < n:
+            cand = lines[j].strip()
+            if not cand or cand.startswith(("@", "[", "//", "/*", "*")):
+                j += 1
+                continue
+            break
+        if j >= n:
+            continue
+        if _is_public_decl(lines[j], ext):
+            hit = next((d for d in doc if _ADR_ID_RE.search(d)), doc[0])
+            findings.append(("advisory", start + 1 + doc.index(hit), PUBLIC_DOC_ADR_LABEL, hit.strip()[:160]))
     return findings
 
 
@@ -405,6 +478,20 @@ SELFTEST_CASES = [
     ("禁止: ブロックコメント継続行", "/**\n * 仕様: kasane/changes/foo/spec.md\n */\n", 1),
 ]
 
+# 公開 doc コメントの ADR 参照 (ADVISORY) を確認するケース: (説明, 拡張子, ソース, 期待する要確認件数)
+PUBLIC_DOC_CASES = [
+    ("要確認: Kotlin の既定公開クラス", ".kt", "/**\n * 判断は cross/ADR-0007 に従う\n */\nclass ButtonCell\n", 1),
+    ("要確認: 注釈を挟んだ公開関数", ".kt", "/** cross/ADR-0007 */\n@Composable\nfun Cell() {}\n", 1),
+    ("要確認: Swift の /// doc", ".swift", "/// 根拠: ui/ADR-0012\n/// 補足\npublic struct Cell {}\n", 1),
+    ("要確認: C# の明示 public", ".cs", "/// <summary>core/ADR-0003</summary>\npublic sealed class Cell {}\n", 1),
+    ("許容: Kotlin の internal", ".kt", "/** cross/ADR-0007 */\ninternal class Cell\n", 0),
+    ("許容: Kotlin の private", ".kt", "/** cross/ADR-0007 */\nprivate fun helper() {}\n", 0),
+    ("許容: C# の暗黙非公開", ".cs", "/// <summary>core/ADR-0003</summary>\nsealed class Cell {}\n", 0),
+    ("許容: 行コメントの ADR 参照", ".kt", "// cross/ADR-0007 に従う\nclass Cell\n", 0),
+    ("許容: ADR を含まない doc", ".kt", "/** ボタン形のセル */\nclass Cell\n", 0),
+    ("許容: allow マーカー", ".kt", "/** cross/ADR-0007 comment-policy:allow */\nclass Cell\n", 0),
+]
+
 # hook のラチェット動作を確認するケース: (説明, 基準 old_string, 書き込む new_string, deny を期待するか)
 HOOK_CASES = [
     ("新規混入は拒否", "", "// 仕様: kasane/changes/foo/spec.md\n", True),
@@ -429,6 +516,11 @@ def selftest() -> int:
     for name, src, expected in SELFTEST_CASES:
         actual = len([f for f in scan_text(src, ".kt") if f[0] == "blocking"])
         check(actual == expected, name, f"期待 {expected} / 実際 {actual}")
+    for name, ext, src, expected in PUBLIC_DOC_CASES:
+        actual = len([f for f in scan_text(src, ext) if f[2] == PUBLIC_DOC_ADR_LABEL])
+        check(actual == expected, name, f"期待 {expected} / 実際 {actual}")
+        # advisory は hook (blocking のみ) を止めない
+        check(not [f for f in scan_text(src, ext) if f[0] == "blocking"], f"{name} は禁止に昇格しない")
 
     with tempfile.TemporaryDirectory() as tmp:
         tmp = os.path.realpath(tmp)

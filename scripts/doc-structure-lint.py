@@ -5,7 +5,7 @@
 
 使い方:
   python3 scripts/doc-structure-lint.py                # 検査範囲 (config lint.doc-structure.scope) を検査
-  python3 scripts/doc-structure-lint.py --paths a b    # 指定ファイルだけ検査 (書き込み経路のスキルはこちらを使う)
+  python3 scripts/doc-structure-lint.py --paths a b    # 指定パスだけ検査 (書き込み経路のスキルはこちらを使う。ディレクトリは .md へ展開、不在パスは exit 2)
   python3 scripts/doc-structure-lint.py --verbose      # 違反を省略せず全件表示する
   python3 scripts/doc-structure-lint.py --stats        # 違反の有無によらず実測値を一覧する (棚卸し・閾値調整用)
 
@@ -184,7 +184,9 @@ def check(src: str, th: dict) -> tuple[list[tuple[int, str]], list[str]]:
 
 def targets(root: str, paths: list[str] | None, scope: list[str], excludes: list[str]) -> list[str]:
     if paths:
-        return [LP.normalize_rel(p, root) for p in paths]
+        # ディレクトリは走査して展開し、不在パスは例外 (main で exit 2) — 無言の「違反なし」を出さない
+        return [rel for rel in LP.expand_paths(root, paths, (".md",), SKIP_NAMES)
+                if not LP.is_excluded(rel, excludes)]
     found: list[str] = []
     for s in scope:
         base = os.path.join(root, s)
@@ -223,10 +225,14 @@ def main(argv: list[str]) -> int:
 
     by_file: list[tuple[str, list[tuple[int, str]], list[str]]] = []
     rows: list[tuple[str, dict]] = []
-    for rel in targets(root, paths, scope, excludes):
+    try:
+        target_list = targets(root, paths, scope, excludes)
+    except LP.PathNotFound as e:
+        sys.stderr.write(f"--paths に存在しないパスがあります: {e} "
+                         f"(複数パスは引数を分けて渡す。zsh の未クォート変数展開は単語分割されない)\n")
+        return 2
+    for rel in target_list:
         full = os.path.join(root, rel)
-        if not os.path.isfile(full):
-            continue
         with open(full, encoding="utf-8") as f:
             src = f.read()
         e, w = check(src, th)
