@@ -1,6 +1,6 @@
 # Cells
 
-Recipes for placing cells in a settings screen. Every XAML example assumes the `ks` namespace declaration from the minimal example in [SKILL.md](../SKILL.md). A fragment that starts with `<ks:Section>` goes directly inside a `<ks:SettingsView>` element; a fragment that is a bare cell goes inside a `<ks:Section>`, because `Root` - the content property of `SettingsView` - holds sections, not cells. Bindings resolve against the page `BindingContext`; the properties they name are yours to declare on a view model.
+Recipes for placing cells in a settings screen. Every XAML example assumes the `ks` namespace declaration from the minimal example in [SKILL.md](../SKILL.md). A fragment that starts with `<ks:Section>` goes directly inside a `<ks:SettingsView>` element; a fragment that is a bare cell goes inside a `<ks:Section>`, because `Root` - the content property of `SettingsView` - holds sections, not cells. Bindings resolve against the page `BindingContext`; the properties they name are yours to declare on a view model. Sections and cells are not part of the page's visual tree, so `{Binding}` works on them but `{x:Reference}` and `{DynamicResource}` do not resolve - those work inside a header or footer view and inside `CustomCell.Content`, which are.
 
 ## Group cells into a section
 
@@ -136,7 +136,7 @@ Switch the mode to `Multiple` and bind `SelectedIndices` instead. `MaxSelectedNu
 
 ## Show object items with a readable text
 
-`DisplayMember` names the property whose value becomes the item text, on the cell and in the selection surface; leave it unset (or name a property that does not resolve) and the item's `ToString()` is shown instead. `SubDisplayMember` adds a second line under each candidate, in the selection surface only. Both resolve public instance properties by name through reflection, so keep those properties preserved when trimming. The former `DisplayFormatter` delegate is gone - use `DisplayMember` instead.
+`DisplayMember` names the property whose value becomes the item text, on the cell and in the selection surface; leave it unset (or name a property that does not resolve) and the item's `ToString()` is shown instead. `SubDisplayMember` adds a second line under each candidate, in the selection surface only. Both resolve public instance properties by name through reflection - a plain property name, not a dotted path - so keep those properties preserved when trimming. The former `DisplayFormatter` delegate is gone - use `DisplayMember` instead.
 
 ```xml
 <ks:PickerCell Title="Plan"
@@ -199,6 +199,8 @@ public SettingsViewModel()
                      Unit="px"
                      PickerTitle="Select a size" />
 ```
+
+A `Step` of zero or less falls back to 1, and a `Number` that is not one of the offered values opens the surface on the first candidate. `Unit` is appended to the candidates in the selection surface too, not only to the value on the cell. The surface is a bottom sheet with a wheel on Android, and a picker that slides up from the bottom edge on iOS.
 
 ## Choose a time
 

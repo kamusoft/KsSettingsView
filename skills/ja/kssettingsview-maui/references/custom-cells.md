@@ -122,3 +122,5 @@ cell.Content = BuildRow(newState);
 `CellBase` から継承する `Title` / `Description` / `HintText` / `IconSource` とテキスト系のスタイルプロパティは Cell に影響しない。設定しても例外にはならず黙って無視される — 同じスタイル指定を種類の違う Cell へまとめて当てられるようにするため。効くのは Cell そのものに掛かる `IsEnabled` / `IsVisible` / `BackgroundColor` / `Height` と、`CustomCell` 固有の `Content` / `Command` / `CommandParameter` / `Tapped` イベント / `ShowArrowIndicator`。
 
 View インスタンスは同時に 1 箇所にしか置けない。同じインスタンスを 2 つの Cell の `Content` にしたり、`Content` と Header / Footer の View に同時に使ったりすると `InvalidOperationException` になる。独自の Cell 型と描画を登録する機構は MAUI では公開していない — 再利用の単位は `CustomCell` の派生クラスになる。
+
+`CustomCell` の行は仮想化されない。ツリーに置かれている間、行の数だけ View の実体が常に生き続ける。数は控えめに保ち、長い生成リストには組み込み Cell を使う。

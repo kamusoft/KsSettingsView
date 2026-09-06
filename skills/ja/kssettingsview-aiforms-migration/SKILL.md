@@ -23,6 +23,7 @@ KsSettingsView は AiForms.SettingsView の骨格 — `SettingsView` に `Sectio
 | 同名または新名で残っている Cell プロパティを読み替える | [references/api-mapping.md](references/api-mapping.md) |
 | `TextPickerCell`・添付プロパティの `RadioCell.SelectedValue`・`EntryCell.CompletedCommand`・`IsAndroidSpinnerStyle` の代わりを探す | [references/api-mapping.md](references/api-mapping.md) |
 | 画面全体のスタイル (`Cell*` 既定値・Header / Footer・Cell の高さ・Section の Container) を移す | [references/api-mapping.md](references/api-mapping.md) |
+| 移行した画面をダーク外観でも判読可能に保つ、両外観の色を自分で決める | [references/api-mapping.md](references/api-mapping.md) |
 | 廃止された機能 (ドラッグ並べ替え・`ScrollToTop`・`UseDescriptionAsValue`・`LongCommand`) の扱いを決める | [references/api-mapping.md](references/api-mapping.md) |
 | Cell ごとの Handler / PropertyMapper のコードと `HandlerCleanUpHelper` の回避策を削除する | [references/api-mapping.md](references/api-mapping.md) |
 | 移行した C# の Cell 構築コードで出るようになった `SwitchCell` / `EntryCell` の CS0104 を直す | [references/api-mapping.md](references/api-mapping.md)、詳細は kssettingsview-maui Skill |
@@ -36,7 +37,7 @@ KsSettingsView は AiForms.SettingsView の骨格 — `SettingsView` に `Sectio
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="KsSettingsView.Maui" Version="0.1.0" />
+  <PackageReference Include="KsSettingsView.Maui" Version="0.1.0-beta.1" />
 </ItemGroup>
 ```
 

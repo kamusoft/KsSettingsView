@@ -2,7 +2,7 @@
 
 画面の見た目にかかわるレシピ: 画面全体の既定値、Cell ごとの上書き、list の外観、Section 装飾、Header / Footer、配置場所。XAML の断片は [SKILL.md](../SKILL.md) の最小動作コードにある `ks` 名前空間宣言を前提とする。
 
-描画値は次の順で解決される: Cell 種別が意味として持つ値 (ButtonCell のタイトル色など) → Cell ごとの上書き → `SettingsView` の画面全体の既定値 → platform 既定。未指定は「次の段から継承する」意思であって「何も使わない」ではない。
+描画値は次の順で解決される: Cell 種別が意味として持つ値 (ButtonCell のタイトル色など) → Cell ごとの上書き → `SettingsView` の画面全体の既定値 → 現在の外観 (ライト / ダーク) のライブラリ既定または platform 既定。未指定は「次の段から継承する」意思であって「何も使わない」ではない。
 
 ## 画面全体の既定値を決める
 
@@ -47,6 +47,25 @@
 ```xml
 <ks:SwitchCell Title="Push notifications" On="True" AccentColor="#34C759" />
 ```
+
+## ライト / ダーク外観に追随させる
+
+未指定の色はライブラリ既定で描かれ、その既定は端末の外観 — iOS のライト / ダーク、Android の夜間モード — に追随する。そのため色を 1 つも設定していない画面も、ダーク端末で判読できる配色で描かれる。設定した色は両方の外観でそのまま描かれ、ライブラリが別の既定値へ置き換えることはない。
+
+両方の外観の色を自分で決めるなら、色プロパティを `AppThemeBinding` で書く。外観が切り替わると新しい値がプロパティへ供給され、表示中の画面まで届く。
+
+```xml
+<ks:SettingsView BackgroundColor="{AppThemeBinding Light=#F2F2F7, Dark=#000000}"
+                 CellBackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1C1C1E}"
+                 CellTitleColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"
+                 SeparatorColor="{AppThemeBinding Light=#C8C7CC, Dark=#38383A}">
+  <ks:Section HeaderText="General">
+    <ks:LabelCell Title="Version" ValueText="1.0.0" />
+  </ks:Section>
+</ks:SettingsView>
+```
+
+同じマークアップ拡張は Cell ごとの上書きにも `AccentColor` にも使える。
 
 ## スタイルプロパティの一覧
 
@@ -173,6 +192,8 @@ Section は `HeaderText` / `FooterText`、画面全体は `RootHeaderText` / `Ro
 ```
 
 これらの View はページの logical tree に載り、所有者の `BindingContext` を継承するので、中のバインドは追加の配線なしに解決される。View の中身が変わればその場で表示が更新され、`HeaderHeight` で高さを固定していない限り領域も追従する。
+
+上の Header / Footer の書式プロパティが効くのはテキスト形式のときだけ。置いた View の見た目は View 自身が持ち、それらのプロパティを変えても View は作り直されない — 画面の他の部分が描き直される間も、View の中の状態 (入力途中の値・スクロール位置など) が保たれるのはこのため。
 
 ## アイコンの大きさを決める
 

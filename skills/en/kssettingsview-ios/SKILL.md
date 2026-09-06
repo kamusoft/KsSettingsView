@@ -21,6 +21,7 @@ KsSettingsView is a UI library for building settings screens - the list-style sc
 | Keep cells identified across re-evaluations, drive visibility from state, host the screen from UIKit | [references/updates.md](references/updates.md) |
 | Express a change as a `SettingsRootDiff`, apply a diff or theme to the controller directly | [references/updates.md](references/updates.md) |
 | Colors, fonts, cell height, Classic / Modern list appearance, section boxes | [references/styling.md](references/styling.md) |
+| Follow the light and dark appearance, with the built-in defaults or your own colors | [references/styling.md](references/styling.md) |
 | Section and screen headers / footers, including arbitrary SwiftUI in them | [references/styling.md](references/styling.md) |
 | Put any SwiftUI view into a cell of the list, or define your own cell type with its own renderer | [references/custom-cells.md](references/custom-cells.md) |
 

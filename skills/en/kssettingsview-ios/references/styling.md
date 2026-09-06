@@ -2,7 +2,7 @@
 
 Recipes for colors, fonts, sizes, list appearance and the supplementary areas around the cells. Every example assumes the imports from the minimal example in [SKILL.md](../SKILL.md).
 
-Values resolve in this order: the meaning-specific value of the cell, then `CellStyle`, then `Theme`, then the UIKit default. A meaning-specific value is a field the cell type owns because of what it means on that cell - `ButtonCell.titleColor`, or the `accentColor` of the selection and input cells - and it wins over the same attribute coming from `CellStyle`. UIKit types are used directly - `UIColor`, `UIFont`, `CGFloat` - which needs `import UIKit` in files that do not already get it from `import SwiftUI`.
+Values resolve in this order: the meaning-specific value of the cell, then `CellStyle`, then `Theme`, then the library default for the current appearance or the UIKit default. A meaning-specific value is a field the cell type owns because of what it means on that cell - `ButtonCell.titleColor`, or the `accentColor` of the selection and input cells - and it wins over the same attribute coming from `CellStyle`. UIKit types are used directly - `UIColor`, `UIFont`, `CGFloat` - which needs `import UIKit` in files that do not already get it from `import SwiftUI`.
 
 ## Apply a theme to the whole screen
 
@@ -24,7 +24,7 @@ KsSettingsView {
 .theme(warmTheme)
 ```
 
-`backgroundColor` paints the canvas behind the list and `cellBackgroundColor` paints the cells; they are separate areas, so setting one does not imply the other.
+`backgroundColor` paints the canvas behind the list and `cellBackgroundColor` paints the cells; they are separate areas, so setting one does not imply the other. The colors above are fixed values and are drawn as they are in both light and dark - the recipe *Make colors follow the light and dark appearance* below covers the adaptive form.
 
 These are all the fields of `Theme`, in declaration order. Arguments must be passed in this order.
 
@@ -32,7 +32,7 @@ These are all the fields of `Theme`, in declaration order. Arguments must be pas
 |---|---|---|---|
 | List | `separatorColor` | `UIColor` | built-in default |
 | List | `backgroundColor` | `UIColor` | built-in default |
-| List | `cellBackgroundColor` | `UIColor` | `.white` |
+| List | `cellBackgroundColor` | `UIColor` | built-in default |
 | List | `selectedColor` | `UIColor` | built-in default |
 | List | `cellAccentColor` | `UIColor` | built-in default |
 | List | `disabledTextColor` | `UIColor` | built-in default |
@@ -69,7 +69,7 @@ These are all the fields of `Theme`, in declaration order. Arguments must be pas
 
 ## Start from the library defaults
 
-The built-in defaults behind the "unspecified" values above are published as `public static` constants on `Theme`, for putting an attribute back to its default or deriving a new value from one.
+The built-in defaults behind the "unspecified" values above are published as `public static` constants on `Theme`, for putting an attribute back to its default or deriving a new value from one. The color constants are dynamic `UIColor` values holding a light and a dark variant, except `defaultCellTitleColor`, `defaultCellDescriptionColor` and `defaultButtonTitleColor`, which are the system colors `.label`, `.secondaryLabel` and `.systemBlue`.
 
 | Constant | Default for |
 |---|---|
@@ -77,6 +77,7 @@ The built-in defaults behind the "unspecified" values above are published as `pu
 | `defaultSelectedColor` | selected-cell background |
 | `defaultAccentColor` | accent color |
 | `defaultBackgroundColor` | list background |
+| `defaultCellBackgroundColor` | cell background |
 | `defaultDisabledTextColor` | disabled text color |
 | `defaultHeaderBackgroundColor` | header background |
 | `defaultFooterBackgroundColor` | footer background |
@@ -91,6 +92,27 @@ The built-in defaults behind the "unspecified" values above are published as `pu
 | `defaultButtonTitleColor` | ButtonCell title color |
 | `defaultCellIconSize` | icon size |
 | `defaultCellIconRadius` | icon corner radius |
+
+## Make colors follow the light and dark appearance
+
+Colors you leave unspecified are resolved when the list is drawn, against the appearance in effect at that moment, so a screen with no theme - or with only a few attributes overridden - stays readable in dark mode. A color you do pass is never swapped for another one by the library: a fixed color such as `UIColor(red:green:blue:alpha:)` is drawn as that color in both appearances.
+
+To have your own colors follow the appearance, pass a dynamic `UIColor` - a color from an asset catalog, or one built with `UIColor(dynamicProvider:)`. UIKit resolves it, so both the defaults and your dynamic colors are redrawn when the appearance changes while the list is on screen.
+
+```swift
+let adaptiveTheme = Theme(
+    backgroundColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(white: 0.07, alpha: 1.0)
+            : UIColor(white: 0.98, alpha: 1.0)
+    },
+    cellAccentColor: UIColor(named: "Accent") ?? Theme.defaultAccentColor
+)
+```
+
+Spelling out the raw value of a default as a fixed color is not the same as leaving it unspecified: such a theme is no longer equal to the default theme, and that attribute no longer changes in dark. Pass the `default...` constant itself to get the library default back, dark variant included.
+
+The `sectionBorderColor` of the Modern section box reaches the layer as a `CGColor`, and the library re-resolves it when the appearance changes, so a dynamic border color does not stay behind in the previous appearance.
 
 ## Override the look of one cell
 

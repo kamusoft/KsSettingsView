@@ -46,7 +46,7 @@ Section と Cell は logical tree に載らないため、`{Binding}` は解決�
 
 ## 全 Cell 共通のフィールドを読み替える
 
-`CellBase` の共通 22 プロパティはすべて残っている。系統的に変わったのは既定値の表し方で、AiForms が「画面既定にフォールバックする」意味に `-1.0` や `KnownColor.Default` を使っていたところが、nullable 型の `null` になった。
+`CellBase` の共通 22 プロパティはすべて残っている。系統的に変わったのは既定値の表し方で、AiForms が「画面既定にフォールバックする」意味に `-1.0` や `KnownColor.Default` を使っていたところが、nullable 型の `null` になった。どの段でも設定されなかった色は、現在の外観に応じたライブラリ既定へ落ちる (下の「ライト / ダーク両外観の色を決める」)。
 
 | AiForms `CellBase` | KsSettingsView `CellBase` | 備考 |
 |---|---|---|
@@ -289,6 +289,25 @@ AiForms は `ButtonCell` で `Description` とそのフォント系プロパテ�
 | (新規) | `ScrollIndicatorVisible` (`bool?`) | |
 
 `SectionMargin` は `Thickness?` だが、`Left` / `Right` は leading / trailing として読まれ、RTL の左右解決は Native 側に委ねられる。`Classic` では上下成分だけが効く。
+
+## ライト / ダーク両外観の色を決める
+
+AiForms では色を設定しないときの既定は固定値だった — `Section.TextColor` の既定は `Colors.Black` で、他のプロパティの裏にある画面全体の既定値も固定値である。KsSettingsView では null のままの色が端末の外観 — iOS のライト / ダーク、Android の夜間モード — に応じたライブラリ既定へ解決される。そのため色を 1 つも設定していない移行後の画面も、こちらで何も足さずにダークで判読できる配色で描かれる。設定した色は両方の外観でそのまま描かれ、ライブラリが別の既定値へ置き換えることはない。
+
+注意が要るのは、XAML にライト向けの配色を持ち込んでいる画面 — AiForms の見た目を固定するために `Cell*` の色を書き写した画面である。その値はダークでも適用され、ダーク端末でライト画面のまま見える。外観に追随する既定に任せるならプロパティを消し、自分で決めるなら `AppThemeBinding` で両外観を書く。この markup extension は AiForms のプロパティに使えたのと同じようにこれらのプロパティにも効くので、すでに使っている画面は prefix の変更だけで移せる。ライブラリの既定色は AiForms の配色ではないため、旧来の見た目を再現するなら色を明示し、そのうえでダークに何を見せるかを決めることになる。
+
+```xml
+<ks:SettingsView BackgroundColor="{AppThemeBinding Light=#F2F2F7, Dark=#000000}"
+                 CellBackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1C1C1E}"
+                 CellTitleColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"
+                 SeparatorColor="{AppThemeBinding Light=#C8C7CC, Dark=#38383A}">
+  <ks:Section HeaderText="General">
+    <ks:LabelCell Title="Version" ValueText="1.0.0" />
+  </ks:Section>
+</ks:SettingsView>
+```
+
+同じ markup extension は Cell ごとの上書きにも `AccentColor` にも使える。新規に書く画面向けの同じ話題は kssettingsview-maui Skill のスタイル reference の「ライト / ダーク外観に追随させる」が扱う。
 
 ## Header / Footer の設定を移す
 

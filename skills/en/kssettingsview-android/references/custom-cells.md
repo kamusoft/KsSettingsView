@@ -35,6 +35,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.ProgressBar
 import android.widget.TextView
+import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.graphics.toArgb
 import jp.kamusoft.kssettingsview.core.Cell
 import jp.kamusoft.kssettingsview.core.DSLReidentifiableCell
@@ -206,9 +207,9 @@ class ProgressCellViewHolder(view: View) : CellViewHolder<ProgressCell>(view) {
 
     override fun bind(cell: ProgressCell, theme: Theme) {
         titleView.text = cell.title
-        titleView.setTextColor(
-            (theme.cellTitleColor ?: Theme.DEFAULT_CELL_TITLE_COLOR).toArgb(),
-        )
+        if (theme.cellTitleColor.isSpecified) {
+            titleView.setTextColor(theme.cellTitleColor.toArgb())
+        }
         progressView.progressTintList =
             ColorStateList.valueOf(theme.cellAccentColor.toArgb())
         progressView.progress = cell.progress
@@ -220,6 +221,8 @@ class ProgressCellViewHolder(view: View) : CellViewHolder<ProgressCell>(view) {
     }
 }
 ```
+
+The `Theme` a holder receives already has the list, cell, separator, selection, accent, disabled-text and header / footer colors resolved for the current appearance, so reading `cellAccentColor` directly is safe. The title, description, value-text, hint and placeholder colors can still arrive as `Color.Unspecified`, because they are decided per cell kind while the row is drawn - hence the `isSpecified` guard above, which leaves the color your layout declares in place when the theme says nothing about it. Do not call `toArgb()` on an unspecified color: it comes out transparent black.
 
 The layout it inflates is yours; here it holds a `TextView` and a `ProgressBar` carrying those two ids. Register the pair before the cell is displayed. `KsCellRegistry` is a process-wide singleton, so one registration at startup covers every screen. View types below 100 are reserved for the library, so start yours at `KsCellRegistry.CELL_VIEW_TYPE_MIN`, the constant holding that 100.
 

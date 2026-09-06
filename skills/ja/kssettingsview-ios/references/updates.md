@@ -142,6 +142,8 @@ store.applyTheme(darkTheme)
 
 宣言的な書き方では `.theme(_:)` modifier が同じ経路を通る。
 
+新しい Theme は表示中の Cell と、text 形式の Header / Footer へ届き、その場で色が塗り直される。View 形式の Header / Footer は意図的に対象外である — 再 bind すると View の factory が再実行され、hosted view が持っていた状態が失われるため。Theme に追随させたい View 形式の accessory は、`store.updateAccessory(target:accessory:)` で自分で差し替える。
+
 ## 再評価をまたいで Cell を追跡する
 
 宣言ツリーは評価のたびに作り直されるため、動的なコレクションには key が要る。`Identifiable` の要素または `id:` KeyPath を受ける DSL の `ForEach` を使う。

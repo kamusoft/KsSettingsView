@@ -219,7 +219,7 @@ NumberPickerCell(
 )
 ```
 
-`pickerTitle` overrides the title of the number picker; left out, `title` is used.
+A `step` of zero or less falls back to `1`. The picker opens on the candidate matching `value`, or on the first candidate when `value` is not one of them, and `onValueChanged` fires once when the user taps Done - closing with Cancel discards the choice. `pickerTitle` overrides the title of the number picker; left out, `title` is used.
 
 ## Choose a time
 

@@ -2,7 +2,7 @@
 
 色・フォント・寸法・list の外観と、Cell の周りの補助領域のレシピ。例はいずれも [SKILL.md](../SKILL.md) の最小動作コードと同じ import を前提とする。
 
-描画値は Cell 種別の意味上の固有値 → `CellStyle` → `Theme` → UIKit 既定値の順で解決する。意味上の固有値とは、その Cell にとっての意味からその型が持っているフィールド — `ButtonCell.titleColor`、選択系・入力系 Cell の `accentColor` など — で、同じ属性を `CellStyle` で指定しても固有値が優先される。型は UIKit のものをそのまま使う (`UIColor` / `UIFont` / `CGFloat`)。`import SwiftUI` から UIKit が入らないファイルでは `import UIKit` が要る。
+描画値は Cell 種別の意味上の固有値 → `CellStyle` → `Theme` → 現在の外観のライブラリ既定値または UIKit 既定値の順で解決する。意味上の固有値とは、その Cell にとっての意味からその型が持っているフィールド — `ButtonCell.titleColor`、選択系・入力系 Cell の `accentColor` など — で、同じ属性を `CellStyle` で指定しても固有値が優先される。型は UIKit のものをそのまま使う (`UIColor` / `UIFont` / `CGFloat`)。`import SwiftUI` から UIKit が入らないファイルでは `import UIKit` が要る。
 
 ## 画面全体に Theme を適用する
 
@@ -24,7 +24,7 @@ KsSettingsView {
 .theme(warmTheme)
 ```
 
-`backgroundColor` は list 全体の下地、`cellBackgroundColor` は Cell の背景であり、別の領域である。一方から他方を推論しない。
+`backgroundColor` は list 全体の下地、`cellBackgroundColor` は Cell の背景であり、別の領域である。一方から他方を推論しない。上の例の色は固定値なので、ライトでもダークでもそのまま描かれる。外観に追随させる書き方は後述の「色をライト / ダーク外観に追随させる」を参照する。
 
 `Theme` のフィールドは以下がすべてで、並びは宣言順である。実引数もこの順に並べる。
 
@@ -32,7 +32,7 @@ KsSettingsView {
 |---|---|---|---|
 | list | `separatorColor` | `UIColor` | ライブラリ既定 |
 | list | `backgroundColor` | `UIColor` | ライブラリ既定 |
-| list | `cellBackgroundColor` | `UIColor` | `.white` |
+| list | `cellBackgroundColor` | `UIColor` | ライブラリ既定 |
 | list | `selectedColor` | `UIColor` | ライブラリ既定 |
 | list | `cellAccentColor` | `UIColor` | ライブラリ既定 |
 | list | `disabledTextColor` | `UIColor` | ライブラリ既定 |
@@ -69,7 +69,7 @@ KsSettingsView {
 
 ## ライブラリ既定値を起点にする
 
-上の「未指定時」のライブラリ既定は `Theme` の `public static` 定数として公開されている。属性を既定へ戻すときや、既定値から派生値を作るときに参照する。
+上の「未指定時」のライブラリ既定は `Theme` の `public static` 定数として公開されている。属性を既定へ戻すときや、既定値から派生値を作るときに参照する。色の定数はライトとダークの 2 値を持つ dynamic な `UIColor` である。ただし `defaultCellTitleColor` / `defaultCellDescriptionColor` / `defaultButtonTitleColor` はシステム色 (`.label` / `.secondaryLabel` / `.systemBlue`) そのものである。
 
 | 定数 | 既定値の対象 |
 |---|---|
@@ -77,6 +77,7 @@ KsSettingsView {
 | `defaultSelectedColor` | 選択中の Cell の背景色 |
 | `defaultAccentColor` | アクセント色 |
 | `defaultBackgroundColor` | list 背景色 |
+| `defaultCellBackgroundColor` | Cell 背景色 |
 | `defaultDisabledTextColor` | 無効時テキスト色 |
 | `defaultHeaderBackgroundColor` | Header 背景色 |
 | `defaultFooterBackgroundColor` | Footer 背景色 |
@@ -91,6 +92,27 @@ KsSettingsView {
 | `defaultButtonTitleColor` | ButtonCell タイトル色 |
 | `defaultCellIconSize` | icon サイズ |
 | `defaultCellIconRadius` | icon 角丸半径 |
+
+## 色をライト / ダーク外観に追随させる
+
+未指定の色は描画時点の外観に対して解決されるため、Theme を渡さない画面も、一部の属性だけ上書きした画面も、ダーク外観で判読できる配色で描かれる。明示的に渡した色をライブラリが別の値へ置き換えることはない — `UIColor(red:green:blue:alpha:)` のような固定色は、どちらの外観でもその色のまま描かれる。
+
+自分で指定した色を外観に追随させたいときは、dynamic な `UIColor` (asset catalog の色、または `UIColor(dynamicProvider:)` で作った色) を渡す。解決は UIKit が行うため、表示中に外観が切り替わると既定色も渡した dynamic 色も描き直される。
+
+```swift
+let adaptiveTheme = Theme(
+    backgroundColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(white: 0.07, alpha: 1.0)
+            : UIColor(white: 0.98, alpha: 1.0)
+    },
+    cellAccentColor: UIColor(named: "Accent") ?? Theme.defaultAccentColor
+)
+```
+
+既定と同じ生値を固定色で書き下すことは、未指定のままにすることとは違う。その Theme は既定 Theme と等価ではなくなり、その属性はダークでも変わらなくなる。ライブラリ既定へ戻すときは `default...` 定数そのものを渡す (ダーク側の値も一緒に戻る)。
+
+Modern の Section Container の `sectionBorderColor` は `CGColor` として layer に載るが、外観の変化を受けてライブラリが再解決するため、dynamic な Border 色だけが前の外観のまま残ることはない。
 
 ## Cell 1 つだけ見た目を上書きする
 

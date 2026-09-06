@@ -219,7 +219,7 @@ NumberPickerCell(
 )
 ```
 
-`pickerTitle` は数値選択画面のタイトルを上書きする (未指定なら `title` を使う)。
+`step` が 0 以下のときは `1` へ fallback する。picker は `value` と一致する候補を選択した状態で開き、`value` が候補に無ければ先頭候補から開く。`onValueChanged` は Done を押した時点で 1 回発火し、Cancel で閉じた場合は選択が破棄される。`pickerTitle` は数値選択画面のタイトルを上書きする (未指定なら `title` を使う)。
 
 ## 時刻を選ばせる
 

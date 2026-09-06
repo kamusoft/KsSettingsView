@@ -2,7 +2,7 @@
 
 Recipes for the look of the screen: screen-wide defaults, per-cell overrides, list appearance, section decoration, headers and footers, and where to place the control. XAML fragments assume the `ks` namespace declaration from the minimal example in [SKILL.md](../SKILL.md).
 
-Each drawn value is resolved in this order: a value the cell type owns by meaning (such as a button title color), then the override on the cell, then the screen-wide default on `SettingsView`, then the platform default. Leaving a property unset means "inherit the next level", not "use nothing".
+Each drawn value is resolved in this order: a value the cell type owns by meaning (such as a button title color), then the override on the cell, then the screen-wide default on `SettingsView`, then the library default for the current appearance (light or dark) or the platform default. Leaving a property unset means "inherit the next level", not "use nothing".
 
 ## Set the defaults for the whole screen
 
@@ -47,6 +47,25 @@ Interactive cells add `AccentColor` for the color of their control - the switch 
 ```xml
 <ks:SwitchCell Title="Push notifications" On="True" AccentColor="#34C759" />
 ```
+
+## Follow the light and dark appearance
+
+A color you leave unset is drawn from the library default, and those defaults follow the appearance of the device - light and dark on iOS, night mode on Android - so a screen that sets no colors at all stays readable in dark. A color you do set is drawn as you gave it in both appearances; the library does not swap your value for a default of its own.
+
+To decide both appearances yourself, write the color properties with `AppThemeBinding`. Switching the appearance supplies the new value to the property, and it reaches the screen while the page is on display.
+
+```xml
+<ks:SettingsView BackgroundColor="{AppThemeBinding Light=#F2F2F7, Dark=#000000}"
+                 CellBackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1C1C1E}"
+                 CellTitleColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"
+                 SeparatorColor="{AppThemeBinding Light=#C8C7CC, Dark=#38383A}">
+  <ks:Section HeaderText="General">
+    <ks:LabelCell Title="Version" ValueText="1.0.0" />
+  </ks:Section>
+</ks:SettingsView>
+```
+
+The same markup extension works on a per-cell override and on `AccentColor`.
 
 ## Style property list
 
@@ -173,6 +192,8 @@ Any MAUI view can take the place of the text. There are four slots - `RootHeader
 ```
 
 These views join the page's logical tree and inherit the `BindingContext` of their owner, so bindings inside them work without extra wiring. Changing what a view shows updates it in place, and the area grows with it unless `HeaderHeight` fixes the height.
+
+The header and footer style properties above shape the text form only. A view you place is styled by the view itself, and a change to those properties does not rebuild it - which is also what keeps the state inside it (an entry being edited, a scroll position) while the rest of the screen is redrawn.
 
 ## Size the icons
 

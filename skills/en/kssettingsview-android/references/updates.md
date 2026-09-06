@@ -32,6 +32,7 @@ import jp.kamusoft.kssettingsview.core.Section
 import jp.kamusoft.kssettingsview.core.SectionAccessory
 import jp.kamusoft.kssettingsview.core.SettingsAccessory
 import jp.kamusoft.kssettingsview.core.SettingsRoot
+import jp.kamusoft.kssettingsview.ui.KsSettingsViewDefaults
 import jp.kamusoft.kssettingsview.ui.LabelCell
 import jp.kamusoft.kssettingsview.ui.RadioCell
 import jp.kamusoft.kssettingsview.ui.SettingsRootStore
@@ -217,10 +218,12 @@ This is a one-shot notification rather than stored state: if nothing is attached
 The theme is not part of the settings tree. `applyTheme` changes colors and fonts without touching ids or structure, and an identical theme is not re-applied.
 
 ```kotlin
-store.applyTheme(darkTheme)
+store.applyTheme(KsSettingsViewDefaults.darkTheme())
 ```
 
 In the declarative form the `theme` parameter of `KsSettingsView` goes through the same path. The store overload has no `theme` parameter: pass the initial value to `SettingsRootStore(initialTheme = ...)` and change it with `applyTheme`.
+
+This is for themes you choose yourself. Following the device between light and dark needs no call at all: a color left at `Color.Unspecified` - which is what every color of a bare `Theme()` is - is resolved against the appearance when the row is drawn, and the view resolves it again when the night mode changes under it. See [styling.md](styling.md) for what the library fills in and how to name a default set explicitly.
 
 ## Keep cells identified across re-evaluations
 

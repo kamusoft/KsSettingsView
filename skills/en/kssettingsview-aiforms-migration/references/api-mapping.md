@@ -46,7 +46,7 @@ Sections and cells are not part of the logical tree, so `{Binding}` resolves but
 
 ## Translate the fields every cell shares
 
-The 22 shared `CellBase` properties all survive. The systematic change is the sentinel: AiForms used `-1.0` and `KnownColor.Default` to mean "fall back to the screen default", KsSettingsView uses a nullable type with `null`.
+The 22 shared `CellBase` properties all survive. The systematic change is the sentinel: AiForms used `-1.0` and `KnownColor.Default` to mean "fall back to the screen default", KsSettingsView uses a nullable type with `null`. A color that is null at every level lands on the library default for the current appearance (see "Decide the colors for light and dark").
 
 | AiForms `CellBase` | KsSettingsView `CellBase` | Notes |
 |---|---|---|
@@ -289,6 +289,25 @@ The `Cell*` defaults keep their names one for one. As on the cells, the sentinel
 | (new) | `ScrollIndicatorVisible` (`bool?`) | |
 
 `SectionMargin` is a `Thickness?` whose `Left` and `Right` are read as leading and trailing, so right-to-left layouts resolve on the native side. In `Classic` only its vertical components apply.
+
+## Decide the colors for light and dark
+
+An unset color meant a fixed value in AiForms - `Section.TextColor` defaulted to `Colors.Black`, and the screen-wide defaults behind the other properties were fixed values too. In KsSettingsView a color left null resolves to the library default for the appearance the device is in - light and dark on iOS, night mode on Android - so a migrated screen that sets no colors is drawn readably in dark without you adding anything. A color you do set is drawn as you gave it in both appearances; the library does not swap your value for a default of its own.
+
+That is what to watch for in a screen carrying a light palette in its XAML - a set of `Cell*` colors copied in to pin the AiForms look. Those values now apply in dark as well, where they read as a light screen. Delete the property to take the appearance-following default, or state both appearances with `AppThemeBinding`, which applies to these properties as it did to the AiForms ones - a screen that already used it moves over on the prefix change alone. The library defaults are not the AiForms palette, so reproducing the old look means setting the colors explicitly, and then deciding what dark should show.
+
+```xml
+<ks:SettingsView BackgroundColor="{AppThemeBinding Light=#F2F2F7, Dark=#000000}"
+                 CellBackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1C1C1E}"
+                 CellTitleColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"
+                 SeparatorColor="{AppThemeBinding Light=#C8C7CC, Dark=#38383A}">
+  <ks:Section HeaderText="General">
+    <ks:LabelCell Title="Version" ValueText="1.0.0" />
+  </ks:Section>
+</ks:SettingsView>
+```
+
+The same markup extension works on a per-cell override and on `AccentColor`. The kssettingsview-maui Skill covers the same ground for a screen written from scratch, under "Follow the light and dark appearance" in its styling reference.
 
 ## Move the header and footer settings
 

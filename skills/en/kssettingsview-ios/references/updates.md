@@ -142,6 +142,8 @@ store.applyTheme(darkTheme)
 
 In the declarative form, the `.theme(_:)` modifier goes through the same path.
 
+The new theme reaches the cells on display and the text headers and footers, which are recolored in place. Headers and footers holding a view are deliberately left alone - re-binding them would run the view factory again and lose whatever state the hosted view held - so a view accessory that should follow the theme has to be updated by you, with `store.updateAccessory(target:accessory:)`.
+
 ## Keep cells identified across re-evaluations
 
 A declarative tree is rebuilt on every evaluation, so dynamic collections need a key. Use the DSL `ForEach`, which takes `Identifiable` elements or an `id:` key path.

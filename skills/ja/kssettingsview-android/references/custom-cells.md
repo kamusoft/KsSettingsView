@@ -35,6 +35,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.ProgressBar
 import android.widget.TextView
+import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.graphics.toArgb
 import jp.kamusoft.kssettingsview.core.Cell
 import jp.kamusoft.kssettingsview.core.DSLReidentifiableCell
@@ -206,9 +207,9 @@ class ProgressCellViewHolder(view: View) : CellViewHolder<ProgressCell>(view) {
 
     override fun bind(cell: ProgressCell, theme: Theme) {
         titleView.text = cell.title
-        titleView.setTextColor(
-            (theme.cellTitleColor ?: Theme.DEFAULT_CELL_TITLE_COLOR).toArgb(),
-        )
+        if (theme.cellTitleColor.isSpecified) {
+            titleView.setTextColor(theme.cellTitleColor.toArgb())
+        }
         progressView.progressTintList =
             ColorStateList.valueOf(theme.cellAccentColor.toArgb())
         progressView.progress = cell.progress
@@ -220,6 +221,8 @@ class ProgressCellViewHolder(view: View) : CellViewHolder<ProgressCell>(view) {
     }
 }
 ```
+
+ViewHolder が受け取る `Theme` では、list 下地・Cell 背景・罫線・選択色・accent・無効時文字・Header / Footer の色が現在の外観で解決済みになっている。上の `cellAccentColor` をそのまま読んでよいのはこのためである。title・description・valueText・hintText・placeholder の色は Cell を描く時点で Cell 種別ごとに決まるので、`Color.Unspecified` のまま渡ってくることがある。上で `isSpecified` を見ているのはそのためで、Theme が何も言っていないときはレイアウトが宣言した色をそのまま残す。未指定の色に `toArgb()` を呼んではいけない (透明な黒になる)。
 
 inflate するレイアウトは利用者側のもので、ここでは上記 2 つの ID を持つ `TextView` と `ProgressBar` を置いている。表示前に組を登録する。`KsCellRegistry` はプロセス全体で共有する singleton なので、起動時に 1 回登録すれば全画面で有効になる。100 未満の viewType はライブラリの予約領域なので、その 100 を保持する定数 `KsCellRegistry.CELL_VIEW_TYPE_MIN` を起点にする。
 

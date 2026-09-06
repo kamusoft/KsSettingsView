@@ -1,6 +1,6 @@
 # Cell
 
-設定画面に Cell を置くためのレシピ。XAML の例はいずれも [SKILL.md](../SKILL.md) の最小動作コードにある `ks` 名前空間宣言を前提とする。`<ks:Section>` から始まる断片は `<ks:SettingsView>` の直下に、Cell 単体の断片は `<ks:Section>` の中に貼る — `SettingsView` の content property である `Root` が持つのは Section であって Cell ではない。バインドはページの `BindingContext` に対して解決されるので、参照しているプロパティは ViewModel 側に用意する。
+設定画面に Cell を置くためのレシピ。XAML の例はいずれも [SKILL.md](../SKILL.md) の最小動作コードにある `ks` 名前空間宣言を前提とする。`<ks:Section>` から始まる断片は `<ks:SettingsView>` の直下に、Cell 単体の断片は `<ks:Section>` の中に貼る — `SettingsView` の content property である `Root` が持つのは Section であって Cell ではない。バインドはページの `BindingContext` に対して解決されるので、参照しているプロパティは ViewModel 側に用意する。Section と Cell はページの visual tree には載らないため、`{Binding}` は効くが `{x:Reference}` と `{DynamicResource}` は解決されない — これらが使えるのは visual tree に載る Header / Footer の View と `CustomCell.Content` の中だけ。
 
 ## Cell を Section にまとめる
 
@@ -136,7 +136,7 @@ private void OnOpenLogTapped(object? sender, EventArgs e)
 
 ## オブジェクトの候補を読みやすい文字列で表示する
 
-`DisplayMember` に指定した名前のプロパティの値が、Cell と選択面の項目テキストになる。未指定 (または名前が解決できない) なら項目の `ToString()` が表示される。`SubDisplayMember` は選択面の候補行に限って 2 行目の副表示を足す。どちらもリフレクションで public インスタンスプロパティを名前解決するので、trimming ではそれらのプロパティを保全しておく。旧 `DisplayFormatter` デリゲートは廃止済み — `DisplayMember` を使う。
+`DisplayMember` に指定した名前のプロパティの値が、Cell と選択面の項目テキストになる。未指定 (または名前が解決できない) なら項目の `ToString()` が表示される。`SubDisplayMember` は選択面の候補行に限って 2 行目の副表示を足す。どちらもリフレクションで public インスタンスプロパティを名前解決する — 書けるのはプロパティ名そのもので、ドット区切りのパス式は使えない — ので、trimming ではそれらのプロパティを保全しておく。旧 `DisplayFormatter` デリゲートは廃止済み — `DisplayMember` を使う。
 
 ```xml
 <ks:PickerCell Title="Plan"
@@ -199,6 +199,8 @@ public SettingsViewModel()
                      Unit="px"
                      PickerTitle="Select a size" />
 ```
+
+`Step` が 0 以下なら 1 として扱われ、`Number` が候補に無い値なら選択面は先頭の候補で開く。`Unit` は Cell の値だけでなく選択面の候補にも付く。選択面は Android がホイールを載せたボトムシート、iOS が画面下端からせり上がる picker。
 
 ## 時刻を選ばせる
 

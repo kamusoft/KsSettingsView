@@ -122,3 +122,5 @@ cell.Content = BuildRow(newState);
 `Title`, `Description`, `HintText`, `IconSource`, and the text style properties inherited from `CellBase` do not affect the cell. Setting them is ignored silently rather than throwing, so one shared style can be applied to a mixed set of cells. What does apply is the cell itself - `IsEnabled`, `IsVisible`, `BackgroundColor`, `Height` - and what `CustomCell` adds of its own: `Content`, `Command`, `CommandParameter`, the `Tapped` event, and `ShowArrowIndicator`.
 
 A single view instance belongs to one place: using it as the `Content` of two cells, or as both a content and a header or footer view, throws `InvalidOperationException`. Registering a cell type of your own with its own renderer is not offered in MAUI - a `CustomCell` subclass is the reusable unit.
+
+Rows holding a `CustomCell` are not virtualized: every one of them keeps its own live view for as long as it is in the tree. Keep the count moderate, and reach for a built-in cell in a long generated list.

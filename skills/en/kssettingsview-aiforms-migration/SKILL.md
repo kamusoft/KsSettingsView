@@ -23,6 +23,7 @@ The mapping is against AiForms.Maui.SettingsView, the .NET MAUI release. Coming 
 | Translate a cell property that survives under the same or a new name | [references/api-mapping.md](references/api-mapping.md) |
 | Find what replaced `TextPickerCell`, the attached `RadioCell.SelectedValue`, `EntryCell.CompletedCommand`, or `IsAndroidSpinnerStyle` | [references/api-mapping.md](references/api-mapping.md) |
 | Carry screen-wide styling over: `Cell*` defaults, header and footer, cell height, section borders | [references/api-mapping.md](references/api-mapping.md) |
+| Keep a migrated screen readable in dark, or decide the colors of both appearances yourself | [references/api-mapping.md](references/api-mapping.md) |
 | Decide what to do about a dropped feature: drag sort, `ScrollToTop`, `UseDescriptionAsValue`, `LongCommand` | [references/api-mapping.md](references/api-mapping.md) |
 | Delete the per-cell Handler / PropertyMapper code and the `HandlerCleanUpHelper` leak workaround | [references/api-mapping.md](references/api-mapping.md) |
 | Fix a CS0104 on `SwitchCell` / `EntryCell` in C# that migrated cell-building code now hits | [references/api-mapping.md](references/api-mapping.md), then the kssettingsview-maui Skill |
@@ -36,7 +37,7 @@ In place of the `PackageReference` you removed, add this one in the `.csproj` of
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="KsSettingsView.Maui" Version="0.1.0" />
+  <PackageReference Include="KsSettingsView.Maui" Version="0.1.0-beta.1" />
 </ItemGroup>
 ```
 

@@ -32,6 +32,7 @@ import jp.kamusoft.kssettingsview.core.Section
 import jp.kamusoft.kssettingsview.core.SectionAccessory
 import jp.kamusoft.kssettingsview.core.SettingsAccessory
 import jp.kamusoft.kssettingsview.core.SettingsRoot
+import jp.kamusoft.kssettingsview.ui.KsSettingsViewDefaults
 import jp.kamusoft.kssettingsview.ui.LabelCell
 import jp.kamusoft.kssettingsview.ui.RadioCell
 import jp.kamusoft.kssettingsview.ui.SettingsRootStore
@@ -217,10 +218,12 @@ store.invalidateAccessoryMeasurement(
 Theme は設定ツリーの一部ではない。`applyTheme` は ID と構造に触れずに色とフォントを変え、同値の Theme は再適用しない。
 
 ```kotlin
-store.applyTheme(darkTheme)
+store.applyTheme(KsSettingsViewDefaults.darkTheme())
 ```
 
 宣言側では `KsSettingsView` の `theme` 引数が同じ経路を通る。Store overload に `theme` 引数はないので、初期値は `SettingsRootStore(initialTheme = ...)`、以後の変更は `applyTheme` を使う。
+
+これは自分で選んだ Theme を切り替える場合の話である。端末のライト / ダークに追随するだけなら呼び出しは要らない。`Color.Unspecified` のままの色 (素の `Theme()` の全色がそうである) は Cell を描く時点で外観に対して解決され、足元で夜間モードが変わったときには View が解決し直す。ライブラリが埋める色と、既定セットを名指しする方法は [styling.md](styling.md) を参照。
 
 ## 再評価をまたいで Cell を追跡する
 

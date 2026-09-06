@@ -21,6 +21,7 @@ KsSettingsView は、iOS の設定アプリのようなリスト形式の設定�
 | 表示中の画面を変える: Cell と Section の追加・削除・移動・差し替え | [references/updates.md](references/updates.md) |
 | ユーザーの操作を ViewModel で受け取る、コレクションから Cell を生成する、ページを離れて戻っても状態を保つ | [references/updates.md](references/updates.md) |
 | 色・フォント・Cell の高さ、Classic / Modern の list 外観、Section の Container | [references/styling.md](references/styling.md) |
+| 端末のライト / ダーク外観に追随させる、両外観の色を自分で決める | [references/styling.md](references/styling.md) |
 | スタイルプロパティの一覧を引く (画面全体の既定と Cell ごとの上書き) | [references/styling.md](references/styling.md) |
 | Section と画面全体の Header / Footer (任意の View も置ける)、ページ上での配置場所 | [references/styling.md](references/styling.md) |
 | 任意の MAUI View を Cell として表示する、再利用できる独自 Cell 型にまとめる | [references/custom-cells.md](references/custom-cells.md) |
@@ -33,7 +34,7 @@ KsSettingsView は、iOS の設定アプリのようなリスト形式の設定�
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="KsSettingsView.Maui" Version="0.1.0" />
+  <PackageReference Include="KsSettingsView.Maui" Version="0.1.0-beta.1" />
 </ItemGroup>
 ```
 
