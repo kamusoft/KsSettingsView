@@ -6,7 +6,7 @@ applies-when:
   tasks: [docs-refresh の API 名網羅検査の仕分け]
 title: 利用者向け Skill の API 掲載基準
 description: skills/ (利用者向け Agent Skills) に公開 API をどこまで載せるか — 「簡潔でも網羅」の方針と意図的な掲載除外の基準・現行除外リスト
-timestamp: 2026-09-01
+timestamp: 2026-09-05
 ---
 
 # 利用者向け Skill の API 掲載基準
@@ -35,7 +35,6 @@ timestamp: 2026-09-01
 | platform | 除外 API | 基準 |
 |---|---|---|
 | iOS | `KsSettingsViewController.disconnectStore()`、`SettingsRootStore.preview`、`KsCellRegistry.resolveRendererType()` / `removeAll()`、`SettingsRootBuilder` / `KsSectionBuilder` の型名 (DSL の記法自体は掲載し、scope 型の名前だけ除外する)、`rootHeaderElementKind` / `rootFooterElementKind` | 低頻度の細部 |
-| iOS | `EffectiveStyle` | 可視性引き下げ候補 (changes: ios-effectivestyle-visibility) |
 | iOS | `KsSettingsViewBridge` 配下一式 | 内部層 |
 | Android | `KsSettingsView.unbind`、`KsCellRegistry.registerBasicCells` / `registerInputCells` / `registerCustomCell`、`CustomCellEmptyContent`、`SettingsRootDsl` / `SectionScope` の型名 (iOS と同じく DSL の記法は掲載し、scope 型の名前だけ除外する)、`DSLIconModifiableCell.withDSLIcon` | 低頻度の細部 |
 | Android | `kssettingsview-bridge` 配下一式 | 内部層 |

@@ -504,6 +504,56 @@ final class DSLDiffCalculatorTests: XCTestCase {
             if case .moveCell = $0 { return true } else { return false }
         }))
     }
+
+    /// 外観に応じて `CellStyle` の色だけを差し替えた再評価は、行の追加・削除ではなく
+    /// 内容更新（`.replaceCell`）として発行され、新しい色を payload で運ぶ。
+    ///
+    /// SwiftUI DSL で `colorScheme` に応じて色を選ぶ利用者は、外観が変わると同じ id・同じ title の
+    /// まま style だけが違う Cell を返す。その差が内容更新にならないと、表示中の行に届かない。
+    func test_CellStyleの色だけの変更でreplaceCellが発行される() {
+        let sectionID = UUID()
+        let cellID = UUID()
+        let lightColor = UIColor(red: 0.9, green: 0.8, blue: 0.7, alpha: 1.0)
+        let darkColor = UIColor(red: 0.2, green: 0.4, blue: 0.6, alpha: 1.0)
+
+        let old = makeTree(sections: [sec(
+            id: sectionID,
+            cells: [LabelCell(id: cellID, style: CellStyle(titleColor: lightColor), title: "A")]
+        )])
+        let new = makeTree(sections: [sec(
+            id: sectionID,
+            cells: [LabelCell(id: cellID, style: CellStyle(titleColor: darkColor), title: "A")]
+        )])
+
+        let diffs = DSLDiffCalculator.compute(from: old, to: new)
+        XCTAssertEqual(diffs.count, 1)
+        guard case let .replaceCell(cid, payload) = diffs[0] else {
+            return XCTFail("Expected .replaceCell, got \(diffs[0])")
+        }
+        XCTAssertEqual(cid.id, cellID, "内容更新の対象は同じ id の行である")
+        XCTAssertEqual(
+            (payload as? LabelCell)?.style.titleColor, darkColor,
+            "payload は切替後の title 色を運ぶ"
+        )
+    }
+
+    /// 色が同じままの再評価は差分を生まない（内容更新が過剰に発行されない）。
+    func test_CellStyleの色が同じなら差分は発行されない() {
+        let sectionID = UUID()
+        let cellID = UUID()
+        let color = UIColor(red: 0.9, green: 0.8, blue: 0.7, alpha: 1.0)
+
+        let old = makeTree(sections: [sec(
+            id: sectionID,
+            cells: [LabelCell(id: cellID, style: CellStyle(titleColor: color), title: "A")]
+        )])
+        let new = makeTree(sections: [sec(
+            id: sectionID,
+            cells: [LabelCell(id: cellID, style: CellStyle(titleColor: color), title: "A")]
+        )])
+
+        XCTAssertEqual(DSLDiffCalculator.compute(from: old, to: new), [])
+    }
 }
 
 struct EmptyTestView: SwiftUI.View {

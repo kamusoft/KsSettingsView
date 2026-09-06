@@ -4,16 +4,18 @@ import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.recyclerview.widget.RecyclerView
 import jp.kamusoft.kssettingsview.core.SectionAccessory
 import org.junit.Assert.fail
 import org.robolectric.Shadows.shadowOf
 import java.util.concurrent.TimeUnit
 
 /*
- * KsSettingsView の Robolectric テストが共有する、メインループの待機と表示内容の観測ユーティリティ。
+ * KsSettingsView の Robolectric テストが共有する、メインループの待機・表示内容の観測・変更通知の記録ユーティリティ。
  *
- * 待機 (idle / awaitConvergence / awaitDifferCommit) と観測 (committedTexts / visibleRowTexts) は、
- * Store 更新が表示へ届くまでの非同期経路を扱うどのテストでも同じ形になるため、ここに 1 つだけ置く。
+ * 待機 (idle / awaitConvergence / awaitDifferCommit)・観測 (committedTexts / visibleRowTexts)・
+ * 変更通知の記録 (ChangeRecordingObserver) は、Store 更新が表示へ届くまでの非同期経路を扱う
+ * どのテストでも同じ形になるため、ここに 1 つだけ置く。
  */
 
 /** メインスレッドのキューに溜まっているメッセージを流し切る。 */
@@ -161,4 +163,51 @@ private fun collectTexts(view: View): List<String> = when (view) {
     is TextView -> listOfNotNull(view.text?.toString()?.takeIf { it.isNotBlank() })
     is ViewGroup -> (0 until view.childCount).flatMap { collectTexts(view.getChildAt(it)) }
     else -> emptyList()
+}
+
+/**
+ * Adapter が発行した変更通知を、種別込みで発行順に記録する Observer。
+ *
+ * payload なしの `notifyItemChanged(position)` も 3 引数版へ payload = null で届くため、
+ * 記録された payload が非 null であることが「payload 付き通知」の証拠になる。
+ *
+ * 内容更新の経路が構造 Diff（remove + insert）へ退行したかどうかは、行の `ViewHolder` の
+ * インスタンス同一性では観測できない。旧 `ViewHolder` は `RecycledViewPool` へ戻り、同じ
+ * viewType の insert がそこから同じインスタンスを引き当てるうえ、`KsSettingsView` は
+ * `supportsChangeAnimations = false` を設定しているため payload の有無に関わらず
+ * `ViewHolder` は再利用される。観測できるのは Adapter が発行した通知の種別そのものなので、
+ * [notifications] に内容更新以外（挿入・削除・移動・全体更新）が混ざっていないことで判定する。
+ */
+internal class ChangeRecordingObserver : RecyclerView.AdapterDataObserver() {
+    val changedPositions = mutableListOf<Int>()
+    val payloads = mutableListOf<Any?>()
+
+    /** 受け取った通知を発行順に並べた要約。内容更新だけが `changed(...)` で始まる。 */
+    val notifications = mutableListOf<String>()
+
+    /** 内容更新 (`changed(...)`) 以外の通知。空であれば行は作り直されていない。 */
+    val structuralNotifications: List<String>
+        get() = notifications.filterNot { it.startsWith("changed(") }
+
+    override fun onChanged() {
+        notifications += "reset"
+    }
+
+    override fun onItemRangeChanged(positionStart: Int, itemCount: Int, payload: Any?) {
+        changedPositions += positionStart
+        payloads += payload
+        notifications += "changed($positionStart,$itemCount,payload=$payload)"
+    }
+
+    override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
+        notifications += "inserted($positionStart,$itemCount)"
+    }
+
+    override fun onItemRangeRemoved(positionStart: Int, itemCount: Int) {
+        notifications += "removed($positionStart,$itemCount)"
+    }
+
+    override fun onItemRangeMoved(fromPosition: Int, toPosition: Int, itemCount: Int) {
+        notifications += "moved($fromPosition,$toPosition,$itemCount)"
+    }
 }

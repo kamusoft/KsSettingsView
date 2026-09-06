@@ -3,7 +3,7 @@ type: reference
 title: Android Compose Bridge と宣言 DSL
 description: KsSettingsView の Store 方式・DSL 方式、identity、modifier、Theme 伝播の利用契約
 tags: [android, compose, dsl, public-api]
-timestamp: 2026-08-28
+timestamp: 2026-09-06
 ---
 
 この文書は、Jetpack Compose から KsSettingsView を使うための公開 API 利用契約と責務境界を整理した reference である。読むと、Store 方式と DSL 方式の選び方、動的要素の identity、Root・Section・Cell の構築、Theme の更新経路が分かる。Android View Host を直接使う場合は [Android Native Host の利用と更新境界](android-native-host.md) を参照する。
@@ -23,7 +23,7 @@ Compose 側は宣言ツリーの構築、Recomposition をまたぐ状態保持�
 | DSL | `KsSettingsView` の内部 | 静的・中規模の一般的な設定画面 | Compose state から宣言ツリーを再評価する |
 | Store | 利用者 | 大量データ、高頻度更新、命令型の部分操作 | 利用者が `SettingsRootStore` の公開操作を呼ぶ |
 
-両方式とも `modifier`、`style`、任意 Composable の `rootHeader` / `rootFooter` を受ける。`style` の既定値は `Classic` である。
+両方式とも `modifier`、`style`、任意 Composable の `rootHeader` / `rootFooter` を受ける。`style` の既定値は `Classic` である。DSL 方式の `theme` の既定値は `KsSettingsViewDefaults.theme()` で、composition 時の `isSystemInDarkTheme()` に応じた light / dark の既定 Theme になる。
 
 ## 利用例
 
@@ -131,7 +131,7 @@ cell(CustomCell(id = "stable-custom"))
 
 TwoWay helper は `MutableState` 自体を Cell の永続状態として保持しない。DSL 評価時点の `state.value` を Cell 値へ写し、Cell callback から `state.value` へ書き戻す。`SwitchCell` と入力 Cell 5種には `MutableState` overload がある。値と callback を明示する通常 overload でも同じ境界を構成できる。
 
-同一 ID の Cell 内容が変わると、DSL は構造 Diff を作らず `replaceCells` の内容更新経路へ渡す。Section / Cell の可視性が変わると、他の差分と混ぜず完全な model から visible projection を再構築する full 更新へ切り替える。
+同一 ID の Cell 内容が変わると、DSL は構造 Diff を作らず `replaceCells` の内容更新経路へ渡す。CellStyle や Cell 固有色 (accent・placeholder 等) だけが変わった場合も同じで、表示中の行は作り直されず新しい色で再 bind される。外観ごとに色を変えたい Cell は `isSystemInDarkTheme()` で選んだ色を CellStyle や Cell 関数の色引数に渡せばよく、外観の切替による再 composition がこの経路で行へ届く ([core/ADR-0031](../../../decisions/core/0031-explicit-cell-color-appearance-contract-and-beta-breaking-change.md))。Section / Cell の可視性が変わると、他の差分と混ぜず完全な model から visible projection を再構築する full 更新へ切り替える。
 
 ## 宣言ツリーの identity
 
@@ -181,7 +181,7 @@ DSL 方式では `theme` 引数を内部 Store の初期 Theme とし、以後�
 
 Store 方式には `theme` 引数がない。利用者は `SettingsRootStore(initialTheme = ...)` と `store.applyTheme(newTheme)` を使い、Host は Store の `theme` を購読する。`style` と Root H/F は Theme とは別の画面状態として `AndroidView.update` から Host へ渡る。
 
-Theme と CellStyle は UI 層で Jetpack Compose 側の型 `Color`、`TextStyle`、`Dp` を直接持つ。通常属性の解決順は CellStyle、Theme、ライブラリ同梱テーマ由来の既定値である。ホストの XML テーマと Compose の `MaterialTheme` はライブラリ UI の配色に影響しない — Native Host は同梱 Material3 派生テーマの常時ラップで描画し、アプリ側テーマへの前提を持たない ([android/ADR-0020](../../../decisions/android/0020-bundled-theme-always-wrap-host-independent.md))。詳細は [Android Native Host の利用と更新境界](android-native-host.md#ホストのテーマと-activity-型-前提なし) を参照する。
+Theme と CellStyle は UI 層で Jetpack Compose 側の型 `Color`、`TextStyle`、`Dp` を直接持つ。色の未指定は `Color.Unspecified` で表し (Cell 固有の色引数と、`switchCell(accentColor = …)` / `entryCell(placeholderColor = …)` のような DSL の Cell 関数の色引数も同じ型・同じ既定値)、通常属性の解決順は CellStyle、Theme、ライブラリ既定 (現在の外観の light / dark セット。既定へ戻す・派生値を作る入口は `KsSettingsViewDefaults`) である。ホストの XML テーマと Compose の `MaterialTheme` はライブラリ UI の配色に影響しない — Native Host は同梱 Material3 派生テーマの常時ラップで描画し、アプリ側テーマへの前提を持たない ([android/ADR-0020](../../../decisions/android/0020-bundled-theme-always-wrap-host-independent.md))。詳細は [Android Native Host の利用と更新境界](android-native-host.md#ホストのテーマと-activity-型-前提なし) を参照する。
 
 ## 保証すること
 

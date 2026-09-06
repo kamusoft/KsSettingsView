@@ -22,7 +22,17 @@ import jp.kamusoft.kssettingsview.R
  * コンテンツへ渡すホスト Context の取り出し（[ksHostContext]）のため。
  */
 internal class KsThemedContext(base: Context) :
-    ContextThemeWrapper(base, R.style.Theme_KsSettingsView_Internal)
+    ContextThemeWrapper(base, R.style.Theme_KsSettingsView_Internal) {
+
+    /**
+     * このラッパを組み立てた時点の夜間モード（`Configuration.UI_MODE_NIGHT_*`）。
+     *
+     * 同梱テーマは DayNight 派生であり、[ContextThemeWrapper] はテーマを生成時に一度だけ組み立てる。
+     * ラッパ自身の `resources` はラップ元へ委譲するため現在の夜間モードを返すが、既に組み上がった
+     * テーマの属性値は切り替わらない。現在値と突き合わせて古さを判定できるよう、生成時の値を覚えておく。
+     */
+    val createdNightMode: Int = base.nightMode()
+}
 
 /**
  * キャッシュした [KsThemedContext] と、それを作った時点の夜間モード。
@@ -50,6 +60,20 @@ private fun Context.nightMode(): Int =
     resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
 
 /**
+ * 現在の外観がダークか。
+ *
+ * 未指定色の既定を外観から選ぶときの判定源であり、同梱テーマ付き Context の作り分け
+ * （[ksThemedContext]）と同じ Configuration の夜間モードを見る。両者の判定源を揃えることで、
+ * 同梱テーマが解決する属性値とライブラリ既定色の外観がずれない。
+ */
+internal fun Context.isKsDarkAppearance(): Boolean =
+    nightMode() == Configuration.UI_MODE_NIGHT_YES
+
+/** [Configuration] から直接夜間モードを判定する（Configuration 変更の通知を受け取る経路用）。 */
+internal fun Configuration.isKsDarkAppearance(): Boolean =
+    (uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+
+/**
  * ラップ元として使う Context を求める。
  *
  * 中間の [ContextWrapper]（ホストがテーマを与えるために被せたラッパ等）は素通りし、UI の帰属先である
@@ -71,12 +95,14 @@ private fun Context.themeBaseContext(): Context {
 /**
  * ライブラリ所有 UI を生成するための Context を返す。
  *
- * すでに同梱テーマをかぶせた Context ならそのまま返し、そうでなければ [themeBaseContext] をラップして
- * 返す（同じラップ元・同じ夜間モードに対しては同じラッパを返す）。ラッパはラップ元の生存期間を超えて
+ * すでに同梱テーマをかぶせた Context でも、それを組み立てた時点の夜間モードが現在値と一致するときだけ
+ * そのまま返す。一致しなければ（Activity を再生成せずに外観が切り替わったホストで、既存の行の Context
+ * から選択面を開き直す場合など）ラップ元まで戻って作り直し、現在の外観でテーマ属性が解決される Context
+ * を返す。同じラップ元・同じ夜間モードに対しては同じラッパを返す。ラッパはラップ元の生存期間を超えて
  * 保持しない。
  */
 internal fun Context.ksThemedContext(): Context {
-    if (this is KsThemedContext) return this
+    if (this is KsThemedContext && createdNightMode == nightMode()) return this
     val base = themeBaseContext()
     val nightMode = base.nightMode()
     synchronized(themedContextCache) {

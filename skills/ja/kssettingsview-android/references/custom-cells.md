@@ -1,6 +1,6 @@
 # カスタム Cell
 
-組み込み Cell で足りない行のためのレシピ。まず `CustomCell` から始め、共通行レイアウトとスタイル解決に参加する行が必要なときだけ独自 Cell 型を定義する。
+組み込み Cell では表せない内容のためのレシピ。まず `CustomCell` から始め、共通 Cell レイアウトとスタイル解決に参加させたいときだけ独自 Cell 型を定義する。
 
 このページの Compose のレシピは以下の import を前提とする。`CustomCell` と modifier は `jp.kamusoft.kssettingsview.compose` の DSL の名前で、残りはすべて通常の Compose。
 
@@ -35,6 +35,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.ProgressBar
 import android.widget.TextView
+import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.graphics.toArgb
 import jp.kamusoft.kssettingsview.core.Cell
 import jp.kamusoft.kssettingsview.core.DSLReidentifiableCell
@@ -46,9 +47,9 @@ import jp.kamusoft.kssettingsview.ui.Theme
 import jp.kamusoft.kssettingsview.ui.VisibilityAware
 ```
 
-## 任意の Compose を行 (row) として表示する
+## 任意の Compose を Cell として表示する
 
-`CustomCell` は任意の Composable をそのまま設定リストの 1 つの行として描く。ViewHolder を書く必要も、登録する必要もない。行が表示する値を `content` に渡し、builder の引数から行を組み立てる。
+`CustomCell` は任意の Composable をそのまま設定リストの 1 つの Cell として描く。ViewHolder を書く必要も、登録する必要もない。Cell が表示する値を `content` に渡し、builder の引数から Cell を組み立てる。
 
 ```kotlin
 var volume by remember { mutableStateOf(50) }
@@ -71,13 +72,13 @@ KsSettingsView {
 }
 ```
 
-行の見た目に効く値は必ず `content` に入れる。`content` は `equals` / `hashCode` を正しく持つ非 null の型であること。builder と `onTap` の関数値は等価比較から除外されるため、キャプチャした値だけを変えても行は据え置かれる。
+Cell の見た目に効く値は必ず `content` に入れる。`content` は `equals` / `hashCode` を正しく持つ非 null の型であること。builder と `onTap` の関数値は等価比較から除外されるため、キャプチャした値だけを変えても Cell は据え置かれる。
 
-builder が描画されるのはアプリのテーマ上であり、ライブラリが自身の行を描く同梱テーマ上ではない。だから builder の中では `MaterialTheme` がいつもどおり効く — 裏返せば、カスタム行がライブラリの `Theme` の色を勝手に拾うことはない。
+builder が描画されるのはアプリのテーマ上であり、ライブラリが自身の Cell を描く同梱テーマ上ではない。だから builder の中では `MaterialTheme` がいつもどおり効く — 裏返せば、カスタム Cell がライブラリの `Theme` の色を勝手に拾うことはない。
 
-## データを持たない固定表示の行
+## データを持たない固定表示の Cell
 
-変化するものを表示しない行では `content` を省略し、builder だけを渡す。
+変化するものを表示しない Cell では `content` を省略し、builder だけを渡す。
 
 ```kotlin
 CustomCell {
@@ -90,7 +91,7 @@ CustomCell {
 
 ## タップ操作や Disclosure Indicator を付ける
 
-`onTap` は行タップで発火する (content の中の要素がタップを消費した場合を除く)。`showArrow` は `CommandCell` と同じ Disclosure Indicator を描き、両者は独立して指定できる。
+`onTap` は Cell のタップで発火する (content の中の要素がタップを消費した場合を除く)。`showArrow` は `CommandCell` と同じ Disclosure Indicator を描き、両者は独立して指定できる。
 
 ```kotlin
 CustomCell(content = planName, showArrow = true, onTap = { openPlans() }) { name ->
@@ -102,11 +103,11 @@ CustomCell(content = planName, showArrow = true, onTap = { openPlans() }) { name
 }
 ```
 
-`isEnabled = false` は行タップと content 内部の操作の両方を止め、content 全体を淡色化する。無効の間、content は TalkBack の読み上げ対象からも外れる。
+`isEnabled = false` は Cell のタップと content 内部の操作の両方を止め、content 全体を淡色化する。無効の間、content は TalkBack の読み上げ対象からも外れる。
 
-## カスタム行の高さを決める
+## カスタム Cell の高さを決める
 
-行は既定では content に合わせて伸びる。`cellHeight` は Theme の `hasUnevenRows` が `true` の間は最低高として働き、`false` にすると固定高になる。カスタム行に効く `CellStyle` は背景色と高さだけで、文字色やフォントは効かない。アイコン領域を持たないため `icon` は no-op。
+Cell は既定では content に合わせて伸びる。`cellHeight` は Theme の `hasUnevenRows` が `true` の間は最低高として働き、`false` にすると固定高になる。カスタム Cell に効く `CellStyle` は背景色と高さだけで、文字色やフォントは効かない。アイコン領域を持たないため `icon` は no-op。
 
 ```kotlin
 CustomCell(content = message) { text ->
@@ -114,11 +115,11 @@ CustomCell(content = message) { text ->
 }.cellHeight(120.dp)
 ```
 
-content の中で `remember` に持たせた状態は、行が画面外へ出て戻る間に保持されることも失われることもある。またいで残したい値は `content` へ持ち上げる。
+content の中で `remember` に持たせた状態は、Cell が画面外へ出て戻る間に保持されることも失われることもある。またいで残したい値は `content` へ持ち上げる。
 
-## CustomCell を再利用可能な行にする
+## CustomCell を再利用可能な Cell にする
 
-複数画面で使い回すには、行を置く代わりに Cell を返す関数を書く。返るのは `jp.kamusoft.kssettingsview.ui` の `CustomCell` クラスで、これが DSL 関数の内側で組まれているもの。両者は名前を共有するため、このヘルパは専用のファイルに置き、そこでは DSL 側ではなく `jp.kamusoft.kssettingsview.ui.CustomCell` を import する。
+複数画面で使い回すには、Cell を置く代わりに Cell を返す関数を書く。返るのは `jp.kamusoft.kssettingsview.ui` の `CustomCell` クラスで、これが DSL 関数の内側で組まれているもの。両者は名前を共有するため、このヘルパは専用のファイルに置き、そこでは DSL 側ではなく `jp.kamusoft.kssettingsview.ui.CustomCell` を import する。
 
 ```kotlin
 import androidx.compose.foundation.layout.Row
@@ -196,7 +197,7 @@ data class ProgressCell(
 ) : Cell, VisibilityAware
 ```
 
-ViewHolder は `CellViewHolder<T>` を継承する。bind のたびに最新の Cell と Theme を受け取り、`reset` は再利用時に前の行のものを解放する。
+ViewHolder は `CellViewHolder<T>` を継承する。bind のたびに最新の Cell と Theme を受け取り、`reset` は再利用時に前の Cell のものを解放する。
 
 ```kotlin
 class ProgressCellViewHolder(view: View) : CellViewHolder<ProgressCell>(view) {
@@ -206,9 +207,9 @@ class ProgressCellViewHolder(view: View) : CellViewHolder<ProgressCell>(view) {
 
     override fun bind(cell: ProgressCell, theme: Theme) {
         titleView.text = cell.title
-        titleView.setTextColor(
-            (theme.cellTitleColor ?: Theme.DEFAULT_CELL_TITLE_COLOR).toArgb(),
-        )
+        if (theme.cellTitleColor.isSpecified) {
+            titleView.setTextColor(theme.cellTitleColor.toArgb())
+        }
         progressView.progressTintList =
             ColorStateList.valueOf(theme.cellAccentColor.toArgb())
         progressView.progress = cell.progress
@@ -220,6 +221,8 @@ class ProgressCellViewHolder(view: View) : CellViewHolder<ProgressCell>(view) {
     }
 }
 ```
+
+ViewHolder が受け取る `Theme` では、list 下地・Cell 背景・罫線・選択色・accent・無効時文字・Header / Footer の色が現在の外観で解決済みになっている。上の `cellAccentColor` をそのまま読んでよいのはこのためである。title・description・valueText・hintText・placeholder の色は Cell を描く時点で Cell 種別ごとに決まるので、`Color.Unspecified` のまま渡ってくることがある。上で `isSpecified` を見ているのはそのためで、Theme が何も言っていないときはレイアウトが宣言した色をそのまま残す。未指定の色に `toArgb()` を呼んではいけない (透明な黒になる)。
 
 inflate するレイアウトは利用者側のもので、ここでは上記 2 つの ID を持つ `TextView` と `ProgressBar` を置いている。表示前に組を登録する。`KsCellRegistry` はプロセス全体で共有する singleton なので、起動時に 1 回登録すれば全画面で有効になる。100 未満の viewType はライブラリの予約領域なので、その 100 を保持する定数 `KsCellRegistry.CELL_VIEW_TYPE_MIN` を起点にする。
 

@@ -49,6 +49,15 @@ android {
         unitTests {
             // Robolectric は Android リソース・Resources 系 API を要求するため有効化
             isIncludeAndroidResources = true
+
+            all {
+                // Robolectric は生成した Resources.Theme を実行環境の生存期間だけ保持する。
+                // bridge のテストも同梱テーマをかぶせた Context から本体 UI を生成するため、
+                // テストが作る Context ごとに Theme が 1 つ増える。Gradle 既定の 512m では
+                // クラスをまたぐ累積で足りなくなる (テストワーカーの異常終了として現れる) ため、
+                // 本体モジュールと同じくテスト JVM のヒープを明示する。
+                it.maxHeapSize = "2g"
+            }
         }
     }
 }

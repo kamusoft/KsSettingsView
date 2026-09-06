@@ -7,6 +7,7 @@ import android.view.View
 import android.widget.FrameLayout
 import androidx.appcompat.R as AppCompatR
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.fragment.app.FragmentActivity
 import com.google.android.material.materialswitch.MaterialSwitch
@@ -313,10 +314,11 @@ class HostThemeIndependenceTest {
     @Test
     fun `ButtonCell のタイトル既定色はホストの colorPrimary に追従しない`() {
         val activity = startHost(appCompatTheme)
+        val libraryDefault = KsThemePalette.Light.buttonTitle.toArgb()
         val hostPrimary = resolveColor(activity, AppCompatR.attr.colorPrimary)
         assertNotEquals(
-            "検証に使うホストテーマの colorPrimary は固定既定色と異なる",
-            EffectiveStyle.SYSTEM_BLUE_ARGB,
+            "検証に使うホストテーマの colorPrimary はライブラリ既定色と異なる",
+            libraryDefault,
             hostPrimary,
         )
 
@@ -327,8 +329,8 @@ class HostThemeIndependenceTest {
         val holder = rowHolders(view).filterIsInstance<ButtonCellViewHolder>().single()
 
         assertEquals(
-            "ButtonCell のタイトル既定色は固定値",
-            EffectiveStyle.SYSTEM_BLUE_ARGB,
+            "ButtonCell のタイトル既定色はライブラリ所有の外観別既定",
+            libraryDefault,
             holder.views.titleView.currentTextColor,
         )
     }

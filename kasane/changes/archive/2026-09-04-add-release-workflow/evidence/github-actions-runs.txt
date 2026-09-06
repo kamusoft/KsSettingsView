@@ -1,0 +1,178 @@
+tasks 1.3 / 1.4 (後半) / 5.1 / 5.3 / 6.1 / 6.2 (Environment): GitHub 上での実測
+実施日: 2026-09-04 (PR #3 マージ後、develop 3559ea4 から dispatch)
+
+================================================================
+1. tasks 1.3 — Android 発行物の再現性 (spike-release-premise.yml run 33826706508)
+================================================================
+ubuntu-24.04 / temurin 17 の別 checkout 2 job (build-a / build-b) が publishToMavenLocal -Pversion=0.0.0-spike.1 を
+実行し、compare job が両者を比較:
+  発行物 5 件が一致します (署名を除く比較): <TEMP>/a/jp / <TEMP>/b/jp
+  => pom / module / aar / sources jar / javadoc jar が同一 OS・同一 JDK・同一 commit で再現する
+     (Requirement「Android 成果物の同一性」の前提が成立。design の見直しは不要)
+
+================================================================
+2. tasks 1.4 後半 — 同じ run の再実行から前 attempt の artifact を取得できる
+================================================================
+attempt 1: seed job が artifact central-deployment-id (digest 1add6cf7...) を upload、reuse job は意図的に失敗
+attempt 2 (gh run rerun --failed): seed は再実行されず、reuse だけが再実行され
+  - central-deployment-id (Expected Digest: sha256:1add6cf7...) / Total of 1 artifact(s) downloaded
+  => 「失敗した job から再実行」で前 attempt の artifact を同じ内容で取得できる (Decision 1 の前提が成立)
+1.4 前半 (artifact を verify-consumer-*.yml に渡す経路) は release.yml の dry-run 入力の完走 (tasks 5.2) で確認する
+
+================================================================
+3. tasks 5.1 — validate の負ケース (release.yml、すべて dry-run 入力の実行、publish 以降は skipped)
+================================================================
+| version / 入力 | run | 失敗した step | 出力 |
+|---|---|---|---|
+| v1.0.0 (dry-run) | 33826742785 | Validate inputs | version の形式が不正: v1.0.0 (X.Y.Z または X.Y.Z-{alpha|beta|rc}.N、先頭ゼロ不可) |
+| 1.0.0 (dry-run=false、develop から) | 33826760101 | Validate inputs | 本番のリリースは main からのみ起動できる (起動 ref: refs/heads/develop) |
+| 9.9.9 (dry-run、一時 tag 9.9.9 を c0f6cdb に作成) | 33826954615 | Verify monorepo tag | tag 9.9.9 が別の commit を指している (tag: c0f6cdb... / 起動: 3559ea4...) |
+| 1.0.0 (dry-run、README は 0.1.0 / from:) | 33826749867 | Verify README install examples | README.md:44: SwiftPM の依存宣言 の version が 1.0.0 でない (実際は 0.1.0) / exact: で書く (実際は from:) / README.md:56: Maven 座標 ... |
+いずれも test / package / dry-run / publish の job は skipped。一時 tag 9.9.9 は確認後に削除した (monorepo の tag は 0 件)。
+不正 version の残り 6 種 (1.0 / 1.0.0-pre.1 / 1.0.0-SNAPSHOT / 01.0.0 / 1.00.0 / 1.0.0-beta.01) は同じ正規表現で弾かれることを
+evidence/release-workflow-static.txt (静的確認) で担保している。
+配信リポジトリの「内容が異なる同名 tag」のケースは、配信リポジトリへの一時 tag 作成がオーナー作業のため未実施
+(判定ロジック自体は scripts-unit.txt の合成リポジトリ 4 ケースで確認済み。validate の該当 step は各 run で absent → 続行を通過している)。
+
+================================================================
+4. tasks 5.3 — 直列化 (concurrency group release)
+================================================================
+9.9.9 と 9.9.7 (どちらも dry-run) を連続 dispatch:
+  10 秒後: 33826957050 pending / 33826954615 completed
+  => 後の run は先の run の完了まで pending で待った (cancel-in-progress: false のため打ち切られない)
+secrets / permissions の静的確認は evidence/release-workflow-static.txt
+
+================================================================
+5. tasks 6.1 — main の作成・保護・default branch
+================================================================
+$ gh api -X POST .../git/refs -f ref=refs/heads/main -f sha=3559ea4...   (develop の先端)
+$ gh api -X PUT .../branches/main/protection --input <手順書の payload>
+  checks (7): ios / verify, android / verify, maui / verify, consumer-ios / verify, consumer-android / verify, consumer-maui / verify, lint (app_id 15368)
+  strict: false / enforce_admins: false / allow_force_pushes: false / allow_deletions: false / required_pull_request_reviews: あり
+$ gh api -X PATCH repos/kamusoft/KsSettingsView -f default_branch=main
+  default_branch: main
+
+================================================================
+6. tasks 6.2 (Environment の部分) — release Environment
+================================================================
+$ gh api -X PUT .../environments/release  (deployment_branch_policy: custom_branch_policies)
+$ gh api -X POST .../environments/release/deployment-branch-policies -f name=main -f type=branch
+  branch_policies: main (branch)
+secrets 7 件の登録はオーナー作業 (未実施)
+
+================================================================
+7. tasks 5.7 (負ケース) — develop 以外から main への PR
+================================================================
+chore/release-spike-cleanup を head、main を base にした draft PR #5 (確認後に close):
+  lint job (run 33827250296) が失敗:
+  ##[error]main を base とする pull request の head は develop でなければならない (head: chore/release-spike-cleanup)
+  => lint は必須 status check なのでマージはブロックされる (Scenario「develop 以外から main への PR は失敗する」)
+正ケース (develop → main の PR で lint が通る) は初回リリース PR (tasks 7.2) で確認する。
+
+================================================================
+8. tasks 6.2 / 6.3 — secrets と deploy key (オーナー作業、2026-09-04 に読み取りで確認)
+================================================================
+$ gh secret list --repo kamusoft/KsSettingsView --env release
+  MAVEN_CENTRAL_PASSWORD / MAVEN_CENTRAL_USERNAME / NUGET_USER / SIGNING_KEY / SIGNING_KEY_ID / SIGNING_PASSWORD / SPM_DEPLOY_KEY (7 件)
+$ gh api repos/kamusoft/KsSettingsView/environments/release
+  deployment_branch_policy: custom_branch_policies (branch policy: main)
+$ gh api repos/kamusoft/KsSettingsView-SPM/keys
+  KsSettingsView release workflow  read_only=false
+リポジトリ単位の secrets は 0 件 (secrets は Environment release にのみ存在する)。
+
+================================================================
+9. tasks 1.1 — Central Portal の 2 段操作 (オーナーが手元で実行、2026-09-04)
+================================================================
+$ (cd android && ./gradlew publishToMavenLocal publishToMavenCentral -Pversion=0.0.0-spike.1)   (User Token と署名鍵を ORG_GRADLE_PROJECT_* で注入)
+  Uploaded bundle to Central Portal as USER_MANAGED, deployment id: <DEPLOYMENT_ID>
+  BUILD SUCCESSFUL
+  => ID はログ 1 行に出て、release.yml の抽出パターン (deployment id: <uuid>) で取れる
+$ ls ~/.m2/repository/jp/kamusoft/kssettingsview/0.0.0-spike.1/*.asc
+  kssettingsview-0.0.0-spike.1.aar.asc / .pom.asc / .module.asc / -sources.jar.asc / -javadoc.jar.asc  (5 件)
+  => 鍵を渡した publishToMavenLocal は mavenLocal にも .asc を書く (Requirement「署名の生成確認」の入力前提が成立)
+$ scripts/release/central-portal.sh status <DEPLOYMENT_ID>
+  VALIDATED
+$ scripts/release/central-portal.sh drop <DEPLOYMENT_ID>
+  drop した (VALIDATED): <DEPLOYMENT_ID>
+  => Portal API の status / drop が実接続で動く。公開はしていない
+PUBLISHING / PUBLISHED の deployment に DELETE が拒否されることは、実 deployment を publish しないと踏めないため
+実接続では未確認 (script 側は状態を照会して VALIDATED / FAILED 以外では DELETE を送らない — selftest で担保)。
+「座標 + version が公開済みか」を返すエンドポイントは Portal API に無く (scripts-unit.txt)、repo1.maven.org の HEAD を採用済み。
+$ scripts/release/central-portal.sh status <DEPLOYMENT_ID>   (drop 後)
+  NOT_FOUND
+  => 実 API でも drop 済み deployment の status は 404 → NOT_FOUND となり、再実行時の「ID を捨てて公開済み確認 → 再 upload」分岐に入る
+
+================================================================
+10. tasks 5.1 — 配信リポジトリの同名 tag (2026-09-04、一時 tag 9.9.8 → 初回スナップショット commit 8661e38)
+================================================================
+実リポジトリ KsSettingsView-SPM の唯一の commit (initial snapshot) は現在の ios/ から作るスナップショットと同一
+(手元で clone → sync-snapshot.sh → git status: 差分 0 ファイル)。そのため実リポジトリの tag では
+「内容が同一なら続行」の正経路しか作れない。「内容が異なれば失敗」の負経路は scripts-unit.txt の
+合成リポジトリ (別内容の tag で exit 1、差分一覧つき) が証跡。
+
+validate の step 順は当初「monorepo tag → README → 配信リポジトリ tag」で、README 不一致が先に落ちて
+配信リポジトリの検査に到達しなかった (run 33832493118)。tasks 4.1 の順序 (配信リポジトリ tag → README) に
+直してから再実行 (chore/release-prep から dry-run 9.9.8、run 33832694159):
+  4 success  Verify monorepo tag
+  5 success  Verify distribution repository tag   → 出力: publish の tag 作成は skip される (match)
+  6 failure  Verify README install examples       → README.md:44: ... version が 9.9.8 でない (想定どおり)
+  => 実リポジトリに対して clone → スナップショット生成 → ls-remote → ツリー比較の経路が CI で動き、
+     同一内容の同名 tag を match と判定した。一時 tag 9.9.8 は確認後に削除する (オーナー作業)
+
+================================================================
+11. tasks 5.2 / 1.4 前半 / 5.1 (README 一致の正ケース) — dry-run リハーサル (2026-09-04)
+================================================================
+release/0.1.0-beta.1 (README の version 置換後、develop へは PR #8 でマージ) から
+release.yml を version=0.1.0-beta.1 / dry-run=true で dispatch (run 33836940680):
+
+attempt 1: validate / package-{ios,android,maui} / consumer-{ios,android,maui} / android / maui = success、
+  ios / verify = failure (phase-3 の既存 workflow。MemoryLeakTests「KsSettingsViewController はスコープを抜けると
+  deinit される」の非同期待機タイムアウト。同じ commit の PR #8 CI では ios / verify は pass — Simulator の
+  負荷に左右される不安定テストで、release workflow の欠陥ではない)。publish 以降は skipped
+attempt 2 (ios / verify のみ再実行): 全 job success。publish / wait-for-registries / smoke-* は skipped
+
+消費者検証が package 段の artifact (配布物そのもの) を解決した証跡 (各 job のログ):
+  consumer-ios:     Total of 1 artifact(s) downloaded / platform=ios mode=dry-run version=0.1.0-beta.1
+                    Resolved source packages: KsSettingsView: <TEMP>/reference/KsSettingsView-SPM @ local
+  consumer-android: Total of 1 artifact(s) downloaded / +--- jp.kamusoft:kssettingsview:0.1.0-beta.1
+  consumer-maui:    Total of 1 artifact(s) downloaded / KsSettingsView.Maui 0.1.0-beta.1 <- <TEMP>/reference
+                    (binding 2 件も同じ参照先から 0.1.0-beta.1)
+  => Scenario「dry-run 入力は publish 手前で止まる」「dry-run は publish する配布物そのものを検証する」、
+     tasks 1.4 前半 (artifact を verify-consumer-*.yml に渡せる) が成立。validate の README 検査は
+     0.1.0-beta.1 で一致 (正ケース)。配信先 (配信リポジトリの tag / Portal の deployments / nuget.org) への
+     書き込みは発生していない (publish job が skipped)
+tasks 1.5 (前提が覆った場合のエスカレーション) は、1.1〜1.4 の前提がすべて成立したため発動しなかった。
+
+================================================================
+12. tasks 7.3 — 初回リリース 0.1.0-beta.1 (2026-09-04、run 33839962511、main @ b47239b から dispatch)
+================================================================
+全 15 job success (attempt 1 で完走)。所要 39 分 24 秒 (05:17:46 dispatch → 05:57:10 完了、UTC)。
+
+| job | 結果 | 所要 |
+|---|---|---|
+| validate | success | 0m09s |
+| package-ios / package-android / package-maui | success | 0m09s / 2m31s / 6m59s |
+| ios / android / maui (verify) | success | 4m32s / 6m07s / 5m59s |
+| consumer-ios / consumer-android / consumer-maui (dry-run、artifact) | success | 1m21s / 2m48s / 11m43s |
+| publish | success | 11m15s |
+| wait-for-registries | success | 0m07s (Maven Central・nuget.org とも即時に取得可能だった) |
+| smoke-ios / smoke-android / smoke-maui (公開レジストリから解決) | success | 0m51s / 2m35s / 8m44s |
+
+publish job のステップ (順序どおり):
+  Re-check external state: monorepo の tag 未作成 / Maven Central 未公開
+  Push snapshot commit: スナップショットに差分なし (commit を skip する) — 配信リポジトリの initial snapshot と同一内容
+  Re-check distribution repository tag: absent
+  Publish Android to Central Portal: Uploaded bundle to Central Portal as USER_MANAGED, deployment id: <DEPLOYMENT_ID> → artifact に保存
+  Login to NuGet.org: Successfully exchanged OIDC token for NuGet API key (Trusted Publishing の初回 login が本番で成功)
+  Push packages to NuGet.org: Your package was pushed. × 6 (binding 2 件 → facade、nupkg + snupkg の対)
+  Release Maven Central deployment: VALIDATED を再確認して release → PUBLISHED まで待機
+  Push distribution repository tag: tag 0.1.0-beta.1 → 8661e38 (initial snapshot commit)
+  Push monorepo tag: tag 0.1.0-beta.1 → b47239b
+  Create GitHub Release: prerelease=true (自動生成ノート)
+
+公開後の確認 (gh / 反映待ち job):
+  monorepo tag 0.1.0-beta.1 → b47239b / 配信リポジトリ tag 0.1.0-beta.1 → 8661e38 / Release prerelease=true draft=false
+  smoke-ios (配信リポジトリの tag から解決)、smoke-android (Maven Central から解決)、smoke-maui (nuget.org から 3 Package ID を解決) が success
+  => Scenario「prerelease の suffix で prerelease になる」「反映を待ってから smoke する」「3 パッケージが同じ version で公開される」
+     「NuGet push の後に release される」「途中で失敗すれば tag は作られない」(正経路) と、
+     consumer-verification の「公開レジストリからの解決」(phase-7 で未実証だった正ケース) が成立

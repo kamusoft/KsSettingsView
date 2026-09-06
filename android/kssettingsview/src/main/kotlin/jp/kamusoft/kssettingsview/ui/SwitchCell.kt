@@ -10,8 +10,9 @@ import jp.kamusoft.kssettingsview.core.DSLReidentifiableCell
  * 右側に `MaterialSwitch` を表示し、ユーザー操作で `onValueChanged(Boolean)` を発火する。
  * `accentColor` を指定すると ON 時のスイッチの色を変更できる。
  *
- * `accentColor` は Compose の [Color]? を直接受け取るため、利用者は `Color.Green` などの
- * 慣れた API で指定できる（core/ADR-0009）。
+ * `accentColor` は Compose の [Color] を直接受け取るため、利用者は `Color.Green` などの
+ * 慣れた API で指定できる。未指定は [Color.Unspecified] で表し、`CellStyle.accentColor` →
+ * `Theme.cellAccentColor` の順に解決する。
  *
  * 共通フィールドとして `description` / `valueText` / `icon` / `hintText` を持ち、
  * 全 Cell 共通レイアウト規約 `[icon][title / description][valueText][hintText][accessory]` に従う。
@@ -25,7 +26,7 @@ public data class SwitchCell(
     val icon: KsImage? = null,
     val hintText: String? = null,
     val isOn: Boolean = false,
-    val accentColor: Color? = null,
+    val accentColor: Color = Color.Unspecified,
     val onValueChanged: ((Boolean) -> Unit)? = null,
     val isEnabled: Boolean = true,
     override val isVisible: Boolean = true,
@@ -37,7 +38,7 @@ public data class SwitchCell(
     /**
      * 等価性（値型としての性質）。クロージャ（[onValueChanged]）のみ除外し、内部状態 [isOn] / [isEnabled] /
      * [isVisible] を含むすべての保持フィールドを比較する。関数値は再構築のたびに別インスタンスに
-     * なるため、含めると内容変化を誤検出する（core/ADR-0010）。
+     * なるため、含めると内容変化を誤検出する。
      */
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -64,7 +65,7 @@ public data class SwitchCell(
         result = 31 * result + (icon?.hashCode() ?: 0)
         result = 31 * result + (hintText?.hashCode() ?: 0)
         result = 31 * result + isOn.hashCode()
-        result = 31 * result + (accentColor?.hashCode() ?: 0)
+        result = 31 * result + accentColor.hashCode()
         result = 31 * result + isEnabled.hashCode()
         result = 31 * result + isVisible.hashCode()
         return result

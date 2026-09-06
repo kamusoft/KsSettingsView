@@ -5,7 +5,7 @@ applies-when:
   tasks: [リリースの実施, release workflow の secrets / Environment の設定, リリースの再実行, リリースのリハーサル]
 title: リリース手順
 description: main ブランチと branch protection の用意、Environment release と secrets の登録、配信リポジトリの deploy key、リリース PR と dispatch、失敗時の再実行、dry-run によるリハーサル
-timestamp: 2026-09-03
+timestamp: 2026-09-06
 ---
 
 # リリース手順
@@ -18,25 +18,26 @@ timestamp: 2026-09-03
 
 | ブランチ | 先端が表すもの |
 |---|---|
-| `develop` | 検証 CI を通った開発の最新。すべての feature ブランチのマージ先 |
+| `develop` | 開発の最新。ローカルの作業ブランチ (worktree) をローカルでマージして直接 push する。push のたびに検証 CI (lint + 3 platform) が事後検証として走り、失敗は通知で拾う |
 | `main` | 最新リリース、またはリリース進行中 (リリース PR のマージ後、publish 成功まで) のリリース候補。リポジトリの default branch |
 
-`main` へ入るのは `develop` からの pull request だけで、それ以外の head は CI の lint job が失敗させる。リリースの起動も `main` に限られる。
+`main` へ入るのは `develop` からの pull request だけで、それ以外の head は CI の lint job が失敗させる。この pull request では 3 platform の検証と lint に加えて消費者検証 3 本が走り、7 件すべてが `main` の必須 status check になっている。リリースの起動も `main` に限られる。
+
+`develop` には必須 status check も pull request の必須化も付けない (force-push 禁止と削除禁止だけ)。開発者 1 人が直接 push する運用に合わせた設定で、経緯は [cross/ADR-0028](../../decisions/cross/0028-ci-triggers-by-branch-role.md)。
 
 ## 初回だけ行う設定
 
 ### main の作成と保護
 
-`develop` から `main` を作り、`develop` と同じ保護を付けてから default branch を切り替える。必須 status check は 7 件で、名前は `develop` の設定が正なので先に読み出して確かめる。
+`develop` から `main` を作り、下の保護を付けてから default branch を切り替える。必須 status check は 7 件で、名前は `.github/workflows/ci.yml` の job 名 (再利用 workflow を呼ぶ job は「呼び出し側 / verify」) と一致させる。`develop` の保護は必須 check を持たないので写さない。
 
 ```bash
-gh api repos/kamusoft/KsSettingsView/branches/develop/protection
 gh api -X POST repos/kamusoft/KsSettingsView/git/refs \
   -f ref=refs/heads/main \
   -f sha="$(gh api repos/kamusoft/KsSettingsView/git/ref/heads/develop --jq .object.sha)"
 ```
 
-保護は完全な payload を PUT する (`gh api -X PUT` は部分更新にならず、書かなかった項目は消える)。`required_pull_request_reviews` の各値は上で読み出した `develop` の内容に合わせる。
+保護は完全な payload を PUT する (`gh api -X PUT` は部分更新にならず、書かなかった項目は消える)。
 
 ```bash
 gh api -X PUT repos/kamusoft/KsSettingsView/branches/main/protection --input - <<'JSON'
@@ -117,10 +118,10 @@ nuget.org 側には、この monorepo の `release.yml` と Environment `release
 ### リリース PR
 
 1. `docs-refresh` をオーナーが依頼し、`skills/` と README 群を現状へ追随させる
-2. `python3 scripts/release/set-readme-version.py <version>` で README 2 枚のインストール例を新しい version に揃える
+2. `python3 scripts/release/set-readme-version.py <version>` で README 2 枚と利用者向け Skill 8 枚 (4 本 × 2 言語) のインストール例を新しい version に揃える
 3. 1 と 2 を含む pull request を `develop` → `main` で作り、7 件の check が通ったらマージする
 
-version の置換を忘れると release workflow の validate が README の不一致で止まる。手元で `python3 scripts/release/set-readme-version.py --check <version>` を先に通しておくと早く気づける。
+version の置換を忘れると release workflow の validate がインストール例の不一致で止まる。手元で `python3 scripts/release/set-readme-version.py --check <version>` を先に通しておくと早く気づける。
 
 ### 起動
 
@@ -131,7 +132,7 @@ gh workflow run release.yml --ref main -f version=<version>
 gh run watch "$(gh run list --workflow=release.yml --limit 1 --json databaseId --jq '.[0].databaseId')"
 ```
 
-全体で 60〜90 分かかる。publish が終わると配信リポジトリと monorepo に tag が付き、prerelease の suffix を持つ version は prerelease として Release が作られる。そのあと公開レジストリへの反映を待って smoke が走る。
+全体で 40 分前後かかる (初回リリース `0.1.0-beta.1` の実測は 39 分。消費者検証 MAUI の dry-run 12 分と publish 11 分が大半で、Maven Central の反映待ちは公式には 10〜30 分かかり得るが初回は数秒だった)。publish が終わると配信リポジトリと monorepo に tag が付き、prerelease の suffix を持つ version は prerelease として Release が作られる。そのあと公開レジストリへの反映を待って smoke が走る。
 
 ### 公開後の確認
 
@@ -139,7 +140,7 @@ gh run watch "$(gh run list --workflow=release.yml --limit 1 --json databaseId -
 - Maven Central の `jp.kamusoft:kssettingsview` の当該 version
 - 配信リポジトリの tag と、monorepo の Release 本文
 
-前回の tag が無い初回リリースでは自動生成ノートに全 pull request が並ぶので、Release 本文は手で整える。
+Release 本文は自動生成ノートのままにし、手で補わない (利用者向けの案内は README が担う。Release ページの見え方だけの問題であり、初回リリースもこの扱いで済ませた)。
 
 ## 失敗したとき
 
@@ -153,7 +154,7 @@ publish の各ステップは冪等なので、原因を取り除いてから **
 | Maven の release | 保留中の deployment を release する |
 | tag / Release | 同じ内容の tag は skip、別内容なら失敗する |
 
-publish が途中で失敗すると、保留中の Maven deployment は失敗経路の後始末で削除され、次の attempt へ引き継ぐ ID も同時に破棄される (再実行は upload からやり直す)。削除できない状態 (公開処理が始まっている) のときは何もせず理由が出て ID もそのまま残るので (次の attempt がその状態を見て続きを行う)、[Central Portal の deployment 一覧](https://central.sonatype.com/publishing/deployments) で状態を見る。手で操作するときは次を使う。
+publish が途中で失敗すると、保留中の Maven deployment は失敗経路の後始末で削除され、次の attempt へ引き継ぐ ID も同時に破棄される (再実行は upload からやり直す)。削除できない状態 (検証中か公開処理中) のときは何もせず理由が出て ID もそのまま残るので (次の attempt がその状態を見て続きを行う)、[Central Portal の deployment 一覧](https://central.sonatype.com/publishing/deployments) で状態を見る。手で操作するときは次を使う。
 
 ```bash
 export MAVEN_CENTRAL_USERNAME=... MAVEN_CENTRAL_PASSWORD=...

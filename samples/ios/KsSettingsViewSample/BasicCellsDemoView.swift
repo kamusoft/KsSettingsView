@@ -35,6 +35,9 @@ struct BasicCellsDemoView: View {
 
     @State private var lastTappedTitle: String = "(none)"
 
+    /// 実効外観。ダークのとき Theme の dark 側を渡す。
+    @Environment(\.colorScheme) private var colorScheme
+
     // MARK: - MAUI 互換 Theme
     //
     // 色定数と Theme は入力 Cell 5 種デモと共用の `SampleTheme` に一元化してある。
@@ -161,14 +164,14 @@ struct BasicCellsDemoView: View {
                 // 7. ButtonCell セクション（1 個: ログアウト、titleAlignment 既定 = .center）
                 Section("ButtonCell") {
                     ButtonCell(
-                        style: CellStyle(titleColor: SampleTheme.mauiTitleText),
+                        style: CellStyle(titleColor: SampleTheme.mauiTitleText(dark: colorScheme == .dark)),
                         title: "ログアウト",
                         onTap: { lastTappedTitle = "ログアウト" },
                         titleAlignment: .center
                     )
                 }
             }
-            .theme(SampleTheme.maui)
+            .theme(SampleTheme.maui(dark: colorScheme == .dark))
             .ignoresSafeArea(.container, edges: .bottom)
         }
         .navigationTitle(SampleScreen.basicCells.title)

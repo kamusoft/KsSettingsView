@@ -206,6 +206,37 @@ def is_excluded(rel: str, excludes: list[str]) -> bool:
     return False
 
 
+class PathNotFound(Exception):
+    """`--paths` に存在しないパスが渡された。無言で読み飛ばすと「違反なし」の偽陽性になるため例外にする。"""
+
+
+def expand_paths(root: str, paths: list[str], suffixes: tuple[str, ...] | None = None,
+                 skip_names: set[str] | None = None) -> list[str]:
+    """`--paths` の指定をリポジトリ相対のファイル一覧に展開する (ファイル単位で読む lint の共通処理)。
+
+    ディレクトリは再帰的に走査して suffixes に合うファイルへ展開する (ファイル直指定は suffixes を問わない)。
+    存在しないパスは PathNotFound — 未クォートの変数展開 (zsh は単語分割しない) で複数パスが
+    1 引数に潰れた場合もここで止まり、素通りしない。
+    """
+    found: list[str] = []
+    for p in paths:
+        full = p if os.path.isabs(p) else os.path.join(root, p)
+        if os.path.isfile(full):
+            found.append(normalize_rel(p, root))
+        elif os.path.isdir(full):
+            for dirpath, dirnames, filenames in os.walk(full):
+                dirnames[:] = sorted(d for d in dirnames if d != ".git")
+                for fn in sorted(filenames):
+                    if suffixes and not fn.endswith(suffixes):
+                        continue
+                    if skip_names and fn in skip_names:
+                        continue
+                    found.append(normalize_rel(os.path.join(dirpath, fn), root))
+        else:
+            raise PathNotFound(p)
+    return list(dict.fromkeys(found))
+
+
 # ---------- lint モード ----------
 
 def lint(root: str, paths: list[str] | None) -> int:

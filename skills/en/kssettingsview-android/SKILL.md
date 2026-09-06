@@ -1,6 +1,6 @@
 ---
 name: kssettingsview-android
-description: Build Android settings screens with KsSettingsView - a Jetpack Compose declarative DSL or an XML View host (the KsSettingsView view), with built-in cells (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker) plus CustomCell rows holding any Composable, live updates through SettingsRootStore, and Theme / CellStyle styling. Use when adding, changing, or reviewing a settings screen in a Kotlin app that depends on jp.kamusoft:kssettingsview or imports jp.kamusoft.kssettingsview.core, .ui, or .compose.
+description: Build Android settings screens with KsSettingsView - a Jetpack Compose declarative DSL or an XML View host (the KsSettingsView view), with built-in cells (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker) plus CustomCell holding any Composable, live updates through SettingsRootStore, and Theme / CellStyle styling. Use when adding, changing, or reviewing a settings screen in a Kotlin app that depends on jp.kamusoft:kssettingsview or imports jp.kamusoft.kssettingsview.core, .ui, or .compose.
 license: MIT
 metadata:
   language: en
@@ -9,19 +9,19 @@ metadata:
 
 # KsSettingsView for Android
 
-KsSettingsView is a UI library for building settings screens - the list-style screens the iOS Settings app is made of. You declare the screen as a tree of rows (cells) grouped into sections, and that tree is the screen. This Skill covers the Android build, which comes in two forms: a Jetpack Compose declarative DSL and a View host placed in XML (the `KsSettingsView` view). The tree can be written declaratively or driven imperatively from a store.
+KsSettingsView is a UI library for building settings screens - the list-style screens the iOS Settings app is made of. You declare the screen as a tree of cells grouped into sections, and that tree is the screen. This Skill covers the Android build, which comes in two forms: a Jetpack Compose declarative DSL and a View host placed in XML (the `KsSettingsView` view). The tree can be written declaratively or driven imperatively from a store.
 
 ## What you can do
 
 | What you want to do | Where to look |
 |---|---|
-| Place a row: label, action, button, switch, checkbox, radio, text field, list picker, number, time, date | [references/cells.md](references/cells.md) |
-| Group rows into sections, add icons, descriptions, hints; disable or hide a row | [references/cells.md](references/cells.md) |
-| Change the screen after it is on display: insert, remove, move, replace rows, batch updates, direct driving with `SettingsRootDiff` | [references/updates.md](references/updates.md) |
-| Keep rows identified across re-evaluations, drive visibility from state, host the screen from XML | [references/updates.md](references/updates.md) |
-| Colors, fonts, row height, Classic / Modern list appearance, section boxes, the `Theme` default constants | [references/styling.md](references/styling.md) |
+| Place a cell: label, action, button, switch, checkbox, radio, text field, list picker, number, time, date | [references/cells.md](references/cells.md) |
+| Group cells into sections, add icons, descriptions, hints; disable or hide a cell | [references/cells.md](references/cells.md) |
+| Change the screen after it is on display: insert, remove, move, replace cells, batch updates, direct driving with `SettingsRootDiff` | [references/updates.md](references/updates.md) |
+| Keep cells identified across re-evaluations, drive visibility from state, host the screen from XML | [references/updates.md](references/updates.md) |
+| Colors, fonts, cell height, Classic / Modern list appearance, section boxes, the light / dark default colors of `KsSettingsViewDefaults`, giving an explicit color a value per appearance | [references/styling.md](references/styling.md) |
 | Section and screen headers / footers, including arbitrary Composables in them | [references/styling.md](references/styling.md) |
-| Put any Composable into a row of the list, or define your own cell type with its own view holder | [references/custom-cells.md](references/custom-cells.md) |
+| Put any Composable into a cell of the list, or define your own cell type with its own view holder | [references/custom-cells.md](references/custom-cells.md) |
 
 ## Setup
 
@@ -37,7 +37,7 @@ repositories {
 }
 
 dependencies {
-    implementation("jp.kamusoft:kssettingsview:0.1.0")
+    implementation("jp.kamusoft:kssettingsview:0.1.0-beta.2")
 }
 ```
 
@@ -62,10 +62,12 @@ The versions below describe the current library build. They are its toolchain, n
 | Gradle | 9.5.0 |
 | JDK | 17 |
 
-The library puts no prerequisites on the host application's theme or activity type. It draws everything inside a context wrapped in its own bundled Material3-derived theme, so any XML theme works - a minimal theme, AppCompat, or a MAUI template default - and any activity works, `ComponentActivity` included; the time and date pickers open everywhere. Two consequences of that self-containment are worth knowing:
+The library puts no prerequisites on the host application's theme or activity type. It draws everything inside a context wrapped in its own bundled Material3-derived theme, so any XML theme works - a minimal theme, AppCompat, or a MAUI template default - and any activity works, `ComponentActivity` included; the time and date pickers open everywhere. The consequences of that self-containment worth knowing are these:
 
 - The colors of your app theme (custom colors and dynamic color included) do not reach the library UI. Restyling is done with the library's own `Theme` / `CellStyle` - see [references/styling.md](references/styling.md). Only content you own - a `CustomCell` body, a view passed through `KsAnyView` - still renders with the theme of the host.
 - Light and dark switch with the device night mode and the app's uiMode APIs (`AppCompatDelegate.setDefaultNightMode` / `UiModeManager.setApplicationNightMode`). Merely declaring a dark XML theme in the app does not switch the library UI.
+- Colors you leave at `Color.Unspecified` follow that switch on their own, out of the light and dark default sets the library owns and publishes through `KsSettingsViewDefaults` (`lightTheme()` / `darkTheme()`), so a screen that passes no `Theme` is legible in dark mode. `Color.Unspecified` is the one mark of "not set" for the colors of `Theme`, of `CellStyle` and of the color arguments a cell takes for its own meaning alike; none of them is a nullable `Color?`.
+- A color you do state is kept as written in both appearances. To pick the colors of both appearances yourself, choose them where you build the theme or the cell, with `isSystemInDarkTheme()` in Compose or the night mode of the configuration in a view host - see [references/styling.md](references/styling.md).
 
 ## Minimal working example
 
@@ -92,11 +94,11 @@ fun SettingsScreen() {
 
 `Section` is a member of the DSL scope, so it needs no import. The cell functions are extensions on the section scope and have to be imported one by one. Both overloads of the `KsSettingsView` Composable - DSL and store - accept a Compose `modifier` parameter.
 
-In this re-evaluating `KsSettingsView { ... }` DSL, the cell functions return a `CellHandle` and `Section` returns a `SectionHandle` (the `section` / `cell` of the `settingsRoot` builder that appears in [references/updates.md](references/updates.md) return no handle). A handle is an opaque reference to the row or section that was just placed - you cannot construct or read one - and it exists so that the modifiers described in [references/styling.md](references/styling.md) can be chained onto the call, as in `LabelCell(title = "Name").titleColor(Color.Red)`. Ignoring the return value is normal.
+In this re-evaluating `KsSettingsView { ... }` DSL, the cell functions return a `CellHandle` and `Section` returns a `SectionHandle` (the `section` / `cell` of the `settingsRoot` builder that appears in [references/updates.md](references/updates.md) return no handle). A handle is an opaque reference to the cell or section that was just placed - you cannot construct or read one - and it exists so that the modifiers described in [references/styling.md](references/styling.md) can be chained onto the call, as in `LabelCell(title = "Name").titleColor(Color.Red)`. Ignoring the return value is normal.
 
 ## Reference files
 
-- [references/cells.md](references/cells.md) - one recipe per built-in cell, plus sections, icons, and the fields every row shares.
-- [references/updates.md](references/updates.md) - changing a screen that is already on display, row identity, visibility, and hosting from XML.
+- [references/cells.md](references/cells.md) - one recipe per built-in cell, plus sections, icons, and the fields every cell shares.
+- [references/updates.md](references/updates.md) - changing a screen that is already on display, cell identity, visibility, and hosting from XML.
 - [references/styling.md](references/styling.md) - `Theme`, `CellStyle`, style modifiers, list appearance, headers and footers.
 - [references/custom-cells.md](references/custom-cells.md) - `CustomCell`, reusable wrappers, and your own cell type with a view holder.

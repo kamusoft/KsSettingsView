@@ -30,13 +30,14 @@ public partial class CustomCellMauiSpecificDemoPage : ContentPage
     public CustomCellMauiSpecificDemoPage()
     {
         InitializeComponent();
-        SampleTheme.Apply(Settings);
         BindingContext = _viewModel;
 
         _contentA = CreateContentView("① Content A", Color.FromArgb("#F4E1D2"));
         _contentB = CreateContentView("① Content B", Color.FromArgb("#D2E7F4"));
         SwapCell.Content = _contentA;
         ReconnectCell.Content = CreateContentView("③ 離脱前の Content", Color.FromArgb("#DCE7EA"));
+
+        SampleThemeFollower.Attach(this, dark => SampleTheme.Apply(Settings, dark));
     }
 
     private static View CreateContentView(string text, Color background)

@@ -1,6 +1,7 @@
 package jp.kamusoft.kssettingsview.ui
 
 import android.content.Context
+import android.content.res.Configuration
 import android.os.Parcel
 import android.os.Parcelable
 import android.util.AttributeSet
@@ -113,8 +114,17 @@ public class KsSettingsView @JvmOverloads constructor(
     /** 内部の `SettingsRoot`（applyDiff で部分更新される）。 */
     private var internalRoot: SettingsRoot = SettingsRoot()
 
-    /** 内部の `Theme`（Store 購読 / `applyTheme` で更新される）。 */
+    /**
+     * 描画に使う解決済みの `Theme`。
+     *
+     * 常に [themeBacking] を現在の外観で解決した結果であり、利用者が渡した Theme をそのまま持つ
+     * ことはない。adapter・`RecyclerView` 背景・`ItemDecoration`・Header / Footer の ViewHolder・
+     * 選択面・カレンダーの選択面は、すべてこの値だけを読む。
+     */
     private var internalTheme: Theme = Theme()
+
+    /** [internalTheme] を解決した時点の外観がダークだったか。再解決の要否判定に使う。 */
+    private var resolvedDarkTheme: Boolean = false
 
     /** Store 購読の Job。`onDetachedFromWindow` で cancel する。 */
     private var storeCollectJob: Job? = null
@@ -226,7 +236,7 @@ public class KsSettingsView @JvmOverloads constructor(
             // `notifyDataSetChanged()` を発火させるため、不要な reload を確実に避ける。
             if (themeBacking == value) return
             themeBacking = value
-            applyThemeInternal(value)
+            reapplyResolvedTheme()
         }
 
     init {
@@ -253,10 +263,14 @@ public class KsSettingsView @JvmOverloads constructor(
             KsCellRegistry.registerCustomCell(context)
         }
 
-        applyDecoration(style)
         // 初期 Theme（既定）を Adapter 群と RecyclerView 背景に反映する。
         // `applyThemeInternal` 経由ではなく直接設定し、構築時の `notifyDataSetChanged` を抑制する
         // （まだ何も bind されていないため全件 reload は不要）。
+        resolvedDarkTheme = context.isKsDarkAppearance()
+        internalTheme = themeBacking.resolvedFor(resolvedDarkTheme)
+        // 装飾は `internalTheme` を読むため、解決の後に組み立てる。先に組むと、`bind` も Full diff も
+        // 通さずに `applyDiff` だけで内容を入れる使い方で、未解決の色がそのまま描画へ渡る。
+        applyDecoration(style)
         mainListAdapter.theme = internalTheme
         headerAdapter.theme = internalTheme
         footerAdapter.theme = internalTheme
@@ -288,8 +302,26 @@ public class KsSettingsView @JvmOverloads constructor(
             attachStoreCollection(store)
         }
 
+        // 解決時と attach 時で外観が違い得る（別の外観で構築された View がそのまま attach される、
+        // detach 中に夜間モードが変わる等）。ここで照合して必要なら解決し直す。
+        reresolveThemeIfAppearanceChanged()
+
         isAttachedToHostWindow = true
         scheduleRestoreScanIfReady()
+    }
+
+    /**
+     * 構成変更のうち夜間モードの変化だけを拾い、未指定色を新しい外観で解決し直して再適用する。
+     *
+     * Activity が uiMode を自前処理して再生成されないホストでは、この View が生き残ったまま外観だけが
+     * 変わる。夜間モードが変わらない構成変更（画面向き等）では再適用しない。
+     */
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        val darkTheme = newConfig.isKsDarkAppearance()
+        if (darkTheme == resolvedDarkTheme) return
+        resolvedDarkTheme = darkTheme
+        applyThemeInternal(themeBacking.resolvedFor(darkTheme))
     }
 
     override fun onDetachedFromWindow() {
@@ -375,7 +407,7 @@ public class KsSettingsView @JvmOverloads constructor(
      * collect の同値スキップとは無関係に表示へ反映される。
      */
     private fun resyncFromStore(store: SettingsRootStore) {
-        setRootDirect(store.state.value, internalTheme)
+        setRootStructureOnly(store.state.value)
     }
 
     /**
@@ -520,13 +552,38 @@ public class KsSettingsView @JvmOverloads constructor(
      * 一切発行しないので、本パスが避けている `notifyDataSetChanged` 多重呼び出しには当たらない。
      */
     internal fun setRootDirect(root: SettingsRoot, theme: Theme = Theme()) {
+        applyRootDirect(root, userTheme = theme)
+    }
+
+    /**
+     * 利用者の Theme を伴わない構造更新の出口。
+     *
+     * 構造更新（`SettingsRootDiff.Full`・Section 置換・可視性切替・Store の再同期）は利用者の Theme を
+     * 変えない。ここで解決済み Theme を利用者の Theme として保存し直すと、以降の外観変更で未指定色が
+     * 明示指定として扱われて追随しなくなる。
+     */
+    private fun setRootStructureOnly(root: SettingsRoot) {
+        applyRootDirect(root, userTheme = null)
+    }
+
+    /**
+     * root と（渡されたときは）利用者の Theme を取り込み、解決済み Theme で表示を作り直す。
+     *
+     * @param root 反映する設定ツリー
+     * @param userTheme 利用者が渡した Theme。`null` のときは現在の利用者 Theme を保つ
+     */
+    private fun applyRootDirect(root: SettingsRoot, userTheme: Theme?) {
         internalRoot = root
+        if (userTheme != null) {
+            themeBacking = userTheme
+        }
         // theme プロパティ／フィールドを内部値として同期させる。`applyThemeInternal` 経由ではなく
         // 直接代入することで、AsyncListDiffer 在中の `submitList` と競合する `notifyDataSetChanged`
         // 多重呼び出しを避ける。
+        resolvedDarkTheme = context.isKsDarkAppearance()
+        val theme = themeBacking.resolvedFor(resolvedDarkTheme)
         val themeChanged = internalTheme != theme
         internalTheme = theme
-        themeBacking = theme
         mainListAdapter.theme = theme
         headerAdapter.theme = theme
         footerAdapter.theme = theme
@@ -556,7 +613,7 @@ public class KsSettingsView @JvmOverloads constructor(
     public fun applyDiff(diff: SettingsRootDiff) {
         when (diff) {
             is SettingsRootDiff.Full -> {
-                setRootDirect(diff.root, internalTheme)
+                setRootStructureOnly(diff.root)
             }
             is SettingsRootDiff.InsertSection -> {
                 val sections = internalRoot.sections.toMutableList()
@@ -603,7 +660,7 @@ public class KsSettingsView @JvmOverloads constructor(
                 internalRoot = internalRoot.copy(sections = sections.toList())
                 // Full 経路に倒すことで cells 集合・accessory・visibility いずれの変化も
                 // visible projection を再構築して反映する。
-                setRootDirect(internalRoot, internalTheme)
+                setRootStructureOnly(internalRoot)
             }
             is SettingsRootDiff.InsertCell -> {
                 val sections = internalRoot.sections.toMutableList()
@@ -680,7 +737,7 @@ public class KsSettingsView @JvmOverloads constructor(
                     // 可視性切替: Full 経路で snapshot 再構築。submitContentUpdate（notifyItemChanged
                     // 系）は使わない（hidden 状態の Cell に対する ViewHolder が存在しないため、内容
                     // 反映が走らないことに加え、構造同期側の挿入・削除アニメーションも逸する）。
-                    setRootDirect(internalRoot, internalTheme)
+                    setRootStructureOnly(internalRoot)
                 } else {
                     mainListAdapter.submitContentUpdate(
                         newList = flatten(internalRoot.sections),
@@ -715,6 +772,27 @@ public class KsSettingsView @JvmOverloads constructor(
                 applyUpdateAccessory(diff.target, diff.accessory)
             }
         }
+    }
+
+    /**
+     * 利用者の Theme を現在の外観で解決し直して再適用する。
+     *
+     * 利用者の Theme（[themeBacking]）は変わらないため `theme` setter の同値スキップには阻まれない。
+     */
+    private fun reapplyResolvedTheme() {
+        resolvedDarkTheme = context.isKsDarkAppearance()
+        applyThemeInternal(themeBacking.resolvedFor(resolvedDarkTheme))
+    }
+
+    /**
+     * 現在の外観が [internalTheme] を解決した時点と違っていれば、利用者の Theme から解決し直して
+     * 再適用する。
+     *
+     * 明示指定された色は解決で変わらないため、再適用しても利用者が渡した色はそのまま残る。
+     */
+    private fun reresolveThemeIfAppearanceChanged() {
+        if (context.isKsDarkAppearance() == resolvedDarkTheme) return
+        reapplyResolvedTheme()
     }
 
     /**
@@ -927,8 +1005,8 @@ public class KsSettingsView @JvmOverloads constructor(
         pendingCalendarRestore = null
         val cell = findCalendarRestoreTarget(cellId) ?: return
         val range = DateCalendarRange.of(cell) ?: return
-        // 行の描画と同じ Context（同梱テーマ適用済み）で解決し、提示時と復元時で色を揃える。
-        val effective = EffectiveStyle.from(context.ksThemedContext(), internalTheme, cell.style)
+        // 行の描画と同じ解決済み Theme と外観で解決し、提示時と復元時で色を揃える。
+        val effective = EffectiveStyle.from(internalTheme, cell.style, resolvedDarkTheme)
         val dialog = DateCalendarDialog(
             hostContext = context,
             dialogTitle = cell.pickerTitle ?: cell.title,
@@ -1110,6 +1188,31 @@ public class KsSettingsView @JvmOverloads constructor(
          * Theme が決める文字を持たないため、作り直しても得るものがない。
          */
         public const val PAYLOAD_THEME: String = "ks-theme"
+
+        /**
+         * 内容更新時の `notifyItemChanged` payload キー。
+         *
+         * Cell の内容更新 (`KsSettingsListAdapter.submitContentUpdate`)・Section H/F の内容差
+         * (`CellListItemDiffCallback.getChangePayload`)・Root H/F の差し替え
+         * (`RootHeaderFooterAdapter.view`) が共通で付与する。値そのものは参照されない。
+         * payload が**非空であること**に意味があり、それによって
+         * `SimpleItemAnimator.canReuseUpdatedViewHolder` が true を返して同一 ViewHolder への
+         * 再 bind が保証される。各 Adapter の 3 引数版 `onBindViewHolder` は本 payload を
+         * 振り分け対象外として `super` へ委譲し、2 引数版のフル bind に落ちるため内容は完全に反映される。
+         *
+         * 設計判断: android/ADR-0001（change アニメーション無効化との二重担保）。
+         */
+        internal const val PAYLOAD_CONTENT: String = "ks-content"
+
+        /**
+         * View accessory の Section Header で **固定高さだけが変わった**ときの
+         * `notifyItemChanged` payload キー。
+         *
+         * この payload だけが届いた行は、`KsSettingsListAdapter` の 3 引数版 `onBindViewHolder` が
+         * 高さの反映だけを行い、`KsAnyView` の中身を作り直さない。`KsAnyView.AndroidView` の View は
+         * factory から再生成すると内部状態を失うため、高さのみの変更を内容の再バインドと区別する。
+         */
+        internal const val PAYLOAD_HEADER_HEIGHT: String = "ks-header-height"
 
         /**
          * `SettingsRoot.sections` を `CellListItem` の平坦リストに展開する。

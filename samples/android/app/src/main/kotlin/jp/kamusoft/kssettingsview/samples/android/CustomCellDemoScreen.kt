@@ -2,6 +2,7 @@ package jp.kamusoft.kssettingsview.samples.android
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -46,6 +47,8 @@ import jp.kamusoft.kssettingsview.ui.KsSettingsViewStyle
  */
 @Composable
 fun CustomCellDemoScreen() {
+    val dark = isSystemInDarkTheme()
+
     // ② SliderCell ラップ関数に渡す値
     var brightness by remember { mutableIntStateOf(70) }
     var volume by remember { mutableIntStateOf(40) }
@@ -69,7 +72,7 @@ fun CustomCellDemoScreen() {
     KsSettingsView(
         modifier = Modifier.fillMaxSize(),
         style = KsSettingsViewStyle.Classic,
-        theme = SampleTheme.maui,
+        theme = SampleTheme.maui(dark),
     ) {
         // ① インライン CustomCell
         Section(

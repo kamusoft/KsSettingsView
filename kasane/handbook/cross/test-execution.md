@@ -5,7 +5,7 @@ applies-when:
   tasks: [テスト実行, テスト結果の報告]
 title: テスト実行規約
 description: iOS / Android / MAUI のテストの正しい実行コマンドと、黙って検証にならない範囲 (macOS 上の swift test で失われるテスト・Robolectric の描画検証限界・MAUI facade テストが触らない platform TFM)。収束を待つアサーションの書き方は platform 共通
-timestamp: 2026-09-01
+timestamp: 2026-09-06
 ---
 
 # テスト実行規約
@@ -33,7 +33,7 @@ iOS / Android / MAUI の 3 platform を記載する。いずれも実際に実�
 
 ## iOS
 
-### 正しい実行方法
+### iOS の実行方法
 
 ```
 cd ios
@@ -98,7 +98,7 @@ xcodebuild test -scheme KsSettingsView -destination 'platform=iOS Simulator,name
 
 ## Android
 
-### 正しい実行方法
+### Android の実行方法
 
 ```
 cd android
@@ -107,16 +107,26 @@ cd android
 
 - Gradle ビルドルートは `android/`。テストは Robolectric を含む JVM 単体テストで、debug / release の両 variant が実行される (2026-09-01 実測: 1350 件 × 2 = 2700 件。件数は変動する)。instrumented test (`androidTest/`) は現状存在しない
 - Gradle は up-to-date なテストタスクをスキップするため、**差分なしの再実行は「テスト 0 件で BUILD SUCCESSFUL」になり得る**。全件を確実に回し直して件数を確認するときは `--rerun-tasks` を付ける
-- 実行件数はコンソールに出ない。各モジュールの `build/test-results/testDebugUnitTest/TEST-*.xml` (release は `testReleaseUnitTest/`) の `tests` / `failures` 属性の合計、または `build/reports/tests/testDebugUnitTest/index.html` で確認する。**ディレクトリ名は variant 名 (`debug` / `release`) ではなくタスク名**であり、`debugUnitTest` 等と読み替えると集計対象が 0 件になる
 - 反復中に絞り込むときは `./gradlew :kssettingsview:testDebugUnitTest --tests '<クラス名のパターン>'` を使えるが、**完了判定には絞り込みなしの全件実行を使う** (iOS と同じ規律)
-- Gradle を動かす JDK は `JAVA_HOME` で選ぶ (JDK 17 / 21 / 25 で実測済み)。成果物のターゲットが Java 17 のため、どの JDK で動かす場合も JDK 17 がローカルにインストールされている必要がある ([Android ビルドツールチェーンの契約](../../concepts/android/architecture/build-toolchain.md))
+
+実行件数はコンソールに出ない。各モジュールの `build/test-results/testDebugUnitTest/TEST-*.xml` (release は `testReleaseUnitTest/`) の `tests` / `failures` 属性の合計、または `build/reports/tests/testDebugUnitTest/index.html` で確認する。**ディレクトリ名は variant 名 (`debug` / `release`) ではなくタスク名**であり、`debugUnitTest` 等と読み替えると集計対象が 0 件になる。
+
+Gradle を動かす JDK は `JAVA_HOME` で選ぶ (JDK 17 / 21 / 25 で実測済み)。成果物のターゲットが Java 17 のため、どの JDK で動かす場合も JDK 17 がローカルにインストールされている必要がある ([Android ビルドツールチェーンの契約](../../concepts/android/architecture/build-toolchain.md))。
+
+Robolectric を多く含むモジュールのテストワーカーは、Gradle 既定の heap (512m) では結果ファイルを書き切れずに基盤エラー (`EOFException` / 結果ファイル欠落) で落ちることがある。本体と bridge のテストタスクは `maxHeapSize = "2g"` を明示しており、新しいモジュールにテストを足すときも同じ設定を置く。この形の失敗はテストの失敗ではなく実行環境の問題で、`build/` を捨てての再実行と heap 設定で切り分ける。
 
 ### Robolectric で「検証したつもり」になる描画系アサーション
 
 Robolectric の既定 (legacy graphics モード) では一部の描画処理が実行されず、描画結果を見るアサーションが空振りする。実測で確認済みの 2 点 (適用実例: `android/kssettingsview/src/test/kotlin/jp/kamusoft/kssettingsview/ui/CellRowWidthAllocationTest.kt`):
 
-- **実 ellipsize**: legacy graphics では `TextUtils.ellipsize` が動作せず、`Layout.getEllipsisCount` が**常に 0 を返す**。末尾省略の発生を検証するテストにはクラスへ `@GraphicsMode(GraphicsMode.Mode.NATIVE)` が必要 (実 Skia を動かすため Robolectric nativeruntime の取得を伴い、起動コストと CI の環境依存が増える)
-- **singleLine な TextView の実描画位置**: `isSingleLine = true` の TextView は内部 `Layout` の幅が `VERY_WIDE` (約 100 万 px) になり、`Layout` 座標は View 座標と一致しない。実描画位置は `viewTreeObserver.dispatchOnPreDraw()` で `TextView.bringTextIntoView()` の `scrollX` 補正を発火させてから `layout.getLineLeft(0) - scrollX` で測る。`root.draw(Canvas)` を呼ぶだけでは補正が入らない。得られる値は **content box (padding を除いた領域) の左端起点**であり、この経路は実機で毎フレーム描画前に走る補正そのものなので Robolectric 固有の抜け道ではない
+| 検証したいこと | 空振りする形 | 正しい測り方 |
+|---|---|---|
+| 実 ellipsize (末尾省略の発生) | legacy graphics では `TextUtils.ellipsize` が動作せず、`Layout.getEllipsisCount` が**常に 0 を返す** | クラスへ `@GraphicsMode(GraphicsMode.Mode.NATIVE)` を付けて実 Skia を動かす (Robolectric nativeruntime の取得を伴い、起動コストと CI の環境依存が増える) |
+| singleLine な TextView の実描画位置 | `isSingleLine = true` の TextView は内部 `Layout` の幅が `VERY_WIDE` (約 100 万 px) になり、`Layout` 座標は View 座標と一致しない。`root.draw(Canvas)` を呼ぶだけでは補正が入らない | `viewTreeObserver.dispatchOnPreDraw()` で `TextView.bringTextIntoView()` の `scrollX` 補正を発火させてから `layout.getLineLeft(0) - scrollX` で測る。得られる値は **content box (padding を除いた領域) の左端起点**。この経路は実機で毎フレーム描画前に走る補正そのものなので Robolectric 固有の抜け道ではない |
+
+### カレンダーの選択面を提示した後に `idle()` を呼ばない
+
+Compose の `DatePicker` を載せたカレンダーの選択面 (`DateCalendarDialog`) を Robolectric で提示した後に `shadowOf(Looper.getMainLooper()).idle()` を呼ぶと、Compose の `PopupLayout.pollForLocationOnScreenChange` が main looper を占有して `idle()` が戻らず、テストが無言で固まる。カレンダーを提示するテストでは提示後の `idle()` を避け、観測したい状態を条件ベース待機 (上の「収束を待つアサーション」) か、提示前に済ませておく (適用実例: `android/kssettingsview/src/test/kotlin/jp/kamusoft/kssettingsview/ui/DateCalendarDialogTest.kt` / `DateCalendarRecreationTest.kt` の流儀)。ボトムシート系の選択面 (`PickerSelectionSheet` 等) にはこの制約は無い。
 
 ### 非同期反映を待たないアサーション
 
@@ -126,7 +136,7 @@ Robolectric の既定 (legacy graphics モード) では一部の描画処理が
 
 ## MAUI
 
-### 正しい実行方法
+### MAUI の実行方法
 
 ```
 dotnet test maui/KsSettingsView.Maui.Tests/KsSettingsView.Maui.Tests.csproj

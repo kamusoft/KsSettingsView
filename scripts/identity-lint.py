@@ -13,7 +13,7 @@ MAC アドレス・メールアドレス・IP・JWT 等 — がアーティフ�
 使い方:
   python3 scripts/identity-lint.py            # lint: 範囲内のファイルを検査 (untracked 含む。違反があれば exit 1)
   python3 scripts/identity-lint.py --hook     # hook: PreToolUse の stdin JSON を検査し deny を返す
-  python3 scripts/identity-lint.py --paths a b  # 指定ファイルだけ lint
+  python3 scripts/identity-lint.py --paths a b  # 指定パスだけ lint (ディレクトリは走査、不在パスは exit 2)
   python3 scripts/identity-lint.py --selftest   # 検出ロジック・git grep 候補拾い・hook の疎通確認
 
 検出群 (kasane/config.yaml の `lint.identity.disable` で群ごとに無効化できる):
@@ -295,9 +295,15 @@ def lint(root: str, paths: list[str] | None) -> int:
                              cwd=root, capture_output=True, text=True).stdout
         candidates = [l for l in out.splitlines() if l]
     else:
+        # ディレクトリは走査して展開し、不在パスは exit 2 — open() の失敗を無言で飛ばすと「違反なし」の偽陽性になる
+        try:
+            files = LP.expand_paths(root, paths)
+        except LP.PathNotFound as e:
+            sys.stderr.write(f"--paths に存在しないパスがあります: {e} "
+                             f"(複数パスは引数を分けて渡す。zsh の未クォート変数展開は単語分割されない)\n")
+            return 2
         candidates = []
-        for p in paths:
-            rel = LP.normalize_rel(p, root)
+        for rel in files:
             try:
                 with open(os.path.join(root, rel), encoding="utf-8", errors="replace") as f:
                     candidates += [f"{rel}:{i}:{l}" for i, l in enumerate(f.read().splitlines(), 1)]

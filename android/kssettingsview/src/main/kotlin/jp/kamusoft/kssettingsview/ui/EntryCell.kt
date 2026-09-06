@@ -17,7 +17,7 @@ import jp.kamusoft.kssettingsview.core.DSLReidentifiableCell
  * が占めるため、同じ位置に値テキストを置くことができないためである。
  *
  * `keyboardType` は **`android.text.InputType` の `Int` 定数を直接公開**（独自列挙型でラップしない）。
- * UI 層の API では Native 型をそのまま公開する（core/ADR-0009）。
+ * UI 層の API では Native 型をそのまま公開する。
  *
  * @property id Cell の一意 ID（DSL 経路では `withDSLId` で安定 ID に rebind される）
  * @property style 任意の `CellStyle`（既定は空インスタンス）
@@ -30,12 +30,13 @@ import jp.kamusoft.kssettingsview.core.DSLReidentifiableCell
  * @property keyboardType `android.text.InputType` の `Int` 定数（既定 `InputType.TYPE_CLASS_TEXT`）
  * @property isPassword パスワードマスクフラグ（既定 `false`）
  * @property textAlignment テキスト配置（既定 `END`、AiForms 互換）
- * @property accentColor caret 色および選択ハイライト色（任意）
+ * @property accentColor caret 色および選択ハイライト色。`Color.Unspecified` は未指定を意味し、
+ *   `CellStyle.accentColor` → `Theme.cellAccentColor` の順に解決する
  * @property maxLength 最大文字数（`null` で無制限、既定 `null`、AiForms `MaxLength: int` 互換）
  * @property onTextChanged テキスト変更時に呼ばれるクロージャ（TwoWay 経路でも内部で設定される）
  * @property isEnabled 有効／無効フラグ（既定 `true`）
  * @property isVisible 可視性フラグ（既定 `true`）
- * @property placeholderColor プレースホルダ文字色（任意）。`null` は未指定を意味し、
+ * @property placeholderColor プレースホルダ文字色。`Color.Unspecified` は未指定を意味し、
  *   `CellStyle.placeholderColor` → `Theme.cellPlaceholderColor` → プラットフォーム既定の順に解決する
  */
 public data class EntryCell(
@@ -50,12 +51,12 @@ public data class EntryCell(
     val keyboardType: Int = InputType.TYPE_CLASS_TEXT,
     val isPassword: Boolean = false,
     val textAlignment: CellTitleAlignment = CellTitleAlignment.END,
-    val accentColor: Color? = null,
+    val accentColor: Color = Color.Unspecified,
     val maxLength: Int? = null,
     val onTextChanged: ((String) -> Unit)? = null,
     val isEnabled: Boolean = true,
     override val isVisible: Boolean = true,
-    val placeholderColor: Color? = null,
+    val placeholderColor: Color = Color.Unspecified,
 ) : Cell, DSLReidentifiableCell, DSLStyleModifiableCell, DSLIconModifiableCell, VisibilityAware {
     override fun withDSLId(newId: String): Cell = copy(id = newId)
     override fun withDSLStyle(newStyle: CellStyle): Cell = copy(style = newStyle)
@@ -98,11 +99,11 @@ public data class EntryCell(
         result = 31 * result + keyboardType
         result = 31 * result + isPassword.hashCode()
         result = 31 * result + textAlignment.hashCode()
-        result = 31 * result + (accentColor?.hashCode() ?: 0)
+        result = 31 * result + accentColor.hashCode()
         result = 31 * result + (maxLength ?: 0)
         result = 31 * result + isEnabled.hashCode()
         result = 31 * result + isVisible.hashCode()
-        result = 31 * result + (placeholderColor?.hashCode() ?: 0)
+        result = 31 * result + placeholderColor.hashCode()
         return result
     }
 }

@@ -12,7 +12,9 @@ import KsSettingsViewCore
 /// Cell 描画契約。具象 `UICollectionViewCell` サブクラスが実装する。
 ///
 /// `cell` は `any KsCell` として受け取り、レンダラ内部で具象型へキャストして使う想定。
-/// `theme` は全体テーマ。`render` 実装は cellStyle 合成（`EffectiveStyle`）→ サブビュー反映の順で行う。
+/// `theme` は全体テーマ。`render` 実装は `theme` と Cell 個別のスタイルから描画値を解決してから
+/// サブビューへ反映する順で行う（組み込み Cell の合成はライブラリ内部で閉じており、利用者定義の
+/// Renderer は `Theme` の公開既定値から自前で解決する）。
 public protocol KsCellRenderer: AnyObject {
     /// 任意の `KsCell` 準拠 Cell と `Theme` を受け取り描画する。
     /// - Parameters:

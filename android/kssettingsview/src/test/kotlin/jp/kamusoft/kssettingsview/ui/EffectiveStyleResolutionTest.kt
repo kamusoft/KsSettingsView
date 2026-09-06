@@ -6,7 +6,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
@@ -26,6 +25,7 @@ class EffectiveStyleResolutionTest {
         val result = EffectiveStyle.effectiveTitleColor(
             cellStyle = CellStyle(titleColor = cellColor),
             theme = Theme(cellTitleColor = themeColor),
+            darkTheme = false,
         )
         assertEquals(cellColor, result)
     }
@@ -36,17 +36,19 @@ class EffectiveStyleResolutionTest {
         val result = EffectiveStyle.effectiveTitleColor(
             cellStyle = CellStyle(),
             theme = Theme(cellTitleColor = themeColor),
+            darkTheme = false,
         )
         assertEquals(themeColor, result)
     }
 
     @Test
-    fun `effectiveTitleColor は既定フォールバック`() {
+    fun `effectiveTitleColor はライトの既定へフォールバック`() {
         val result = EffectiveStyle.effectiveTitleColor(
             cellStyle = CellStyle(),
             theme = Theme(),
+            darkTheme = false,
         )
-        assertEquals(Theme.DEFAULT_CELL_TITLE_COLOR, result)
+        assertEquals(KsThemePalette.Light.cellTitle, result)
     }
 
     // MARK: - effectiveValueTextColor / effectiveValueTextFont
@@ -58,6 +60,7 @@ class EffectiveStyleResolutionTest {
         val result = EffectiveStyle.effectiveValueTextColor(
             cellStyle = CellStyle(valueTextColor = cellColor),
             theme = Theme(cellValueTextColor = themeValueColor),
+            darkTheme = false,
         )
         assertEquals(cellColor, result)
     }
@@ -68,28 +71,31 @@ class EffectiveStyleResolutionTest {
         val result = EffectiveStyle.effectiveValueTextColor(
             cellStyle = CellStyle(),
             theme = Theme(cellValueTextColor = themeValueColor),
+            darkTheme = false,
         )
         assertEquals(themeValueColor, result)
     }
 
     @Test
     fun `effectiveValueTextColor は Theme cellTitleColor にフォールバック`() {
-        // cellValueTextColor が null のとき cellTitleColor から落ちる
+        // cellValueTextColor が未指定のとき cellTitleColor から落ちる
         val titleColor = Color(0xFF334455)
         val result = EffectiveStyle.effectiveValueTextColor(
             cellStyle = CellStyle(),
             theme = Theme(cellTitleColor = titleColor),
+            darkTheme = false,
         )
         assertEquals(titleColor, result)
     }
 
     @Test
-    fun `effectiveValueTextColor 全て null なら既定`() {
+    fun `effectiveValueTextColor 全て未指定ならライトのタイトル既定`() {
         val result = EffectiveStyle.effectiveValueTextColor(
             cellStyle = CellStyle(),
             theme = Theme(),
+            darkTheme = false,
         )
-        assertEquals(Theme.DEFAULT_CELL_TITLE_COLOR, result)
+        assertEquals(KsThemePalette.Light.cellTitle, result)
     }
 
     // MARK: - effectiveDescriptionColor
@@ -100,6 +106,7 @@ class EffectiveStyleResolutionTest {
         val result = EffectiveStyle.effectiveDescriptionColor(
             cellStyle = CellStyle(descriptionColor = cellColor),
             theme = Theme(cellDescriptionColor = Color.Blue),
+            darkTheme = false,
         )
         assertEquals(cellColor, result)
     }
@@ -110,17 +117,19 @@ class EffectiveStyleResolutionTest {
         val result = EffectiveStyle.effectiveDescriptionColor(
             cellStyle = CellStyle(),
             theme = Theme(cellDescriptionColor = themeColor),
+            darkTheme = false,
         )
         assertEquals(themeColor, result)
     }
 
     @Test
-    fun `effectiveDescriptionColor は既定フォールバック`() {
+    fun `effectiveDescriptionColor はライトの既定へフォールバック`() {
         val result = EffectiveStyle.effectiveDescriptionColor(
             cellStyle = CellStyle(),
             theme = Theme(),
+            darkTheme = false,
         )
-        assertEquals(Theme.DEFAULT_CELL_DESCRIPTION_COLOR, result)
+        assertEquals(KsThemePalette.Light.cellDescription, result)
     }
 
     // MARK: - effectiveHintTextColor
@@ -177,7 +186,7 @@ class EffectiveStyleResolutionTest {
     @Test
     fun `effectivePlaceholderColor は Theme フォールバック`() {
         val result = EffectiveStyle.effectivePlaceholderColor(
-            entryPlaceholderColor = null,
+            entryPlaceholderColor = Color.Unspecified,
             cellStyle = CellStyle(),
             theme = Theme(cellPlaceholderColor = Color.Blue),
         )
@@ -185,10 +194,11 @@ class EffectiveStyleResolutionTest {
     }
 
     @Test
-    fun `effectivePlaceholderColor は全段未指定でプラットフォーム既定を表す null になる`() {
-        assertNull(
+    fun `effectivePlaceholderColor は全段未指定でプラットフォーム既定を表す Unspecified になる`() {
+        assertEquals(
+            Color.Unspecified,
             EffectiveStyle.effectivePlaceholderColor(
-                entryPlaceholderColor = null,
+                entryPlaceholderColor = Color.Unspecified,
                 cellStyle = CellStyle(),
                 theme = Theme(),
             ),
@@ -386,41 +396,54 @@ class EffectiveStyleResolutionTest {
             buttonCellTitleColor = Color.Red,
             cellStyle = CellStyle(titleColor = Color.Green),
             theme = Theme(cellTitleColor = Color.Blue),
+            darkTheme = false,
         )
         assertEquals(Color.Red, result)
     }
 
     @Test
-    fun `effectiveButtonTitleColor は ButtonCell が null なら CellStyle 採用`() {
+    fun `effectiveButtonTitleColor は ButtonCell 未指定なら CellStyle 採用`() {
         val result = EffectiveStyle.effectiveButtonTitleColor(
-            buttonCellTitleColor = null,
+            buttonCellTitleColor = Color.Unspecified,
             cellStyle = CellStyle(titleColor = Color.Green),
             theme = Theme(cellTitleColor = Color.Blue),
+            darkTheme = false,
         )
         assertEquals(Color.Green, result)
     }
 
     @Test
-    fun `effectiveButtonTitleColor は ButtonCell と CellStyle が null なら Theme 採用`() {
+    fun `effectiveButtonTitleColor は ButtonCell と CellStyle が未指定なら Theme 採用`() {
         val result = EffectiveStyle.effectiveButtonTitleColor(
-            buttonCellTitleColor = null,
+            buttonCellTitleColor = Color.Unspecified,
             cellStyle = CellStyle(),
             theme = Theme(cellTitleColor = Color.Blue),
+            darkTheme = false,
         )
         assertEquals(Color.Blue, result)
     }
 
     @Test
-    fun `effectiveButtonTitleColor は全て null なら既定 ButtonTitleColor`() {
-        // ButtonCell.titleColor は 4 段優先で解決し、4 段目はプラットフォーム既定の
-        // Button 慣習色（クロスプラットフォーム既定 SYSTEM_BLUE 相当）となる。
-        // Compose 経路 (Context 不要) では `Theme.DEFAULT_BUTTON_TITLE_COLOR` を返す。
+    fun `effectiveButtonTitleColor は全て未指定ならライトの ButtonCell 既定`() {
+        // ButtonCell.titleColor は 4 段優先で解決し、4 段目は外観に対応する Button 慣習色となる。
         val result = EffectiveStyle.effectiveButtonTitleColor(
-            buttonCellTitleColor = null,
+            buttonCellTitleColor = Color.Unspecified,
             cellStyle = CellStyle(),
             theme = Theme(),
+            darkTheme = false,
         )
-        assertEquals(Theme.DEFAULT_BUTTON_TITLE_COLOR, result)
+        assertEquals(KsThemePalette.Light.buttonTitle, result)
+    }
+
+    @Test
+    fun `effectiveButtonTitleColor は全て未指定ならダークの ButtonCell 既定`() {
+        val result = EffectiveStyle.effectiveButtonTitleColor(
+            buttonCellTitleColor = Color.Unspecified,
+            cellStyle = CellStyle(),
+            theme = Theme(),
+            darkTheme = true,
+        )
+        assertEquals(KsThemePalette.Dark.buttonTitle, result)
     }
 
     // MARK: - TextStyle equals 安定性

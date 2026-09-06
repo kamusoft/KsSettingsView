@@ -368,28 +368,61 @@ final class KsBridgeCustomCellTests: XCTestCase {
         let maxOffset = max(0, collectionView.contentSize.height - collectionView.bounds.height)
         XCTAssertGreaterThan(maxOffset, 0, "前提: 画面外へスクロールできる長さの list になっていない")
 
+        let firstRowIndexPath = IndexPath(item: 0, section: 0)
+        // 行が可視矩形と重なっているか。`cellForItem(at:)` が nil を返すことを画面外の判定に
+        // 使わない — UICollectionView は可視矩形から外れた行をすぐには手放さず、hidden の
+        // まま返し続けることがあり、手放す時期は実行機の速さで変わる。位置で判定すれば、
+        // UIKit が行を保持し続けても判定の意味は変わらない。
+        let intersectsViewport: (UICollectionViewCell?) -> Bool = { cell in
+            guard let cell else { return false }
+            return cell.frame.intersects(collectionView.bounds)
+        }
+        let firstRowIsOffscreen = {
+            !intersectsViewport(collectionView.cellForItem(at: firstRowIndexPath))
+        }
+        // 内容が可視矩形に重なるどの行にも取り付いていないこと。画面外に残っている行は
+        // 表示に寄与しないため、内容が漏れたかどうかの判定からは外す。
+        let probeIsDetachedFromViewport = {
+            !collectionView.indexPathsForVisibleItems.contains { indexPath in
+                let cell = collectionView.cellForItem(at: indexPath)
+                return intersectsViewport(cell) && (cell.map { probe.isDescendant(of: $0) } ?? false)
+            }
+        }
+        // 失敗時にどちらの条件で止まったかを切り分けられるよう、先頭行の位置・可視矩形と、
+        // 内容が取り付いたままの行を出す。
+        let observedRecycleState = {
+            let firstRow = collectionView.cellForItem(at: firstRowIndexPath)
+            let holders = collectionView.indexPathsForVisibleItems.filter { indexPath in
+                collectionView.cellForItem(at: indexPath).map { probe.isDescendant(of: $0) } ?? false
+            }
+            return """
+                先頭行 \(KsBridgeTestHost.describe(firstRow)) \
+                frame \(firstRow.map { "\($0.frame)" } ?? "なし") \
+                hidden \(firstRow.map { "\($0.isHidden)" } ?? "なし") / \
+                可視矩形 \(collectionView.bounds) / \
+                内容が残る行 \(holders)
+                """
+        }
+
         collectionView.contentOffset = CGPoint(x: 0, y: maxOffset)
         // 画面外へ出た行の回収と、その内容の取り外しは次のレイアウト周回で確定するため、
-        // 回収が済んで内容がどの表示中の行にも残っていない状態そのものを待つ。
-        let isRecycled = {
-            collectionView.cellForItem(at: IndexPath(item: 0, section: 0)) == nil
-                && !collectionView.indexPathsForVisibleItems.contains { indexPath in
-                    collectionView.cellForItem(at: indexPath).map { probe.isDescendant(of: $0) } ?? false
-                }
-        }
+        // 先頭行が可視矩形から外れ、内容が表示中の行に残っていない状態そのものを待つ。
         awaitCondition(
             "先頭行が画面外へ出て再利用され、内容が表示中の行から外れる",
             in: collectionView,
-            actual: {
-                "先頭行 \(KsBridgeTestHost.describe(collectionView.cellForItem(at: IndexPath(item: 0, section: 0))))"
-            },
-            until: isRecycled
+            actual: observedRecycleState,
+            until: { firstRowIsOffscreen() && probeIsDetachedFromViewport() }
         )
-        XCTAssertNil(
-            collectionView.cellForItem(at: IndexPath(item: 0, section: 0)),
-            "前提: 先頭行が画面外へ出ていない"
+        XCTAssertTrue(
+            firstRowIsOffscreen(),
+            "前提: 先頭行が画面外へ出ていない (\(observedRecycleState()))"
         )
-        for indexPath in collectionView.indexPathsForVisibleItems {
+        let inspectedRows = collectionView.indexPathsForVisibleItems.filter { indexPath in
+            intersectsViewport(collectionView.cellForItem(at: indexPath))
+        }
+        // 検査対象が空のまま素通りすると、内容の漏れを見ていないのに成功として扱われる。
+        XCTAssertFalse(inspectedRows.isEmpty, "前提: 可視矩形に重なる行が 1 つもない")
+        for indexPath in inspectedRows {
             let cell = collectionView.cellForItem(at: indexPath)
             XCTAssertFalse(
                 cell.map { probe.isDescendant(of: $0) } ?? false,

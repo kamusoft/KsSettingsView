@@ -29,6 +29,15 @@
             "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/identity-lint.py\" --hook"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/git-gate-lint.py\" --bash-hook"
+          }
+        ]
       }
     ]
   }

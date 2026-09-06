@@ -140,27 +140,33 @@ class KsBridgeTheme {
     /** Section の箱のボーダー色（ARGB） */
     var sectionBorderColor: Int? = null
 
-    /** DTO から Native の `Theme` を解決する。未指定の項目は `Theme` の既定値を用いる。 */
+    /**
+     * DTO から Native の `Theme` を解決する。
+     *
+     * 未指定（`null`）の色は native の未指定表現（`Color.Unspecified`）へ写し、外観に応じた既定への
+     * 解決は native 側に委ねる。ここで固定の既定色を埋めると、ダーク外観での既定色の追随が効かなく
+     * なる。色以外の未指定は `Theme` の既定値を用いる。
+     */
     @JvmSynthetic
     internal fun resolve(): Theme {
         val base = Theme()
         return Theme(
-            separatorColor = KsBridgeColor.color(separatorColor) ?: base.separatorColor,
-            backgroundColor = KsBridgeColor.color(backgroundColor) ?: base.backgroundColor,
-            cellBackgroundColor = KsBridgeColor.color(cellBackgroundColor) ?: base.cellBackgroundColor,
-            selectedColor = KsBridgeColor.color(selectedColor) ?: base.selectedColor,
-            cellAccentColor = KsBridgeColor.color(cellAccentColor) ?: base.cellAccentColor,
-            disabledTextColor = KsBridgeColor.color(disabledTextColor) ?: base.disabledTextColor,
+            separatorColor = KsBridgeColor.color(separatorColor),
+            backgroundColor = KsBridgeColor.color(backgroundColor),
+            cellBackgroundColor = KsBridgeColor.color(cellBackgroundColor),
+            selectedColor = KsBridgeColor.color(selectedColor),
+            cellAccentColor = KsBridgeColor.color(cellAccentColor),
+            disabledTextColor = KsBridgeColor.color(disabledTextColor),
             scrollIndicatorVisible = scrollIndicatorVisible ?: base.scrollIndicatorVisible,
             rowHeight = rowHeight ?: base.rowHeight,
             hasUnevenRows = hasUnevenRows ?: base.hasUnevenRows,
-            headerTextColor = KsBridgeColor.color(headerTextColor) ?: base.headerTextColor,
-            headerBackgroundColor = KsBridgeColor.color(headerBackgroundColor) ?: base.headerBackgroundColor,
+            headerTextColor = KsBridgeColor.color(headerTextColor),
+            headerBackgroundColor = KsBridgeColor.color(headerBackgroundColor),
             headerFontSize = headerFontSize ?: base.headerFontSize,
             headerFont = headerFont?.resolve(),
             headerHeight = headerHeight ?: base.headerHeight,
-            footerTextColor = KsBridgeColor.color(footerTextColor) ?: base.footerTextColor,
-            footerBackgroundColor = KsBridgeColor.color(footerBackgroundColor) ?: base.footerBackgroundColor,
+            footerTextColor = KsBridgeColor.color(footerTextColor),
+            footerBackgroundColor = KsBridgeColor.color(footerBackgroundColor),
             footerFontSize = footerFontSize ?: base.footerFontSize,
             footerFont = footerFont?.resolve(),
             cellTitleColor = KsBridgeColor.color(cellTitleColor),

@@ -129,6 +129,8 @@
         <ks:DatePickerCell Title="予約日"
                            Date="{Binding Reservation}"
                            Format="yyyy/MM/dd"
+                           MinimumDate="{Binding ReservationMinimum}"
+                           MaximumDate="{Binding ReservationMaximum}"
                            PickerTitle="予約日を選択"
                            UIStyle="Calendar"
                            TodayText="今日" />

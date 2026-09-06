@@ -5,7 +5,7 @@ applies-when:
   tasks: [描画性能の評価・計測, カクつき報告の裏取り]
 title: MAUI の描画性能を測るビルド構成
 description: MAUI Android の Debug は Mono インタープリタ実行のため描画性能が実力より大幅に低く見える。性能の評価・調査・カクつき報告の裏取りは必ず Release ビルドで行う (iOS 側は本件では未計測)
-timestamp: 2026-08-29
+timestamp: 2026-09-05
 ---
 
 # MAUI の描画性能を測るビルド構成
@@ -32,6 +32,17 @@ MAUI Android の Debug ビルドは既定で Mono インタープリタ実行 (C
 計測回数は Debug / Release / native が各 1 回、`UseInterpreter=false` のみ連続 2 回で、表の幅はその 2 回の値 (2 回目には連続計測による発熱の影響が混ざり得る)。
 
 Release は native サンプルと同等以上であり、**Release で測ったときに性能問題は観測されない**。Debug 構成に `UseInterpreter=false` を入れると中間の性能になるが、**最良値 (p90 53ms) でも Release (12ms) と大差がある**ため **Release の代替にはならない** (計測用途には使わない)。2 回の値に幅があることは補足材料にとどまる (上記のとおり発熱が交絡し得る)。
+
+## CustomCell content の重さと端末クラスの目安 (Pixel 4a / 6a 実機、2026-09-05)
+
+MAUI の CustomCell は行のリサイクルごとに content の platform view を付け直すため、content が重いほど・端末が遅いほど bind のあるフレームが伸びる (構造は [MauiView の native 実体化機構](../../concepts/maui/architecture/view-materialization.md) の「Android — 行リサイクルのコスト」)。同一操作の Release 計測:
+
+| content (行あたり View 数) | Pixel 6a (2022 年ミドル) | Pixel 4a (2020 年ミドル) |
+|---|---|---|
+| デモの標準行 (7 個) | Janky 4.2% / p90 12ms | Janky 4.4% / p90 25ms |
+| 重い行 (15 個) | Janky 1.0% / p90 19ms | Janky 14.5% / p90 73ms |
+
+**CustomCell のカクつき報告を裏取りするときは、Release であることに加えて、content の View 数と端末クラスを添える。** Pixel 4a 級 × 行あたり View 15 個は既知の限界で、wrapper 側の最適化 (計測キャッシュ) では改善しない (measure は 1 フレームの 2% 未満)。この組で予算内に収める手当ては content を軽くすること (View 数を減らす) であり、ライブラリ側の対処は行のリサイクル停止という設計変更になる (未着手。探索メモ: `kasane/changes/archive/2026-09-05-maui-android-customcell-embed-perf/exploration.md`)。計測手順とスクリプトは同 archive の `evidence/` にある。
 
 ## 計測手順
 

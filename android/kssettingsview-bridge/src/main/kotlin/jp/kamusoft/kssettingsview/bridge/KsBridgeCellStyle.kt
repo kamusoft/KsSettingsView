@@ -6,9 +6,15 @@ import jp.kamusoft.kssettingsview.ui.CellStyle
 /**
  * Cell 個別スタイルを interop 境界で輸送する DTO。
  *
- * 項目は Native の `CellStyle` の公開項目と 1 対 1 で対応する。色は ARGB を詰めた 32bit 整数、
+ * 輸送するのは MAUI の Cell が CellStyle 段として公開する項目 — title / description / valueText /
+ * hint の色とフォント、icon の寸法、行の高さ、行の背景色。色は ARGB を詰めた 32bit 整数、
  * フォントは [KsBridgeFont] の記述子、寸法は数値で表し、`null` は「未指定 → Theme から継承」を
  * 意味する（maui/ADR-0004）。
+ *
+ * Native の `CellStyle` が持つ accent と placeholder の CellStyle 段は MAUI から設定する手段が
+ * なく、MAUI の `AccentColor` / `PlaceholderColor` は Cell 固有段として Cell 種別ごとの DTO
+ * （[KsBridgeSwitchCell] / [KsBridgeEntryCell] 等）で運ぶ。[accentColor] の枠は wire 形式として
+ * 残るが MAUI からは設定されず、placeholder の枠はこの DTO に無い。
  *
  * この DTO は輸送専用であり、利用者向けのスタイル公開契約ではない。
  */
@@ -53,7 +59,12 @@ class KsBridgeCellStyle {
     /** Cell 個別 accent 色（ARGB） */
     var accentColor: Int? = null
 
-    /** DTO から Native の `CellStyle` を解決する。未指定の項目は `null`（Theme 継承）のままにする。 */
+    /**
+     * DTO から Native の `CellStyle` を解決する。
+     *
+     * 未指定の項目は未指定のまま（色は `Color.Unspecified`、それ以外は `null`）にして Theme 継承へ
+     * 送る。明示された ARGB はそのまま色として保つ。
+     */
     @JvmSynthetic
     internal fun resolve(): CellStyle = CellStyle(
         titleColor = KsBridgeColor.color(titleColor),

@@ -8,17 +8,18 @@ import java.time.LocalTime
 /**
  * 時刻選択用 Cell。
  *
- * `time` は **Native 型 [java.time.LocalTime]** を直接公開する（中間論理表現でラップしない。
- * core/ADR-0009）。`valueText` 自動表示は
+ * `time` は **Native 型 [java.time.LocalTime]** を直接公開する（中間論理表現でラップしない）。
+ * `valueText` 自動表示は
  * `LocalTime.format(DateTimeFormatter.ofPattern(format))` で文字列化する。
  *
  * @property time 現在時刻（既定 `LocalTime.MIDNIGHT`）
  * @property format `DateTimeFormatter.ofPattern` 互換のフォーマット文字列（既定 `"HH:mm"`）。
- *   行の valueText の文字列化にだけ効き、選択面の時制には関与しない（core/ADR-0028）
+ *   行の valueText の文字列化にだけ効き、選択面の時制には関与しない
  * @property is24Hour 選択面の時制（既定 `true` = 24時間制、`false` で12時間制）。選択面の時制は
- *   この値だけで決まる（core/ADR-0028）
+ *   この値だけで決まる
  * @property pickerTitle モーダル画面のタイトル（任意）
- * @property accentColor 強調色（任意）
+ * @property accentColor 強調色。`Color.Unspecified` は未指定を意味し、
+ *   `CellStyle.accentColor` → `Theme.cellAccentColor` の順に解決する
  * @property valueText 明示指定の valueText（`null` で `format` に従って自動表示）
  * @property onValueChanged 時刻変更 callback
  */
@@ -34,7 +35,7 @@ public data class TimePickerCell(
     val format: String = "HH:mm",
     val is24Hour: Boolean = true,
     val pickerTitle: String? = null,
-    val accentColor: Color? = null,
+    val accentColor: Color = Color.Unspecified,
     val onValueChanged: ((LocalTime) -> Unit)? = null,
     val isEnabled: Boolean = true,
     override val isVisible: Boolean = true,
@@ -74,7 +75,7 @@ public data class TimePickerCell(
         result = 31 * result + format.hashCode()
         result = 31 * result + is24Hour.hashCode()
         result = 31 * result + (pickerTitle?.hashCode() ?: 0)
-        result = 31 * result + (accentColor?.hashCode() ?: 0)
+        result = 31 * result + accentColor.hashCode()
         result = 31 * result + isEnabled.hashCode()
         result = 31 * result + isVisible.hashCode()
         return result

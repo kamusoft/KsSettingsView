@@ -34,9 +34,9 @@ public partial class AccessoryViewsDemoPage : ContentPage
     public AccessoryViewsDemoPage()
     {
         InitializeComponent();
-        SampleTheme.Apply(Settings);
         BindingContext = _viewModel;
         SwapSection.HeaderView = CreateSwapHeaderView();
+        SampleThemeFollower.Attach(this, dark => SampleTheme.Apply(Settings, dark));
     }
 
     private static View CreateAccessoryView(string text, Color background, Color textColor)

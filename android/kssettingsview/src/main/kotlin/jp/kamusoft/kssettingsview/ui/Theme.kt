@@ -18,9 +18,14 @@ import androidx.compose.ui.unit.Dp
  * `TextStyle` は通常のクラスだが `equals` を実装しているため `data class` フィールドとして
  * 利用可能。
  *
+ * 色フィールドの未指定は `Color.Unspecified` で表す。既定値はすべて `Color.Unspecified` であり、
+ * 未指定の色は描画時に現在の外観（ライト / ダーク）の既定セットへ解決される。
+ * 既定セットは [KsSettingsViewDefaults] の factory が返す。「既定へ戻す」意図では
+ * `Color.Unspecified` を渡す。色以外（フォント・寸法・余白）の未指定は `null` で表す。
+ *
  * 「Cell 全体既定」フィールド群（`cellTitleColor` / `cellDescriptionColor` 等）は
- * 個別 Cell の `CellStyle.X` が `null` のときの **フォールバック値** として `EffectiveStyle`
- * 経由で参照される（解決順序: `CellStyle.X` → `Theme.cellX` → プラットフォーム既定）。
+ * 個別 Cell の `CellStyle.X` が未指定のときの **フォールバック値** として `EffectiveStyle`
+ * 経由で参照される（解決順序: `CellStyle.X` → `Theme.cellX` → 外観の既定セット）。
  *
  * `cellTitleFontSize` は `cellTitleFont` と並立する独立 `Double` フィールドで、
  * `> 0` のとき `cellTitleFont.fontSize` を **上書き** する（オリジナル
@@ -34,9 +39,9 @@ import androidx.compose.ui.unit.Dp
  *   Compose のメジャーアップグレード時には挙動回帰に注意する。
  *
  * Theme は Core ではなく UI 層に属し、色・フォント・サイズを Compose の Native 型
- * （`Color` / `TextStyle` / `Dp`）で保持する（core/ADR-0009）。
+ * （`Color` / `TextStyle` / `Dp`）で保持する。
  *
- * @property separatorColor セパレータ色
+ * @property separatorColor セパレータ色（`Color.Unspecified` は未指定 → 外観の既定セット。以降の色フィールドも同じ）
  * @property backgroundColor SettingsView（`RecyclerView`）自身の背景色。`cellBackgroundColor` とは独立
  * @property cellBackgroundColor Cell 既定背景色
  * @property selectedColor Cell 選択時の背景色
@@ -58,15 +63,15 @@ import androidx.compose.ui.unit.Dp
  * @property footerBackgroundColor Section フッタの背景色
  * @property footerFontSize Section フッタ既定フォントサイズ（論理単位、`-1` は未指定）
  * @property footerFont Section フッタ既定フォント（`null` は未指定）
- * @property cellTitleColor Cell タイトル既定色（`null` は未指定 → プラットフォーム既定）
+ * @property cellTitleColor Cell タイトル既定色（`Color.Unspecified` は未指定 → 外観の既定セット）
  * @property cellTitleFont Cell タイトル既定フォント（`null` は未指定 → プラットフォーム既定）
  * @property cellTitleFontSize Cell タイトル既定フォントサイズ（独立 `Double`、`-1.0` は未指定）。
  *   `> 0` のとき `cellTitleFont.fontSize` を上書きする
- * @property cellValueTextColor valueText 既定色。`null` は未指定 → `cellTitleColor` 等にフォールバック
+ * @property cellValueTextColor valueText 既定色。`Color.Unspecified` は未指定 → `cellTitleColor` 等にフォールバック
  * @property cellValueTextFont valueText 既定フォント。`null` は未指定 → `cellTitleFont` 等にフォールバック
- * @property cellDescriptionColor description 既定色。`null` は未指定 → グレー（#6D6D72）相当にフォールバック
+ * @property cellDescriptionColor description 既定色。`Color.Unspecified` は未指定 → 外観の既定セット
  * @property cellDescriptionFont description 既定フォント。`null` は未指定 → caption 系にフォールバック
- * @property cellHintTextColor hintText 既定色。`null` は未指定 → `cellAccentColor` にフォールバック
+ * @property cellHintTextColor hintText 既定色。`Color.Unspecified` は未指定 → `cellAccentColor` にフォールバック
  * @property cellHintFont hintText 既定フォント。`null` は未指定 → footnote 相当にフォールバック
  * @property cellIconSize アイコンの既定サイズ（正方形の一辺 dp）。`null` は未指定 → 24dp
  * @property cellIconRadius アイコンの既定角丸半径（dp）。`null` は未指定 → 0dp（角丸なし）
@@ -76,94 +81,47 @@ import androidx.compose.ui.unit.Dp
  *   可変な独自 `PaddingValues` 実装を同一参照のまま書き換えた場合の再描画は保証しない
  * @property sectionCornerRadius Modern の箱の角丸半径。`null` は未指定 → style ごとの既定
  * @property sectionBorderWidth Modern の箱のボーダー幅。`null` は未指定 → 実効 0dp（ボーダーなし）
- * @property sectionBorderColor Modern の箱のボーダー色。`null` は未指定 → 実効透明
- * @property cellPlaceholderColor `EntryCell` の placeholder 既定色。`null` は未指定 → プラットフォーム既定
- *   （ホストテーマの hint 色）にフォールバックし、ライブラリ独自の既定色を持ち込まない
+ * @property sectionBorderColor Modern の箱のボーダー色。`Color.Unspecified` は未指定 → 実効透明
+ * @property cellPlaceholderColor `EntryCell` の placeholder 既定色。`Color.Unspecified` は未指定 → プラットフォーム既定
+ *   （同梱テーマの hint 色。現在の外観で解決される）にフォールバックし、ライブラリ独自の既定色を持ち込まない
  */
 public data class Theme(
-    val separatorColor: Color = DEFAULT_SEPARATOR_COLOR,
-    val backgroundColor: Color = DEFAULT_BACKGROUND_COLOR,
-    val cellBackgroundColor: Color = Color.White,
-    val selectedColor: Color = DEFAULT_SELECTED_COLOR,
-    val cellAccentColor: Color = DEFAULT_ACCENT_COLOR,
-    val disabledTextColor: Color = DEFAULT_DISABLED_TEXT_COLOR,
+    val separatorColor: Color = Color.Unspecified,
+    val backgroundColor: Color = Color.Unspecified,
+    val cellBackgroundColor: Color = Color.Unspecified,
+    val selectedColor: Color = Color.Unspecified,
+    val cellAccentColor: Color = Color.Unspecified,
+    val disabledTextColor: Color = Color.Unspecified,
     val scrollIndicatorVisible: Boolean = true,
     val rowHeight: Int = -1,
     val hasUnevenRows: Boolean = true,
-    val headerTextColor: Color = DEFAULT_HEADER_TEXT_COLOR,
-    val headerBackgroundColor: Color = DEFAULT_HEADER_BACKGROUND_COLOR,
+    val headerTextColor: Color = Color.Unspecified,
+    val headerBackgroundColor: Color = Color.Unspecified,
     val headerFontSize: Double = -1.0,
     val headerFont: TextStyle? = null,
     val headerHeight: Double = -1.0,
-    val footerTextColor: Color = DEFAULT_FOOTER_TEXT_COLOR,
-    val footerBackgroundColor: Color = DEFAULT_FOOTER_BACKGROUND_COLOR,
+    val footerTextColor: Color = Color.Unspecified,
+    val footerBackgroundColor: Color = Color.Unspecified,
     val footerFontSize: Double = -1.0,
     val footerFont: TextStyle? = null,
-    val cellTitleColor: Color? = null,
+    val cellTitleColor: Color = Color.Unspecified,
     val cellTitleFont: TextStyle? = null,
     val cellTitleFontSize: Double = -1.0,
-    val cellValueTextColor: Color? = null,
+    val cellValueTextColor: Color = Color.Unspecified,
     val cellValueTextFont: TextStyle? = null,
-    val cellDescriptionColor: Color? = null,
+    val cellDescriptionColor: Color = Color.Unspecified,
     val cellDescriptionFont: TextStyle? = null,
-    val cellHintTextColor: Color? = null,
+    val cellHintTextColor: Color = Color.Unspecified,
     val cellHintFont: TextStyle? = null,
     val cellIconSize: Dp? = null,
     val cellIconRadius: Dp? = null,
     val sectionMargin: PaddingValues? = null,
     val sectionCornerRadius: Dp? = null,
     val sectionBorderWidth: Dp? = null,
-    val sectionBorderColor: Color? = null,
-    val cellPlaceholderColor: Color? = null,
+    val sectionBorderColor: Color = Color.Unspecified,
+    val cellPlaceholderColor: Color = Color.Unspecified,
 ) {
     public companion object {
-        /** システム標準の灰色 separator（おおよそ #C8C7CC） */
-        public val DEFAULT_SEPARATOR_COLOR: Color = Color(0xFFC8C7CC)
-
-        /** 選択時のグレー（おおよそ #D9D9D9） */
-        public val DEFAULT_SELECTED_COLOR: Color = Color(0xFFD9D9D9)
-
-        /**
-         * アクセント既定色（システム強調色相当の青、おおよそ #007AFF）。
-         * iOS の tint / Material のアクセントに合わせたクロスプラットフォーム既定値。
-         */
-        public val DEFAULT_ACCENT_COLOR: Color = Color(0xFF007AFF)
-
-        /** ヘッダ既定背景色（システムグループ化背景に近い #F2F2F7） */
-        public val DEFAULT_HEADER_BACKGROUND_COLOR: Color = Color(0xFFF2F2F7)
-
-        /** フッタ既定背景色（現状はヘッダと同値だが、将来的に独立進化できるよう別定数として宣言） */
-        public val DEFAULT_FOOTER_BACKGROUND_COLOR: Color = DEFAULT_HEADER_BACKGROUND_COLOR
-
-        /** ヘッダ既定テキスト色（おおよそ #6D6D72） */
-        public val DEFAULT_HEADER_TEXT_COLOR: Color = Color(0xFF6D6D72)
-
-        /** フッタ既定テキスト色（ヘッダと同色） */
-        public val DEFAULT_FOOTER_TEXT_COLOR: Color = Color(0xFF6D6D72)
-
-        /** SettingsView 全体の既定背景色（白系、`cellBackgroundColor` と同等のニュートラル既定）。 */
-        public val DEFAULT_BACKGROUND_COLOR: Color = Color(0xFFFFFFFF)
-
-        /** `isEnabled = false` 時のテキスト色（やや薄い灰色、おおよそ #999999） */
-        public val DEFAULT_DISABLED_TEXT_COLOR: Color = Color(0xFF999999)
-
-        // ===== Cell 全体既定 / フォールバック先既定値（EffectiveStyle と共有） =====
-
-        /** `cellTitleColor` 未指定時のフォールバック色（黒）。 */
-        public val DEFAULT_CELL_TITLE_COLOR: Color = Color(0xFF000000)
-
-        /**
-         * ButtonCell の `titleColor` 4 段解決で「いずれも未指定」のときに使う既定色。
-         *
-         * iOS の `.systemBlue` (#FF007AFF) と一致する青色。Compose 経路・View 経路のいずれも
-         * ホストのテーマを参照せず本定数を既定に採るため、両経路の解決結果は一致する
-         * (android/ADR-0020)。`EffectiveStyle.effectiveButtonTitleColor` /
-         * `EffectiveStyle.effectiveButtonTitleColorArgb` の 4 段目フォールバック値として参照される。
-         */
-        public val DEFAULT_BUTTON_TITLE_COLOR: Color = Color(0xFF007AFF)
-
-        /** `cellDescriptionColor` 未指定時のフォールバック色（やや薄いグレー、おおよそ #6D6D72）。 */
-        public val DEFAULT_CELL_DESCRIPTION_COLOR: Color = Color(0xFF6D6D72)
 
         /** `cellIconSize` 未指定時のフォールバックサイズ（24dp 相当のスカラー値、Dp は呼び出し側で解釈）。 */
         public const val DEFAULT_CELL_ICON_SIZE_DP_VALUE: Float = 24.0f

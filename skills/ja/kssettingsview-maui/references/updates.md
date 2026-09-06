@@ -1,10 +1,10 @@
 # 表示中の画面の更新
 
-表示中の設定画面を変える、ユーザーの操作を ViewModel へ戻す、データから行を生成する、ためのレシピ。XAML の断片は [SKILL.md](../SKILL.md) の最小動作コードにある `ks` 名前空間宣言を前提とし、C# の断片は `using KsSettingsView;` と、ページ内に `Settings` という名前の `SettingsView` があることを前提とする。
+表示中の設定画面を変える、ユーザーの操作を ViewModel へ戻す、データから Cell を生成する、ためのレシピ。XAML の断片は [SKILL.md](../SKILL.md) の最小動作コードにある `ks` 名前空間宣言を前提とし、C# の断片は `using KsSettingsView;` と、ページ内に `Settings` という名前の `SettingsView` があることを前提とする。
 
 ## ユーザーが変えた値を受け取る
 
-ユーザー操作で Native の行から書き戻されるプロパティは下の表のとおりで、いずれも既定が TwoWay なので普通にバインドするだけでよい。`PickerCell.SelectedItem` と `SelectedItems` も既定 TwoWay だが、これは書き戻しではなく導出 — `SelectedIndex` / `SelectedIndices` と `ItemsSource` に対して相互に同期されるので、index ではなく項目そのもので扱いたいときにバインドする。
+ユーザー操作で Native の Cell から書き戻されるプロパティは下の表のとおりで、いずれも既定が TwoWay なので普通にバインドするだけでよい。`PickerCell.SelectedItem` と `SelectedItems` も既定 TwoWay だが、これは書き戻しではなく導出 — `SelectedIndex` / `SelectedIndices` と `ItemsSource` に対して相互に同期されるので、index ではなく項目そのもので扱いたいときにバインドする。
 
 | Cell | プロパティ |
 |---|---|
@@ -25,9 +25,9 @@
 <ks:SwitchCell Title="Push notifications" On="{Binding NotificationsEnabled}" />
 ```
 
-## 表示中に行を足す・外す
+## 表示中に Cell を足す・外す
 
-`Section.Cells` は既定で observable なコレクションなので、行の追加・削除はそのまま表示に出る。
+`Section.Cells` は既定で observable なコレクションなので、Cell の追加・削除はそのまま表示に出る。
 
 ```csharp
 Section section = Settings.Root[0];
@@ -62,7 +62,7 @@ root.Add(new Section { HeaderText = "General" });
 Settings.Root = root;
 ```
 
-## 行の表示内容を変える
+## Cell の表示内容を変える
 
 すでに渡してある Cell のプロパティを設定する。同一 UI サイクル内の内容変更は 1 回にまとまって画面へ届く。
 
@@ -88,9 +88,9 @@ Cell と Section の `IsVisible` は、内容とバインドを保ったまま�
 </ks:Section>
 ```
 
-## コレクションから行を生成する
+## コレクションから Cell を生成する
 
-Section の `ItemsSource` をバインドして `ItemTemplate` を与える。生成された Cell の `BindingContext` は対応する item になり、observable な items なら行が追従する。
+Section の `ItemsSource` をバインドして `ItemTemplate` を与える。生成された Cell の `BindingContext` は対応する item になり、observable な items なら Cell が追従する。
 
 ```xml
 <ks:Section HeaderText="Devices" ItemsSource="{Binding Devices}">
@@ -104,9 +104,9 @@ Section の `ItemsSource` をバインドして `ItemTemplate` を与える。�
 </ks:Section>
 ```
 
-## 生成した行と手書きの行を混ぜる
+## 生成した Cell と手書きの Cell を混ぜる
 
-XAML に書いた行はそのまま残り、生成分をどこから差し込むかは `TemplateStartIndex` が決める。`ItemsSource` を外すと生成分だけが取り除かれる。
+XAML に書いた Cell はそのまま残り、生成分をどこから差し込むかは `TemplateStartIndex` が決める。`ItemsSource` を外すと生成分だけが取り除かれる。
 
 ```xml
 <ks:Section HeaderText="Devices"
@@ -123,7 +123,7 @@ XAML に書いた行はそのまま残り、生成分をどこから差し込む
 
 ## コレクションから Section ごと生成する
 
-`SettingsView` も同じ 3 プロパティを持ち、そちらでは行ではなく Section が生成される。
+`SettingsView` も同じ 3 プロパティを持ち、そちらでは Cell ではなく Section が生成される。
 
 ```xml
 <ks:SettingsView ItemsSource="{Binding Groups}">

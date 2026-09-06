@@ -122,13 +122,16 @@ internal data class PickerSheetStyle(
         fun from(cell: TimePickerCell, theme: Theme, effective: EffectiveStyle): PickerSheetStyle =
             from(cell.accentColor, theme, effective)
 
-        /** Cell 固有の強調色 [cellAccentColor]（未指定なら `null`）を起点にスタイル値を解決する。 */
+        /**
+         * Cell 固有の強調色 [cellAccentColor]（未指定なら `Color.Unspecified`）を起点に
+         * スタイル値を解決する。
+         */
         private fun from(
-            cellAccentColor: androidx.compose.ui.graphics.Color?,
+            cellAccentColor: androidx.compose.ui.graphics.Color,
             theme: Theme,
             effective: EffectiveStyle,
         ): PickerSheetStyle = PickerSheetStyle(
-            accentColor = cellAccentColor?.toArgb() ?: effective.accentColor,
+            accentColor = cellAccentColor.toArgbOrElse(effective.accentColor),
             sheetBackgroundColor = theme.cellBackgroundColor.toArgb(),
             separatorColor = theme.separatorColor.toArgb(),
             rippleColor = theme.selectedColor.toArgb(),

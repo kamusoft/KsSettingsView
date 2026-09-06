@@ -143,9 +143,11 @@ final class KsBridgeHostReleaseTests: XCTestCase {
             fixture.bridge.releaseHost()
         }
 
-        let exp = expectation(description: "wait runloop")
-        DispatchQueue.main.async { exp.fulfill() }
-        wait(for: [exp], timeout: 1.0)
+        awaitCondition(
+            "外部参照を破棄した旧 Host が解放される",
+            actual: { "weakHost=\(weakHost == nil ? "nil" : "non-nil")" },
+            until: { weakHost == nil }
+        )
 
         XCTAssertNil(weakHost, "解放後も旧 Host が参照され続けている")
         XCTAssertNil(fixture.bridge.hostController)

@@ -1,0 +1,49 @@
+MAUI Android — 夜間モード切替の前後で Activity / KsSettingsView のインスタンスが同一であることの記録
+
+採取: 2026-09-05、Android Emulator `ksn_custcell_api35` (Android 15)。Sample の外観は「システム」。
+`samples/maui/.../Platforms/Android/MainActivity.cs` の `Recreate()` を一時的にコメントアウトした
+ビルドで、`adb shell cmd uimode night no|yes` により端末の夜間モードを切り替えた。
+インスタンス識別は `adb shell dumpsys activity top` の出力から、対象アプリの
+`ACTIVITY` 行 / `Local Activity <identityHashCode>` 行 / View 階層の該当 2 行だけを抜粋した
+(全文はスクラッチに保管。他アプリ・ランチャの行は採らない)。
+
+== (a) 「共通フィールド統合デモ」(色プロパティ未設定の画面) ==
+
+--- ライト (切替前) ---
+  ACTIVITY jp.kamusoft.kssettingsview.samples.maui/crc6406af7334108e5082.MainActivity 5252896 displayId=0
+    Local Activity 329c446 State:
+      jp.kamusoft.kssettingsview.ui.KsSettingsView{5085ecb V.E...... ........ 0,0-1080,2050 app:id/ks_settings_view}
+        androidx.recyclerview.widget.RecyclerView{f916cca VFED..... ........ 0,0-1080,2050}
+
+--- ダーク (切替後・同一表示のまま) ---
+  ACTIVITY jp.kamusoft.kssettingsview.samples.maui/crc6406af7334108e5082.MainActivity 5252896 displayId=0
+    Local Activity 329c446 State:
+      jp.kamusoft.kssettingsview.ui.KsSettingsView{5085ecb V.E...... ........ 0,0-1080,2050 app:id/ks_settings_view}
+        androidx.recyclerview.widget.RecyclerView{f916cca VFED..... ........ 0,0-1080,2050}
+
+判定: Activity (329c446)・KsSettingsView (5085ecb)・RecyclerView (f916cca) の identityHashCode が
+切替前後で一致する。Activity は再生成されておらず、同一 View が描き替わっている。
+
+== (c) 「isVisible デモ」(CellBackgroundColor / HeaderTextColor に AppThemeBinding を一時付与) ==
+
+--- ライト (切替前) ---
+  ACTIVITY jp.kamusoft.kssettingsview.samples.maui/crc6406af7334108e5082.MainActivity 5252896 displayId=0
+    Local Activity 329c446 State:
+      jp.kamusoft.kssettingsview.ui.KsSettingsView{3b4e2a V.E...... ........ 0,0-1080,2050 app:id/ks_settings_view}
+        androidx.recyclerview.widget.RecyclerView{2a9f242 VFED..... ........ 0,0-1080,2050}
+
+--- ダーク (切替後・同一表示のまま) ---
+  ACTIVITY jp.kamusoft.kssettingsview.samples.maui/crc6406af7334108e5082.MainActivity 5252896 displayId=0
+    Local Activity 329c446 State:
+      jp.kamusoft.kssettingsview.ui.KsSettingsView{3b4e2a V.E...... ........ 0,0-1080,2050 app:id/ks_settings_view}
+        androidx.recyclerview.widget.RecyclerView{2a9f242 VFED..... ........ 0,0-1080,2050}
+
+判定: 同上。Activity は (a) と同じ 329c446 のままで、アプリ起動後に一度も再生成されていない。
+なお同じ dump に写るランチャの Local Activity は同じ切替で別値に変わっており
+(再生成されている)、識別子が切替で変わり得ること自体は確認できている。
+
+== 画素の実測 ==
+
+(a) 共通フィールド統合デモ (未指定色) — list 下地 #FFFFFF → #000000、Cell 背景 #FFFFFF → #1C1C1E。
+(c) isVisible デモ (明示色) — Cell 背景 #FFD9E6 → #102A54、Section Header 文字 #C2185B → #7FD4FF。
+    同画面の未指定色も list 下地 #FFFFFF → #000000 へ追随した。

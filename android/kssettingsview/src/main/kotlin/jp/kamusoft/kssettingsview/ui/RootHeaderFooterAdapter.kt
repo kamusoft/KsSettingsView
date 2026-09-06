@@ -10,7 +10,7 @@ import jp.kamusoft.kssettingsview.core.RootAccessory
  * `KsSettingsView` 内部の `ConcatAdapter(headerAdapter, mainListAdapter, footerAdapter)` で
  * 先頭 / 末尾に配置される。`view` プロパティの `null` / 非 `null` で itemCount を 0 / 1 に
  * 切り替え、変化のたびに対応する `notifyItemInserted(0)` / `notifyItemRemoved(0)` /
- * `notifyItemChanged(0)` を発行する。
+ * `notifyItemChanged(0, [KsSettingsView.PAYLOAD_CONTENT])` を発行する。
  *
  * `getItemId(0)` は header 用 `1L` / footer 用 `2L` を予約し、`mainListAdapter` 側はこれと
  * 衝突しない値域（`KsSettingsListAdapter.CELL_ID_OFFSET` 以上）を返す。
@@ -44,8 +44,12 @@ internal class RootHeaderFooterAdapter(
                 oldValue == null && value != null -> notifyItemInserted(0)
                 oldValue != null && value == null -> notifyItemRemoved(0)
                 oldValue != null && value != null -> {
-                    // 中身（KsAnyView.View）の差分検出は不可なので、念のため必ず通知して再 bind させる
-                    notifyItemChanged(0)
+                    // 中身（RootAccessory.View が持つ KsAnyView）の差分検出は不可なので、念のため必ず通知して再 bind させる。
+                    // payload を付けるのは Cell の内容更新と同じ理由で、既定の ItemAnimator 下では
+                    // payload なしの通知で `SimpleItemAnimator.canReuseUpdatedViewHolder` が false を返し、
+                    // ViewHolder が新規生成されて旧行とクロスフェードするため。`KsSettingsView` 側の
+                    // change アニメーション無効化と合わせた二重担保（android/ADR-0001）。
+                    notifyItemChanged(0, KsSettingsView.PAYLOAD_CONTENT)
                 }
                 // null → null は通知不要
             }
@@ -112,8 +116,8 @@ internal class RootHeaderFooterAdapter(
      * `KsAnyView.AndroidView` の View は factory から作り直すと内部状態（入力中のテキスト・
      * スクロール位置・フォーカス）を失う。
      *
-     * それ以外（payload なしの内容差し替え・text 形式・Theme 以外の payload が混ざる通知）は
-     * 既定動作に委ね、2 引数版 [onBindViewHolder] のフル bind へ落とす。
+     * それ以外（[KsSettingsView.PAYLOAD_CONTENT] を伴う内容差し替え・payload なし・text 形式・
+     * Theme 以外の payload が混ざる通知）は既定動作に委ね、2 引数版 [onBindViewHolder] のフル bind へ落とす。
      */
     override fun onBindViewHolder(
         holder: RecyclerView.ViewHolder,

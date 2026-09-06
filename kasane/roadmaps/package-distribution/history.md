@@ -33,3 +33,12 @@ ksn-agenda での議論の結果、phase-9 は調査・意思決定だけで終�
 change に含まれる範囲: 英日 README 2 枚の新規作成 / 旧 README 5 枚 (`android/` `maui/` `samples/*3`) の廃止 / 移送 (MAUI binding 知識・環境セットアップ手順・検証ホスト手順 → concepts、サードパーティ通知 → ルート README) / `.github/` 一式 (Issue Forms 2 本・CONTRIBUTING 英日) / docs-refresh の対象定義変更 (README 8 → 4 枚、デモ画面一覧の照合検査の廃止) / `skills/` の iOS 配布座標の修正。
 
 実行方式を変更フローにしたのは cross/ADR-0022 が「初期生成・構成の見直しは変更フローの承認を通す。docs-refresh は既存構成への追従更新に限定」と定めているため。本フェーズで起票した ADR は cross/0023 (README をルート 2 枚に集約) と cross/0024 (貢献は Issue で受け PR は受け付けない) で、cross/0018 (配信リポジトリ名の確定) と cross/0022 (未公開注記の縛りを削除) にも改訂を入れた。agenda の TODO は research 用の完了マークから `ksn-propose で変更提案を起こす` へ差し替えた。
+
+## 2026-09-04: フェーズ追加 — phase-13-ci-trigger-slimming (CI トリガーを開発運用に合わせて絞る)
+
+初回リリース (phase-8) 後の実測で、`develop` へ反映するだけで検証 CI 7 job (本体 3・消費者 3・lint) が PR と push で 2 回走り (壁時計 14〜20 分、消費者検証 MAUI が 14.2 分で最長)、開発効率を著しく下げていることが分かった。開発体制は「外部 PR なし・開発者 1 人・ローカルで worktree 並列作業 → `develop` へローカルマージして push」であり、phase-3 で決めたトリガー (`develop` 宛て PR + push) と必須チェック化 (`develop` に 7 件) は運用と噛み合っていない。
+
+オーナー判断 (ksn-explore、change `slim-ci-triggers`): `develop` 宛て PR トリガーを廃止、`develop` push は lint + 本体検証 3 本、`main` 宛て PR (head は develop のみ) はそれに消費者検証 3 本を加える。`develop` の必須 status check は撤去 (force-push 禁止・削除禁止は維持)、`main` の 7 件は維持、release workflow は変更なし。`develop` push の concurrency はブランチ単位の group + cancel-in-progress (従来は commit 単位の group で打ち切りが起きない構造だった)。変更パスによる絞り込みを行わない方針 (cross/ADR-0025) は維持し、絞るのは事象であって変更内容ではない。決定は cross/ADR-0028 (proposed) に起票した。
+
+末尾採番で phase-13-ci-trigger-slimming (change、in-progress) を追加し、phase-3 の決定事項「トリガー」「必須チェック化と通知」と phase-8 の `main` 保護設定の記述に改訂注記を入れた。ゴールの「PR / push で検証 CI がある」はブランチの役割に合わせた表現へ改訂。
+

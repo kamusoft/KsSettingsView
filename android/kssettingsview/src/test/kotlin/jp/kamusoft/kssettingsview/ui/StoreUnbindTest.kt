@@ -106,9 +106,10 @@ class StoreUnbindTest {
         activity.layoutSettingsView()
 
         assertEquals("解除後の構造・内容更新は表示へ届かない", listOf("A", "B-updated"), visibleRowTexts(view))
-        assertEquals("解除後の Theme 更新も届かない", Theme(), view.internalTheme())
+        assertEquals("解除後の Theme 更新も届かない", Theme(), view.theme)
         assertEquals(
-            Theme().backgroundColor.toArgb(),
+            "背景も解除前のまま（ライトの既定）",
+            KsSettingsViewDefaults.lightTheme().backgroundColor.toArgb(),
             (view.internalRecyclerView().background as ColorDrawable).color,
         )
     }

@@ -81,8 +81,8 @@ class DateSelectionSheetTest {
         todayText: String? = null,
         title: String = "誕生日",
         pickerTitle: String? = null,
-        accentColor: Color? = null,
-        androidButtonColor: Color? = null,
+        accentColor: Color = Color.Unspecified,
+        androidButtonColor: Color = Color.Unspecified,
         style: CellStyle = CellStyle(),
         isEnabled: Boolean = true,
         onValueChanged: ((LocalDate) -> Unit)? = null,
@@ -649,6 +649,27 @@ class DateSelectionSheetTest {
         )
         assertEquals(Color(0xFFFF0000).toArgb(), sheet.cancelView.currentTextColor)
         assertEquals(Color(0xFFFF0000).toArgb(), confirmPillColor(sheet))
+    }
+
+    /**
+     * Cell 固有色が 2 本とも未指定のとき、操作色は Theme の強調色まで倒れる。
+     *
+     * 未指定色をそのまま ARGB へ変換すると透明な黒（`0x00000000`）になり、操作ラベルが
+     * 見えなくなる。段を進めていることと、透明な黒でないことの両方を観測する。
+     */
+    @Test
+    @Config(qualifiers = DEVICE_QUALIFIERS)
+    fun `androidButtonColor と accentColor が未指定なら操作色は Theme の強調色になる`() {
+        val themeAccent = Color(0xFF0000FF)
+        val sheet = openSheet(spinnerCell(), theme = Theme(cellAccentColor = themeAccent))
+
+        assertEquals(themeAccent.toArgb(), sheet.cancelView.currentTextColor)
+        assertEquals(themeAccent.toArgb(), confirmPillColor(sheet))
+        assertNotEquals(
+            "未指定色が透明な黒へ落ちている",
+            Color.Unspecified.toArgb(),
+            sheet.cancelView.currentTextColor,
+        )
     }
 
     /** レイアウト後の各ホイールの選択中行の文字色（3系列で同じ色になる）。 */

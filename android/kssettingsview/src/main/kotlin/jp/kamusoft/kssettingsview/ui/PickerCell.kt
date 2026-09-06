@@ -10,7 +10,7 @@ import jp.kamusoft.kssettingsview.core.DSLReidentifiableCell
  * `selectionMode` で単一 / 複数を切替え、対応する binding（`selectedIndex` / `selectedIndices`）を
  * 使う。callback 経路は `onSelectionChanged`（単一）/ `onMultiSelectionChanged`（複数）を併設。
  *
- * 選択 UI はボトムシートで表示する（android/ADR-0005）。
+ * 選択 UI はボトムシートで表示する。
  *
  * @property selectionMode 単一 / 複数 のモード切替（既定 [PickerSelectionMode.Single]）
  * @property items 選択候補のリスト（主表示 + 任意の副表示）
@@ -20,7 +20,8 @@ import jp.kamusoft.kssettingsview.core.DSLReidentifiableCell
  *   `selectionMode == Single` のときは無視される。
  * @property maxSelectedNumber 複数選択モードでの上限（既定 `0` = 無制限）
  * @property pageTitle モーダル画面のタイトル（任意）
- * @property accentColor 選択強調色（任意）
+ * @property accentColor 選択強調色。`Color.Unspecified` は未指定を意味し、
+ *   `CellStyle.accentColor` → `Theme.cellAccentColor` の順に解決する
  * @property valueText 明示指定の valueText（`null` のとき現在の選択値から自動生成）
  * @property onSelectionChanged 単一選択モードでの選択変更 callback
  * @property onMultiSelectionChanged 複数選択モードでの選択変更 callback
@@ -39,7 +40,7 @@ public data class PickerCell(
     val selectedIndices: Set<Int> = emptySet(),
     val maxSelectedNumber: Int = 0,
     val pageTitle: String? = null,
-    val accentColor: Color? = null,
+    val accentColor: Color = Color.Unspecified,
     val onSelectionChanged: ((Int) -> Unit)? = null,
     val onMultiSelectionChanged: ((Set<Int>) -> Unit)? = null,
     val isEnabled: Boolean = true,
@@ -105,7 +106,7 @@ public data class PickerCell(
         result = 31 * result + selectedIndices.hashCode()
         result = 31 * result + maxSelectedNumber
         result = 31 * result + (pageTitle?.hashCode() ?: 0)
-        result = 31 * result + (accentColor?.hashCode() ?: 0)
+        result = 31 * result + accentColor.hashCode()
         result = 31 * result + isEnabled.hashCode()
         result = 31 * result + isVisible.hashCode()
         return result

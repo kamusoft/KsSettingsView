@@ -5,7 +5,6 @@ import android.graphics.Color
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
-import androidx.compose.ui.graphics.toArgb
 import androidx.core.graphics.ColorUtils
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.materialswitch.MaterialSwitch
@@ -134,7 +133,7 @@ internal class SwitchCellViewHolder(
     private var currentHandler: ((Boolean) -> Unit)? = null
 
     override fun bind(cell: SwitchCell, theme: Theme) {
-        val effective = EffectiveStyle.from(views.root.context, theme, cell.style)
+        val effective = EffectiveStyle.from(theme, cell.style, views.root.context.isKsDarkAppearance())
         applyCellBaseLayout(
             views = views,
             title = cell.title,
@@ -152,19 +151,23 @@ internal class SwitchCellViewHolder(
         switchView.isChecked = cell.isOn
 
         // accent 色: SwitchCell.accentColor → effective.accentColor（CellStyle.accentColor ?? Theme.cellAccentColor）
-        val accent = cell.accentColor?.toArgb() ?: effective.accentColor
+        val accent = cell.accentColor.toArgbOrElse(effective.accentColor)
 
         // オン thumb は accent に対するコントラスト色として決める（テーマ attr は参照しない）。
         val onThumbColor = onThumbColorFrom(accent)
         // オフ状態の明度の土台にするテーマ attr。素の MaterialSwitch と同じ attr を使うことで、
         // ダークテーマでの明度の反転にそのまま追従する。
+        // 解決元は View の Context ではなく現在の外観の同梱テーマ付き Context にする。行の View が
+        // 持つ Context は生成時に組み立てたテーマを保持し続けるため、Activity を再生成せずに外観が
+        // 変わるホストでは切替前の値を返してしまう。
+        val themedContext = views.root.context.ksThemedContext()
         val surfaceColor = MaterialColors.getColor(
-            switchView,
+            themedContext,
             com.google.android.material.R.attr.colorSurfaceContainerHighest,
             Color.LTGRAY,
         )
         val outlineColor = MaterialColors.getColor(
-            switchView,
+            themedContext,
             com.google.android.material.R.attr.colorOutline,
             Color.GRAY,
         )

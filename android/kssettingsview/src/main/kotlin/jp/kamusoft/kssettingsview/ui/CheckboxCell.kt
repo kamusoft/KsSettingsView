@@ -11,7 +11,8 @@ import jp.kamusoft.kssettingsview.core.DSLReidentifiableCell
  * `AiForms.Maui.SettingsView` と同じく `isChecked` は TwoWay バインディング相当。
  *
  * 共通フィールドとして `description` / `valueText` / `icon` / `hintText` を持つ。
- * `accentColor` は Compose の `Color?` を直接受け取る（core/ADR-0009）。
+ * `accentColor` は Compose の [Color] を直接受け取る。未指定は [Color.Unspecified] で表し、
+ * `CellStyle.accentColor` → `Theme.cellAccentColor` の順に解決する。
  */
 public data class CheckboxCell(
     override val id: String = "checkbox-${java.util.UUID.randomUUID()}",
@@ -22,7 +23,7 @@ public data class CheckboxCell(
     val icon: KsImage? = null,
     val hintText: String? = null,
     val isChecked: Boolean = false,
-    val accentColor: Color? = null,
+    val accentColor: Color = Color.Unspecified,
     val onValueChanged: ((Boolean) -> Unit)? = null,
     val isEnabled: Boolean = true,
     override val isVisible: Boolean = true,
@@ -56,7 +57,7 @@ public data class CheckboxCell(
         result = 31 * result + (icon?.hashCode() ?: 0)
         result = 31 * result + (hintText?.hashCode() ?: 0)
         result = 31 * result + isChecked.hashCode()
-        result = 31 * result + (accentColor?.hashCode() ?: 0)
+        result = 31 * result + accentColor.hashCode()
         result = 31 * result + isEnabled.hashCode()
         result = 31 * result + isVisible.hashCode()
         return result

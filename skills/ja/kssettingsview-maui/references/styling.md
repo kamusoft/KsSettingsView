@@ -1,8 +1,8 @@
 # スタイル
 
-画面の見た目にかかわるレシピ: 画面全体の既定値、行ごとの上書き、list の外観、Section 装飾、Header / Footer、配置場所。XAML の断片は [SKILL.md](../SKILL.md) の最小動作コードにある `ks` 名前空間宣言を前提とする。
+画面の見た目にかかわるレシピ: 画面全体の既定値、Cell ごとの上書き、list の外観、Section 装飾、Header / Footer、配置場所。XAML の断片は [SKILL.md](../SKILL.md) の最小動作コードにある `ks` 名前空間宣言を前提とする。
 
-描画値は次の順で解決される: Cell 種別が意味として持つ値 (ButtonCell のタイトル色など) → 行ごとの上書き → `SettingsView` の画面全体の既定値 → platform 既定。未指定は「次の段から継承する」意思であって「何も使わない」ではない。
+描画値は次の順で解決される: Cell 種別が意味として持つ値 (ButtonCell のタイトル色など) → Cell ごとの上書き → `SettingsView` の画面全体の既定値 → 現在の外観 (ライト / ダーク) のライブラリ既定または platform 既定。未指定は「次の段から継承する」意思であって「何も使わない」ではない。
 
 ## 画面全体の既定値を決める
 
@@ -28,11 +28,11 @@
 </ks:SettingsView>
 ```
 
-`BackgroundColor` は list 全体の下地、`CellBackgroundColor` は行の既定背景で、一方から他方を推論しない。`HeaderBackgroundColor` / `FooterBackgroundColor` は Section の Header / Footer 領域を塗る指定だが、両 platform に届かない唯一の組でもある — iOS ではこれらは領域へ適用されず、効くのは `HeaderTextColor` / `FooterTextColor` だけになる。`CellPlaceholderColor` は全 `EntryCell` のプレースホルダ文字色の既定で、行ごとには `PlaceholderColor` で上書きする。どちらも未指定なら OS 既定のプレースホルダ色のままで、ダークモードにも自動で追従する。
+`BackgroundColor` は list 全体の下地、`CellBackgroundColor` は Cell の既定背景で、一方から他方を推論しない。`HeaderBackgroundColor` / `FooterBackgroundColor` は Section の Header / Footer 領域を塗る指定だが、両 platform に届かない唯一の組でもある — iOS ではこれらは領域へ適用されず、効くのは `HeaderTextColor` / `FooterTextColor` だけになる。`CellPlaceholderColor` は全 `EntryCell` のプレースホルダ文字色の既定で、Cell ごとには `PlaceholderColor` で上書きする。どちらも未指定なら OS 既定のプレースホルダ色のままで、ダークモードにも自動で追従する。
 
-## 行 1 つの見た目を上書きする
+## Cell 1 つの見た目を上書きする
 
-同じ値が行ごとにも用意されていて、指定した行だけがその値で描かれる。
+同じ値が Cell ごとにも用意されていて、指定した Cell だけがその値で描かれる。
 
 ```xml
 <ks:LabelCell Title="Danger zone"
@@ -48,9 +48,82 @@
 <ks:SwitchCell Title="Push notifications" On="True" AccentColor="#34C759" />
 ```
 
+## ライト / ダーク外観に追随させる
+
+未指定の色はライブラリ既定で描かれ、その既定は端末の外観 — iOS のライト / ダーク、Android の夜間モード — に追随する。そのため色を 1 つも設定していない画面も、ダーク端末で判読できる配色で描かれる。設定した色は両方の外観でそのまま描かれ、ライブラリが別の既定値へ置き換えることはない。外観が切り替わったとき描き直されるのは、未指定のままにした色だけになる。色を null に戻すと次の段 — 画面全体の既定、その先は現在の外観のライブラリ既定 — へ継承が戻る。
+
+両方の外観の色を自分で決めるなら、`SettingsView` の色プロパティを `AppThemeBinding` で書く。外観が切り替わると新しい値がプロパティへ供給され、表示中の画面まで届く。
+
+```xml
+<ks:SettingsView BackgroundColor="{AppThemeBinding Light=#F2F2F7, Dark=#000000}"
+                 CellBackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1C1C1E}"
+                 CellTitleColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"
+                 SeparatorColor="{AppThemeBinding Light=#C8C7CC, Dark=#38383A}">
+  <ks:Section HeaderText="General">
+    <ks:LabelCell Title="Version" ValueText="1.0.0" />
+  </ks:Section>
+</ks:SettingsView>
+```
+
+## Cell 1 つの色を外観に合わせて変える
+
+Cell のプロパティに書いた `AppThemeBinding` は、外観が切り替わっても評価し直されない。`Section` と Cell はコントロールへ渡すデータであってページのツリーの要素ではなく、ツリーの外にあるバインドには外観の変化が伝わらないため。代わりに `Application.RequestedThemeChanged` を購読し、現在の外観の色をプロパティへ入れ直す。入れ直しはその Cell の内容更新として表示中の行まで届き、行はその場で描き直される。
+
+```xml
+<ks:ButtonCell x:Name="LogoutButton" Title="Log out" />
+```
+
+```csharp
+public partial class SettingsPage : ContentPage
+{
+    private Application? _subscribedTo;
+
+    public SettingsPage()
+    {
+        InitializeComponent();
+
+        Loaded += OnLoaded;
+        Unloaded += OnUnloaded;
+        ApplyThemeColors(Application.Current?.RequestedTheme == AppTheme.Dark);
+    }
+
+    private void ApplyThemeColors(bool isDark)
+        => LogoutButton.TitleColor = isDark ? Colors.Magenta : Colors.Green;
+
+    private void OnLoaded(object? sender, EventArgs e)
+    {
+        ApplyThemeColors(Application.Current?.RequestedTheme == AppTheme.Dark);
+
+        if (_subscribedTo is not null || Application.Current is not { } application)
+        {
+            return;
+        }
+
+        application.RequestedThemeChanged += OnRequestedThemeChanged;
+        _subscribedTo = application;
+    }
+
+    private void OnUnloaded(object? sender, EventArgs e)
+    {
+        if (_subscribedTo is not { } application)
+        {
+            return;
+        }
+
+        application.RequestedThemeChanged -= OnRequestedThemeChanged;
+        _subscribedTo = null;
+    }
+
+    private void OnRequestedThemeChanged(object? sender, AppThemeChangedEventArgs e)
+        => ApplyThemeColors(e.RequestedTheme == AppTheme.Dark);
+}
+```
+
+Cell に載る色はいずれもこの入れ直しで切り替える — `CellBase` のテキスト系の色と `BackgroundColor`、それに `AccentColor` / `PlaceholderColor` / `AndroidButtonColor` のように Cell 種別が意味として持つ色。
+
 ## スタイルプロパティの一覧
 
-画面全体の既定値は `SettingsView` に、行ごとの上書きは `CellBase` (全 Cell 共通の基底) に、次のプロパティとして並んでいる。個々の使い方はこのファイルの各レシピが扱う。いずれも bindable property で、対応する `FooProperty` という名前の `BindableProperty` フィールド (例: `CellTitleColorProperty`) を持つ。
+画面全体の既定値は `SettingsView` に、Cell ごとの上書きは `CellBase` (全 Cell 共通の基底) に、次のプロパティとして並んでいる。個々の使い方はこのファイルの各レシピが扱う。いずれも bindable property で、対応する `FooProperty` という名前の `BindableProperty` フィールド (例: `CellTitleColorProperty`) を持つ。
 
 `SettingsView` (画面全体の既定):
 
@@ -66,7 +139,7 @@
 | アイコン | `CellIconSize`、`CellIconRadius` |
 | Section 装飾 | `SectionMargin`、`SectionCornerRadius`、`SectionBorderWidth`、`SectionBorderColor` |
 
-`CellBase` (行ごとの上書き):
+`CellBase` (Cell ごとの上書き):
 
 | 分類 | プロパティ |
 |---|---|
@@ -74,11 +147,11 @@
 | 値テキスト | `ValueTextColor`、`ValueTextFontFamily`、`ValueTextFontSize`、`ValueTextFontAttributes` |
 | 説明文 | `DescriptionColor`、`DescriptionFontFamily`、`DescriptionFontSize`、`DescriptionFontAttributes` |
 | ヒント | `HintTextColor`、`HintFontFamily`、`HintFontSize`、`HintFontAttributes` |
-| 行・アイコン | `BackgroundColor`、`IconSize`、`IconRadius`、`Height` |
+| Cell・アイコン | `BackgroundColor`、`IconSize`、`IconRadius`、`Height` |
 
 ## フォントを変える
 
-フォントはテキストのスロットごとに 3 つのプロパティに分けて公開されていて、画面全体にも行ごとにも指定できる。
+フォントはテキストのスロットごとに 3 つのプロパティに分けて公開されていて、画面全体にも Cell ごとにも指定できる。
 
 ```xml
 <ks:SettingsView CellTitleFontFamily="OpenSansRegular"
@@ -91,9 +164,9 @@
 </ks:SettingsView>
 ```
 
-## 行の高さを決める
+## Cell の高さを決める
 
-`RowHeight` が画面全体の基準で、`Height` が行ごとの上書き。`HasUnevenRows="True"` なら高さは最低値として働き各行が内容に応じて伸び、`False` なら固定される。`RowHeight` は正値だけが有効なので「自動」を意味する数値は無い — どの行も内容に合わせたいときは `RowHeight` を指定せず、`HasUnevenRows="True"` に任せる。
+`RowHeight` が画面全体の基準で、`Height` が Cell ごとの上書き。`HasUnevenRows="True"` なら高さは最低値として働き各 Cell が内容に応じて伸び、`False` なら固定される。`RowHeight` は正値だけが有効なので「自動」を意味する数値は無い — どの Cell も内容に合わせたいときは `RowHeight` を指定せず、`HasUnevenRows="True"` に任せる。
 
 ```xml
 <ks:SettingsView HasUnevenRows="True">
@@ -103,9 +176,9 @@
 </ks:SettingsView>
 ```
 
-## フラットな外観 (Classic) と箱の外観 (Modern) を切り替える
+## Section の区切り方を切り替える (Classic の罫線 / Modern の角丸 Container)
 
-`ListStyle` (`SettingsViewStyle` 型) は Section の区切り方を選ぶ。`Classic` は罫線でフラットに区切り、`Modern` は Section の行だけを角丸の箱にまとめて Header / Footer を箱の外に置く。切り替えても内容と identity は変わらない。
+`ListStyle` (`SettingsViewStyle` 型) は Section の区切り方を選ぶ。`Classic` は Cell と Section の境界を罫線で引くだけで、Cell は画面の全幅に並ぶ。`Modern` は Section の Cell だけを角丸の Container にまとめ、Section Header / Footer はその Container の外側に置く。切り替えても内容と identity は変わらない。
 
 ```xml
 <ks:SettingsView ListStyle="Modern">
@@ -115,9 +188,9 @@
 </ks:SettingsView>
 ```
 
-## Section の箱を調整する
+## Modern の Section Container を調整する
 
-箱と Section 周りの余白は 4 つのプロパティで表す。指定は画面内の全 Section に効く。`SectionMargin` の左右は leading / trailing の意味なので文字の流れる向きに従い、`Classic` では上下成分だけが効く。
+Container と Section 周りの余白は 4 つのプロパティで表す。指定は画面内の全 Section に効く。`SectionMargin` の左右は leading / trailing の意味なので文字の流れる向きに従い、`Classic` では上下成分だけが効く。
 
 ```xml
 <ks:SettingsView ListStyle="Modern"
@@ -131,7 +204,7 @@
 </ks:SettingsView>
 ```
 
-未指定のものは platform 既定へ落ちる — 既定の余白と角丸は両 platform で同じ値、ボーダーは描かれない。
+未指定のものは platform 既定へ落ちる — 既定の余白と角丸は両 platform で同じ値、Border は描かれない。
 
 ## Header と Footer を付ける
 
@@ -174,9 +247,11 @@ Section は `HeaderText` / `FooterText`、画面全体は `RootHeaderText` / `Ro
 
 これらの View はページの logical tree に載り、所有者の `BindingContext` を継承するので、中のバインドは追加の配線なしに解決される。View の中身が変わればその場で表示が更新され、`HeaderHeight` で高さを固定していない限り領域も追従する。
 
+上の Header / Footer の書式プロパティが効くのはテキスト形式のときだけ。置いた View の見た目は View 自身が持ち、それらのプロパティを変えても View は作り直されない — 画面の他の部分が描き直される間も、View の中の状態 (入力途中の値・スクロール位置など) が保たれるのはこのため。
+
 ## アイコンの大きさを決める
 
-アイコンのサイズと角丸は画面ごとにも行ごとにも解決される。
+アイコンのサイズと角丸は画面ごとにも Cell ごとにも解決される。
 
 ```xml
 <ks:SettingsView CellIconSize="32" CellIconRadius="8">

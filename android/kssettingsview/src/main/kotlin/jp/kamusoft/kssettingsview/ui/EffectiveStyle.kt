@@ -2,9 +2,10 @@ package jp.kamusoft.kssettingsview.ui
 
 import android.content.Context
 import android.graphics.Typeface
-import android.util.TypedValue
 import androidx.annotation.ColorInt
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.isSpecified
+import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
@@ -16,12 +17,16 @@ import androidx.compose.ui.unit.sp
 /**
  * `Theme` と `CellStyle` を合成した実効スタイル。
  *
- * Cell ごとの [CellStyle] の各フィールドは `null` 可（Theme から継承する意図）。
+ * Cell ごとの [CellStyle] の各フィールドは未指定を取り得る（Theme から継承する意図）。
  * 本クラスは「Cell 描画時に確定値として欲しいプラットフォーム型」を提供するため、
- * `null` フィールドは Theme（または UI 層既定値）から補完する。
+ * 未指定フィールドは Theme（または UI 層既定値）から補完する。
  *
- * 入力の `Theme` / `CellStyle` の解決順序は「`CellStyle.X` → `Theme.cellX` → プラットフォーム既定」
- * で統一する。アクセサ関数群（[effectiveTitleColor] / [effectiveValueTextColor] 等）は本ファイル末尾の
+ * 入力の `Theme` は、解決済み `Theme` を直接読む描画箇所が使う色（list 下地・Cell 背景・
+ * separator・選択色・accent・disabled 文字・Header / Footer）が現在の外観の既定セットへ解決済みで
+ * あることを前提とする（解決点は `KsSettingsView`。core/ADR-0030）。タイトルと説明文の外観既定は
+ * 解決済み `Theme` には載らず、本クラスのアクセサが `darkTheme` を受けて最終段で
+ * [KsThemePalette] から選ぶ。入力の解決順序は「`CellStyle.X` → `Theme.cellX` → 外観の既定」で
+ * 統一する。アクセサ関数群（[effectiveTitleColor] / [effectiveValueTextColor] 等）は
  * `EffectiveStyle.Companion` および top-level 関数として提供する。
  *
  * @property titleColor タイトル文字色（ARGB Int、`cellTitleFontSize > 0` のとき size が上書き済み）
@@ -34,7 +39,8 @@ import androidx.compose.ui.unit.sp
  * @property selectedColor Cell 選択時背景色（ARGB Int）
  * @property accentColor 選択系 Cell のアクセント色（ARGB Int）
  * @property valueTextColor valueText 系の文字色（ARGB Int）。LabelCell / CommandCell の値テキストと
- *   `EntryCell` の入力済みテキストが使う。どの段にも指定が無いときはホストテーマの既定文字色へ解決する
+ *   `EntryCell` の入力済みテキストが使う。どの段にも指定が無いときは `Theme.cellTitleColor`、
+ *   それも未指定なら外観のタイトル既定へ落ちる
  * @property valueTextTypeface valueText の Typeface
  * @property valueTextSizeSp valueText の文字サイズ（sp）
  * @property hintTextColor hintText の文字色（ARGB Int）
@@ -45,7 +51,6 @@ import androidx.compose.ui.unit.sp
  * @property iconRadiusDp icon 領域の枠にかける角丸半径（dp、0 は角丸なし）。`CellStyle.iconRadius` → `Theme.cellIconRadius` → 既定 0dp の順で解決済み
  * @property effectiveHeightDp 実効行高さ（dp）。`CellStyle.cellHeight ?? Theme.rowHeight ?? MIN_ROW_HEIGHT_DP` を MIN_ROW_HEIGHT_DP（= 60dp）で下限ガード
  * @property isFixedHeight 固定高さモードか（`!Theme.hasUnevenRows`）
- * @property titleColorIsExplicit タイトル色が CellStyle または Theme いずれかで明示指定されたかを示すフラグ
  */
 internal data class EffectiveStyle(
     @ColorInt val titleColor: Int,
@@ -68,7 +73,6 @@ internal data class EffectiveStyle(
     val iconRadiusDp: Float,
     val effectiveHeightDp: Int,
     val isFixedHeight: Boolean,
-    val titleColorIsExplicit: Boolean,
 ) {
     companion object {
         /** タイトル既定サイズ（sp）。プラットフォーム既定 17sp 相当。 */
@@ -96,23 +100,20 @@ internal data class EffectiveStyle(
         /**
          * `Theme` と `CellStyle` を合成して [EffectiveStyle] を構築する。
          *
-         * `cellStyle` の各フィールドが `null` の場合、`theme` の対応値もしくは UI 層既定値で補完する。
+         * `cellStyle` の各フィールドが未指定の場合、`theme` の対応値もしくは UI 層既定値で補完する。
+         *
+         * @param theme 未指定色を外観の既定セットへ解決済みの `Theme`
+         * @param cellStyle Cell 個別のスタイル
+         * @param darkTheme ダーク外観なら `true`。タイトル・説明文・ButtonCell タイトルの最終段の
+         *   既定を選ぶのに使う
          */
-        fun from(context: Context, theme: Theme, cellStyle: CellStyle): EffectiveStyle {
+        fun from(theme: Theme, cellStyle: CellStyle, darkTheme: Boolean): EffectiveStyle {
             // 解決ロジックは Companion アクセサ群に集約し、本関数は「Compose 論理型 →
             // Android View 系のプラットフォーム型 (ARGB Int / Typeface / sp Float)」変換のみ担う。
-            // SoT を 1 箇所にすることで spec の解決順序ロジックが二重管理にならないようにする。
-            val titleColorIsExplicit: Boolean =
-                cellStyle.titleColor != null || theme.cellTitleColor != null
+            // SoT を 1 箇所にすることで解決順序ロジックが二重管理にならないようにする。
 
             // タイトル色: アクセサ経由で Color を取得し、Color → ARGB Int 変換。
-            // ただし「両方 nil」のときの 4 段目だけは Android View 系では Context 経由の
-            // `android.R.attr.textColorPrimary` 解決が必要なため、ここで分岐する。
-            val titleColor: Int = if (titleColorIsExplicit) {
-                effectiveTitleColor(cellStyle, theme).toArgb()
-            } else {
-                resolveDefaultTitleColor(context)
-            }
+            val titleColor: Int = effectiveTitleColor(cellStyle, theme, darkTheme).toArgb()
 
             // タイトルフォント: Compose TextStyle のアクセサで解決 → Typeface / sp Float に変換。
             val resolvedTitleStyle: TextStyle = effectiveTitleFont(cellStyle, theme)
@@ -121,7 +122,7 @@ internal data class EffectiveStyle(
                 ?: DEFAULT_TITLE_SIZE_SP
 
             // 説明色: Companion アクセサ経由で解決。
-            val descriptionColor = effectiveDescriptionColor(cellStyle, theme).toArgb()
+            val descriptionColor = effectiveDescriptionColor(cellStyle, theme, darkTheme).toArgb()
 
             // 説明フォント: Companion アクセサ経由で TextStyle 取得 → Typeface / sp Float に変換。
             val resolvedDescriptionStyle: TextStyle = effectiveDescriptionFont(cellStyle, theme)
@@ -140,16 +141,7 @@ internal data class EffectiveStyle(
             val accentColor = effectiveAccentColor(cellStyle, theme).toArgb()
 
             // 値テキスト色 / フォント: Companion アクセサ経由で取得 → ARGB / Typeface / sp Float へ。
-            // タイトル色と同じく、解決順の 4 段目（どの段にも指定が無い場合）だけは Android View 系では
-            // Context 経由の `android.R.attr.textColorPrimary` 解決が必要なため、ここで分岐する。
-            val valueTextColorIsExplicit: Boolean = cellStyle.valueTextColor != null ||
-                theme.cellValueTextColor != null ||
-                theme.cellTitleColor != null
-            val valueTextColor: Int = if (valueTextColorIsExplicit) {
-                effectiveValueTextColor(cellStyle, theme).toArgb()
-            } else {
-                resolveDefaultTitleColor(context)
-            }
+            val valueTextColor: Int = effectiveValueTextColor(cellStyle, theme, darkTheme).toArgb()
             val resolvedValueTextStyle: TextStyle = effectiveValueTextFont(cellStyle, theme)
             val valueTextTypeface = if (resolvedValueTextStyle === TextStyle.Default) {
                 // valueText フォント未指定時は title の Typeface を継承する（既存挙動互換）。
@@ -207,42 +199,7 @@ internal data class EffectiveStyle(
                 iconRadiusDp = iconRadiusDp,
                 effectiveHeightDp = effectiveHeightDp,
                 isFixedHeight = !theme.hasUnevenRows,
-                titleColorIsExplicit = titleColorIsExplicit,
             )
-        }
-
-        /**
-         * Title 色の既定値（3 段階目フォールバック）を Context のテーマの
-         * `android.R.attr.textColorPrimary` から解決する。取得失敗時は黒（`#FF000000`）へ
-         * フォールバックする。
-         *
-         * ここへ渡る Context はライブラリ所有 UI 用の Context（同梱テーマ適用済み）であり、
-         * 解決値はホストのテーマに影響されない（android/ADR-0020）。
-         */
-        @ColorInt
-        private fun resolveDefaultTitleColor(context: Context): Int {
-            val tv = TypedValue()
-            val resolved = context.theme.resolveAttribute(
-                android.R.attr.textColorPrimary,
-                tv,
-                true,
-            )
-            if (!resolved) return DEFAULT_TITLE_COLOR
-            // resourceId 経由（ColorStateList の可能性に対応）
-            if (tv.resourceId != 0) {
-                val csl = try {
-                    androidx.core.content.ContextCompat.getColorStateList(context, tv.resourceId)
-                } catch (_: Throwable) {
-                    null
-                }
-                if (csl != null) return csl.defaultColor
-                return try {
-                    androidx.core.content.ContextCompat.getColor(context, tv.resourceId)
-                } catch (_: Throwable) {
-                    DEFAULT_TITLE_COLOR
-                }
-            }
-            return tv.data
         }
 
         /**
@@ -254,20 +211,6 @@ internal data class EffectiveStyle(
             return (dp * density).toInt()
         }
 
-        /**
-         * タイトル既定色（黒、`0xFF000000`）。
-         *
-         * `android.graphics.Color.BLACK` の値リテラル `0xFF000000.toInt()` をそのまま記述することで、
-         * 単体テスト（非 Robolectric）でも `EffectiveStyle` のロードが Android Color API に依存
-         * せずに成立するようにする。
-         */
-        @ColorInt
-        private val DEFAULT_TITLE_COLOR: Int = 0xFF000000.toInt()
-
-        /** 説明既定色（システムグレー、おおよそ #6D6D72）。 */
-        @ColorInt
-        private val DEFAULT_DESCRIPTION_COLOR: Int = 0xFF6D6D72.toInt()
-
         // ============================================================================
         // EffectiveStyle アクセサ群（解決順序 `CellStyle → Theme → 既定`）
         //
@@ -278,13 +221,14 @@ internal data class EffectiveStyle(
 
         /**
          * タイトル文字色を解決する。
-         * 解決順序: `cellStyle.titleColor` → `theme.cellTitleColor` → `DEFAULT_CELL_TITLE_COLOR`
+         * 解決順序: `cellStyle.titleColor` → `theme.cellTitleColor` → 外観の既定
+         *
+         * 最終段が外観の既定を返すため、戻り値が未指定になることはない。
          */
-        fun effectiveTitleColor(cellStyle: CellStyle, theme: Theme): Color {
-            cellStyle.titleColor?.let { return it }
-            theme.cellTitleColor?.let { return it }
-            return Theme.DEFAULT_CELL_TITLE_COLOR
-        }
+        fun effectiveTitleColor(cellStyle: CellStyle, theme: Theme, darkTheme: Boolean): Color =
+            cellStyle.titleColor
+                .takeOrElse { theme.cellTitleColor }
+                .takeOrElse { KsThemePalette.cellTitle(darkTheme) }
 
         /**
          * タイトルフォントを解決する。
@@ -304,13 +248,12 @@ internal data class EffectiveStyle(
 
         /**
          * description 色を解決する。
-         * 解決順序: `cellStyle.descriptionColor` → `theme.cellDescriptionColor` → `DEFAULT_CELL_DESCRIPTION_COLOR`
+         * 解決順序: `cellStyle.descriptionColor` → `theme.cellDescriptionColor` → 外観の既定
          */
-        fun effectiveDescriptionColor(cellStyle: CellStyle, theme: Theme): Color {
-            cellStyle.descriptionColor?.let { return it }
-            theme.cellDescriptionColor?.let { return it }
-            return Theme.DEFAULT_CELL_DESCRIPTION_COLOR
-        }
+        fun effectiveDescriptionColor(cellStyle: CellStyle, theme: Theme, darkTheme: Boolean): Color =
+            cellStyle.descriptionColor
+                .takeOrElse { theme.cellDescriptionColor }
+                .takeOrElse { KsThemePalette.cellDescription(darkTheme) }
 
         /**
          * description フォントを解決する。
@@ -324,14 +267,16 @@ internal data class EffectiveStyle(
 
         /**
          * valueText 色を解決する。
-         * 解決順序: `cellStyle.valueTextColor` → `theme.cellValueTextColor` → `theme.cellTitleColor` → `DEFAULT_CELL_TITLE_COLOR`
+         * 解決順序: `cellStyle.valueTextColor` → `theme.cellValueTextColor` → `theme.cellTitleColor`
+         * → 外観の既定（タイトルと同じロール）
+         *
+         * `theme.cellValueTextColor` は外観の既定を持たず、未指定のときは title の色を継承する。
          */
-        fun effectiveValueTextColor(cellStyle: CellStyle, theme: Theme): Color {
-            cellStyle.valueTextColor?.let { return it }
-            theme.cellValueTextColor?.let { return it }
-            theme.cellTitleColor?.let { return it }
-            return Theme.DEFAULT_CELL_TITLE_COLOR
-        }
+        fun effectiveValueTextColor(cellStyle: CellStyle, theme: Theme, darkTheme: Boolean): Color =
+            cellStyle.valueTextColor
+                .takeOrElse { theme.cellValueTextColor }
+                .takeOrElse { theme.cellTitleColor }
+                .takeOrElse { KsThemePalette.cellTitle(darkTheme) }
 
         /**
          * valueText フォントを解決する。
@@ -348,11 +293,10 @@ internal data class EffectiveStyle(
          * hintText 色を解決する。
          * 解決順序: `cellStyle.hintTextColor` → `theme.cellHintTextColor` → `theme.cellAccentColor`
          */
-        fun effectiveHintTextColor(cellStyle: CellStyle, theme: Theme): Color {
-            cellStyle.hintTextColor?.let { return it }
-            theme.cellHintTextColor?.let { return it }
-            return theme.cellAccentColor
-        }
+        fun effectiveHintTextColor(cellStyle: CellStyle, theme: Theme): Color =
+            cellStyle.hintTextColor
+                .takeOrElse { theme.cellHintTextColor }
+                .takeOrElse { theme.cellAccentColor }
 
         /**
          * hintText フォントを解決する。
@@ -366,15 +310,15 @@ internal data class EffectiveStyle(
 
         /**
          * placeholder 文字色を解決する（Cell 固有値を伴わない `CellStyle` 以降の段）。
-         * 解決順序: `cellStyle.placeholderColor` → `theme.cellPlaceholderColor` → プラットフォーム既定（`null`）
+         * 解決順序: `cellStyle.placeholderColor` → `theme.cellPlaceholderColor` → プラットフォーム既定
          *
-         * 戻り値の `null` は「どの段にも指定が無い」ことを表し、描画側はホストテーマの hint 色
-         * （`android:textColorHint` の `ColorStateList`）をそのまま使う。ライブラリ独自の既定色は持ち込まない。
+         * 戻り値の `Color.Unspecified` は「どの段にも指定が無い」ことを表し、描画側は同梱テーマ
+         * （`Theme.Material3.DayNight` 派生）の hint 色（`android:textColorHint` の `ColorStateList`）を
+         * 現在の外観で解決してそのまま使う。ホストアプリの XML テーマは参照しない。ライブラリ独自の
+         * 既定色は持ち込まないため、placeholder は外観の既定セットにも含まれない。
          */
-        fun effectivePlaceholderColor(cellStyle: CellStyle, theme: Theme): Color? {
-            cellStyle.placeholderColor?.let { return it }
-            return theme.cellPlaceholderColor
-        }
+        fun effectivePlaceholderColor(cellStyle: CellStyle, theme: Theme): Color =
+            cellStyle.placeholderColor.takeOrElse { theme.cellPlaceholderColor }
 
         /**
          * `EntryCell.placeholderColor` 用の 4 段優先 placeholder 色解決。
@@ -383,16 +327,13 @@ internal data class EffectiveStyle(
          *   1. `entryPlaceholderColor`（`EntryCell` 個別フィールド、Cell 固有値が最優先）
          *   2. `cellStyle.placeholderColor`
          *   3. `theme.cellPlaceholderColor`
-         *   4. プラットフォーム既定（`null`）
+         *   4. プラットフォーム既定（`Color.Unspecified`）
          */
         fun effectivePlaceholderColor(
-            entryPlaceholderColor: Color?,
+            entryPlaceholderColor: Color,
             cellStyle: CellStyle,
             theme: Theme,
-        ): Color? {
-            entryPlaceholderColor?.let { return it }
-            return effectivePlaceholderColor(cellStyle, theme)
-        }
+        ): Color = entryPlaceholderColor.takeOrElse { effectivePlaceholderColor(cellStyle, theme) }
 
         /**
          * アイコンサイズ（正方形の一辺 dp）を解決する。
@@ -439,19 +380,15 @@ internal data class EffectiveStyle(
          * Cell 背景色を解決する。
          * 解決順序: `cellStyle.backgroundColor` → `theme.cellBackgroundColor`
          */
-        fun effectiveBackgroundColor(cellStyle: CellStyle, theme: Theme): Color {
-            cellStyle.backgroundColor?.let { return it }
-            return theme.cellBackgroundColor
-        }
+        fun effectiveBackgroundColor(cellStyle: CellStyle, theme: Theme): Color =
+            cellStyle.backgroundColor.takeOrElse { theme.cellBackgroundColor }
 
         /**
          * accent 色を解決する。
          * 解決順序: `cellStyle.accentColor` → `theme.cellAccentColor`
          */
-        fun effectiveAccentColor(cellStyle: CellStyle, theme: Theme): Color {
-            cellStyle.accentColor?.let { return it }
-            return theme.cellAccentColor
-        }
+        fun effectiveAccentColor(cellStyle: CellStyle, theme: Theme): Color =
+            cellStyle.accentColor.takeOrElse { theme.cellAccentColor }
 
         /**
          * 実効行高さ（dp）を解決する。
@@ -487,49 +424,47 @@ internal data class EffectiveStyle(
          *   1. `buttonCellTitleColor`（ButtonCell 個別フィールド、Cell 個別最優先）
          *   2. `cellStyle.titleColor`
          *   3. `theme.cellTitleColor`
-         *   4. `DEFAULT_BUTTON_TITLE_COLOR`（既定、ButtonCell の慣習的なアクセント色 `SYSTEM_BLUE`）
+         *   4. 外観に対応する ButtonCell の既定色（[KsThemePalette.buttonTitle]）
          *
-         * Note: 通常 Cell のタイトル既定 `DEFAULT_CELL_TITLE_COLOR` (黒) と異なり、ButtonCell は
-         * 「tappable に見える慣習色」として、クロスプラットフォーム統一の `SYSTEM_BLUE` (#FF007AFF) を
-         * 既定に採る。
+         * 通常 Cell のタイトル既定（黒 / 白）と異なり、ButtonCell は「tappable に見える慣習色」として
+         * 外観ごとのシステムブルー相当を既定に採る。この 4 段目は accent の指定とは独立であり、
+         * 利用者が accent だけを変えても ButtonCell のタイトルは変わらない。
          * View 系 (TextView 等) の本番描画では [effectiveButtonTitleColorArgb] を使うこと。
          */
         fun effectiveButtonTitleColor(
-            buttonCellTitleColor: Color?,
+            buttonCellTitleColor: Color,
             cellStyle: CellStyle,
             theme: Theme,
-        ): Color {
-            buttonCellTitleColor?.let { return it }
-            cellStyle.titleColor?.let { return it }
-            theme.cellTitleColor?.let { return it }
-            return Theme.DEFAULT_BUTTON_TITLE_COLOR
-        }
+            darkTheme: Boolean,
+        ): Color = buttonCellTitleColor
+            .takeOrElse { cellStyle.titleColor }
+            .takeOrElse { theme.cellTitleColor }
+            .takeOrElse { KsThemePalette.buttonTitle(darkTheme) }
 
         /**
          * `ButtonCell.titleColor` 用の 4 段優先タイトル色解決（Android View 系、ARGB Int を返す）。
          *
          * 解決順序は `ButtonCell.titleColor` → `CellStyle.titleColor` → `Theme.cellTitleColor`
-         * → 固定の既定色（`SYSTEM_BLUE_ARGB` = #FF007AFF）の 4 段。SoT は本ヘルパに集約し、
+         * → 外観に対応する ButtonCell の既定色の 4 段。SoT は本ヘルパに集約し、
          * `ButtonCellViewHolder` から直接呼ぶ。
          *
-         * 4 段目はホストのテーマを参照せず固定値である。ライブラリ UI の配色はホストの XML テーマから
-         * 隔離され、見た目の指定は `Theme` / `CellStyle` が正となる（android/ADR-0020）。Compose 経路の
-         * [effectiveButtonTitleColor] と同じ既定色になるため、両経路の解決結果は一致する。
+         * 4 段目はホストのテーマを参照せず、ライブラリが所有する外観別の既定値である。ライブラリ UI の
+         * 配色はホストの XML テーマから隔離され、見た目の指定は `Theme` / `CellStyle` が正となる
+         * （android/ADR-0020）。Compose 経路の [effectiveButtonTitleColor] と同じ既定色になるため、
+         * 両経路の解決結果は一致する。
          */
         @ColorInt
         fun effectiveButtonTitleColorArgb(
-            buttonCellTitleColor: Color?,
+            buttonCellTitleColor: Color,
             cellStyle: CellStyle,
             theme: Theme,
+            darkTheme: Boolean,
         ): Int = effectiveButtonTitleColor(
             buttonCellTitleColor = buttonCellTitleColor,
             cellStyle = cellStyle,
             theme = theme,
+            darkTheme = darkTheme,
         ).toArgb()
-
-        /** iOS の `.systemBlue` 相当の ARGB Int 値（#FF007AFF）。 */
-        @ColorInt
-        val SYSTEM_BLUE_ARGB: Int = 0xFF007AFF.toInt()
 
         /**
          * Section / Root Header のテキストフォントを `TextStyle` として解決する。
@@ -571,6 +506,18 @@ internal data class EffectiveStyle(
             if (isHeader) effectiveHeaderFont(theme) else effectiveFooterFont(theme)
     }
 }
+
+/**
+ * Cell 固有の色を View 系の ARGB へ落とす。
+ *
+ * 未指定（`Color.Unspecified`）の色は ARGB へ変換せず、次の段で解決済みの [fallbackArgb] を返す。
+ * `Color.Unspecified` をそのまま `toArgb()` に掛けると透明な黒になり、未指定の意味が失われるため、
+ * Cell 固有色を ARGB で消費する箇所はこのヘルパを通す（Cell 固有色の未指定も Theme / CellStyle と
+ * 同じく `Color.Unspecified` の 1 流儀で表す。core/ADR-0031）。
+ */
+@ColorInt
+internal fun Color.toArgbOrElse(@ColorInt fallbackArgb: Int): Int =
+    if (isSpecified) toArgb() else fallbackArgb
 
 /**
  * Compose `TextStyle` から Android `Typeface` を解決する。

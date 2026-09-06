@@ -27,17 +27,22 @@ enum class SectionDecorationPreset(val title: String) {
     Bordered("ボーダーあり"),
     ;
 
-    /** プリセットに対応する Theme。 */
-    val theme: Theme
-        get() = when (this) {
-            Standard -> SampleTheme.sectionDecorationDemo()
-            WideMargin -> SampleTheme.sectionDecorationDemo(
-                sectionMargin = PaddingValues(start = 32.dp, top = 32.dp, end = 32.dp, bottom = 0.dp),
-                sectionCornerRadius = 8.dp,
-            )
-            Bordered -> SampleTheme.sectionDecorationDemo(
-                sectionBorderWidth = 2.dp,
-                sectionBorderColor = SampleTheme.demoSectionBorder,
-            )
-        }
+    /**
+     * プリセットに対応する Theme。
+     *
+     * @param dark 実効外観がダークなら `true`
+     */
+    fun theme(dark: Boolean): Theme = when (this) {
+        Standard -> SampleTheme.sectionDecorationDemo(dark = dark)
+        WideMargin -> SampleTheme.sectionDecorationDemo(
+            dark = dark,
+            sectionMargin = PaddingValues(start = 32.dp, top = 32.dp, end = 32.dp, bottom = 0.dp),
+            sectionCornerRadius = 8.dp,
+        )
+        Bordered -> SampleTheme.sectionDecorationDemo(
+            dark = dark,
+            sectionBorderWidth = 2.dp,
+            sectionBorderColor = SampleTheme.demoSectionBorder,
+        )
+    }
 }

@@ -1,8 +1,8 @@
 # Styling
 
-Recipes for the look of the screen: screen-wide defaults, per-row overrides, list appearance, section decoration, headers and footers, and where to place the control. XAML fragments assume the `ks` namespace declaration from the minimal example in [SKILL.md](../SKILL.md).
+Recipes for the look of the screen: screen-wide defaults, per-cell overrides, list appearance, section decoration, headers and footers, and where to place the control. XAML fragments assume the `ks` namespace declaration from the minimal example in [SKILL.md](../SKILL.md).
 
-Each drawn value is resolved in this order: a value the cell type owns by meaning (such as a button title color), then the override on the row, then the screen-wide default on `SettingsView`, then the platform default. Leaving a property unset means "inherit the next level", not "use nothing".
+Each drawn value is resolved in this order: a value the cell type owns by meaning (such as a button title color), then the override on the cell, then the screen-wide default on `SettingsView`, then the library default for the current appearance (light or dark) or the platform default. Leaving a property unset means "inherit the next level", not "use nothing".
 
 ## Set the defaults for the whole screen
 
@@ -28,11 +28,11 @@ The screen-wide values live on `SettingsView` as individual properties.
 </ks:SettingsView>
 ```
 
-`BackgroundColor` is the backdrop of the list, `CellBackgroundColor` is the default background of a row - one is never derived from the other. `HeaderBackgroundColor` and `FooterBackgroundColor` fill the section header and footer areas, and they are the one pair that does not reach both platforms: on iOS those areas keep the platform background and only `HeaderTextColor` and `FooterTextColor` take effect. `CellPlaceholderColor` is the default placeholder text color of every `EntryCell`; a row overrides it with `PlaceholderColor`, and leaving both unset keeps the OS default placeholder color, which adapts to dark mode on its own.
+`BackgroundColor` is the backdrop of the list, `CellBackgroundColor` is the default background of a cell - one is never derived from the other. `HeaderBackgroundColor` and `FooterBackgroundColor` fill the section header and footer areas, and they are the one pair that does not reach both platforms: on iOS those areas keep the platform background and only `HeaderTextColor` and `FooterTextColor` take effect. `CellPlaceholderColor` is the default placeholder text color of every `EntryCell`; a cell overrides it with `PlaceholderColor`, and leaving both unset keeps the OS default placeholder color, which adapts to dark mode on its own.
 
-## Override the look of one row
+## Override the look of one cell
 
-The same values exist per row, and only the rows that set them are drawn differently.
+The same values exist per cell, and only the cells that set them are drawn differently.
 
 ```xml
 <ks:LabelCell Title="Danger zone"
@@ -48,9 +48,82 @@ Interactive cells add `AccentColor` for the color of their control - the switch 
 <ks:SwitchCell Title="Push notifications" On="True" AccentColor="#34C759" />
 ```
 
+## Follow the light and dark appearance
+
+A color you leave unset is drawn from the library default, and those defaults follow the appearance of the device - light and dark on iOS, night mode on Android - so a screen that sets no colors at all stays readable in dark. A color you do set is drawn as you gave it in both appearances; the library does not swap your value for a default of its own, and when the appearance changes only the colors left unset are resolved again. Setting a color back to null hands it back to the next level - the screen-wide default, and then the library default for the current appearance.
+
+To decide both appearances yourself, write the color properties of `SettingsView` with `AppThemeBinding`. Switching the appearance supplies the new value to the property, and it reaches the screen while the page is on display.
+
+```xml
+<ks:SettingsView BackgroundColor="{AppThemeBinding Light=#F2F2F7, Dark=#000000}"
+                 CellBackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1C1C1E}"
+                 CellTitleColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}"
+                 SeparatorColor="{AppThemeBinding Light=#C8C7CC, Dark=#38383A}">
+  <ks:Section HeaderText="General">
+    <ks:LabelCell Title="Version" ValueText="1.0.0" />
+  </ks:Section>
+</ks:SettingsView>
+```
+
+## Change the colors of one cell with the appearance
+
+`AppThemeBinding` written on a cell property is not re-evaluated when the appearance changes: a `Section` and a cell are data you hand to the control rather than elements of the page's tree, and a binding outside that tree is not told about the change. Subscribe to `Application.RequestedThemeChanged` and assign the color of the current appearance to the property instead. The assignment reaches the row on display as a content update, so the row is redrawn where it is.
+
+```xml
+<ks:ButtonCell x:Name="LogoutButton" Title="Log out" />
+```
+
+```csharp
+public partial class SettingsPage : ContentPage
+{
+    private Application? _subscribedTo;
+
+    public SettingsPage()
+    {
+        InitializeComponent();
+
+        Loaded += OnLoaded;
+        Unloaded += OnUnloaded;
+        ApplyThemeColors(Application.Current?.RequestedTheme == AppTheme.Dark);
+    }
+
+    private void ApplyThemeColors(bool isDark)
+        => LogoutButton.TitleColor = isDark ? Colors.Magenta : Colors.Green;
+
+    private void OnLoaded(object? sender, EventArgs e)
+    {
+        ApplyThemeColors(Application.Current?.RequestedTheme == AppTheme.Dark);
+
+        if (_subscribedTo is not null || Application.Current is not { } application)
+        {
+            return;
+        }
+
+        application.RequestedThemeChanged += OnRequestedThemeChanged;
+        _subscribedTo = application;
+    }
+
+    private void OnUnloaded(object? sender, EventArgs e)
+    {
+        if (_subscribedTo is not { } application)
+        {
+            return;
+        }
+
+        application.RequestedThemeChanged -= OnRequestedThemeChanged;
+        _subscribedTo = null;
+    }
+
+    private void OnRequestedThemeChanged(object? sender, AppThemeChangedEventArgs e)
+        => ApplyThemeColors(e.RequestedTheme == AppTheme.Dark);
+}
+```
+
+Re-assignment is how every color that sits on the cell is switched - the text colors and `BackgroundColor` of `CellBase`, and the colors a cell type owns by meaning such as `AccentColor`, `PlaceholderColor`, and `AndroidButtonColor`.
+
 ## Style property list
 
-The screen-wide defaults live on `SettingsView` and the per-row overrides on `CellBase` (the base shared by the cells), as the properties below; the recipes in this file show them in use. Each is a bindable property with a matching `BindableProperty` field named `FooProperty` (for example `CellTitleColorProperty`).
+The screen-wide defaults live on `SettingsView` and the per-cell overrides on `CellBase` (the base shared by the cells), as the properties below; the recipes in this file show them in use. Each is a bindable property with a matching `BindableProperty` field named `FooProperty` (for example `CellTitleColorProperty`).
 
 `SettingsView` (screen-wide defaults):
 
@@ -66,7 +139,7 @@ The screen-wide defaults live on `SettingsView` and the per-row overrides on `Ce
 | Icons | `CellIconSize`, `CellIconRadius` |
 | Section decoration | `SectionMargin`, `SectionCornerRadius`, `SectionBorderWidth`, `SectionBorderColor` |
 
-`CellBase` (per-row overrides):
+`CellBase` (per-cell overrides):
 
 | Category | Properties |
 |---|---|
@@ -74,11 +147,11 @@ The screen-wide defaults live on `SettingsView` and the per-row overrides on `Ce
 | Value text | `ValueTextColor`, `ValueTextFontFamily`, `ValueTextFontSize`, `ValueTextFontAttributes` |
 | Description | `DescriptionColor`, `DescriptionFontFamily`, `DescriptionFontSize`, `DescriptionFontAttributes` |
 | Hint | `HintTextColor`, `HintFontFamily`, `HintFontSize`, `HintFontAttributes` |
-| Row and icon | `BackgroundColor`, `IconSize`, `IconRadius`, `Height` |
+| Cell and icon | `BackgroundColor`, `IconSize`, `IconRadius`, `Height` |
 
 ## Change fonts
 
-Fonts are exposed as three separate properties per text slot, screen-wide and per row.
+Fonts are exposed as three separate properties per text slot, screen-wide and per cell.
 
 ```xml
 <ks:SettingsView CellTitleFontFamily="OpenSansRegular"
@@ -91,9 +164,9 @@ Fonts are exposed as three separate properties per text slot, screen-wide and pe
 </ks:SettingsView>
 ```
 
-## Control row height
+## Control cell height
 
-`RowHeight` is the screen-wide baseline and `Height` overrides it for one row. With `HasUnevenRows="True"` the height acts as a minimum and each row grows to fit its content; with `False` the height is fixed. Only a positive `RowHeight` counts, so there is no number that means "measure it": leave the property unset and let `HasUnevenRows="True"` give you rows that fit their content.
+`RowHeight` is the screen-wide baseline and `Height` overrides it for one cell. With `HasUnevenRows="True"` the height acts as a minimum and each cell grows to fit its content; with `False` the height is fixed. Only a positive `RowHeight` counts, so there is no number that means "measure it": leave the property unset and let `HasUnevenRows="True"` give you cells that fit their content.
 
 ```xml
 <ks:SettingsView HasUnevenRows="True">
@@ -103,9 +176,9 @@ Fonts are exposed as three separate properties per text slot, screen-wide and pe
 </ks:SettingsView>
 ```
 
-## Switch between the flat (Classic) and the boxed (Modern) appearance
+## Choose how sections are separated (Classic separators / Modern rounded boxes)
 
-`ListStyle` (of type `SettingsViewStyle`) chooses how sections are separated. `Classic` draws flat rows with separator lines; `Modern` wraps the rows of each section in a rounded box, with the header and footer outside the box. Switching does not change the content or the identity of anything.
+`ListStyle` (of type `SettingsViewStyle`) chooses how sections are separated. `Classic` only draws separator lines between cells and sections, and cells span the full width of the screen. `Modern` wraps just the cells of each section in a rounded box, with the section header and footer outside the box. Switching does not change the content or the identity of anything.
 
 ```xml
 <ks:SettingsView ListStyle="Modern">
@@ -115,7 +188,7 @@ Fonts are exposed as three separate properties per text slot, screen-wide and pe
 </ks:SettingsView>
 ```
 
-## Adjust the section box
+## Tune the Modern section box
 
 Four properties describe the box and the spacing around each section. They apply to every section on the screen. Left and right of `SectionMargin` mean leading and trailing, so they follow the reading direction; in `Classic` only the vertical parts apply.
 
@@ -174,9 +247,11 @@ Any MAUI view can take the place of the text. There are four slots - `RootHeader
 
 These views join the page's logical tree and inherit the `BindingContext` of their owner, so bindings inside them work without extra wiring. Changing what a view shows updates it in place, and the area grows with it unless `HeaderHeight` fixes the height.
 
+The header and footer style properties above shape the text form only. A view you place is styled by the view itself, and a change to those properties does not rebuild it - which is also what keeps the state inside it (an entry being edited, a scroll position) while the rest of the screen is redrawn.
+
 ## Size the icons
 
-Icon size and corner radius are resolved per screen and per row.
+Icon size and corner radius are resolved per screen and per cell.
 
 ```xml
 <ks:SettingsView CellIconSize="32" CellIconRadius="8">

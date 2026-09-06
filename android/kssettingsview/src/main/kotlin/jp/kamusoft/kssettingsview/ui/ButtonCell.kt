@@ -22,7 +22,8 @@ import jp.kamusoft.kssettingsview.core.DSLReidentifiableCell
  * 等価性判定からは `onTap` を除く（関数値は再構築のたびに別インスタンスになり、内容変化の
  * 誤検出を招くため）。`titleAlignment` / `isEnabled` は判定に含める。
  *
- * `titleColor` は Compose の `Color?` を直接受け取る（core/ADR-0009）。
+ * `titleColor` は Compose の [Color] を直接受け取る。未指定は [Color.Unspecified] で表し、
+ * `CellStyle.titleColor` → `Theme.cellTitleColor` → 外観ごとの既定色の順に解決する。
  */
 public data class ButtonCell(
     override val id: String = "button-${java.util.UUID.randomUUID()}",
@@ -31,7 +32,7 @@ public data class ButtonCell(
     val valueText: String? = null,
     val icon: KsImage? = null,
     val hintText: String? = null,
-    val titleColor: Color? = null,
+    val titleColor: Color = Color.Unspecified,
     val onTap: (() -> Unit)? = null,
     val titleAlignment: CellTitleAlignment = CellTitleAlignment.CENTER,
     val isEnabled: Boolean = true,
@@ -63,7 +64,7 @@ public data class ButtonCell(
         result = 31 * result + (valueText?.hashCode() ?: 0)
         result = 31 * result + (icon?.hashCode() ?: 0)
         result = 31 * result + (hintText?.hashCode() ?: 0)
-        result = 31 * result + (titleColor?.hashCode() ?: 0)
+        result = 31 * result + titleColor.hashCode()
         result = 31 * result + titleAlignment.hashCode()
         result = 31 * result + isEnabled.hashCode()
         result = 31 * result + isVisible.hashCode()

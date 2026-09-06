@@ -91,6 +91,13 @@ class InitialThemeDecorationTest {
     private fun decorationTheme(view: KsSettingsView): Theme =
         (view.internalCurrentDecoration() as ClassicSectionDecoration).theme
 
+    /**
+     * 描画側が受け取る想定の Theme（未指定色をライト外観の既定で解決した形）。
+     *
+     * Robolectric の既定 Configuration は非夜間であり、View もライトで解決する。
+     */
+    private fun expectedResolved(theme: Theme): Theme = theme.resolvedFor(darkTheme = false)
+
     @Test
     fun `attach 済み View に初期 Theme 付き Store を bind すると ItemDecoration が初期 Theme になる`() {
         val ctrl = Robolectric.buildActivity(HostActivity::class.java).setup()
@@ -103,8 +110,9 @@ class InitialThemeDecorationTest {
         view.bind(SettingsRootStore(initialRoot = sampleRoot(), initialTheme = theme))
         idle()
 
-        assertEquals("bind 直後に ItemDecoration が初期 Theme になる", theme, decorationTheme(view))
-        assertEquals("内部 Theme も初期 Theme になる", theme, view.internalTheme())
+        assertEquals("bind 直後に ItemDecoration が初期 Theme になる", expectedResolved(theme), decorationTheme(view))
+        assertEquals("解決済み Theme も初期 Theme 由来になる", expectedResolved(theme), view.internalTheme())
+        assertEquals("利用者が読む Theme は解決前のまま", theme, view.theme)
     }
 
     @Test
@@ -122,15 +130,16 @@ class InitialThemeDecorationTest {
         view.bind(SettingsRootStore(initialRoot = sampleRoot(), initialTheme = theme))
         idle()
 
-        assertEquals("attach 前でも ItemDecoration が初期 Theme になる", theme, decorationTheme(view))
+        assertEquals("attach 前でも ItemDecoration が初期 Theme になる", expectedResolved(theme), decorationTheme(view))
 
         // attach 後も初期 Theme のままであること。attach 時の再取り込みと Theme の同値スキップを
         // 通過しても、ItemDecoration が既定 Theme へ戻らないことを見る。
         activity.container.addView(view)
         idle()
 
-        assertEquals("attach 後も ItemDecoration は初期 Theme のまま", theme, decorationTheme(view))
-        assertEquals("内部 Theme も初期 Theme のまま", theme, view.internalTheme())
+        assertEquals("attach 後も ItemDecoration は初期 Theme のまま", expectedResolved(theme), decorationTheme(view))
+        assertEquals("解決済み Theme も初期 Theme 由来のまま", expectedResolved(theme), view.internalTheme())
+        assertEquals("利用者が読む Theme は解決前のまま", theme, view.theme)
     }
 
     @Test
@@ -147,7 +156,7 @@ class InitialThemeDecorationTest {
 
         assertEquals(
             "Modern スタイルの ItemDecoration も初期 Theme になる",
-            theme,
+            expectedResolved(theme),
             (view.internalCurrentDecoration() as ModernSectionDecoration).theme,
         )
     }

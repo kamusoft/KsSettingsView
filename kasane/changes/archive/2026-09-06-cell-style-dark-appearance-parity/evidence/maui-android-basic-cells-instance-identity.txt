@@ -1,0 +1,20 @@
+# MAUI Android: 夜間モード切替の前後で Activity / View のインスタンスが同一であることの抜粋
+# 採取: adb shell dumpsys activity top (MainActivity の Local Activity と View 階層)
+# 対象: samples/maui/.../Platforms/Android/MainActivity.cs の OnConfigurationChanged() の
+#       Recreate() を一時的に外したビルド。基本 Cell 7 種デモを表示したまま夜間モードを on にした
+
+## 夜間モード off (ライト表示中)
+  ACTIVITY jp.kamusoft.kssettingsview.samples.maui/....MainActivity f26d385
+    Local Activity 329c446 State:
+      jp.kamusoft.kssettingsview.ui.KsSettingsView{5085ecb ... app:id/ks_settings_view}
+        androidx.recyclerview.widget.RecyclerView{b01585 ...}
+
+## 夜間モード on (同じ画面を表示したまま切替)
+  ACTIVITY jp.kamusoft.kssettingsview.samples.maui/....MainActivity f26d385
+    Local Activity 329c446 State:
+      jp.kamusoft.kssettingsview.ui.KsSettingsView{5085ecb ... app:id/ks_settings_view}
+        androidx.recyclerview.widget.RecyclerView{b01585 ...}
+
+# Activity 329c446 / KsSettingsView 5085ecb / RecyclerView b01585 は切替の前後で一致する。
+# 対照として、同じ dump に写るランチャの Local Activity は 18f92f4 -> 8bf1a51 と変わっており、
+# 再生成が起きれば identityHashCode が変わること自体は同じ採取方法で確認できている。

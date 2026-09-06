@@ -25,10 +25,10 @@ class ThemeTest {
     @Test
     fun `デフォルトコンストラクタは中立的な既定値を持つ`() {
         val theme = Theme()
-        // backgroundColor は白系
-        assertEquals(Theme.DEFAULT_BACKGROUND_COLOR, theme.backgroundColor)
-        // rowHeight = -1, hasUnevenRows = true（refine-cell-layout-after-unify-review で
-        // オリジナル AiForms iOS / Android 踏襲の「Auto 高さ + 下限保証」既定に変更）
+        // 色は未指定（描画時に外観の既定セットへ解決される）
+        assertEquals(Color.Unspecified, theme.backgroundColor)
+        // rowHeight = -1, hasUnevenRows = true（オリジナル AiForms iOS / Android 踏襲の
+        // 「Auto 高さ + 下限保証」を既定とする）
         assertEquals(-1, theme.rowHeight)
         assertTrue(theme.hasUnevenRows)
         // headerFontSize / footerFontSize = -1
@@ -38,21 +38,21 @@ class ThemeTest {
         assertEquals(-1.0, theme.headerHeight, 0.0001)
         // cellTitleFontSize = -1.0
         assertEquals(-1.0, theme.cellTitleFontSize, 0.0001)
-        // disabledTextColor はやや薄い灰色（#999999）
-        assertEquals(Color(0xFF999999), theme.disabledTextColor)
-        // cellTitleColor / cellTitleFont は null
-        assertNull(theme.cellTitleColor)
+        // 色はすべて未指定（描画時に外観の既定セットへ解決される）
+        assertEquals(Color.Unspecified, theme.disabledTextColor)
+        // cellTitleColor は未指定 / cellTitleFont は null
+        assertEquals(Color.Unspecified, theme.cellTitleColor)
         assertNull(theme.cellTitleFont)
-        // 新規 Cell 全体既定はすべて null
-        assertNull(theme.cellValueTextColor)
+        // Cell 全体既定はすべて未指定
+        assertEquals(Color.Unspecified, theme.cellValueTextColor)
         assertNull(theme.cellValueTextFont)
-        assertNull(theme.cellDescriptionColor)
+        assertEquals(Color.Unspecified, theme.cellDescriptionColor)
         assertNull(theme.cellDescriptionFont)
-        assertNull(theme.cellHintTextColor)
+        assertEquals(Color.Unspecified, theme.cellHintTextColor)
         assertNull(theme.cellHintFont)
         assertNull(theme.cellIconSize)
         assertNull(theme.cellIconRadius)
-        // 新規 Header/Footer Font も null
+        // Header/Footer Font も null
         assertNull(theme.headerFont)
         assertNull(theme.footerFont)
         // scrollIndicatorVisible は true
@@ -60,9 +60,9 @@ class ThemeTest {
     }
 
     @Test
-    fun `cellTitleColor と cellTitleFont は nullable で既定 null`() {
+    fun `cellTitleColor は既定で未指定 cellTitleFont は既定 null`() {
         val theme = Theme()
-        assertNull(theme.cellTitleColor)
+        assertEquals(Color.Unspecified, theme.cellTitleColor)
         assertNull(theme.cellTitleFont)
     }
 
@@ -107,7 +107,7 @@ class ThemeTest {
     }
 
     @Test
-    fun `新規 Cell 全体既定フィールドを保持できる`() {
+    fun `Cell 全体既定フィールドを保持できる`() {
         // Cell 全体既定（cellHintTextColor / cellIconSize 等）を Theme に直接渡せる
         val font = TextStyle(fontWeight = FontWeight.Medium)
         val theme = Theme(
@@ -149,7 +149,7 @@ class ThemeTest {
         assertNull(theme.sectionMargin)
         assertNull(theme.sectionCornerRadius)
         assertNull(theme.sectionBorderWidth)
-        assertNull(theme.sectionBorderColor)
+        assertEquals(Color.Unspecified, theme.sectionBorderColor)
     }
 
     @Test

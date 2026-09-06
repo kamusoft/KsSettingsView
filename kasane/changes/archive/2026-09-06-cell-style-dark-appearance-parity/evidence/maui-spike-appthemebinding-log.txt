@@ -1,0 +1,26 @@
+# spike 0.1 の計測ログ抜粋 (Sample の一時計測コードが出した行のみ)
+#   title    = ButtonCell.TitleColor        (XAML の {AppThemeBinding Light=#FF008000, Dark=#FFFF00FF})
+#   probe    = 同じページの Label.TextColor (同じ AppThemeBinding。視覚ツリー上)
+#   detached = code で作った Label.TextColor (SetAppTheme。視覚ツリーに載せていない)
+#   parent   = ButtonCell.Parent の型名
+#   green = [Color: Red=0, Green=0.5019608, Blue=0, Alpha=1] (light 値)
+#   magenta = [Color: Red=1, Green=0, Blue=1, Alpha=1]       (dark 値)
+
+## MAUI iOS (Simulator / 外観をライト -> ダークへ、画面を表示したまま)
+KSNSPIKE apply dark=False requested=Light title=green parent=null probe=green
+KSNSPIKE later dark=False requested=Light title=green probe=green
+KSNSPIKE apply dark=True  requested=Dark  title=green parent=null probe=magenta
+KSNSPIKE later dark=True  requested=Dark  title=green probe=magenta detached=green
+KSNSPIKE assigned dark=True title=magenta          <- 直接代入した直後の値
+
+## MAUI Android (Emulator API 35 / 夜間モードを off -> on、画面を表示したまま、Recreate() 無効)
+KSNSPIKE apply dark=False requested=Light title=green parent=null probe=green
+KSNSPIKE later dark=False requested=Light title=green probe=green
+KSNSPIKE apply dark=True  requested=Dark  title=green parent=null probe=magenta
+KSNSPIKE later dark=True  requested=Dark  title=green probe=magenta
+KSNSPIKE assigned dark=True title=magenta          <- 直接代入した直後の値
+
+# 読み方: Application.RequestedTheme は Dark に変わり、視覚ツリー上の Label は dark 値へ
+# 再評価される。一方 Cell のプロパティに書いた AppThemeBinding は light 値のまま再評価されない。
+# 視覚ツリーに載せていない素の Label も同じく再評価されない (detached=green)。
+# 直接代入した値は同じ画面・同じ Activity のまま native の行へ届き、描き替わる。

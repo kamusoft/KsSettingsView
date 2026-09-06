@@ -16,7 +16,8 @@ import jp.kamusoft.kssettingsview.core.DSLReidentifiableCell
  * @property value 現在値
  * @property unit 値に付与する単位（既定 `""` = 単位なし）
  * @property pickerTitle モーダル画面のタイトル（任意）
- * @property accentColor 強調色（任意）
+ * @property accentColor 強調色。`Color.Unspecified` は未指定を意味し、
+ *   `CellStyle.accentColor` → `Theme.cellAccentColor` の順に解決する
  * @property valueText 明示指定の valueText（`null` で [format] による自動表示）
  * @property onValueChanged 値変更 callback
  */
@@ -34,7 +35,7 @@ public data class NumberPickerCell(
     val value: Int = 0,
     val unit: String = "",
     val pickerTitle: String? = null,
-    val accentColor: Color? = null,
+    val accentColor: Color = Color.Unspecified,
     val onValueChanged: ((Int) -> Unit)? = null,
     val isEnabled: Boolean = true,
     override val isVisible: Boolean = true,
@@ -85,7 +86,7 @@ public data class NumberPickerCell(
         result = 31 * result + value
         result = 31 * result + unit.hashCode()
         result = 31 * result + (pickerTitle?.hashCode() ?: 0)
-        result = 31 * result + (accentColor?.hashCode() ?: 0)
+        result = 31 * result + accentColor.hashCode()
         result = 31 * result + isEnabled.hashCode()
         result = 31 * result + isVisible.hashCode()
         return result

@@ -1,8 +1,8 @@
 # Styling
 
-Recipes for colors, fonts, sizes, list appearance and the supplementary areas around the rows. Every example assumes the imports from the minimal example in [SKILL.md](../SKILL.md).
+Recipes for colors, fonts, sizes, list appearance and the supplementary areas around the cells. Every example assumes the imports from the minimal example in [SKILL.md](../SKILL.md).
 
-Values resolve in this order: the meaning-specific value of the cell, then `CellStyle`, then `Theme`, then the UIKit default. A meaning-specific value is a field the cell type owns because of what it means on that cell - `ButtonCell.titleColor`, or the `accentColor` of the selection and input cells - and it wins over the same attribute coming from `CellStyle`. UIKit types are used directly - `UIColor`, `UIFont`, `CGFloat` - which needs `import UIKit` in files that do not already get it from `import SwiftUI`.
+Values resolve in this order: the meaning-specific value of the cell, then `CellStyle`, then `Theme`, then the library default for the current appearance or the UIKit default. A meaning-specific value is a field the cell type owns because of what it means on that cell - `ButtonCell.titleColor`, or the `accentColor` of the selection and input cells - and it wins over the same attribute coming from `CellStyle`. UIKit types are used directly - `UIColor`, `UIFont`, `CGFloat` - which needs `import UIKit` in files that do not already get it from `import SwiftUI`.
 
 ## Apply a theme to the whole screen
 
@@ -24,7 +24,7 @@ KsSettingsView {
 .theme(warmTheme)
 ```
 
-`backgroundColor` paints the canvas behind the list and `cellBackgroundColor` paints the rows; they are separate areas, so setting one does not imply the other.
+`backgroundColor` paints the canvas behind the list and `cellBackgroundColor` paints the cells; they are separate areas, so setting one does not imply the other. The colors above are fixed values and are drawn as they are in both light and dark - the recipe *Make colors follow the light and dark appearance* below covers the adaptive form.
 
 These are all the fields of `Theme`, in declaration order. Arguments must be passed in this order.
 
@@ -32,7 +32,7 @@ These are all the fields of `Theme`, in declaration order. Arguments must be pas
 |---|---|---|---|
 | List | `separatorColor` | `UIColor` | built-in default |
 | List | `backgroundColor` | `UIColor` | built-in default |
-| List | `cellBackgroundColor` | `UIColor` | `.white` |
+| List | `cellBackgroundColor` | `UIColor` | built-in default |
 | List | `selectedColor` | `UIColor` | built-in default |
 | List | `cellAccentColor` | `UIColor` | built-in default |
 | List | `disabledTextColor` | `UIColor` | built-in default |
@@ -69,14 +69,15 @@ These are all the fields of `Theme`, in declaration order. Arguments must be pas
 
 ## Start from the library defaults
 
-The built-in defaults behind the "unspecified" values above are published as `public static` constants on `Theme`, for putting an attribute back to its default or deriving a new value from one.
+The built-in defaults behind the "unspecified" values above are published as `public static` constants on `Theme`, for putting an attribute back to its default or deriving a new value from one. The color constants are dynamic `UIColor` values holding a light and a dark variant, except `defaultCellTitleColor`, `defaultCellDescriptionColor` and `defaultButtonTitleColor`, which are the system colors `.label`, `.secondaryLabel` and `.systemBlue`.
 
 | Constant | Default for |
 |---|---|
 | `defaultSeparatorColor` | separator color |
-| `defaultSelectedColor` | selected-row background |
+| `defaultSelectedColor` | selected-cell background |
 | `defaultAccentColor` | accent color |
 | `defaultBackgroundColor` | list background |
+| `defaultCellBackgroundColor` | cell background |
 | `defaultDisabledTextColor` | disabled text color |
 | `defaultHeaderBackgroundColor` | header background |
 | `defaultFooterBackgroundColor` | footer background |
@@ -92,9 +93,49 @@ The built-in defaults behind the "unspecified" values above are published as `pu
 | `defaultCellIconSize` | icon size |
 | `defaultCellIconRadius` | icon corner radius |
 
-## Override the look of one row
+## Make colors follow the light and dark appearance
 
-`CellStyle` overrides the theme for a single row. Fields you leave out are `nil` and are inherited from the theme.
+Colors you leave unspecified are resolved when the list is drawn, against the appearance in effect at that moment, so a screen with no theme - or with only a few attributes overridden - stays readable in dark mode. A color you do pass is never swapped for another one by the library: a fixed color such as `UIColor(red:green:blue:alpha:)` is drawn as that color in both appearances.
+
+To have your own colors follow the appearance, pass a dynamic `UIColor` - a color from an asset catalog, or one built with `UIColor(dynamicProvider:)`. UIKit resolves it, so both the defaults and your dynamic colors are redrawn when the appearance changes while the list is on screen.
+
+```swift
+let adaptiveTheme = Theme(
+    backgroundColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(white: 0.07, alpha: 1.0)
+            : UIColor(white: 0.98, alpha: 1.0)
+    },
+    cellAccentColor: UIColor(named: "Accent") ?? Theme.defaultAccentColor
+)
+```
+
+Spelling out the raw value of a default as a fixed color is not the same as leaving it unspecified: such a theme is no longer equal to the default theme, and that attribute no longer changes in dark. Pass the `default...` constant itself to get the library default back, dark variant included.
+
+The `sectionBorderColor` of the Modern section box reaches the layer as a `CGColor`, and the library re-resolves it when the appearance changes, so a dynamic border color does not stay behind in the previous appearance.
+
+## Make the colors of one cell follow the appearance
+
+The same rule holds for the two levels below the theme: a color passed to `CellStyle`, and a color passed to a field the cell type owns because of what it means there (`ButtonCell.titleColor`, the `accentColor` of the selection and input cells, `EntryCell.placeholderColor`). A dynamic `UIColor` there is resolved to its own value for the current appearance, and a fixed color is drawn as that color in both. The library publishes no type or callback that hands the appearance to a cell - pass a dynamic `UIColor` and the cell itself does not have to be swapped out.
+
+```swift
+let brandTitle = UIColor { trait in
+    trait.userInterfaceStyle == .dark
+        ? UIColor(red: 0.65, green: 0.80, blue: 1.00, alpha: 1.0)
+        : UIColor(red: 0.10, green: 0.30, blue: 0.65, alpha: 1.0)
+}
+
+ksSection("Account") {
+    LabelCell(style: CellStyle(titleColor: brandTitle), title: "Plan", valueText: "Pro")
+    SwitchCell(title: "Sync", isOn: true, accentColor: brandTitle)
+}
+```
+
+When the appearance changes while the list is on screen, the row is not rebuilt: it keeps its identity, the colors you set explicitly are drawn unchanged, and only the colors left unspecified on that row are resolved again against the new appearance. The accent fill and border of the checkbox indicator reach the layer as a `CGColor`, and the library re-resolves them on the appearance change just as it does the section border.
+
+## Override the look of one cell
+
+`CellStyle` overrides the theme for a single cell. Fields you leave out are `nil` and are inherited from the theme.
 
 ```swift
 LabelCell(
@@ -143,7 +184,7 @@ LabelCell(title: "Name")
 
 Available modifiers are `font`, `descriptionFont`, `iconSize`, `cellHeight`, `titleColor`, `backgroundColor`, `icon`, `disabled` and `cellID`. `descriptionFont` and `iconSize` are iOS only - the Android DSL has no equivalent - and `disabled` is a no-op on every cell, as noted in [cells.md](cells.md).
 
-## Color the placeholder of entry rows
+## Color the placeholder of entry cells
 
 The placeholder text color of `EntryCell` resolves from `EntryCell.placeholderColor`, then `CellStyle.placeholderColor`, then `Theme.cellPlaceholderColor`, then the OS placeholder color, which adapts to dark mode on its own.
 
@@ -158,9 +199,9 @@ EntryCell(
 )
 ```
 
-## Switch between Classic and Modern list appearance
+## Choose how sections are separated (Classic separators / Modern rounded boxes)
 
-The style is a `KsSettingsViewStyle`: `.classic` separates rows with flat rules, `.modern` groups each section into a rounded box. Switching styles keeps the contents and identifiers untouched.
+The style is a `KsSettingsViewStyle`, and it chooses how sections are separated. `.classic` only draws separator lines between cells and sections, and cells span the full width of the screen. `.modern` wraps just the cells of each section in a rounded box, with the section header and footer outside the box. Switching styles keeps the contents and identifiers untouched.
 
 ```swift
 KsSettingsView {
@@ -184,17 +225,17 @@ let boxedTheme = Theme(
 )
 ```
 
-The box covers only the rows of a section: section headers and footers sit outside it, and the screen header and footer are never boxed. In `.classic` only the vertical parts of `sectionMargin` apply, because a classic section spans the full width.
+The box covers only the cells of a section: section headers and footers sit outside it, and the screen header and footer are never boxed. In `.classic` only the vertical parts of `sectionMargin` apply, because a classic section spans the full width.
 
-## Control row height
+## Control cell height
 
-Height resolves from `CellStyle.cellHeight`, then `Theme.rowHeight`, then the platform minimum of 48pt. With `hasUnevenRows` left at `true` the resolved height is a minimum and rows grow with their content; set it to `false` to pin every row.
+Height resolves from `CellStyle.cellHeight`, then `Theme.rowHeight`, then the platform minimum of 48pt. With `hasUnevenRows` left at `true` the resolved height is a minimum and cells grow with their content; set it to `false` to pin every cell.
 
 ```swift
 let compactTheme = Theme(rowHeight: 52, hasUnevenRows: false)
 ```
 
-With a fixed height, content that does not fit is not allowed to grow the row, so pick a height that fits multi-line text.
+With a fixed height, content that does not fit is not allowed to grow the cell, so pick a height that fits multi-line text.
 
 ## Put a header and footer on a section
 

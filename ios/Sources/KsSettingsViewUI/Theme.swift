@@ -19,14 +19,14 @@ import UIKit
 /// SettingsView 全体に適用されるスタイル値型。
 ///
 /// すべての色フィールドは `UIColor`、フォントフィールドは `UIFont` を直接保持する。
-/// 中間の論理色・論理フォント表現は経由しない（core/ADR-0009）。
+/// 中間の論理色・論理フォント表現は経由しない。
 ///
 /// `UIColor` / `UIFont` は Swift の `Equatable` に準拠していないため、本型の `==` は
 /// 各フィールドについて `isEqual(_:)` ベースの手動実装で判定する。
 ///
 /// 「Cell 全体既定」フィールド群（`cellTitleColor` / `cellDescriptionColor` 等）は
-/// 個別 Cell の `CellStyle.X` が `nil` のときの **フォールバック値** として `EffectiveStyle`
-/// 経由で参照される（解決順序: `CellStyle.X` → `Theme.cellX` → プラットフォーム既定）。
+/// 個別 Cell の `CellStyle.X` が `nil` のときの **フォールバック値** として参照される
+/// （解決順序: `CellStyle.X` → `Theme.cellX` → プラットフォーム既定）。
 ///
 /// `cellTitleFontSize` は `cellTitleFont` と並立する独立 `Double` フィールドで、
 /// `> 0` のとき `cellTitleFont.pointSize` を **上書き** する（オリジナル
@@ -146,7 +146,7 @@ public struct Theme: Equatable, @unchecked Sendable {
     public init(
         separatorColor: UIColor = Theme.defaultSeparatorColor,
         backgroundColor: UIColor = Theme.defaultBackgroundColor,
-        cellBackgroundColor: UIColor = .white,
+        cellBackgroundColor: UIColor = Theme.defaultCellBackgroundColor,
         selectedColor: UIColor = Theme.defaultSelectedColor,
         cellAccentColor: UIColor = Theme.defaultAccentColor,
         disabledTextColor: UIColor = Theme.defaultDisabledTextColor,
@@ -258,26 +258,64 @@ public struct Theme: Equatable, @unchecked Sendable {
 // MARK: - 既定色プリセット
 
 extension Theme {
-    /// システム標準の灰色 separator（おおよそ #C8C7CC）
-    public static let defaultSeparatorColor = UIColor(red: 0.78, green: 0.78, blue: 0.80, alpha: 1.0)
-    /// 選択時のグレー（おおよそ #D9D9D9）
-    public static let defaultSelectedColor = UIColor(red: 0.85, green: 0.85, blue: 0.85, alpha: 1.0)
-    /// アクセント既定色（システム強調色相当の青、おおよそ #007AFF）
-    public static let defaultAccentColor = UIColor(red: 0.0, green: 0.478, blue: 1.0, alpha: 1.0)
-    /// ヘッダ既定背景色（システムグループ化背景に近い #F2F2F7）
-    public static let defaultHeaderBackgroundColor = UIColor(red: 0.95, green: 0.95, blue: 0.97, alpha: 1.0)
-    /// フッタ既定背景色
+    /// separator の既定色。ライトはシステム標準の灰色（おおよそ #C8C7CC）、ダークは #38383A。
+    public static let defaultSeparatorColor = UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? Theme.darkSeparatorColorValue
+            : UIColor(red: 0.78, green: 0.78, blue: 0.80, alpha: 1.0)
+    }
+    /// 選択時の背景の既定色。ライトはグレー（おおよそ #D9D9D9）、ダークは #2C2C2E。
+    public static let defaultSelectedColor = UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? Theme.darkSelectedColorValue
+            : UIColor(red: 0.85, green: 0.85, blue: 0.85, alpha: 1.0)
+    }
+    /// アクセント既定色。ライトはシステム強調色相当の青（おおよそ #007AFF）、ダークは #0A84FF。
+    public static let defaultAccentColor = UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? Theme.darkAccentColorValue
+            : UIColor(red: 0.0, green: 0.478, blue: 1.0, alpha: 1.0)
+    }
+    /// ヘッダ既定背景色。ライトはシステムグループ化背景に近い #F2F2F7、ダークは黒。
+    public static let defaultHeaderBackgroundColor = UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? Theme.darkHeaderBackgroundColorValue
+            : UIColor(red: 0.95, green: 0.95, blue: 0.97, alpha: 1.0)
+    }
+    /// フッタ既定背景色（ヘッダ既定背景色と同じ）
     public static let defaultFooterBackgroundColor: UIColor = defaultHeaderBackgroundColor
-    /// ヘッダ既定テキスト色（おおよそ #6D6D72）
-    public static let defaultHeaderTextColor = UIColor(red: 0.43, green: 0.43, blue: 0.45, alpha: 1.0)
-    /// フッタ既定テキスト色
-    public static let defaultFooterTextColor = UIColor(red: 0.43, green: 0.43, blue: 0.45, alpha: 1.0)
-    /// SettingsView 全体の既定背景色（白系）
-    public static let defaultBackgroundColor = UIColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0)
-    /// `isEnabled = false` 時のテキスト色（やや薄い灰色、おおよそ #999999）
-    public static let defaultDisabledTextColor = UIColor(red: 0.6, green: 0.6, blue: 0.6, alpha: 1.0)
+    /// ヘッダ既定テキスト色。ライトは灰色（おおよそ #6D6D72）、ダークは #8E8E93。
+    public static let defaultHeaderTextColor = UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? Theme.darkHeaderTextColorValue
+            : UIColor(red: 0.43, green: 0.43, blue: 0.45, alpha: 1.0)
+    }
+    /// フッタ既定テキスト色。ライトは灰色（おおよそ #6D6D72）、ダークは #8E8E93。
+    public static let defaultFooterTextColor = UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? Theme.darkFooterTextColorValue
+            : UIColor(red: 0.43, green: 0.43, blue: 0.45, alpha: 1.0)
+    }
+    /// SettingsView 全体の既定背景色。ライトは白、ダークは黒。
+    public static let defaultBackgroundColor = UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? Theme.darkBackgroundColorValue
+            : UIColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0)
+    }
+    /// Cell の既定背景色。ライトは白、ダークは #1C1C1E。
+    public static let defaultCellBackgroundColor = UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? Theme.darkCellBackgroundColorValue
+            : UIColor.white
+    }
+    /// `isEnabled = false` 時のテキスト色。ライトはやや薄い灰色（おおよそ #999999）、ダークは #636366。
+    public static let defaultDisabledTextColor = UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? Theme.darkDisabledTextColorValue
+            : UIColor(red: 0.6, green: 0.6, blue: 0.6, alpha: 1.0)
+    }
 
-    // MARK: - Cell 全体既定 / フォールバック先既定値（EffectiveStyle と共有）
+    // MARK: - Cell 全体既定 / フォールバック先既定値（内部の実効値解決と共有）
 
     /// `cellTitleColor` 未指定時のフォールバック色（`UIColor.label`）。
     public static let defaultCellTitleColor: UIColor = .label
@@ -297,12 +335,48 @@ extension Theme {
     ///
     /// 通常 Cell の `cellTitleColor` 既定 (`UIColor.label`) と異なり、ButtonCell は
     /// 「tappable に見えるよう慣習的に青色を使う」運用のためここで分離する。
-    /// `EffectiveStyle.effectiveButtonTitleColor` の 4 段目フォールバック値として参照される。
+    /// ButtonCell の title 色は `ButtonCell.titleColor` → `CellStyle.titleColor` → `Theme.cellTitleColor` → 本値
+    /// の順で解決される。
     public static let defaultButtonTitleColor: UIColor = .systemBlue
     /// Section / Root Header / Footer のテキストフォントの既定（`UIListContentConfiguration.cell()` の
     /// text 既定相当 = footnote スタイル）。`Theme.headerFont` / `Theme.footerFont` が `nil` のときの
-    /// フォールバック先で、`EffectiveStyle.effectiveHeaderFont` / `effectiveFooterFont` から参照される。
+    /// フォールバック先。`headerFontSize` / `footerFontSize` が `> 0` のときは pointSize が上書きされる。
     public static let defaultHeaderFooterFont: UIFont = UIFont.preferredFont(forTextStyle: .footnote)
+}
+
+// MARK: - ダーク外観の既定色の生値（core/ADR-0030。Android の KsThemePalette.Dark と同じ値を置く）
+
+extension Theme {
+    /// `0xRRGGBB` 形式の値から不透明な `UIColor` を作る。
+    private static func opaqueColor(_ rgb: UInt32) -> UIColor {
+        return UIColor(
+            red: CGFloat((rgb >> 16) & 0xFF) / 255.0,
+            green: CGFloat((rgb >> 8) & 0xFF) / 255.0,
+            blue: CGFloat(rgb & 0xFF) / 255.0,
+            alpha: 1.0
+        )
+    }
+
+    /// ダークの SettingsView 全体の下地。
+    internal static let darkBackgroundColorValue = Theme.opaqueColor(0x000000)
+    /// ダークの Cell 背景。
+    internal static let darkCellBackgroundColorValue = Theme.opaqueColor(0x1C1C1E)
+    /// ダークの separator。
+    internal static let darkSeparatorColorValue = Theme.opaqueColor(0x38383A)
+    /// ダークの選択時の背景。
+    internal static let darkSelectedColorValue = Theme.opaqueColor(0x2C2C2E)
+    /// ダークのアクセント色。
+    internal static let darkAccentColorValue = Theme.opaqueColor(0x0A84FF)
+    /// ダークの `isEnabled = false` の文字色。
+    internal static let darkDisabledTextColorValue = Theme.opaqueColor(0x636366)
+    /// ダークの Header 背景。
+    internal static let darkHeaderBackgroundColorValue = Theme.opaqueColor(0x000000)
+    /// ダークの Footer 背景。
+    internal static let darkFooterBackgroundColorValue = Theme.darkHeaderBackgroundColorValue
+    /// ダークの Header 文字。
+    internal static let darkHeaderTextColorValue = Theme.opaqueColor(0x8E8E93)
+    /// ダークの Footer 文字。
+    internal static let darkFooterTextColorValue = Theme.opaqueColor(0x8E8E93)
 }
 
 // MARK: - UIColor / UIFont 比較ヘルパ

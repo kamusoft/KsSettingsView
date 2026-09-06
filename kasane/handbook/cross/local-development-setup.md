@@ -2,10 +2,10 @@
 kind: guide
 applies-when:
   always: false
-  tasks: [環境構築, Sample の起動, 本体のビルド・lint, 消費者検証の実行, 本体 source へのステップイン]
+  tasks: [環境構築, Sample の起動, MAUI Sample への native 変更の配備確認, Sample の外観 (ダーク) 確認, 本体のビルド・lint, 消費者検証の実行, 本体 source へのステップイン]
 title: ローカル開発環境と Sample の実行
-description: iOS・Android・MAUI のローカル環境設定、Sample の起動、本体モジュールのビルド / lint コマンド、消費者検証 (verification/) の手元実行、本体 source へのステップイン手順
-timestamp: 2026-09-02
+description: iOS・Android・MAUI のローカル環境設定、Sample の起動と外観 (ライト / ダーク) の切り替え、本体モジュールのビルド / lint コマンド、消費者検証 (verification/) の手元実行、本体 source へのステップイン手順
+timestamp: 2026-09-06
 ---
 
 # ローカル開発環境と Sample の実行
@@ -120,6 +120,8 @@ cd samples/android
 adb shell am start -n jp.kamusoft.kssettingsview.samples.android/.MainActivity
 ```
 
+`./gradlew :app:installDebug` は接続中の**全端末** (実機を含む) に配備する。`ANDROID_SERIAL` も `-Pandroid.injected.device.serial` も Gradle の install 対象を絞らないため、Emulator と実機を同時に繋いでいるときは `adb -s <serial> install -r app/build/outputs/apk/debug/app-debug.apk` で対象を指定して配備する (`adb devices` で serial を確認)。
+
 ### MAUI iOS
 
 利用可能な Simulator の UDID を `xcrun simctl list devices available` で確認し、起動してから実行する。**接続先は UDID で明示する** — `booted` 指定は起動中の Simulator が 2 台以上あると宛先が定まらない。
@@ -139,6 +141,8 @@ xcrun simctl install <simulator-udid> \
 xcrun simctl launch <simulator-udid> jp.kamusoft.kssettingsview.samples.maui
 ```
 
+native (Swift) を変更した直後の `dotnet build -f net10.0-ios` は、xcframework が更新されてもアプリ実行ファイルの再リンクが走らず、古い native を抱えたまま「成功」することがある。native の変更を Simulator で確認するときは、Sample の iOS 向け `bin` / `obj` を捨てて再ビルドし、実行ファイル (`obj/.../nativelibraries/` 配下のリンク成果物) の更新時刻が今回のビルドであることを確かめてから install する。古い実行内容で見た「再現しない」「直った」は判断材料にならない。
+
 ### MAUI Android
 
 Emulator を起動してから実行する。AVD 名は `emulator -list-avds` で確認する。
@@ -154,6 +158,8 @@ dotnet build samples/maui/KsSettingsView.Sample.Maui/KsSettingsView.Sample.Maui.
 ```
 
 接続先が 1 台だけなら `AdbTarget` は省略できる。`adb devices` で対象を確認する。
+
+Debug 構成は Fast Deployment でアセンブリを apk に埋め込まないため、`adb install` した apk 単体では古い内容が走る (または `No assemblies found` で異常終了する)。配備は常に上の `-t:Run` (または `-t:Install`) で行い、`adb install` を代替にしない。
 
 ## 本体をビルドする
 
@@ -221,6 +227,17 @@ Android Sample は `includeBuild("../../android")` で本体を source 参照す
 MAUI Sample は `samples/maui/KsSettingsView.Sample.Maui/KsSettingsView.Sample.Maui.csproj` から `maui/KsSettingsView.Maui/KsSettingsView.Maui.csproj` を `ProjectReference` する。IDE で Sample を Debug 実行し、facade の C# source に breakpoint を置くとステップインできる。本書が保証するステップイン範囲は facade の C# source までであり、binding assembly から Native Bridge へ入る platform debugger の設定は対象外とする。
 
 facade の純ロジック test の実行方法と、そのテストが触らない範囲は [テスト実行規約](test-execution.md) の MAUI 節が正。
+
+## 外観 (ライト / ダーク) を切り替えて確認する
+
+ダークでの描画 (Theme の dark 値・Theme を渡さない画面の既定色・選択面の配色) は、Sample を一時改変せずに確認する。4 実行面 (iOS Native / Android Native / MAUI iOS / MAUI Android) とも、ルートメニュー先頭の「外観」の項目群 (システム / ライト / ダーク) で切り替える。
+
+- 選択は Sample 自身が永続化し、再起動後も維持される。初回は「システム」(端末の外観に追随)。OS 側の設定には触れない
+- 「ダーク」を選ぶと、アプリの chrome と `SampleTheme` を渡す画面 (基本 Cell 7 種 / 入力 Cell 5 種 / CustomCell / Section 装飾) が dark プリセットで描かれる
+- Theme を渡さない画面 (Store / DSL / 共通フィールド統合 / isVisible) はライブラリ既定色の dark セットで描かれる。本体既定色の追随を確認するときはこれらの画面を見る ([スタイルの所有と実効値解決](../../concepts/core/styling/style-resolution.md) の「既定色と外観の追随」)
+- Android Native と MAUI Android の切り替えは Activity の再生成を伴う。デモ画面内の入力状態は消えるため、切り替えは常にルートメニューで行い、その後デモ画面を開く
+- 「システム」選択中に端末の外観を変えたときの追随も 4 実行面で成立する (MAUI iOS はアプリへ戻った再開時に反映される)
+- ダーク描画の証跡を撮るときは、撮影前に前面が対象の Sample であることを確認する (4 実行面が同じ文言・構成のため取り違えやすい)
 
 ## デモ画面一覧はどこを見るか
 

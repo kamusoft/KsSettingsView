@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# managed-by: ksn-update — Kasane 標準の pre-commit hook (配布元: ksn-init templates/githooks/)。
+# プロジェクト側では編集しない。独自の検査を足すときは別ファイルにして、ここから呼ぶ行を配布元に提案する。
+#
+# ステージされた内容を検査する:
+#   1. scripts/git-gate-lint.py --staged — 個体・個人・秘密を特定する値とローカル絶対パス (Kasane 標準 lint と同じ判定)
+#   2. gitleaks (導入済みなら) — 汎用の secret (API key 等)
+#
+# 有効化 (clone ごとに 1 回): git config core.hooksPath .githooks
+# 書き込み時点の PreToolUse hook はヒアドキュメント等をすり抜ける。履歴に入る直前のここが防波堤にあたる。
+set -uo pipefail
+
+status=0
+
+if [ -f scripts/git-gate-lint.py ]; then
+  python3 scripts/git-gate-lint.py --staged || status=1
+else
+  echo "警告: scripts/git-gate-lint.py が無いため識別子・ローカルパスの検査を省略しました (ksn-update で配布)。" >&2
+fi
+
+if command -v gitleaks >/dev/null 2>&1; then
+  if ! gitleaks git --staged --pre-commit --redact --no-banner; then
+    echo "" >&2
+    echo "secret を検出しました。誤検出なら .gitleaks.toml の allowlist、または該当行末に 'gitleaks:allow' を付けてください。" >&2
+    status=1
+  fi
+else
+  echo "警告: gitleaks が未導入のため secret 検査を省略しました ('brew install gitleaks')。" >&2
+fi
+
+if [ "$status" -ne 0 ]; then
+  echo "" >&2
+  echo "検査で止まったためコミットを中止しました。該当行を直して再度 commit してください (--no-verify での迂回はしない)。" >&2
+fi
+exit "$status"

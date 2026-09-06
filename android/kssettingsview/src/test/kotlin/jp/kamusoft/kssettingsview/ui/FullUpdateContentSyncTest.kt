@@ -109,7 +109,7 @@ class FullUpdateContentSyncTest {
         assertEquals("詳細", bindSectionText(adapter, 0))
         assertEquals(
             "header 行へ payload 付きの変更通知が発行される",
-            listOf(ChangeRecord(0, 1, KsSettingsListAdapter.PAYLOAD_CONTENT)),
+            listOf(ChangeRecord(0, 1, KsSettingsView.PAYLOAD_CONTENT)),
             recorder.changed,
         )
     }
@@ -140,7 +140,7 @@ class FullUpdateContentSyncTest {
         // 平坦リストは [CellRow, SectionFooter] の 2 件。
         assertEquals("別の説明", bindSectionText(adapter, 1))
         assertEquals(
-            listOf(ChangeRecord(1, 1, KsSettingsListAdapter.PAYLOAD_CONTENT)),
+            listOf(ChangeRecord(1, 1, KsSettingsView.PAYLOAD_CONTENT)),
             recorder.changed,
         )
     }
@@ -176,7 +176,7 @@ class FullUpdateContentSyncTest {
         // 新規 ViewHolder への bind は通知の有無と無関係に currentList の新しい値を返すため、
         // 検出力を持つのは payload 付き変更通知の照合のほう。
         assertEquals(
-            listOf(ChangeRecord(0, 1, KsSettingsListAdapter.PAYLOAD_CONTENT)),
+            listOf(ChangeRecord(0, 1, KsSettingsView.PAYLOAD_CONTENT)),
             recorder.changed,
         )
     }
@@ -219,7 +219,7 @@ class FullUpdateContentSyncTest {
         adapter.onBindViewHolder(holder, 0)
         assertEquals(dpToPx(48.0), holder.itemView.layoutParams.height)
         assertEquals(
-            listOf(ChangeRecord(0, 1, KsSettingsListAdapter.PAYLOAD_CONTENT)),
+            listOf(ChangeRecord(0, 1, KsSettingsView.PAYLOAD_CONTENT)),
             recorder.changed,
         )
     }
@@ -263,7 +263,7 @@ class FullUpdateContentSyncTest {
         adapter.onBindViewHolder(holder, 0)
         assertEquals(dpToPx(96.0), holder.itemView.layoutParams.height)
         assertEquals(
-            listOf(ChangeRecord(0, 1, KsSettingsListAdapter.PAYLOAD_CONTENT)),
+            listOf(ChangeRecord(0, 1, KsSettingsView.PAYLOAD_CONTENT)),
             recorder.changed,
         )
     }
@@ -303,7 +303,7 @@ class FullUpdateContentSyncTest {
 
         assertEquals(
             "高さだけの変更は中身を作り直さない高さ payload で通知される",
-            listOf(ChangeRecord(0, 1, KsSettingsListAdapter.PAYLOAD_HEADER_HEIGHT)),
+            listOf(ChangeRecord(0, 1, KsSettingsView.PAYLOAD_HEADER_HEIGHT)),
             recorder.changed,
         )
     }
@@ -421,7 +421,7 @@ class FullUpdateContentSyncTest {
         val child = bindSectionAnyView(adapter, 0)
         assertEquals("新", (child as TextView).text.toString())
         assertEquals(
-            listOf(ChangeRecord(0, 1, KsSettingsListAdapter.PAYLOAD_CONTENT)),
+            listOf(ChangeRecord(0, 1, KsSettingsView.PAYLOAD_CONTENT)),
             recorder.changed,
         )
     }
@@ -532,7 +532,7 @@ class FullUpdateContentSyncTest {
 
         assertEquals("新", bindCellTitle(adapter, 0))
         assertEquals(
-            listOf(ChangeRecord(0, 1, KsSettingsListAdapter.PAYLOAD_CONTENT)),
+            listOf(ChangeRecord(0, 1, KsSettingsView.PAYLOAD_CONTENT)),
             recorder.changed,
         )
     }
@@ -559,7 +559,7 @@ class FullUpdateContentSyncTest {
         // 新規 ViewHolder への bind は通知の有無と無関係に currentList の新しい値を返すため、
         // 検出力を持つのは payload 付き変更通知の照合のほう。
         assertEquals(
-            listOf(ChangeRecord(0, 1, KsSettingsListAdapter.PAYLOAD_CONTENT)),
+            listOf(ChangeRecord(0, 1, KsSettingsView.PAYLOAD_CONTENT)),
             recorder.changed,
         )
     }
@@ -582,7 +582,7 @@ class FullUpdateContentSyncTest {
 
         assertEquals("新", bindCellTitle(adapter, 0))
         assertEquals(
-            listOf(ChangeRecord(0, 1, KsSettingsListAdapter.PAYLOAD_CONTENT)),
+            listOf(ChangeRecord(0, 1, KsSettingsView.PAYLOAD_CONTENT)),
             recorder.changed,
         )
     }

@@ -27,9 +27,9 @@ class ThemeRenameTest {
     }
 
     @Test
-    fun `backgroundColor 既定値は DEFAULT_BACKGROUND_COLOR`() {
+    fun `backgroundColor 既定値は未指定`() {
         val theme = Theme()
-        assertEquals(Theme.DEFAULT_BACKGROUND_COLOR, theme.backgroundColor)
+        assertEquals(Color.Unspecified, theme.backgroundColor)
     }
 
     // MARK: - cellTitleColor（旧 titleColor）
@@ -42,9 +42,9 @@ class ThemeRenameTest {
     }
 
     @Test
-    fun `cellTitleColor 既定値は null`() {
+    fun `cellTitleColor 既定値は未指定`() {
         val theme = Theme()
-        assertNull(theme.cellTitleColor)
+        assertEquals(Color.Unspecified, theme.cellTitleColor)
     }
 
     // MARK: - cellTitleFont（旧 titleFont）

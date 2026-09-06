@@ -1,5 +1,6 @@
 package jp.kamusoft.kssettingsview.samples.android
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -38,10 +39,11 @@ import jp.kamusoft.kssettingsview.ui.KsSettingsViewStyle
  *
  * `AiForms.Maui.SettingsView` の Sample（Sample/Views/MainPage.xaml）と限りなく一致する
  * 見た目を目指し、MAUI 互換 Theme（[SampleTheme.maui]）を明示渡しする。Theme 定義は
- * 入力 Cell 5 種デモと共有する。
+ * 入力 Cell 5 種デモと共有する。実効外観がダークのときは同じ Theme の dark 側を渡す。
  */
 @Composable
 fun BasicCellsDemoScreen() {
+    val dark = isSystemInDarkTheme()
     var notifEnabled by remember { mutableStateOf(true) }
     var agreedTerms by remember { mutableStateOf(true) }
     var selectedType by remember { mutableStateOf("TypeA") }
@@ -60,7 +62,7 @@ fun BasicCellsDemoScreen() {
         KsSettingsView(
             modifier = Modifier.fillMaxSize(),
             style = KsSettingsViewStyle.Classic,
-            theme = SampleTheme.maui,
+            theme = SampleTheme.maui(dark),
         ) {
             // 1. CommandCell セクション
             Section(header = "CommandCell", headerHeight = 60.0) {
@@ -179,7 +181,7 @@ fun BasicCellsDemoScreen() {
             // 7. ButtonCell セクション
             Section(header = "ButtonCell") {
                 ButtonCell(
-                    style = CellStyle(titleColor = SampleTheme.mauiTitleText),
+                    style = CellStyle(titleColor = SampleTheme.mauiTitleText(dark)),
                     title = "ログアウト",
                     titleAlignment = CellTitleAlignment.CENTER,
                     onTap = { lastTappedTitle = "ログアウト" },

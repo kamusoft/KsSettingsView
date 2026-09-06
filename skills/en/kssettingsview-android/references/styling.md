@@ -1,8 +1,9 @@
 # Styling
 
-Recipes for colors, fonts, sizes, list appearance and the supplementary areas around the rows. Every example on this page assumes the imports below. The style types and the modifiers are split across two packages: `Theme`, `CellStyle`, `KsImage` and `KsSettingsViewStyle` come from `jp.kamusoft.kssettingsview.ui`, while the modifiers you chain onto a handle come from `jp.kamusoft.kssettingsview.compose`.
+Recipes for colors, fonts, sizes, list appearance and the supplementary areas around the cells. Every example on this page assumes the imports below. The style types and the modifiers are split across two packages: `Theme`, `CellStyle`, `KsSettingsViewDefaults`, `KsImage` and `KsSettingsViewStyle` come from `jp.kamusoft.kssettingsview.ui`, while the modifiers you chain onto a handle come from `jp.kamusoft.kssettingsview.compose`.
 
 ```kotlin
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
@@ -23,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import jp.kamusoft.kssettingsview.compose.KsSettingsView
 import jp.kamusoft.kssettingsview.compose.LabelCell
+import jp.kamusoft.kssettingsview.compose.SwitchCell
 import jp.kamusoft.kssettingsview.compose.backgroundColor
 import jp.kamusoft.kssettingsview.compose.cellHeight
 import jp.kamusoft.kssettingsview.compose.font
@@ -32,13 +34,18 @@ import jp.kamusoft.kssettingsview.compose.sectionHeader
 import jp.kamusoft.kssettingsview.compose.titleColor
 import jp.kamusoft.kssettingsview.ui.CellStyle
 import jp.kamusoft.kssettingsview.ui.KsImage
+import jp.kamusoft.kssettingsview.ui.KsSettingsViewDefaults
 import jp.kamusoft.kssettingsview.ui.KsSettingsViewStyle
 import jp.kamusoft.kssettingsview.ui.Theme
 ```
 
 `dp` and `sp` are the extension properties that turn a number into a size, so `80.dp` needs `androidx.compose.ui.unit.dp` imported even though the type it produces is `Dp`.
 
-Values resolve in this order: the meaning-specific value of the cell, then `CellStyle`, then `Theme`, then the platform default. Compose types are used directly - `androidx.compose.ui.graphics.Color`, `androidx.compose.ui.text.TextStyle`, `androidx.compose.ui.unit.Dp`. The last step resolves against a Material3-derived theme the library bundles, not against the theme of your app: neither the XML theme nor a Compose `MaterialTheme` recolors the library UI, so everything on this page is the way to restyle it. Light and dark come from the device night mode and the uiMode APIs, since the bundled theme is a DayNight one.
+Values resolve in this order: the meaning-specific value of the cell, then `CellStyle`, then `Theme`, then the library default for the current appearance, then the platform default. Compose types are used directly - `androidx.compose.ui.graphics.Color`, `androidx.compose.ui.text.TextStyle`, `androidx.compose.ui.unit.Dp`.
+
+A color you did not set is `Color.Unspecified`. That is the one spelling of "unset" for colors: it is the default of every color field of `Theme` and `CellStyle`, and also of every color argument a cell takes for its own meaning, none of which is a nullable `Color?` (fonts, sizes and paddings do mark the unset state with `null`). The library fills unspecified colors in when it draws, from its own light or dark default set, so a screen that passes no `Theme` is legible in dark mode with nothing extra on your side. A color you did pass is never replaced by another value, in either appearance - the recipes below cover how to give such a color an appearance of its own.
+
+Where the resolution does reach a platform default it lands on a Material3-derived theme the library bundles, not on the theme of your app: neither the XML theme nor a Compose `MaterialTheme` recolors the library UI, so everything on this page is the way to restyle it. Light and dark come from the device night mode and the uiMode APIs, since the bundled theme is a DayNight one.
 
 ## Apply a theme to the whole screen
 
@@ -59,73 +66,124 @@ KsSettingsView(theme = warmTheme) {
 }
 ```
 
-`backgroundColor` paints the canvas behind the list and `cellBackgroundColor` paints the rows; they are separate areas, so setting one does not imply the other.
+`backgroundColor` paints the canvas behind the list and `cellBackgroundColor` paints the cells; they are separate areas, so setting one does not imply the other.
 
 These are all the fields of `Theme`, in declaration order. `Theme` is a data class, so pass them as named arguments in any order and leave out what you do not change.
 
-| Group | Field | Type | Unspecified |
+| Group | Field | Type | Left unspecified |
 |---|---|---|---|
-| List | `separatorColor` | `Color` | built-in default |
-| List | `backgroundColor` | `Color` | built-in default |
-| List | `cellBackgroundColor` | `Color` | `Color.White` |
-| List | `selectedColor` | `Color` | built-in default |
-| List | `cellAccentColor` | `Color` | built-in default |
-| List | `disabledTextColor` | `Color` | built-in default |
+| List | `separatorColor` | `Color` | `Color.Unspecified` - appearance default |
+| List | `backgroundColor` | `Color` | `Color.Unspecified` - appearance default |
+| List | `cellBackgroundColor` | `Color` | `Color.Unspecified` - appearance default |
+| List | `selectedColor` | `Color` | `Color.Unspecified` - appearance default |
+| List | `cellAccentColor` | `Color` | `Color.Unspecified` - appearance default |
+| List | `disabledTextColor` | `Color` | `Color.Unspecified` - appearance default |
 | List | `scrollIndicatorVisible` | `Boolean` | `true` |
 | Height | `rowHeight` | `Int` | `-1` (automatic) |
 | Height | `hasUnevenRows` | `Boolean` | `true` |
-| Header | `headerTextColor` | `Color` | built-in default |
-| Header | `headerBackgroundColor` | `Color` | built-in default |
+| Header | `headerTextColor` | `Color` | `Color.Unspecified` - appearance default |
+| Header | `headerBackgroundColor` | `Color` | `Color.Unspecified` - appearance default |
 | Header | `headerFontSize` | `Double` | `-1.0` |
 | Header | `headerFont` | `TextStyle?` | `null` |
 | Header | `headerHeight` | `Double` | `-1.0` (automatic) |
-| Footer | `footerTextColor` | `Color` | built-in default |
-| Footer | `footerBackgroundColor` | `Color` | built-in default |
+| Footer | `footerTextColor` | `Color` | `Color.Unspecified` - appearance default |
+| Footer | `footerBackgroundColor` | `Color` | `Color.Unspecified` - appearance default |
 | Footer | `footerFontSize` | `Double` | `-1.0` |
 | Footer | `footerFont` | `TextStyle?` | `null` |
-| Cell defaults | `cellTitleColor` | `Color?` | `null` |
+| Cell defaults | `cellTitleColor` | `Color` | `Color.Unspecified` - appearance default, per cell kind |
 | Cell defaults | `cellTitleFont` | `TextStyle?` | `null` |
 | Cell defaults | `cellTitleFontSize` | `Double` | `-1.0` |
-| Cell defaults | `cellValueTextColor` | `Color?` | `null` |
+| Cell defaults | `cellValueTextColor` | `Color` | `Color.Unspecified` - follows the title color |
 | Cell defaults | `cellValueTextFont` | `TextStyle?` | `null` |
-| Cell defaults | `cellDescriptionColor` | `Color?` | `null` |
+| Cell defaults | `cellDescriptionColor` | `Color` | `Color.Unspecified` - appearance default |
 | Cell defaults | `cellDescriptionFont` | `TextStyle?` | `null` |
-| Cell defaults | `cellHintTextColor` | `Color?` | `null` |
+| Cell defaults | `cellHintTextColor` | `Color` | `Color.Unspecified` - follows `cellAccentColor` |
 | Cell defaults | `cellHintFont` | `TextStyle?` | `null` |
 | Cell defaults | `cellIconSize` | `Dp?` | `null` (24dp) |
 | Cell defaults | `cellIconRadius` | `Dp?` | `null` (0dp) |
 | Section box | `sectionMargin` | `PaddingValues?` | `null` |
 | Section box | `sectionCornerRadius` | `Dp?` | `null` |
 | Section box | `sectionBorderWidth` | `Dp?` | `null` (no border) |
-| Section box | `sectionBorderColor` | `Color?` | `null` |
-| Cell defaults | `cellPlaceholderColor` | `Color?` | `null` (OS default) |
+| Section box | `sectionBorderColor` | `Color` | `Color.Unspecified` (transparent) |
+| Cell defaults | `cellPlaceholderColor` | `Color` | `Color.Unspecified` (OS default) |
 
 `cellTitleFontSize` is an independent size that overrides the point size of whichever title font was resolved, and `headerFontSize` / `footerFontSize` do the same for headers and footers. Any of the three is only applied when it is positive.
 
-## Read the built-in theme defaults
+The title color marked "per cell kind" is why `ButtonCell` still gets a tappable-looking title while every other cell gets the plain text color: the default is chosen per cell when the row is drawn rather than stored on the theme. Setting `cellTitleColor` yourself takes that distinction away and colors `ButtonCell` like the rest.
 
-The built-in defaults of the table are published as public constants on the `Theme` companion. Refer to them to go back to a default, or to derive a color from one. Only the two icon constants are `Float` dp values rather than colors; the rest are `Color`s.
+## Start from the library default colors
 
-| Constant | Default of |
-|---|---|
-| `DEFAULT_SEPARATOR_COLOR` | separator color |
-| `DEFAULT_SELECTED_COLOR` | selected-row background |
-| `DEFAULT_ACCENT_COLOR` | accent color |
-| `DEFAULT_BACKGROUND_COLOR` | list background |
-| `DEFAULT_DISABLED_TEXT_COLOR` | disabled text color |
-| `DEFAULT_HEADER_BACKGROUND_COLOR` | header background |
-| `DEFAULT_FOOTER_BACKGROUND_COLOR` | footer background |
-| `DEFAULT_HEADER_TEXT_COLOR` | header text color |
-| `DEFAULT_FOOTER_TEXT_COLOR` | footer text color |
-| `DEFAULT_CELL_TITLE_COLOR` | cell title color |
-| `DEFAULT_CELL_DESCRIPTION_COLOR` | cell description color |
-| `DEFAULT_BUTTON_TITLE_COLOR` | ButtonCell title color |
-| `DEFAULT_CELL_ICON_SIZE_DP_VALUE` | icon size (dp value) |
-| `DEFAULT_CELL_ICON_RADIUS_DP_VALUE` | icon corner radius (dp value) |
+`KsSettingsViewDefaults` returns the library defaults as a `Theme` with role names on it. Use it to derive a color from a default, or to hold on to the defaults while changing a few of them. `theme()` is the Composable form that picks the set matching the current appearance, and it is also the default value of the `theme` parameter of `KsSettingsView`.
 
-## Override the look of one row
+```kotlin
+val brandedTheme = KsSettingsViewDefaults.theme().copy(
+    cellAccentColor = Color(0xFFFFBF00),
+)
 
-`CellStyle` overrides the theme for a single row. Fields you leave out are inherited from the theme.
+KsSettingsView(theme = brandedTheme) {
+    Section(header = "General") {
+        LabelCell(title = "Version", valueText = "1.0.0")
+    }
+}
+```
+
+Outside a Composable - a view holder, an activity driving the XML view host - use `KsSettingsViewDefaults.theme(darkTheme = ...)`, or `lightTheme()` / `darkTheme()` to name a set outright.
+
+The `Theme` returned by these factories carries the ten colors of the list, the cells, the separator, the selection, the accent, the disabled text and the header / footer text and background. The rest stay `Color.Unspecified` in it, because they are decided when the row is drawn: title and description from the appearance, value text from the title, hint text from the accent, the placeholder from the bundled theme, and the section border from nothing at all. Pass a factory set that disagrees with the device - `darkTheme()` on a light device - and those late-resolved colors follow the device instead; `copy` the returned theme and state them if you need them pinned.
+
+The `Theme` companion no longer publishes color constants; only `DEFAULT_CELL_ICON_SIZE_DP_VALUE` and `DEFAULT_CELL_ICON_RADIUS_DP_VALUE`, the two `Float` dp values behind the icon frame, still live there.
+
+## Give light and dark their own colors
+
+When you want to choose both appearances yourself, pick the theme where you build it. In Compose that is `isSystemInDarkTheme()`; a view host reads the night mode out of `resources.configuration`.
+
+```kotlin
+val theme = if (isSystemInDarkTheme()) {
+    KsSettingsViewDefaults.darkTheme().copy(cellAccentColor = Color(0xFFFFD54F))
+} else {
+    KsSettingsViewDefaults.lightTheme().copy(cellAccentColor = Color(0xFFFFBF00))
+}
+
+KsSettingsView(theme = theme) {
+    Section(header = "General") {
+        LabelCell(title = "Version", valueText = "1.0.0")
+    }
+}
+```
+
+Colors you leave unspecified keep following the appearance on their own: the view host re-resolves them when the night mode changes under it, even in an activity that handles `uiMode` itself instead of being recreated. Colors you state explicitly, like the accent above, are yours to switch - which is what the branch does here.
+
+## Give an explicit cell color its own light and dark values
+
+A color stated on a cell - a `CellStyle` field, or a color argument the cell takes for its own meaning - is kept as written when the appearance changes, just like an explicit `Theme` color. In the declarative DSL, branch on the appearance where the cell is built: the recomposition that follows a night-mode change reaches the row as a content update, so the row is re-bound with the new colors rather than rebuilt, and ids and scroll position stay.
+
+```kotlin
+val notifications = remember { mutableStateOf(true) }
+val accent = if (isSystemInDarkTheme()) Color(0xFFFFD54F) else Color(0xFFFFBF00)
+
+KsSettingsView {
+    Section(header = "General") {
+        LabelCell(
+            title = "Version",
+            valueText = "1.0.0",
+            style = CellStyle(titleColor = accent),
+        )
+        SwitchCell(
+            title = "Push notifications",
+            isOn = notifications,
+            accentColor = accent,
+        )
+    }
+}
+```
+
+The cells with a color of their own are `ButtonCell` (`titleColor`), `EntryCell` (`placeholderColor`, `accentColor`), `DatePickerCell` (`androidButtonColor`, `accentColor`) and the switch, checkbox, simple check, radio, picker, number picker and time picker cells (`accentColor`). Left at `Color.Unspecified`, such a color falls through to `CellStyle`, then the theme, then the default of the current appearance.
+
+Outside the declarative DSL nothing recomposes to carry the branch. An activity that keeps `uiMode` in its own `configChanges` is not recreated either, so it hands the store cells carrying the new colors when the appearance changes - see [updates.md](updates.md).
+
+## Override the look of one cell
+
+`CellStyle` overrides the theme for a single cell. Fields you leave out are inherited from the theme.
 
 ```kotlin
 LabelCell(
@@ -138,30 +196,30 @@ LabelCell(
 )
 ```
 
-These are all the fields of `CellStyle`, in declaration order. Every one of them is nullable, and `null` means "inherit from the theme".
+These are all the fields of `CellStyle`, in declaration order. Every one of them can be left unspecified, which means "inherit from the theme" - `Color.Unspecified` for the colors, `null` for the fonts and the sizes.
 
-| Field | Type |
-|---|---|
-| `titleColor` | `Color?` |
-| `titleFont` | `TextStyle?` |
-| `descriptionColor` | `Color?` |
-| `descriptionFont` | `TextStyle?` |
-| `valueTextColor` | `Color?` |
-| `valueTextFont` | `TextStyle?` |
-| `iconSize` | `Dp?` |
-| `iconRadius` | `Dp?` |
-| `cellHeight` | `Dp?` |
-| `hintTextColor` | `Color?` |
-| `hintTextFont` | `TextStyle?` |
-| `backgroundColor` | `Color?` |
-| `accentColor` | `Color?` |
-| `placeholderColor` | `Color?` |
+| Field | Type | Unspecified |
+|---|---|---|
+| `titleColor` | `Color` | `Color.Unspecified` |
+| `titleFont` | `TextStyle?` | `null` |
+| `descriptionColor` | `Color` | `Color.Unspecified` |
+| `descriptionFont` | `TextStyle?` | `null` |
+| `valueTextColor` | `Color` | `Color.Unspecified` |
+| `valueTextFont` | `TextStyle?` | `null` |
+| `iconSize` | `Dp?` | `null` |
+| `iconRadius` | `Dp?` | `null` |
+| `cellHeight` | `Dp?` | `null` |
+| `hintTextColor` | `Color` | `Color.Unspecified` |
+| `hintTextFont` | `TextStyle?` | `null` |
+| `backgroundColor` | `Color` | `Color.Unspecified` |
+| `accentColor` | `Color` | `Color.Unspecified` |
+| `placeholderColor` | `Color` | `Color.Unspecified` |
 
 `placeholderColor` only means something on an `EntryCell`, where it sits between the `placeholderColor` argument of the cell and `Theme.cellPlaceholderColor` in the resolution order.
 
 ## Chain style modifiers on a cell
 
-The same overrides are available as modifiers on the `CellHandle` each cell function returns. Chaining preserves the values set earlier and the row identity.
+The same overrides are available as modifiers on the `CellHandle` each cell function returns. Chaining preserves the values set earlier and the cell identity.
 
 ```kotlin
 LabelCell(title = "Name")
@@ -172,11 +230,11 @@ LabelCell(title = "Name")
     .cellHeight(60.dp)
 ```
 
-Available modifiers on a `CellHandle` are `font`, `cellHeight`, `titleColor`, `backgroundColor`, `icon`, `cellID` and `disabled`. `font` changes the title font only, not the hint text. `disabled` is a no-op that returns the row unchanged - to disable a row, pass `isEnabled = false` to the cell function. A `SectionHandle` takes `sectionHeader`, `sectionFooter` and `sectionID` instead.
+Available modifiers on a `CellHandle` are `font`, `cellHeight`, `titleColor`, `backgroundColor`, `icon`, `cellID` and `disabled`. `font` changes the title font only, not the hint text. `disabled` is a no-op that returns the cell unchanged - to disable a cell, pass `isEnabled = false` to the cell function. A `SectionHandle` takes `sectionHeader`, `sectionFooter` and `sectionID` instead.
 
-## Switch between Classic and Modern list appearance
+## Choose how sections are separated (Classic separators / Modern rounded boxes)
 
-`KsSettingsViewStyle.Classic` separates rows with hairlines; `Modern` groups each section into a rounded box. Switching styles keeps the contents and ids untouched.
+`KsSettingsViewStyle` chooses how sections are separated. `Classic` only draws hairlines between cells and sections, and cells span the full width of the screen. `Modern` wraps just the cells of each section in a rounded box, with the section header and footer outside the box. Switching styles keeps the contents and ids untouched.
 
 ```kotlin
 KsSettingsView(style = KsSettingsViewStyle.Modern) {
@@ -199,23 +257,23 @@ val boxedTheme = Theme(
 )
 ```
 
-The box covers only the rows of a section: section headers and footers sit outside it, and the screen header and footer are never boxed. In `Classic` only the vertical parts of `sectionMargin` apply, because a classic section spans the full width.
+The box covers only the cells of a section: section headers and footers sit outside it, and the screen header and footer are never boxed. In `Classic` only the vertical parts of `sectionMargin` apply, because a classic section spans the full width.
 
-## Control row height
+## Control cell height
 
 Height resolves from `CellStyle.cellHeight`, then `Theme.rowHeight`, then the platform minimum of 60dp. The two are written differently: `CellStyle.cellHeight` is a `Dp?` and takes `80.dp`, while `Theme.rowHeight` is a plain `Int` counted in dp, with `-1` meaning unspecified, so it takes `64` and rejects `64.dp`.
 
-With `hasUnevenRows` left at `true` the resolved height is a minimum and rows grow with their content; set it to `false` to pin every row.
+With `hasUnevenRows` left at `true` the resolved height is a minimum and cells grow with their content; set it to `false` to pin every cell.
 
 ```kotlin
 val compactTheme = Theme(rowHeight = 64, hasUnevenRows = false)
 ```
 
-With a fixed height, content that does not fit is not allowed to grow the row, so pick a height that fits multi-line text. 60dp is also a floor rather than only a fallback: a smaller value resolved from either source is raised back to 60dp, so `Theme(rowHeight = 40)` still gives 60dp rows.
+With a fixed height, content that does not fit is not allowed to grow the cell, so pick a height that fits multi-line text. 60dp is also a floor rather than only a fallback: a smaller value resolved from either source is raised back to 60dp, so `Theme(rowHeight = 40)` still gives 60dp cells.
 
-## Size the icon of a row
+## Size the icon of a cell
 
-`CellStyle.iconSize` and `iconRadius` set the edge length of the icon frame and the rounding of its corners for one row; `Theme.cellIconSize` and `cellIconRadius` do the same for the screen. All four are `Dp?`, and the defaults are 24dp square with square corners.
+`CellStyle.iconSize` and `iconRadius` set the edge length of the icon frame and the rounding of its corners for one cell; `Theme.cellIconSize` and `cellIconRadius` do the same for the screen. All four are `Dp?`, and the defaults are 24dp square with square corners.
 
 ```kotlin
 val avatarTheme = Theme(cellIconSize = 32.dp, cellIconRadius = 16.dp)

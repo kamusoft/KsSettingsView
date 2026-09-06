@@ -283,6 +283,16 @@ public sealed class InputCellsDemoViewModel : SampleViewModel
         }
     }
 
+    /// <summary>DatePickerCell「予約日」で選べる最小の日付。</summary>
+    /// <remarks>
+    /// 範囲外の日付が同じ月の表示内で無効として見えるよう、月の途中で範囲を切る
+    /// (カレンダーは前後の月の日を描画しないため)。
+    /// </remarks>
+    public DateTime ReservationMinimum { get; } = new(2026, 6, 1);
+
+    /// <summary>DatePickerCell「予約日」で選べる最大の日付。</summary>
+    public DateTime ReservationMaximum { get; } = new(2026, 6, 20);
+
     /// <summary>EntryCell「メモ」(下部配置・キーボード回避検証用) の入力値。</summary>
     public string Memo
     {

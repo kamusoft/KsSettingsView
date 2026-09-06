@@ -2,11 +2,12 @@
 scope: process
 kind: pain
 severity: normal
-count: 1
+count: 2
 first-seen: 2026-09-02
-last-seen: 2026-09-02
+last-seen: 2026-09-06
 evidence:
   - add-consumer-verification (verify-001 が INVALID — Scenario の欠落・乖離は 0 件だったが、deviation.md に無い付随修正が 2 件あった。(1) `kasane/config.yaml` の `lint.identity.allow` への `repo.local` 追加 (tasks 4.3 は scope への `verification` 追加しか指示していない)、(2) `android/kssettingsview/build.gradle.kts` の SNAPSHOT ガードのエラー案内の改訂 (deviation 2 件目の署名条件化の記述に含まれていなかった)。いずれも実装の欠陥ではなく記録の漏れで、deviation.md の追記だけで verify-002 が VALID になった)
+  - skills-install-version-drift (review-002 Minor 1 — 指揮側が review-001 Minor 1 への対応として `.github/workflows/release.yml` / `ci.yml` の step 名・コメントを直した際、同じサイクルで直した `release-procedure.md` の付随修正は deviation.md に書いたのに workflow 側は書かず、再レビューで記録漏れとして指摘された。修正内容に異論はなく 1 行追記で解消)
 ---
 
 ## ルール文 (候補)
@@ -22,3 +23,4 @@ tasks に無いファイルへ手を入れた (付随修正) 瞬間に、その�
 ## 経緯
 
 - 2026-09-02 add-consumer-verification: 付随修正 2 件 (version 注入の受け口・署名の条件化) はオーナー裁定を経て記録されたが、裁定を要さない小修正 (identity-lint の allow 追加、SNAPSHOT ガードの文言追随) は記録されず、verify-001 の未記録差分検査で発覚した。verify の突き合わせ (tasks が名指ししない変更ファイルの列挙) が機能した例でもあり、記録の起点を「編集した瞬間」に前倒しすれば verify の往復が 1 回減る。
+- 2026-09-06 skills-install-version-drift: レビュー指摘対応としての数行修正 (workflow の step 名) は「指摘に従っただけ」と感じられて記録の対象と認識されにくい。付随修正を deviation.md に書いた直後に別ファイルへ同じ性質の修正を広げたときも、その編集と同じ作業単位で行を足す。

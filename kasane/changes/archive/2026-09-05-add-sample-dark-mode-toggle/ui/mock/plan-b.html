@@ -1,0 +1,83 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><title>add-sample-dark-mode-toggle plan-b</title><style>
+body{font-family:-apple-system,"Hiragino Sans",sans-serif;background:#ddd;margin:0;padding:24px;color:#222}
+h1{font-size:18px;margin:0 0 4px} p.lead{margin:0 0 16px;font-size:13px;color:#444}
+.grid{display:flex;flex-wrap:wrap;gap:20px}
+.phone{width:280px;height:560px;border-radius:28px;overflow:hidden;margin:0;box-shadow:0 4px 14px rgba(0,0,0,.25);display:flex;flex-direction:column;font-size:13px;position:relative}
+.chrome{padding:34px 14px 10px;font-weight:600;font-size:15px}
+.menu,.canvas{flex:1;overflow:hidden;padding:0 0 12px}
+.sec{font-size:11px;padding:14px 16px 6px;letter-spacing:.02em}
+.row{display:flex;justify-content:space-between;padding:11px 16px}
+.row:last-child{border-bottom:none} .more{padding:8px 16px}
+.hdr{font-size:11px;padding:14px 16px 6px} .ftr{font-size:11px;padding:6px 16px 4px}
+.box{margin:0 12px;border-radius:10px;overflow:hidden}
+.cell{display:flex;justify-content:space-between;align-items:center;padding:11px 14px}
+.cell:last-child{border-bottom:none} .cell.center{justify-content:center}
+.sw{width:38px;height:22px;border-radius:11px;position:relative} .sw i{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:9px;background:#fff} .sw.on i{left:18px}
+.cb{font-weight:700} .btn{font-weight:600}
+.canvas.dim{display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5)!important}
+.dialog{width:236px;border-radius:14px;padding:14px 12px}
+.dtitle{font-size:12px;letter-spacing:.04em;margin-bottom:6px} .dmonth{text-align:center;font-weight:600;margin:6px 0}
+.dow,.days{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:11px;gap:2px}
+.dow span{padding:2px 0} .d{padding:4px 0;border-radius:50%} .dbtn{display:flex;justify-content:flex-end;gap:16px;margin-top:10px;font-weight:600}
+figcaption{position:absolute;bottom:0;left:0;right:0;text-align:center;font-size:11px;padding:6px;background:rgba(0,0,0,.55);color:#fff}
+.note{font-size:12px;color:#333;margin:16px 0 0;max-width:900px} .note code{background:#eee;padding:1px 4px;border-radius:3px}
+table{border-collapse:collapse;font-size:12px;margin-top:8px} td,th{border:1px solid #bbb;padding:3px 8px;text-align:left} .sw-cell{width:14px;height:14px;display:inline-block;border:1px solid #888;vertical-align:middle;margin-right:6px}
+.light .chrome{background:#F7F7F7;color:#000000}
+.light .menu{background:#F2EFE6} .light .group{background:#FFFFFF} .light .row{border-bottom:1px solid #E0E0E0;color:#555555}
+.light .sec,.light .more{color:#999999} .light .chk{color:#FFBF00} .light .chev{color:#999999}
+.light .canvas{background:#F2EFE6} .light .box{background:#FFFFFF} .light .cell{border-bottom:1px solid #E6DAB9;color:#555555}
+.light .hdr{color:#CC9900} .light .ftr{color:#999999} .light .val{color:#555555} .light .desc{color:#6D6D72;font-size:11px}
+.light .sw{background:#999999} .light .sw.on{background:#FFBF00} .light .cb{color:#FFBF00} .light .btn{color:#CC9900} .light .dis{color:#999999}
+.light .dialog{background:#FFFFFF;color:#555555} .light .dmonth,.light .dow{color:#999999} .light .d.out{color:#999999;opacity:.55} .light .d.sel{background:#FFBF00;color:#000} .light .ok{color:#FFBF00} .light .dbtn .dis{color:#999999} .light .dtitle{color:#CC9900}
+.dark .chrome{background:#1C1C1E;color:#FFFFFF}
+.dark .menu{background:#000000} .dark .group{background:#1C1C1E} .dark .row{border-bottom:1px solid #38383A;color:#EBEBF5}
+.dark .sec,.dark .more{color:#8E8E93} .dark .chk{color:#FFBF00} .dark .chev{color:#8E8E93}
+.dark .canvas{background:#000000} .dark .box{background:#1C1C1E} .dark .cell{border-bottom:1px solid #3A3A3C;color:#EBEBF5}
+.dark .hdr{color:#FFD25A} .dark .ftr{color:#8E8E93} .dark .val{color:#AEAEB2} .dark .desc{color:#8E8E93;font-size:11px}
+.dark .sw{background:#636366} .dark .sw.on{background:#FFBF00} .dark .cb{color:#FFBF00} .dark .btn{color:#FFD25A} .dark .dis{color:#636366}
+.dark .dialog{background:#1C1C1E;color:#EBEBF5} .dark .dmonth,.dark .dow{color:#8E8E93} .dark .d.out{color:#636366;opacity:.55} .dark .d.sel{background:#FFBF00;color:#000} .dark .ok{color:#FFBF00} .dark .dbtn .dis{color:#636366} .dark .dtitle{color:#FFD25A}
+</style></head><body>
+<h1>add-sample-dark-mode-toggle — 案B: 中立ダーク (OS 標準ダークに寄せた無彩色、accent は維持)</h1>
+<p class="lead">外観の切替はルートメニュー先頭の「外観」項目群 (システム / ライト / ダーク、選択中にチェック)。案の違いは dark プリセットの配色のみ (外観トグルの形は共通)。</p>
+<div class="grid"><figure class="phone light"><div class="chrome">KsSettingsView Sample</div>
+<div class="menu"><div class="sec">外観</div><div class="group"><div class="row"><span>システム</span><span class="chk">✓</span></div><div class="row"><span>ライト</span><span class="chk"></span></div><div class="row"><span>ダーク</span><span class="chk"></span></div></div>
+<div class="sec">デモ</div><div class="group"><div class="row"><span>Store 方式デモ</span><span class="chev">›</span></div><div class="row"><span>DSL 方式デモ</span><span class="chev">›</span></div><div class="row"><span>基本 Cell 7 種デモ</span><span class="chev">›</span></div><div class="row"><span>入力 Cell 5 種デモ</span><span class="chev">›</span></div><div class="row"><span>CustomCell デモ</span><span class="chev">›</span></div></div><div class="more">…</div></div><figcaption>ルートメニュー (ライト・システム選択中)</figcaption></figure><figure class="phone dark"><div class="chrome">KsSettingsView Sample</div>
+<div class="menu"><div class="sec">外観</div><div class="group"><div class="row"><span>システム</span><span class="chk"></span></div><div class="row"><span>ライト</span><span class="chk"></span></div><div class="row"><span>ダーク</span><span class="chk">✓</span></div></div>
+<div class="sec">デモ</div><div class="group"><div class="row"><span>Store 方式デモ</span><span class="chev">›</span></div><div class="row"><span>DSL 方式デモ</span><span class="chev">›</span></div><div class="row"><span>基本 Cell 7 種デモ</span><span class="chev">›</span></div><div class="row"><span>入力 Cell 5 種デモ</span><span class="chev">›</span></div><div class="row"><span>CustomCell デモ</span><span class="chev">›</span></div></div><div class="more">…</div></div><figcaption>ルートメニュー (ダーク選択中)</figcaption></figure><figure class="phone light"><div class="chrome">‹ 基本 Cell 7 種デモ</div>
+<div class="canvas">
+ <div class="hdr">LABELCELL</div>
+ <div class="box"><div class="cell"><span>バージョン<br><span class="desc">アプリの現在の版</span></span><span class="val">1.0.0</span></div>
+ <div class="cell"><span>ライセンス</span><span class="val">MIT</span></div></div>
+ <div class="ftr">読み取り専用の値を表示する Cell。</div>
+ <div class="hdr">SWITCHCELL / CHECKBOXCELL</div>
+ <div class="box"><div class="cell"><span>通知を受け取る</span><span class="sw on"><i></i></span></div>
+ <div class="cell"><span>位置情報</span><span class="sw"><i></i></span></div>
+ <div class="cell"><span>利用規約に同意</span><span class="cb">✓</span></div></div>
+ <div class="hdr">BUTTONCELL</div>
+ <div class="box"><div class="cell center"><span class="btn">登録</span></div>
+ <div class="cell center dis"><span>無効なボタン</span></div></div>
+ <div class="ftr">タップで処理を実行する Cell。</div>
+</div><figcaption>基本 Cell 7 種デモ — light プリセット (現行)</figcaption></figure><figure class="phone dark"><div class="chrome">‹ 基本 Cell 7 種デモ</div>
+<div class="canvas">
+ <div class="hdr">LABELCELL</div>
+ <div class="box"><div class="cell"><span>バージョン<br><span class="desc">アプリの現在の版</span></span><span class="val">1.0.0</span></div>
+ <div class="cell"><span>ライセンス</span><span class="val">MIT</span></div></div>
+ <div class="ftr">読み取り専用の値を表示する Cell。</div>
+ <div class="hdr">SWITCHCELL / CHECKBOXCELL</div>
+ <div class="box"><div class="cell"><span>通知を受け取る</span><span class="sw on"><i></i></span></div>
+ <div class="cell"><span>位置情報</span><span class="sw"><i></i></span></div>
+ <div class="cell"><span>利用規約に同意</span><span class="cb">✓</span></div></div>
+ <div class="hdr">BUTTONCELL</div>
+ <div class="box"><div class="cell center"><span class="btn">登録</span></div>
+ <div class="cell center dis"><span>無効なボタン</span></div></div>
+ <div class="ftr">タップで処理を実行する Cell。</div>
+</div><figcaption>基本 Cell 7 種デモ — dark プリセット</figcaption></figure><figure class="phone dark"><div class="chrome">‹ 入力 Cell 5 種デモ</div>
+<div class="canvas dim"><div class="dialog"><div class="dtitle">予約日を選択</div>
+<div class="dmonth">‹ &nbsp;2026年6月&nbsp; ›</div>
+<div class="dow"><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span><span>日</span></div>
+<div class="days"><span class="d sel">1</span><span class="d">2</span><span class="d">3</span><span class="d">4</span><span class="d">5</span><span class="d">6</span><span class="d">7</span><span class="d">8</span><span class="d">9</span><span class="d">10</span><span class="d">11</span><span class="d">12</span><span class="d">13</span><span class="d">14</span><span class="d">15</span><span class="d">16</span><span class="d">17</span><span class="d">18</span><span class="d">19</span><span class="d">20</span><span class="d out">21</span><span class="d out">22</span><span class="d out">23</span><span class="d out">24</span><span class="d out">25</span><span class="d out">26</span><span class="d out">27</span><span class="d out">28</span><span class="d out">29</span><span class="d out">30</span></div>
+<div class="dbtn"><span>キャンセル</span><span class="dis">今日</span><span class="ok">OK</span></div></div></div><figcaption>予約日の選択面 (dark)・範囲 2026/06/01〜06/20</figcaption></figure></div>
+<div class="note"><strong>dark プリセットの色ロール対応表</strong> (light は現行 <code>SampleTheme.maui</code>)
+<table><tr><th>Theme の色ロール</th><th>light (現行)</th><th>dark (plan-b)</th></tr><tr><td>backgroundColor / header・footerBackgroundColor</td><td><span class="sw-cell" style="background:#F2EFE6"></span>#F2EFE6</td><td><span class="sw-cell" style="background:#000000"></span>#000000</td></tr><tr><td>cellBackgroundColor</td><td><span class="sw-cell" style="background:#FFFFFF"></span>#FFFFFF</td><td><span class="sw-cell" style="background:#1C1C1E"></span>#1C1C1E</td></tr><tr><td>separatorColor</td><td><span class="sw-cell" style="background:#E6DAB9"></span>#E6DAB9</td><td><span class="sw-cell" style="background:#3A3A3C"></span>#3A3A3C</td></tr><tr><td>cellAccentColor (selectedColor は同色 α 0x50)</td><td><span class="sw-cell" style="background:#FFBF00"></span>#FFBF00</td><td><span class="sw-cell" style="background:#FFBF00"></span>#FFBF00</td></tr><tr><td>headerTextColor / ButtonCell titleColor</td><td><span class="sw-cell" style="background:#CC9900"></span>#CC9900</td><td><span class="sw-cell" style="background:#FFD25A"></span>#FFD25A</td></tr><tr><td>footerTextColor</td><td><span class="sw-cell" style="background:#999999"></span>#999999</td><td><span class="sw-cell" style="background:#8E8E93"></span>#8E8E93</td></tr><tr><td>disabledTextColor</td><td><span class="sw-cell" style="background:#999999"></span>#999999</td><td><span class="sw-cell" style="background:#636366"></span>#636366</td></tr><tr><td>cellTitleColor</td><td><span class="sw-cell" style="background:#555555"></span>#555555</td><td><span class="sw-cell" style="background:#EBEBF5"></span>#EBEBF5</td></tr><tr><td>cellValueTextColor (light は未指定 = title へフォールバック)</td><td><span class="sw-cell" style="background:#555555"></span>#555555</td><td><span class="sw-cell" style="background:#AEAEB2"></span>#AEAEB2</td></tr><tr><td>cellDescriptionColor (light は未指定 = 既定 #6D6D72)</td><td><span class="sw-cell" style="background:#6D6D72"></span>#6D6D72</td><td><span class="sw-cell" style="background:#8E8E93"></span>#8E8E93</td></tr></table>
+<p>dark 側は description / valueText も明示する (light は未指定のままライブラリ既定へフォールバック。Android の description 既定は固定値で夜間に追随しないため)。</p><p>Section 装飾デモの下地 Theme (<code>sectionDecorationDemo</code>) の <code>backgroundColor</code> / header・footer 背景も、dark 時は上表の canvas 色を使う。Cell に明示指定している固定デモ色 (accent 6 色・CustomCell content 色等) は外観に依らず不変 (proposal の Non-Goals)。</p></div>
+</body></html>

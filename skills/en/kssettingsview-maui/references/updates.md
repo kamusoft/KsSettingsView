@@ -1,10 +1,10 @@
 # Updating the screen while it is shown
 
-Recipes for changing a settings screen that is already on display, for getting user edits back into a view model, and for generating rows from data. XAML fragments assume the `ks` namespace declaration from the minimal example in [SKILL.md](../SKILL.md); C# snippets assume `using KsSettingsView;` and a `SettingsView` named `Settings` in the page.
+Recipes for changing a settings screen that is already on display, for getting user edits back into a view model, and for generating cells from data. XAML fragments assume the `ks` namespace declaration from the minimal example in [SKILL.md](../SKILL.md); C# snippets assume `using KsSettingsView;` and a `SettingsView` named `Settings` in the page.
 
 ## Receive what the user changed
 
-The table below lists the properties written back from the native row when the user operates it, and each of them is two-way by default, so a plain binding is enough. `PickerCell.SelectedItem` and `SelectedItems` are two-way as well, but they are derived rather than written back: they are kept in step with `SelectedIndex` / `SelectedIndices` and `ItemsSource`, so binding them is a way of working in items instead of indices.
+The table below lists the properties written back from the native cell when the user operates it, and each of them is two-way by default, so a plain binding is enough. `PickerCell.SelectedItem` and `SelectedItems` are two-way as well, but they are derived rather than written back: they are kept in step with `SelectedIndex` / `SelectedIndices` and `ItemsSource`, so binding them is a way of working in items instead of indices.
 
 | Cell | Property |
 |---|---|
@@ -25,9 +25,9 @@ Every other property binds one-way by default. When you need to know that a writ
 <ks:SwitchCell Title="Push notifications" On="{Binding NotificationsEnabled}" />
 ```
 
-## Add or remove a row after display
+## Add or remove a cell after display
 
-`Section.Cells` is an observable collection by default, so adding and removing rows shows up immediately.
+`Section.Cells` is an observable collection by default, so adding and removing cells shows up immediately.
 
 ```csharp
 Section section = Settings.Root[0];
@@ -62,7 +62,7 @@ root.Add(new Section { HeaderText = "General" });
 Settings.Root = root;
 ```
 
-## Change what a row shows
+## Change what a cell shows
 
 Set the property on the cell you already handed over. Content changes made in the same UI cycle reach the screen together as one update.
 
@@ -88,9 +88,9 @@ version.IsEnabled = false;
 </ks:Section>
 ```
 
-## Generate rows from a collection
+## Generate cells from a collection
 
-Bind `ItemsSource` on a section and give it an `ItemTemplate`. Each generated cell gets its item as `BindingContext`, and an observable source keeps the rows in sync.
+Bind `ItemsSource` on a section and give it an `ItemTemplate`. Each generated cell gets its item as `BindingContext`, and an observable source keeps the cells in sync.
 
 ```xml
 <ks:Section HeaderText="Devices" ItemsSource="{Binding Devices}">
@@ -104,9 +104,9 @@ Bind `ItemsSource` on a section and give it an `ItemTemplate`. Each generated ce
 </ks:Section>
 ```
 
-## Mix generated rows with hand-written ones
+## Mix generated cells with hand-written ones
 
-Rows written in XAML stay where they are; `TemplateStartIndex` decides where the generated block is inserted among them. Clearing `ItemsSource` removes only the generated rows.
+Cells written in XAML stay where they are; `TemplateStartIndex` decides where the generated block is inserted among them. Clearing `ItemsSource` removes only the generated cells.
 
 ```xml
 <ks:Section HeaderText="Devices"
@@ -123,7 +123,7 @@ Rows written in XAML stay where they are; `TemplateStartIndex` decides where the
 
 ## Generate whole sections from a collection
 
-`SettingsView` carries the same three properties, and there they generate sections instead of rows.
+`SettingsView` carries the same three properties, and there they generate sections instead of cells.
 
 ```xml
 <ks:SettingsView ItemsSource="{Binding Groups}">

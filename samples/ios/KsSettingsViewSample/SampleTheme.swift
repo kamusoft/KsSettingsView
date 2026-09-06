@@ -34,10 +34,33 @@ enum SampleTheme {
     static let mauiFooterText = UIColor(red: 0x99/255.0, green: 0x99/255.0, blue: 0x99/255.0, alpha: 1.0)
     /// 無効時テキスト色（#999999）
     static let mauiDisabledText = UIColor(red: 0x99/255.0, green: 0x99/255.0, blue: 0x99/255.0, alpha: 1.0)
-    /// MAUI Sample の TitleTextColor 用（ButtonCell の `CellStyle(titleColor:)` で使用）
-    static let mauiTitleText = UIColor(red: 0xCC/255.0, green: 0x99/255.0, blue: 0x00/255.0, alpha: 1.0)
     /// DeepTextColor（#555555）。Cell タイトルの文字色。
     static let mauiDeepText = UIColor(red: 0x55/255.0, green: 0x55/255.0, blue: 0x55/255.0, alpha: 1.0)
+
+    // MARK: - dark プリセットの色定数
+
+    // light 側の各色ロールを、色相を保ったまま明度反転させた暖色ダーク。accent（#FFBF00）と
+    // その半透明（selectedColor）は light と共有する。暖色を保ち、Theme に dark 値を渡したときの
+    // 描画がライブラリ既定色のダークと見分けられるようにする。
+
+    /// dark の下地色（#1B1915）。SettingsView 全体と Header / Footer の背景。
+    static let mauiDarkViewBackground = UIColor(red: 0x1B/255.0, green: 0x19/255.0, blue: 0x15/255.0, alpha: 1.0)
+    /// dark の Cell 背景（#2A2620）。
+    static let mauiDarkCellBackground = UIColor(red: 0x2A/255.0, green: 0x26/255.0, blue: 0x20/255.0, alpha: 1.0)
+    /// dark のセパレータ色（#4A3F28）。
+    static let mauiDarkSeparator = UIColor(red: 0x4A/255.0, green: 0x3F/255.0, blue: 0x28/255.0, alpha: 1.0)
+    /// dark のヘッダ文字色（#E0B040）。ButtonCell の `CellStyle(titleColor:)` にも使う。
+    static let mauiDarkHeaderText = UIColor(red: 0xE0/255.0, green: 0xB0/255.0, blue: 0x40/255.0, alpha: 1.0)
+    /// dark のフッタ文字色（#9A948A）。
+    static let mauiDarkFooterText = UIColor(red: 0x9A/255.0, green: 0x94/255.0, blue: 0x8A/255.0, alpha: 1.0)
+    /// dark の無効時テキスト色（#7A756C）。
+    static let mauiDarkDisabledText = UIColor(red: 0x7A/255.0, green: 0x75/255.0, blue: 0x6C/255.0, alpha: 1.0)
+    /// dark の Cell タイトル文字色（#E6E1D6）。
+    static let mauiDarkDeepText = UIColor(red: 0xE6/255.0, green: 0xE1/255.0, blue: 0xD6/255.0, alpha: 1.0)
+    /// dark の valueText 文字色（#B8B2A6）。
+    static let mauiDarkValueText = UIColor(red: 0xB8/255.0, green: 0xB2/255.0, blue: 0xA6/255.0, alpha: 1.0)
+    /// dark の description 文字色（#9A948A）。
+    static let mauiDarkDescriptionText = UIColor(red: 0x9A/255.0, green: 0x94/255.0, blue: 0x8A/255.0, alpha: 1.0)
 
     // MARK: - 共通フィールド統合デモ用の共有アクセントパレット
 
@@ -111,8 +134,8 @@ enum SampleTheme {
 
     // MARK: - Theme
 
-    /// MAUI 互換 Theme（UI 層 `Theme` を UIColor 直接構築で渡す）。
-    static let maui = Theme(
+    /// MAUI 互換 Theme（light）。UI 層 `Theme` を UIColor 直接構築で渡す。
+    static let mauiLight = Theme(
         separatorColor: mauiSeparator,
         backgroundColor: mauiViewBackground,
         cellBackgroundColor: mauiCellBackground,
@@ -128,29 +151,64 @@ enum SampleTheme {
         cellTitleColor: mauiDeepText
     )
 
+    /// MAUI 互換 Theme（dark）。
+    ///
+    /// 色ロールの構成は `mauiLight` と同じで、description と valueText の色だけを追加で明示する。
+    /// 未指定のままだと、これらの既定色が暗い下地に追随しない。
+    static let mauiDark = Theme(
+        separatorColor: mauiDarkSeparator,
+        backgroundColor: mauiDarkViewBackground,
+        cellBackgroundColor: mauiDarkCellBackground,
+        selectedColor: mauiSelected,
+        cellAccentColor: mauiAccent,
+        disabledTextColor: mauiDarkDisabledText,
+        rowHeight: -1,
+        hasUnevenRows: true,
+        headerTextColor: mauiDarkHeaderText,
+        headerBackgroundColor: mauiDarkViewBackground,
+        footerTextColor: mauiDarkFooterText,
+        footerBackgroundColor: mauiDarkViewBackground,
+        cellTitleColor: mauiDarkDeepText,
+        cellValueTextColor: mauiDarkValueText,
+        cellDescriptionColor: mauiDarkDescriptionText
+    )
+
+    /// 実効外観に対応する MAUI 互換 Theme。
+    ///
+    /// - Parameter dark: 実効外観がダークなら `true`
+    static func maui(dark: Bool) -> Theme { dark ? mauiDark : mauiLight }
+
+    /// 実効外観に対応する ButtonCell の `CellStyle(titleColor:)` 用の色。
+    ///
+    /// - Parameter dark: 実効外観がダークなら `true`
+    static func mauiTitleText(dark: Bool) -> UIColor { dark ? mauiDarkHeaderText : mauiHeaderText }
+
     /// Section 装飾デモ用 Theme。
     ///
-    /// 下地（`backgroundColor`）と Header / Footer の背景に PaleBackColorPrimary を敷き、
+    /// 下地（`backgroundColor`）と Header / Footer の背景に実効外観に応じた下地色を敷き、
     /// 箱（`cellBackgroundColor`）・separator・Header / Footer 文字色はライブラリ既定のまま残す。
     /// アイコンはバッジ型（`SampleIconBadge`）に合わせたサイズ・角丸を指定する。
     /// Section 装飾の 4 属性だけを引数で差し替えてプリセットを作る。
     ///
     /// - Parameters:
+    ///   - dark: 実効外観がダークなら `true`
     ///   - sectionMargin: Section 単位の外側余白（`nil` で style ごとの既定）
     ///   - sectionCornerRadius: 箱の角丸半径（`nil` で style ごとの既定）
     ///   - sectionBorderWidth: 箱のボーダー幅（`nil` で実効 0）
     ///   - sectionBorderColor: 箱のボーダー色（`nil` で実効透明）
     static func sectionDecorationDemo(
+        dark: Bool,
         sectionMargin: NSDirectionalEdgeInsets? = nil,
         sectionCornerRadius: CGFloat? = nil,
         sectionBorderWidth: CGFloat? = nil,
         sectionBorderColor: UIColor? = nil
     ) -> Theme {
-        Theme(
-            backgroundColor: mauiViewBackground,
+        let viewBackground = dark ? mauiDarkViewBackground : mauiViewBackground
+        return Theme(
+            backgroundColor: viewBackground,
             cellAccentColor: demoAccentGreen,
-            headerBackgroundColor: mauiViewBackground,
-            footerBackgroundColor: mauiViewBackground,
+            headerBackgroundColor: viewBackground,
+            footerBackgroundColor: viewBackground,
             cellIconSize: SampleIconBadge.size,
             cellIconRadius: SampleIconBadge.cornerRadius,
             sectionMargin: sectionMargin,

@@ -293,8 +293,8 @@ class RootAccessoryThemeRefreshTest {
 
         val updatedTheme = Theme(headerTextColor = updated)
         store.applyTheme(updatedTheme)
-        awaitConvergence(view, extraDiagnostics = { "Theme: ${view.internalTheme()}" }) {
-            view.internalTheme() == updatedTheme
+        awaitConvergence(view, extraDiagnostics = { "Theme: ${view.theme}" }) {
+            view.theme == updatedTheme
         }
         activity.settle(view)
 

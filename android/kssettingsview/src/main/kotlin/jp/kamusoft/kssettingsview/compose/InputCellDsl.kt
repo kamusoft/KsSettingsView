@@ -41,10 +41,10 @@ public fun DSLSectionScope.EntryCell(
     keyboardType: Int = InputType.TYPE_CLASS_TEXT,
     isPassword: Boolean = false,
     textAlignment: CellTitleAlignment = CellTitleAlignment.END,
-    accentColor: Color? = null,
+    accentColor: Color = Color.Unspecified,
     maxLength: Int? = null,
     style: CellStyle = CellStyle(),
-    placeholderColor: Color? = null,
+    placeholderColor: Color = Color.Unspecified,
 ): CellHandle = cell(
     UiEntryCell(
         style = style,
@@ -79,11 +79,11 @@ public fun DSLSectionScope.EntryCell(
     keyboardType: Int = InputType.TYPE_CLASS_TEXT,
     isPassword: Boolean = false,
     textAlignment: CellTitleAlignment = CellTitleAlignment.END,
-    accentColor: Color? = null,
+    accentColor: Color = Color.Unspecified,
     maxLength: Int? = null,
     onTextChanged: ((String) -> Unit)? = null,
     style: CellStyle = CellStyle(),
-    placeholderColor: Color? = null,
+    placeholderColor: Color = Color.Unspecified,
 ): CellHandle = cell(
     UiEntryCell(
         style = style,
@@ -123,7 +123,7 @@ public fun DSLSectionScope.PickerCell(
     pageTitle: String? = null,
     subText: ((String) -> String?)? = null,
     onItemSelected: ((String) -> Unit)? = null,
-    accentColor: Color? = null,
+    accentColor: Color = Color.Unspecified,
     style: CellStyle = CellStyle(),
 ): CellHandle = PickerCell(
     title = title,
@@ -162,7 +162,7 @@ public fun <T> DSLSectionScope.PickerCell(
     pageTitle: String? = null,
     subText: ((T) -> String?)? = null,
     onItemSelected: ((T) -> Unit)? = null,
-    accentColor: Color? = null,
+    accentColor: Color = Color.Unspecified,
     style: CellStyle = CellStyle(),
 ): CellHandle = cell(
     UiPickerCell(
@@ -202,7 +202,7 @@ public fun DSLSectionScope.PickerCell(
     isVisible: Boolean = true,
     pageTitle: String? = null,
     subText: ((String) -> String?)? = null,
-    accentColor: Color? = null,
+    accentColor: Color = Color.Unspecified,
     style: CellStyle = CellStyle(),
 ): CellHandle = PickerCell(
     title = title,
@@ -241,7 +241,7 @@ public fun <T> DSLSectionScope.PickerCell(
     isVisible: Boolean = true,
     pageTitle: String? = null,
     subText: ((T) -> String?)? = null,
-    accentColor: Color? = null,
+    accentColor: Color = Color.Unspecified,
     style: CellStyle = CellStyle(),
 ): CellHandle {
     val elements = items.toList()
@@ -287,7 +287,7 @@ public fun DSLSectionScope.PickerCell(
     pageTitle: String? = null,
     subText: ((String) -> String?)? = null,
     onItemsSelected: ((List<String>) -> Unit)? = null,
-    accentColor: Color? = null,
+    accentColor: Color = Color.Unspecified,
     style: CellStyle = CellStyle(),
 ): CellHandle = PickerCell(
     title = title,
@@ -328,7 +328,7 @@ public fun <T> DSLSectionScope.PickerCell(
     pageTitle: String? = null,
     subText: ((T) -> String?)? = null,
     onItemsSelected: ((List<T>) -> Unit)? = null,
-    accentColor: Color? = null,
+    accentColor: Color = Color.Unspecified,
     style: CellStyle = CellStyle(),
 ): CellHandle = cell(
     UiPickerCell(
@@ -371,7 +371,7 @@ public fun DSLSectionScope.NumberPickerCell(
     step: Int = 1,
     unit: String = "",
     pickerTitle: String? = null,
-    accentColor: Color? = null,
+    accentColor: Color = Color.Unspecified,
     style: CellStyle = CellStyle(),
 ): CellHandle = cell(
     UiNumberPickerCell(
@@ -411,7 +411,7 @@ public fun DSLSectionScope.TimePickerCell(
     format: String = "HH:mm",
     is24Hour: Boolean = true,
     pickerTitle: String? = null,
-    accentColor: Color? = null,
+    accentColor: Color = Color.Unspecified,
     style: CellStyle = CellStyle(),
 ): CellHandle = cell(
     UiTimePickerCell(
@@ -451,9 +451,9 @@ public fun DSLSectionScope.DatePickerCell(
     maxDate: LocalDate? = null,
     uiStyle: DatePickerUIStyle = DatePickerUIStyle.Material,
     todayText: String? = null,
-    androidButtonColor: Color? = null,
+    androidButtonColor: Color = Color.Unspecified,
     pickerTitle: String? = null,
-    accentColor: Color? = null,
+    accentColor: Color = Color.Unspecified,
     style: CellStyle = CellStyle(),
 ): CellHandle = cell(
     UiDatePickerCell(

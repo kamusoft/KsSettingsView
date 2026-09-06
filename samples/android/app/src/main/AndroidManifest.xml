@@ -8,9 +8,10 @@
 
     <!--
       android:theme:
-        フレームワーク標準の素のテーマを指定する。Material3 の XML テーマも AppCompat の
-        XML テーマも持たない Compose 専業アプリ（Compose テンプレートの既定構成）を模し、
+        フレームワーク標準の素のテーマを親に取る自前 style を指定する。Material3 の XML テーマも
+        AppCompat の XML テーマも持たない Compose 専業アプリ（Compose テンプレートの既定構成）を模し、
         KsSettingsView がホストのテーマ種別を問わずに動作することを示すため。
+        style は values/ と values-night/ に同名で置き、夜間モードで暗い側が選ばれる。
 
         ライブラリの View と選択面は、ライブラリが同梱する Material3 派生テーマを
         かぶせた Context から生成されるので、ホスト側でテーマを整える必要はない
@@ -19,7 +20,7 @@
     -->
     <application
         android:label="@string/app_name"
-        android:theme="@android:style/Theme.Material.Light.NoActionBar"
+        android:theme="@style/Theme.KsSettingsViewSample"
         android:allowBackup="true">
 
         <activity

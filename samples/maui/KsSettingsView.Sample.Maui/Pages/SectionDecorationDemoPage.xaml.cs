@@ -22,7 +22,7 @@ public partial class SectionDecorationDemoPage : ContentPage
     {
         InitializeComponent();
         On<iOS>().SetLargeTitleDisplay(LargeTitleDisplayMode.Never);
-        SampleTheme.ApplySectionDecorationDemo(Settings);
         BindingContext = new SectionDecorationDemoViewModel();
+        SampleThemeFollower.Attach(this, dark => SampleTheme.ApplySectionDecorationDemo(Settings, dark));
     }
 }

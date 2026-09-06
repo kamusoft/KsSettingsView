@@ -93,11 +93,19 @@ internal final class PickerCellView: KsListCellBase, @MainActor KsCellRenderer {
         )
     }
 
+    /// 実際に提示する VC（選択面を載せた navigation controller）を組み立てる。
+    /// 提示元の外観の引き継ぎもここで済ませ、提示経路とテストの検証 seam が同じ結果を共有する。
+    private func makePresentedViewController() -> UINavigationController? {
+        guard let listVC = makeListViewController() else { return nil }
+        let nav = UINavigationController(rootViewController: listVC)
+        PresentationAppearance.inherit(from: self, to: nav)
+        return nav
+    }
+
     private func presentPickerModal() {
-        guard let listVC = makeListViewController() else { return }
+        guard let nav = makePresentedViewController() else { return }
         guard let presenter = KeyWindowResolver.topPresentedViewController() else { return }
 
-        let nav = UINavigationController(rootViewController: listVC)
         presenter.present(nav, animated: true, completion: nil)
     }
 
@@ -117,6 +125,11 @@ internal final class PickerCellView: KsListCellBase, @MainActor KsCellRenderer {
     /// VC を直接生成するテストでは `render` からの配線漏れを検出できないため、この経路を用いる。
     internal func _makeListViewControllerForTesting() -> PickerListViewController? {
         return makeListViewController()
+    }
+
+    /// テスト用: 提示経路と同一の組み立てで、実際に提示する VC を生成する（配線の検証 seam）。
+    internal func _makePresentedViewControllerForTesting() -> UINavigationController? {
+        return makePresentedViewController()
     }
 
     /// テスト用: bind 中の cell を取得する。

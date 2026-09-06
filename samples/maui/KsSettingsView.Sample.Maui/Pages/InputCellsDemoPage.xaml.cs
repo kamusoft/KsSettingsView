@@ -16,7 +16,7 @@ public partial class InputCellsDemoPage : ContentPage
     public InputCellsDemoPage()
     {
         InitializeComponent();
-        SampleTheme.Apply(Settings);
         BindingContext = new InputCellsDemoViewModel();
+        SampleThemeFollower.Attach(this, dark => SampleTheme.Apply(Settings, dark));
     }
 }

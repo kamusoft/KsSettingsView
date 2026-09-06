@@ -3,7 +3,7 @@ type: concept
 title: Android ビルドツールチェーンの契約
 description: android/ と samples/android/ の Gradle ビルドにおける JDK の役割分担 (Gradle を動かす JDK と成果物ターゲット Java 17)・ビルド関連バージョンと GAV の宣言の単一元 (libs.versions.toml とルート build.gradle.kts)・Maven 発行の入口 (vanniktech maven publish)・MAUI binding など消費側が依存する前提と、ツールチェーン更新時に揃えるもの
 tags: [android, build, gradle, toolchain, version-catalog, jdk, maven-publish]
-timestamp: 2026-09-02
+timestamp: 2026-09-04
 ---
 
 # Android ビルドツールチェーンの契約
@@ -52,9 +52,9 @@ timestamp: 2026-09-02
 
 version はルート `android/build.gradle.kts` が全モジュールへ配る。`-Pversion=` の注入があればそれを使い、無いときだけカタログの開発用既定値 (`0.1.0-SNAPSHOT`) を使う ([cross/ADR-0020](../../../decisions/cross/0020-release-dispatch-tag-last-version-injection.md))。version が `-SNAPSHOT` の間は Central 向け発行タスクが build.gradle.kts 内のガードで失敗する (ローカル検証は `publishToMavenLocal`)。
 
-署名は署名鍵 (`signingInMemoryKey` プロパティ。release CI は `ORG_GRADLE_PROJECT_*` 環境変数で渡す) がある発行でだけ必須になり、鍵の無い発行はリリース版の version でも Sign タスクを skip して未署名で成功する。鍵を持たない消費者検証の dry-run がリリース版を mavenLocal に発行するための条件で、鍵の渡し忘れは Central Portal の未署名拒否で止まる (CI 自身の検査ではない)。Central Portal の認証も同じく環境変数渡しで release CI が注入する。
+署名は署名鍵 (`signingInMemoryKey` プロパティ。release CI は `ORG_GRADLE_PROJECT_*` 環境変数で渡す) がある発行でだけ必須になり、鍵の無い発行はリリース版の version でも Sign タスクを skip して未署名で成功する。鍵を持たない消費者検証の dry-run がリリース版を mavenLocal に発行するための条件で、鍵の渡し忘れは release CI が upload の前に成果物ごとの `.asc` の存在を検査して止める (`scripts/release/check-signatures.sh`)。Central Portal の認証も同じく環境変数渡しで release CI が注入する。Central 向けの発行は `publishToMavenCentral` で upload して保留し (自動 release なし)、NuGet の push が済んでから Portal API で release する 2 段になっている ([cross/ADR-0020](../../../decisions/cross/0020-release-dispatch-tag-last-version-injection.md))。
 
-mavenLocal 経由の解決と Release ビルドは `verification/android` の消費者が PR CI の dry-run で毎回確かめる ([リポジトリとビルドの責務境界](../../cross/architecture/repository-boundaries.md))。公開レジストリからの解決 (smoke) は初回リリースで実証する。
+mavenLocal 経由の解決と Release ビルドは `verification/android` の消費者が `main` 宛て pull request の CI とリリースの dry-run で確かめ、公開後の smoke が Maven Central からの解決を確かめる (初回リリース `0.1.0-beta.1` で実証済み) ([リポジトリとビルドの責務境界](../../cross/architecture/repository-boundaries.md))。
 
 ## 消費側が依存する前提
 
@@ -92,5 +92,5 @@ Compose 版の整合 (2026-08-28 時点):
 - [リポジトリとビルドの責務境界](../../cross/architecture/repository-boundaries.md) — build root の独立と Sample の consumer 境界
 - [テスト実行規約](../../../handbook/cross/test-execution.md) — Android テストの全件実行と件数確認
 - [公開識別子と配布座標](../../../handbook/cross/public-identifiers.md) — GAV と `group` の現在地
-- [Native Bridge の interop 境界](../../maui/api/native-bridge.md) — binding 構成の要点
+- [MAUI binding の Native artifact 統合](../../maui/architecture/binding-build-integration.md) — Android binding の gradlew 直接実行と aar の増分ビルド入力
 - [maui/ADR-0006](../../../decisions/maui/0006-android-binding-gradlew-exec.md) — gradlew 直接実行方式の採用理由

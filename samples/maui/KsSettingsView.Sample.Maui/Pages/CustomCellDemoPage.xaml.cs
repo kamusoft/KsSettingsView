@@ -15,7 +15,7 @@ public partial class CustomCellDemoPage : ContentPage
     public CustomCellDemoPage()
     {
         InitializeComponent();
-        SampleTheme.Apply(Settings);
         BindingContext = _viewModel;
+        SampleThemeFollower.Attach(this, dark => SampleTheme.Apply(Settings, dark));
     }
 }

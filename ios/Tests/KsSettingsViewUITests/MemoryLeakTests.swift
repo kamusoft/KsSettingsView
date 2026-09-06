@@ -7,6 +7,7 @@
 #if canImport(UIKit)
 import XCTest
 import UIKit
+import KsSettingsViewTestSupport
 @testable import KsSettingsViewUI
 @testable import KsSettingsViewCore
 
@@ -24,9 +25,11 @@ final class MemoryLeakTests: XCTestCase {
             XCTAssertNotNil(weakController)
         }
 
-        let exp = expectation(description: "wait runloop")
-        DispatchQueue.main.async { exp.fulfill() }
-        wait(for: [exp], timeout: 1.0)
+        awaitCondition(
+            "Controller がスコープを抜けた後に解放される",
+            actual: { "weakController=\(weakController == nil ? "nil" : "non-nil")" },
+            until: { weakController == nil }
+        )
 
         XCTAssertNil(weakController, "Controller がスコープを抜けても解放されていない（メモリリーク）")
     }
@@ -49,9 +52,11 @@ final class MemoryLeakTests: XCTestCase {
             XCTAssertNotNil(weakController)
         }
 
-        let exp = expectation(description: "wait runloop")
-        DispatchQueue.main.async { exp.fulfill() }
-        wait(for: [exp], timeout: 1.0)
+        awaitCondition(
+            "Store 経由の Controller がスコープを抜けた後に解放される",
+            actual: { "weakController=\(weakController == nil ? "nil" : "non-nil")" },
+            until: { weakController == nil }
+        )
 
         XCTAssertNil(weakController, "Store 経路でも Controller が解放されていない（メモリリーク）")
 

@@ -3,10 +3,10 @@ type: reference
 title: iOS Native Host の利用と更新境界
 description: SettingsRootStore と KsSettingsViewController を使って UIKit の設定画面を構築・更新・拡張する方法
 tags: [ios, uikit, host, public-api]
-timestamp: 2026-08-29
+timestamp: 2026-09-06
 ---
 
-この文書は、iOS の Native API で設定画面を組み込むための公開 API 利用契約と責務境界を整理した reference である。読むと、`SettingsRootStore` と `KsSettingsViewController` の役割、表示後の更新方法、独自 Cell の登録方法が分かる。SwiftUI から使う場合は [iOS SwiftUI Bridge と宣言 DSL](ios-swiftui.md) を参照する。設定ツリーと差分の型自体は [SettingsRoot・Section・Cell の設定ツリー](../../core/core-model/settings-tree.md) と [SettingsRootDiff による構造変更](../../core/core-model/structural-changes.md) を先に読む。
+この文書は、iOS の Native API で設定画面を組み込むための公開 API 利用契約と責務境界を整理した reference である。読むと、`SettingsRootStore` と `KsSettingsViewController` の役割、表示後の更新方法、独自 Cell の登録方法、既定色が外観 (ライト / ダーク) に追随する仕組みが分かる。SwiftUI から使う場合は [iOS SwiftUI Bridge と宣言 DSL](ios-swiftui.md) を参照する。設定ツリーと差分の型自体は [SettingsRoot・Section・Cell の設定ツリー](../../core/core-model/settings-tree.md) と [SettingsRootDiff による構造変更](../../core/core-model/structural-changes.md) を先に読む。
 
 ## 目的
 
@@ -59,7 +59,7 @@ let controller = KsSettingsViewController(
 
 Controller は Store の初期 root / theme を取り込み、その後の構造変更と Theme 変更を購読する。`SettingsRoot` の公開 setter は持たない。空の Root も有効で、空の `UICollectionView` として表示できる。
 
-`style` は `.classic` と `.modern` を受ける。`.classic` は UIKit の `.plain` list appearance、`.modern` は `.insetGrouped` を使わず compositional layout 上の自前 Section 装飾で箱を描く ([ios/ADR-0003](../../../decisions/ios/0003-modern-self-drawn-section-decoration.md))。装飾の寸法・ボーダーは Theme の Section 装飾4属性から解決する ([設定 list の外観と補助領域](../../core/styling/list-appearance.md))。切替は設定内容や ID を変えず、同じ値の再代入では layout を作り直さない。
+`style` は `.classic` と `.modern` を受ける。`.classic` は UIKit の `.plain` list appearance、`.modern` は `.insetGrouped` を使わず compositional layout 上の自前 Section 装飾で Container を描く ([ios/ADR-0003](../../../decisions/ios/0003-modern-self-drawn-section-decoration.md))。装飾の寸法・Border は Theme の Section 装飾4属性から解決する ([設定 list の外観と補助領域](../../core/styling/list-appearance.md))。切替は設定内容や ID を変えず、同じ値の再代入では layout を作り直さない。
 
 `rootHeader` / `rootFooter` は Root レベルの `RootAccessory` を保持し、`nil` は非表示を表す。`SettingsRoot` には含まれない。Section Header / Footer は各 `Section` の `SectionAccessory` から描画する。text と `KsAnyView.swiftUI` / `.uiKit` の任意 View を利用できる。
 
@@ -114,7 +114,7 @@ let controller = KsSettingsViewController(
 
 ## スタイルと視覚状態
 
-画面全体の既定値は `Theme`、単一 Cell の上書きは `CellStyle` が持つ。通常の描画値は Cell 個別値、CellStyle、Theme、UIKit 既定値の順で解決する。`Theme.backgroundColor` が list の canvas、`Theme.cellBackgroundColor` が Cell の既定背景、`CellStyle.backgroundColor` が個別 Cell の背景であり、互いに代用しない。
+画面全体の既定値は `Theme`、単一 Cell の上書きは `CellStyle` が持つ。通常の描画値は Cell 個別値、CellStyle、Theme、ライブラリ既定 (light / dark の対) または UIKit 既定値の順で解決する。`Theme.backgroundColor` が list の canvas、`Theme.cellBackgroundColor` が Cell の既定背景、`CellStyle.backgroundColor` が個別 Cell の背景であり、互いに代用しない。
 
 Cell 個別高さは Theme の行高さより優先され、iOS の最終行高は 48pt を下回らない。`Theme.hasUnevenRows == true` では内容に応じて伸び、`false` では解決済み高さへ固定する。
 
@@ -122,12 +122,27 @@ Cell 個別高さは Theme の行高さより優先され、iOS の最終行高�
 
 Theme 属性の未指定時に使われるライブラリ既定値は、`Theme` の public static 定数として公開される。利用者は「既定へ戻す」「既定値を基準に派生値を作る」用途でこれらを参照できる。
 
+色の定数は `UIColor(dynamicProvider:)` で light / dark の対を持つ dynamic な `UIColor` で、`Theme()` の既定引数が同じ定数を参照する (`init` の `cellBackgroundColor` の既定は `defaultCellBackgroundColor`)。描画側は `UIColor` を渡すだけで UIKit の trait 解決に乗るため、既定 Theme・利用者の dynamic 色とも外観の切替で描き直される。`defaultCellTitleColor` (`.label`) / `defaultCellDescriptionColor` (`.secondaryLabel`) / `defaultButtonTitleColor` (`.systemBlue`) はシステム色のまま。生値と 3 platform の対応は [スタイルの所有と実効値解決](../../core/styling/style-resolution.md) の「既定色と外観の追随」。既定と同じ生値を固定色で明示した Theme は既定 Theme と等価ではなく、その色はダークでも変わらない (dynamic な既定定数を明示した Theme は既定と等価)。
+
+Modern の Section 装飾の Border は CGColor を layer に置くため、装飾 view が最後に適用した `UIColor` を保持して外観の trait 変更で `layer.borderColor` を再解決する。利用者が dynamic な `sectionBorderColor` を渡しても、Border だけが古い外観で残らない。
+
+`CellStyle` と Cell 固有値 (`ButtonCell.titleColor`、選択系・入力系 Cell の `accentColor`、`EntryCell.placeholderColor`) に渡した `UIColor` も Theme と同じ扱いで、dynamic な色はその色自身の現在の外観の値へ解決され、固定色は両外観でその色のまま描かれる。CGColor を layer に置く `KsCheckBoxView` の accent (塗りと枠) はライブラリが trait 変更で再解決する。両外観で異なる色を使いたい Cell は dynamic な `UIColor` を渡すだけでよく、Cell の差し替えは要らない ([core/ADR-0031](../../../decisions/core/0031-explicit-cell-color-appearance-contract-and-beta-breaking-change.md))。
+
+```swift
+// 両外観の値を持つ色を CellStyle に渡す。UIKit が trait 変更で再解決する
+let brandTitle = UIColor { traits in
+    traits.userInterfaceStyle == .dark ? UIColor(named: "BrandTitleDark")! : UIColor(named: "BrandTitleLight")!
+}
+let versionCell = LabelCell(title: "バージョン", valueText: "1.0.0", style: CellStyle(titleColor: brandTitle))
+```
+
 | 定数 | 既定値の対象 |
 |---|---|
 | `defaultSeparatorColor` | 罫線色 |
 | `defaultSelectedColor` | 選択中背景色 |
 | `defaultAccentColor` | アクセント色 |
 | `defaultBackgroundColor` | list 背景色 |
+| `defaultCellBackgroundColor` | Cell 背景色 |
 | `defaultDisabledTextColor` | 無効時テキスト色 |
 | `defaultHeaderBackgroundColor` | Header 背景色 |
 | `defaultFooterBackgroundColor` | Footer 背景色 |
@@ -148,6 +163,7 @@ Theme 属性の未指定時に使われるライブラリ既定値は、`Theme` 
 - Store 方式では、初期状態と後続更新が同じ `SettingsRootStore → KsSettingsViewController` 経路へ流れる。
 - Store 接続済みなら、view load 完了時点の表示は Store の現在状態と一致する (取り付け順序に依存しない。[core/ADR-0019](../../../decisions/core/0019-host-restores-from-store-on-attach.md))。
 - Root / Section Accessory が空または `nil` なら、意味のない supplementary 領域を生成しない。
+- Theme を渡さない list はダーク外観で dark セットの既定色で描かれ、表示中の外観切替でも既定色と利用者の dynamic 色 (Theme・CellStyle・Cell 固有値のいずれも) が描き直される。固定色で明示した値は変わらない。
 - Store が Controller より長命でも、Store 購読と UIKit の DataSource / Delegate が Controller を延命しない。
 - Registry の登録・解決は排他制御され、同じ Cell 型を再登録した場合は後の Renderer が使われる。
 - Cell の再利用時は前の内容を除去し、編集中の text field は不必要な再生成で first responder を失わない。

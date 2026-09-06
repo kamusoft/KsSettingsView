@@ -52,7 +52,7 @@ internal final class KsCheckBoxView: UIView {
     }
 
     /// 有効／無効状態。`false` のとき枠・塗り・チェックマークの色を薄く描画する。
-    /// `UIView` 標準には `isEnabled` がないため独自定義（refine-basic-cells-style Suggestion-1 対応）。
+    /// `UIView` 標準には `isEnabled` がないため独自定義。
     var isEnabled: Bool = true {
         didSet {
             guard isEnabled != oldValue else { return }
@@ -81,6 +81,7 @@ internal final class KsCheckBoxView: UIView {
         layer.backgroundColor = UIColor.clear.cgColor
 
         // dark mode 等の color appearance 変化時に cgColor を再解決する。
+        // 利用者が accentColor に渡した dynamic な UIColor もここで現在の外観の値へ解決される（core/ADR-0031）。
         // iOS 17+ は deprecated な traitCollectionDidChange(_:) の代わりに
         // registerForTraitChanges(_:handler:) を使用する。
         if #available(iOS 17.0, *) {

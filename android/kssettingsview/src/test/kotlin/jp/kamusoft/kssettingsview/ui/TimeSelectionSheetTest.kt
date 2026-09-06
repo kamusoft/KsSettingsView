@@ -71,7 +71,7 @@ class TimeSelectionSheetTest {
         is24Hour: Boolean = true,
         title: String = "起床時刻",
         pickerTitle: String? = null,
-        accentColor: Color? = null,
+        accentColor: Color = Color.Unspecified,
         style: CellStyle = CellStyle(),
         isEnabled: Boolean = true,
         onValueChanged: ((LocalTime) -> Unit)? = null,

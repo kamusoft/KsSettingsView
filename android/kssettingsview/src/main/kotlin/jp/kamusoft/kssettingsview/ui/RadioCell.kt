@@ -12,9 +12,8 @@ import jp.kamusoft.kssettingsview.core.DSLReidentifiableCell
  * 更新は SettingsRoot 側の責務であり、本 Cell は選択状態を自前で書き換えない。
  *
  * 共通フィールドとして `description` / `valueText` / `icon` / `hintText` / `accentColor` を持つ。
- * `accentColor` の解決順序は
- * `RadioCell.accentColor → CellStyle.accentColor → Theme.cellAccentColor → プラットフォーム既定`。
- * `style` は UI 層所属の [CellStyle] を参照する（core/ADR-0009）。
+ * `accentColor` は Compose の [Color] を直接受け取り、未指定は [Color.Unspecified] で表す。
+ * 解決順序は `RadioCell.accentColor → CellStyle.accentColor → Theme.cellAccentColor → 外観の既定`。
  */
 public data class RadioCell(
     override val id: String = "radio-${java.util.UUID.randomUUID()}",
@@ -27,7 +26,7 @@ public data class RadioCell(
     val groupId: String,
     val value: String,
     val selectedValue: String,
-    val accentColor: Color? = null,
+    val accentColor: Color = Color.Unspecified,
     val onSelected: ((String) -> Unit)? = null,
     val isEnabled: Boolean = true,
     override val isVisible: Boolean = true,
@@ -65,7 +64,7 @@ public data class RadioCell(
         result = 31 * result + groupId.hashCode()
         result = 31 * result + value.hashCode()
         result = 31 * result + selectedValue.hashCode()
-        result = 31 * result + (accentColor?.hashCode() ?: 0)
+        result = 31 * result + accentColor.hashCode()
         result = 31 * result + isEnabled.hashCode()
         result = 31 * result + isVisible.hashCode()
         return result
