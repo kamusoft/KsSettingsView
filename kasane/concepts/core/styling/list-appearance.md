@@ -3,7 +3,7 @@ type: concept
 title: 設定 list の外観と補助領域
 description: Classic・Modern style と Section 装飾4属性・Section・Root Header / Footer の配置原則
 tags: [styling, list, section, accessory, modern]
-timestamp: 2026-08-25
+timestamp: 2026-09-06
 ---
 
 # 設定 list の外観と補助領域
@@ -47,18 +47,18 @@ Header 高さは accessory 種別 (text / view) に依らず、正の `Section.h
 
 Header / Footer の色は Android では Theme の `headerTextColor` / `headerBackgroundColor` と `footerTextColor` / `footerBackgroundColor` から解決する。iOS は text 色を Theme から解決する一方、Header / Footer 領域の背景に `headerBackgroundColor` / `footerBackgroundColor` を適用しない — 既知の platform 非対称として、背景色の共通反映は保証しない。
 
-iOS Footer の既定文字色は移植元ライブラリ (AiForms.SettingsView) 互換の固定 gray を維持し、system appearance (light / dark) に追従する Cell の description text 色とは別に扱う。これは `Theme.footerTextColor` の既定値であり、利用者が明示した値では上書きできる。
+Header / Footer の既定文字色は両 platform とも同じ light / dark の対 (#6D6D72 / #8E8E93) で外観に追随し、Cell の description の既定 (iOS はシステム色 `.secondaryLabel`、Android は同じ生値の対) とは別のロールとして扱う。light 側の値は移植元ライブラリ (AiForms.SettingsView) 互換の gray をそのまま残したものである。いずれも `Theme.headerTextColor` / `footerTextColor` の既定値であり、利用者が明示した値で上書きできる ([スタイルの所有と実効値解決](style-resolution.md) の「既定色と外観の追随」)。
 
 ## Theme の Section 装飾4属性
 
-`Theme` は次の4属性を公開する。nil / null は未指定を表し、**style 別の platform 既定**へ解決する:
+`Theme` は次の4属性を公開する。未指定 (iOS は `nil`、Android は寸法が `null`・色が `Color.Unspecified`) は **style 別の platform 既定**へ解決する:
 
 | 属性 | iOS 型 | Android 型 | 未指定時の解決 |
 |---|---|---|---|
 | `sectionMargin` | `NSDirectionalEdgeInsets?` | `PaddingValues?` | Classic / Modern 同値・両 platform 同値の既定寸法 (Classic は水平を無視) |
 | `sectionCornerRadius` | `CGFloat?` | `Dp?` | Modern: platform 既定値 (Classic に角丸はない) |
 | `sectionBorderWidth` | `CGFloat?` | `Dp?` | 実効 0 — 既定の Modern に Border は描かれない |
-| `sectionBorderColor` | `UIColor?` | `Color?` | 透明 |
+| `sectionBorderColor` | `UIColor?` | `Color` (未指定 = `Color.Unspecified`) | 透明 |
 
 Android の型は Compose の型 (`PaddingValues` / `Dp` / `Color`) だが、描画自体は RecyclerView の ItemDecoration が行う — Theme が Compose の型で受け、decoration が描画値へ変換する。
 
@@ -74,7 +74,7 @@ Classic では `sectionMargin` の**上下成分のみ**を適用し、leading /
 
 `Theme.backgroundColor` は list 全体の下地 (canvas)、`Theme.cellBackgroundColor` は Cell または Modern Section Container の背景であり、同じ領域ではない。押下・選択背景は `selectedColor` から解決する。Theme 変更時も style と identity を維持するが、再評価される領域は platform 実装依存であり、本契約では規定しない。
 
-Classic の separator: Section 最初の Cell 上端と最後の Cell 下端は全幅、Section 内の中間 separator は左から16pt / 16dp inset する。icon の有無で inset を変えない。Android は `Theme.separatorColor` で1物理 pixel の細線を描き、Root Header / Footer と Section Accessory 行を対象に含めない。iOS も main list (設定 list 本体) の separator 色を `Theme.separatorColor` から解決する (モーダルのピッカー選択画面も同色)。両 platform とも separator は Theme の固定色で描き、system appearance (light / dark) に追従しない。
+Classic の separator: Section 最初の Cell 上端と最後の Cell 下端は全幅、Section 内の中間 separator は左から16pt / 16dp inset する。icon の有無で inset を変えない。Android は `Theme.separatorColor` で1物理 pixel の細線を描き、Root Header / Footer と Section Accessory 行を対象に含めない。iOS も main list (設定 list 本体) の separator 色を `Theme.separatorColor` から解決する (モーダルのピッカー選択画面も同色)。両 platform とも separator は `Theme.separatorColor` の解決値で描く。既定はライブラリの light / dark セット (#C8C7CC / #38383A) で外観に追随し、明示指定した固定色は外観で変わらない ([スタイルの所有と実効値解決](style-resolution.md) の「既定色と外観の追随」)。
 
 Modern の separator: Section 先頭 Cell の上端と末尾 Cell の下端には描かない (Container の縁が区切りを兼ねる)。中間 separator は leading 側を Classic と同じ inset 規則 (Container の内側 leading 端基準)、trailing 側にも同量の inset を Container の内側 trailing 端から取る**左右対称** — Container の両端まで引くと Container が分断されて見えるためで、Classic の「trailing は端まで」とは意図的に異なる。色は `Theme.separatorColor`、icon の有無で inset を変えない。Cell が自身の背景を塗っても separator は視認できる (描画順で保証)。
 

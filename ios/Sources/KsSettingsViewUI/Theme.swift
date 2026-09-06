@@ -344,7 +344,7 @@ extension Theme {
     public static let defaultHeaderFooterFont: UIFont = UIFont.preferredFont(forTextStyle: .footnote)
 }
 
-// MARK: - ダーク外観の既定色の生値
+// MARK: - ダーク外観の既定色の生値（core/ADR-0030。Android の KsThemePalette.Dark と同じ値を置く）
 
 extension Theme {
     /// `0xRRGGBB` 形式の値から不透明な `UIColor` を作る。

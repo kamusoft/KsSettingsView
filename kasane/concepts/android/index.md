@@ -4,7 +4,7 @@ Android 系統 (android/ ビルドルート) 固有の知識。カテゴリ定�
 
 ## api/
 
-- [api/android-native-host.md](api/android-native-host.md) — SettingsRootStore と Android View Host の構築・更新・ViewHolder 拡張境界
+- [api/android-native-host.md](api/android-native-host.md) — SettingsRootStore と Android View Host の構築・更新・ViewHolder 拡張境界、ライブラリ既定色 (KsSettingsViewDefaults) と夜間モードへの追随
 - [api/android-compose.md](api/android-compose.md) — Compose の Store / DSL 方式、identity、modifier、Theme 伝播
 
 ## architecture/

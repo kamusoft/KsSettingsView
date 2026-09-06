@@ -3,7 +3,7 @@ type: reference
 title: Android Compose Bridge と宣言 DSL
 description: KsSettingsView の Store 方式・DSL 方式、identity、modifier、Theme 伝播の利用契約
 tags: [android, compose, dsl, public-api]
-timestamp: 2026-08-28
+timestamp: 2026-09-06
 ---
 
 この文書は、Jetpack Compose から KsSettingsView を使うための公開 API 利用契約と責務境界を整理した reference である。読むと、Store 方式と DSL 方式の選び方、動的要素の identity、Root・Section・Cell の構築、Theme の更新経路が分かる。Android View Host を直接使う場合は [Android Native Host の利用と更新境界](android-native-host.md) を参照する。
@@ -23,7 +23,7 @@ Compose 側は宣言ツリーの構築、Recomposition をまたぐ状態保持�
 | DSL | `KsSettingsView` の内部 | 静的・中規模の一般的な設定画面 | Compose state から宣言ツリーを再評価する |
 | Store | 利用者 | 大量データ、高頻度更新、命令型の部分操作 | 利用者が `SettingsRootStore` の公開操作を呼ぶ |
 
-両方式とも `modifier`、`style`、任意 Composable の `rootHeader` / `rootFooter` を受ける。`style` の既定値は `Classic` である。
+両方式とも `modifier`、`style`、任意 Composable の `rootHeader` / `rootFooter` を受ける。`style` の既定値は `Classic` である。DSL 方式の `theme` の既定値は `KsSettingsViewDefaults.theme()` で、composition 時の `isSystemInDarkTheme()` に応じた light / dark の既定 Theme になる。
 
 ## 利用例
 
@@ -181,7 +181,7 @@ DSL 方式では `theme` 引数を内部 Store の初期 Theme とし、以後�
 
 Store 方式には `theme` 引数がない。利用者は `SettingsRootStore(initialTheme = ...)` と `store.applyTheme(newTheme)` を使い、Host は Store の `theme` を購読する。`style` と Root H/F は Theme とは別の画面状態として `AndroidView.update` から Host へ渡る。
 
-Theme と CellStyle は UI 層で Jetpack Compose 側の型 `Color`、`TextStyle`、`Dp` を直接持つ。通常属性の解決順は CellStyle、Theme、ライブラリ同梱テーマ由来の既定値である。ホストの XML テーマと Compose の `MaterialTheme` はライブラリ UI の配色に影響しない — Native Host は同梱 Material3 派生テーマの常時ラップで描画し、アプリ側テーマへの前提を持たない ([android/ADR-0020](../../../decisions/android/0020-bundled-theme-always-wrap-host-independent.md))。詳細は [Android Native Host の利用と更新境界](android-native-host.md#ホストのテーマと-activity-型-前提なし) を参照する。
+Theme と CellStyle は UI 層で Jetpack Compose 側の型 `Color`、`TextStyle`、`Dp` を直接持つ。色の未指定は `Color.Unspecified` で表し、通常属性の解決順は CellStyle、Theme、ライブラリ既定 (現在の外観の light / dark セット。既定へ戻す・派生値を作る入口は `KsSettingsViewDefaults`) である。ホストの XML テーマと Compose の `MaterialTheme` はライブラリ UI の配色に影響しない — Native Host は同梱 Material3 派生テーマの常時ラップで描画し、アプリ側テーマへの前提を持たない ([android/ADR-0020](../../../decisions/android/0020-bundled-theme-always-wrap-host-independent.md))。詳細は [Android Native Host の利用と更新境界](android-native-host.md#ホストのテーマと-activity-型-前提なし) を参照する。
 
 ## 保証すること
 

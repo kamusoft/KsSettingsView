@@ -78,4 +78,4 @@
 - [x] 8.5 撮影画像を `ui/verification/` に置き、brief.md に照合記録を書く (個人要素なしの確認を含む)
 
 ## 9. 申し送り (蒸留)
-- [ ] 9.1 concepts の改訂範囲 (exploration.md 論点 8) と ADR-0030 の accepted 昇格を ksn-distill へ申し送る。`skills/` の追従は docs-refresh の明示依頼で別途
+- [x] 9.1 concepts の改訂範囲 (exploration.md 論点 8) と ADR-0030 の accepted 昇格を ksn-distill へ申し送る。`skills/` の追従は docs-refresh の明示依頼で別途

@@ -2,10 +2,10 @@
 kind: guide
 applies-when:
   always: false
-  tasks: [環境構築, Sample の起動, Sample の外観 (ダーク) 確認, 本体のビルド・lint, 消費者検証の実行, 本体 source へのステップイン]
+  tasks: [環境構築, Sample の起動, MAUI Sample への native 変更の配備確認, Sample の外観 (ダーク) 確認, 本体のビルド・lint, 消費者検証の実行, 本体 source へのステップイン]
 title: ローカル開発環境と Sample の実行
 description: iOS・Android・MAUI のローカル環境設定、Sample の起動と外観 (ライト / ダーク) の切り替え、本体モジュールのビルド / lint コマンド、消費者検証 (verification/) の手元実行、本体 source へのステップイン手順
-timestamp: 2026-09-05
+timestamp: 2026-09-06
 ---
 
 # ローカル開発環境と Sample の実行
@@ -139,6 +139,8 @@ xcrun simctl install <simulator-udid> \
 xcrun simctl launch <simulator-udid> jp.kamusoft.kssettingsview.samples.maui
 ```
 
+native (Swift) を変更した直後の `dotnet build -f net10.0-ios` は、xcframework が更新されてもアプリ実行ファイルの再リンクが走らず、古い native を抱えたまま「成功」することがある。native の変更を Simulator で確認するときは、Sample の iOS 向け `bin` / `obj` を捨てて再ビルドし、実行ファイル (`obj/.../nativelibraries/` 配下のリンク成果物) の更新時刻が今回のビルドであることを確かめてから install する。古い実行内容で見た「再現しない」「直った」は判断材料にならない。
+
 ### MAUI Android
 
 Emulator を起動してから実行する。AVD 名は `emulator -list-avds` で確認する。
@@ -154,6 +156,8 @@ dotnet build samples/maui/KsSettingsView.Sample.Maui/KsSettingsView.Sample.Maui.
 ```
 
 接続先が 1 台だけなら `AdbTarget` は省略できる。`adb devices` で対象を確認する。
+
+Debug 構成は Fast Deployment でアセンブリを apk に埋め込まないため、`adb install` した apk 単体では古い内容が走る (または `No assemblies found` で異常終了する)。配備は常に上の `-t:Run` (または `-t:Install`) で行い、`adb install` を代替にしない。
 
 ## 本体をビルドする
 
@@ -228,7 +232,7 @@ facade の純ロジック test の実行方法と、そのテストが触らな�
 
 - 選択は Sample 自身が永続化し、再起動後も維持される。初回は「システム」(端末の外観に追随)。OS 側の設定には触れない
 - 「ダーク」を選ぶと、アプリの chrome と `SampleTheme` を渡す画面 (基本 Cell 7 種 / 入力 Cell 5 種 / CustomCell / Section 装飾) が dark プリセットで描かれる
-- Theme を渡さない画面 (Store / DSL / 共通フィールド統合 / isVisible) はライブラリ既定色のままで、外観に追随するのは title 等の文字色だけである ([スタイルの所有と実効値解決](../../concepts/core/styling/style-resolution.md) の「既定色と外観の追随」)
+- Theme を渡さない画面 (Store / DSL / 共通フィールド統合 / isVisible) はライブラリ既定色の dark セットで描かれる。本体既定色の追随を確認するときはこれらの画面を見る ([スタイルの所有と実効値解決](../../concepts/core/styling/style-resolution.md) の「既定色と外観の追随」)
 - Android Native と MAUI Android の切り替えは Activity の再生成を伴う。デモ画面内の入力状態は消えるため、切り替えは常にルートメニューで行い、その後デモ画面を開く
 - 「システム」選択中に端末の外観を変えたときの追随も 4 実行面で成立する (MAUI iOS はアプリへ戻った再開時に反映される)
 - ダーク描画の証跡を撮るときは、撮影前に前面が対象の Sample であることを確認する (4 実行面が同じ文言・構成のため取り違えやすい)

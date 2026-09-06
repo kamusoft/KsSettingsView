@@ -3,10 +3,10 @@ type: reference
 title: Android Native Host の利用と更新境界
 description: SettingsRootStore と KsSettingsView を使って Android View の設定画面を構築・更新・拡張する方法
 tags: [android, views, host, public-api]
-timestamp: 2026-09-05
+timestamp: 2026-09-06
 ---
 
-この文書は、Android View から KsSettingsView を使うための公開 API 利用契約と責務境界を整理した reference である。読むと、`SettingsRootStore` と `KsSettingsView` の役割、表示後の更新方法、独自 Cell の登録方法、ホスト側に前提が無いこと (テーマ・Activity 型) が分かる。Jetpack Compose から使う場合は [Android Compose Bridge と宣言 DSL](android-compose.md) を参照する。設定ツリーと差分の型自体は [SettingsRoot・Section・Cell の設定ツリー](../../core/core-model/settings-tree.md) と [SettingsRootDiff による構造変更](../../core/core-model/structural-changes.md) を先に読む。
+この文書は、Android View から KsSettingsView を使うための公開 API 利用契約と責務境界を整理した reference である。読むと、`SettingsRootStore` と `KsSettingsView` の役割、表示後の更新方法、独自 Cell の登録方法、ライブラリ既定色 (`KsSettingsViewDefaults`) と夜間モードへの追随、ホスト側に前提が無いこと (テーマ・Activity 型) が分かる。Jetpack Compose から使う場合は [Android Compose Bridge と宣言 DSL](android-compose.md) を参照する。設定ツリーと差分の型自体は [SettingsRoot・Section・Cell の設定ツリー](../../core/core-model/settings-tree.md) と [SettingsRootDiff による構造変更](../../core/core-model/structural-changes.md) を先に読む。
 
 ## 目的
 
@@ -96,28 +96,22 @@ KsCellRegistry.register(
 
 ## スタイルと視覚状態
 
-画面全体の既定値は `Theme`、単一 Cell の上書きは `CellStyle` が持つ。通常属性は `CellStyle`、Theme、Android / Material の既定値の順で解決する。`Theme.backgroundColor` が RecyclerView の canvas、`Theme.cellBackgroundColor` が Cell の既定背景、`CellStyle.backgroundColor` が個別 Cell の背景であり、互いに代用しない。
+画面全体の既定値は `Theme`、単一 Cell の上書きは `CellStyle` が持つ。通常属性は `CellStyle`、Theme、ライブラリ既定 (現在の外観の light / dark セット) または Android / Material の既定値の順で解決する。`Theme.backgroundColor` が RecyclerView の canvas、`Theme.cellBackgroundColor` が Cell の既定背景、`CellStyle.backgroundColor` が個別 Cell の背景であり、互いに代用しない。
 
 Cell 個別高さは Theme の行高さより優先され、Android の最終行高は60dpを下回らない。`Theme.hasUnevenRows == true` では内容に応じて伸び、`false` では解決済み高さへ固定する。無効化は Cell initializer の `isEnabled` で指定し、無効時は Theme の disabled text 色と Native control の disabled 表現を使う。
 
-Theme 属性の未指定時に使われるライブラリ既定値は、`Theme` companion の public 定数として公開される。利用者は「既定へ戻す」「既定値を基準に派生値を作る」用途でこれらを参照できる。
+Theme と CellStyle の色フィールドはすべて Compose の `Color` 型で、未指定は既定値の `Color.Unspecified` で表す。`Theme()` は全色が未指定で、`KsSettingsView` が Theme を受け取った時点で現在の外観 (Configuration の夜間モード) の既定セットで未指定を埋めた解決済み Theme を 1 箇所で作り、行・list 下地・separator・Section 装飾・Header / Footer・選択面・カレンダーの選択面はそれだけを読む。利用者が読む `view.theme` と `store.theme` は解決前の Theme のまま。契約の全体は [スタイルの所有と実効値解決](../../core/styling/style-resolution.md) の「既定色と外観の追随」。
 
-| 定数 | 既定値の対象 |
+ライブラリ既定色は `jp.kamusoft.kssettingsview.ui.KsSettingsViewDefaults` の factory がロール名付きの `Theme` として返す。`Theme` companion に色の定数は無い (icon の `DEFAULT_CELL_ICON_SIZE_DP_VALUE` / `DEFAULT_CELL_ICON_RADIUS_DP_VALUE` は残る)。
+
+| 用途 | 使うもの |
 |---|---|
-| `DEFAULT_SEPARATOR_COLOR` | 罫線色 |
-| `DEFAULT_SELECTED_COLOR` | 選択中背景色 |
-| `DEFAULT_ACCENT_COLOR` | アクセント色 |
-| `DEFAULT_BACKGROUND_COLOR` | list 背景色 |
-| `DEFAULT_DISABLED_TEXT_COLOR` | 無効時テキスト色 |
-| `DEFAULT_HEADER_BACKGROUND_COLOR` | Header 背景色 |
-| `DEFAULT_FOOTER_BACKGROUND_COLOR` | Footer 背景色 |
-| `DEFAULT_HEADER_TEXT_COLOR` | Header テキスト色 |
-| `DEFAULT_FOOTER_TEXT_COLOR` | Footer テキスト色 |
-| `DEFAULT_CELL_TITLE_COLOR` | Cell タイトル色 |
-| `DEFAULT_CELL_DESCRIPTION_COLOR` | Cell 説明文色 |
-| `DEFAULT_BUTTON_TITLE_COLOR` | ButtonCell タイトル色 |
-| `DEFAULT_CELL_ICON_SIZE_DP_VALUE` | icon サイズ (dp 値) |
-| `DEFAULT_CELL_ICON_RADIUS_DP_VALUE` | icon 角丸半径 (dp 値) |
+| 既定へ戻す | 該当フィールドに `Color.Unspecified` を渡す (描画時に現在の外観の既定へ解決される) |
+| 既定値を基準に派生値を作る | `KsSettingsViewDefaults.lightTheme()` / `darkTheme()` が返す `Theme` の値から派生させる |
+| 外観に合わせた既定 Theme を明示的に得る | `KsSettingsViewDefaults.theme(darkTheme: Boolean)`。Compose では `@Composable theme()` (`isSystemInDarkTheme()` で選ぶ。DSL 入口の `theme` の既定値式) |
+| 両外観の色を自分で決める | 構築時に light / dark の Theme を選んで渡す (View は Configuration の uiMode、Compose は `isSystemInDarkTheme()`)。明示した色は表示中の外観変更で変わらない |
+
+factory が返す `Theme` は list 下地・Cell 背景・separator・選択色・accent・disabled 文字・Header / Footer の文字と背景の 10 色を持ち、Cell title / description・valueText / hintText・placeholder・`sectionBorderColor` は `Unspecified` のまま描画時に決まる (title / description は現在の外観の既定、valueText → title・hintText → accent のフォールバック、placeholder は同梱テーマの hint 色、Border は透明)。factory は端末の外観と同じ側を選んで渡す前提で、端末がライトのまま `darkTheme()` を渡すと title / description だけ端末側の外観の既定になる (固定したい場合は返された `Theme` を `copy` して明示する)。
 
 `Classic` は Cell へ1物理 pixelの hairline を描き、Section 内の中間線だけ左16dp inset とする。`Modern` は Theme の Section 装飾4属性 (`sectionMargin` 等。未指定はライブラリ既定) に従い、Section の Cell のみを角丸背景・Border の Container でまとめ、Section H/F 行は Container の外に置く ([設定 list の外観と補助領域](../../core/styling/list-appearance.md))。Style の切替は model、stable ID、Registry を変えない。Theme の変更時は現在の Style の装飾も再構築される。
 
@@ -125,7 +119,9 @@ Theme 属性の未指定時に使われるライブラリ既定値は、`Theme` 
 
 Host はライブラリ同梱の Material3 派生テーマ (DayNight) でラップした Context から自前の UI を生成するため、ホストアプリの XML テーマに前提はない — 最小構成のテーマ・AppCompat 系・MAUI テンプレート既定 (`Maui.SplashTheme`) のいずれでも、全 Cell と選択面が例外なく表示・動作する ([android/ADR-0020](../../../decisions/android/0020-bundled-theme-always-wrap-host-independent.md))。ホストテーマの色 (カスタム色・dynamic color を含む) はライブラリ UI へ反映されず、見た目の調整はライブラリの `Theme` / `CellStyle` で行う。利用者所有コンテンツ (CustomCell の content・`KsAnyView` 経由の利用者 View) は隔離の対象外で、従来どおりホストの Context (ホストテーマ) で解決される。
 
-同梱テーマから解決される値 (chrome・選択面の配色、Cell title の既定色) のライト / ダークは端末の夜間モードとアプリの uiMode 制御 (Activity の Configuration 上書き・`AppCompatDelegate.setDefaultNightMode` 等) で決まる。ホストが XML テーマで Dark 系を明示するだけの指定は反映されない。`Theme` の他の既定色 (下地・Cell 背景・separator・description・Header / Footer 文字) は同梱テーマを経由しない固定のライト値で、夜間モードに追随しない — ダークで使う application は `Theme` に dark の色値を渡す ([スタイルの所有と実効値解決](../../core/styling/style-resolution.md) の「既定色と外観の追随」)。
+同梱テーマから解決される値 (chrome・選択面の配色、EntryCell の placeholder の既定・Switch のオフ色) のライト / ダークと、ライブラリ既定色の light / dark セットの選択は、どちらも端末の夜間モードとアプリの uiMode 制御 (Activity の Configuration 上書き・`AppCompatDelegate.setDefaultNightMode` 等) で決まる。ホストが XML テーマで Dark 系を明示するだけの指定は反映されない。Cell title の既定は同梱テーマの `textColorPrimary` から動的に解決せず、ライブラリ既定 (ライト #000000 / ダーク #FFFFFF) を使う。Theme を渡さない・一部だけ上書きした画面はダークで判読できる既定色になり、ダークのために `Theme` を渡す必要はない ([スタイルの所有と実効値解決](../../core/styling/style-resolution.md) の「既定色と外観の追随」)。
+
+Activity を再生成せず uiMode を自前処理するホスト (`configChanges` に uiMode を持つ Activity。.NET MAUI のテンプレート既定 `MainActivity` がこの形) では、`KsSettingsView` が `onConfigurationChanged` で夜間モードの変化を受けて未指定色を再解決し、既存の Theme 更新経路で表示中の行・下地・Section 装飾・Header / Footer へ再適用する。明示指定色は変わらない。表示中の選択面・カレンダーの選択面は開いた時点の配色のままで、閉じて開き直したときから新しい外観になる。
 
 ホスト Activity の型にも前提はない — `ComponentActivity` を含む任意の Activity で、`TimePickerCell` / `DatePickerCell` の選択面を含む全 Cell が動作する。FragmentActivity / FragmentManager への依存は存在しない ([android/ADR-0018](../../../decisions/android/0018-timepickercell-bottom-sheet-wheel-unification.md) / [android/ADR-0019](../../../decisions/android/0019-datepickercell-calendar-compose-datepicker.md))。
 
@@ -142,7 +138,7 @@ Host はライブラリ同梱の Material3 派生テーマ (DayNight) でラッ�
 
 - 初期状態と後続更新は同じ `SettingsRootStore → KsSettingsView` 経路へ流れる。
 - Root / Section Accessory が空なら意味のない行を生成しない。
-- Theme 更新を SettingsRoot の構造変更として扱わない。
+- Theme 更新を SettingsRoot の構造変更として扱わない。Theme を渡さない・一部だけ上書きした画面は現在の夜間モードのライブラリ既定色で描かれ、Activity が再生成されない構成でも夜間モードの変更に追随する (明示指定色と、利用者が読む解決前の `theme` は変わらない)。
 - Registry の解決後は Cell 固有の bind / reset を ViewHolder へ委譲する。
 - Cell の内容更新と可視性変更を別の表示同期経路へ流す。
 - 同じ ID の内容更新は ViewHolder を再生成せず同一 ViewHolder への再 bind として届く。フォーカスや IME の未確定文字列 (composing) を破壊しない ([android/ADR-0001](../../../decisions/android/0001-content-update-preserves-viewholder.md))。

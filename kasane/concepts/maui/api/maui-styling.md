@@ -3,7 +3,7 @@ type: concept
 title: スタイルの MAUI 表現 (Theme / CellStyle / ListStyle)
 description: native の Theme / CellStyle / style 切替が KsSettingsView.Maui でどう公開されるか — 個別プロパティへの展開・ListStyle・Section 装飾 4 属性・プロパティ一覧
 tags: [maui, facade, styling, theme]
-timestamp: 2026-09-04
+timestamp: 2026-09-06
 ---
 
 # スタイルの MAUI 表現 (Theme / CellStyle / ListStyle)
@@ -13,6 +13,10 @@ timestamp: 2026-09-04
 ## 公開の形
 
 画面全体の既定値 (native の `Theme` に対応) は SettingsView の個別プロパティとして展開して公開する。Cell 単位の上書き (native の `CellStyle` に対応) は CellBase / 各 Cell のプロパティと Cell 固有の `AccentColor` (対話型 Cell — Switch / Checkbox / SimpleCheck / Radio / Entry / Picker / NumberPicker / TimePicker / DatePicker — が持つ。画面全体の既定は `CellAccentColor`)。フォントは FontFamily / FontSize / FontAttributes に分けて公開し facade が合成する (maui/ADR-0008)。プロパティの全一覧は下の「プロパティ一覧」。
+
+## 未設定の色と外観 (ライト / ダーク)
+
+色プロパティを設定しない (`null`) とき、facade は未指定のまま Native へ渡し、Native のライブラリ既定に任せる。Native の既定色は 3 platform 共通の light / dark セットで端末の外観に追随するため、色を設定しない SettingsView はダーク端末でも判読できる既定色で描かれ、facade は外観対応の仕組みを持たない ([スタイル解決](../../core/styling/style-resolution.md) の「既定色と外観の追随」)。設定した色は外観で変わらない。両外観の色を自分で決めるときは XAML の `AppThemeBinding` で色プロパティを書く — 外観変更時に facade のプロパティ変更 → snapshot → bridge DTO → Native の Theme 再適用まで届き、Android で Activity が再生成されないホストでも表示中に切り替わる (Simulator / Emulator で確認済み)。
 
 ## ListStyle (設定 list の style 切替)
 
