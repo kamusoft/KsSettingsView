@@ -3,7 +3,7 @@ type: concept
 title: MAUI Native Bridge の interop 境界
 description: C# から Native SettingsView を操作する Bridge 層の公開契約 — 内部所有 Store・更新 API と DTO の輸送規約・ID 採番・lifecycle・操作通知
 tags: [maui, bridge, interop, binding]
-timestamp: 2026-09-02
+timestamp: 2026-09-06
 ---
 
 # MAUI Native Bridge の interop 境界
@@ -71,7 +71,7 @@ Optional を型で表せない scalar (uiStyle の enum 序数等) は「未指�
 
 ### Theme・CellStyle・Section 装飾の DTO
 
-Theme は primitive (ARGB int・フォント記述子等) で表現した DTO `KsBridgeTheme` で受ける。DTO は iOS / Android の各 Bridge に同名で存在し、それぞれの platform の `Theme` 公開項目と名前まで 1:1 に対応する。未指定 (null) は Theme 側の未指定になる。Cell 単位のスタイル上書きは per-type DTO の style フィールド (`KsBridgeCellStyle`) で輸送する。icon は解決済みの platform 画像 (iOS `UIImage` / Android `Drawable`) を DTO に載せ、native の画像表現 `KsImage` のうち platform 画像を保持するケース (`uiImage` / `Drawable`) で受ける (解決は facade 側の責務 — maui/ADR-0015)。
+Theme は primitive (ARGB int・フォント記述子等) で表現した DTO `KsBridgeTheme` で受ける。DTO は iOS / Android の各 Bridge に同名で存在し、それぞれの platform の `Theme` 公開項目と名前まで 1:1 に対応する。未指定 (null) は Theme 側の未指定になる。Cell 単位のスタイル上書きは per-type DTO の style フィールド (`KsBridgeCellStyle`) で輸送する。`KsBridgeCellStyle` (と facade 側の写し `KsCellStyleSnapshot`) が運ぶのは MAUI の Cell が CellStyle 段として公開する項目 — title / description / valueText / hint の色とフォント、icon の寸法、行の高さ、行の背景色 — で、native の `CellStyle` とは 1 対 1 ではない。native の CellStyle 段の accent / placeholder は MAUI から設定する手段が無く、MAUI の `AccentColor` / `PlaceholderColor` / `AndroidButtonColor` は Cell 固有段として Cell 種別ごとの DTO で運ぶ (`accentColor` の枠は wire 形式として `KsBridgeCellStyle` に残るが書き手が無く、placeholder の枠は無い)。Android bridge は Cell DTO の未指定 (`null`) の色を native の `Color.Unspecified` へ写す ([core/ADR-0031](../../../decisions/core/0031-explicit-cell-color-appearance-contract-and-beta-breaking-change.md))。icon は解決済みの platform 画像 (iOS `UIImage` / Android `Drawable`) を DTO に載せ、native の画像表現 `KsImage` のうち platform 画像を保持するケース (`uiImage` / `Drawable`) で受ける (解決は facade 側の責務 — maui/ADR-0015)。
 
 Section 装飾4属性は `KsBridgeTheme` のフラットな7フィールド (margin は論理4成分 top / leading / bottom / trailing、radius / borderWidth、borderColor は ARGB int。入れ子 DTO は作らない) で運び、margin は all-or-none — 部分 null は margin 全体を未指定として resolve する。Bridge の resolve が4成分から platform の directional 型 (iOS `NSDirectionalEdgeInsets` / Android `PaddingValues(start, top, end, bottom)`) を組み立てる。装飾値は検証せず生のまま運ぶ — 正規化 (負値・非有限 → 0) は Native の描画時のみが正で、Android は Compose 標準の `PaddingValues(...)` ファクトリが構築時に全成分 0 以上を要求するため、非検証実装 `KsBridgeSectionMargin` を用いて生値を描画時正規化まで届ける (maui/ADR-0024)。
 

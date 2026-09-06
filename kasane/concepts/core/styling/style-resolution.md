@@ -1,7 +1,7 @@
 ---
 type: concept
 title: スタイルの所有と実効値解決
-description: UI 層が Theme と CellStyle を所有し、platform の描画値へ段階的に解決する共通規則。ライブラリ所有の light / dark 既定色と未指定色の外観解決、ライブラリ既定色を中立に保ち AiForms 互換色は利用側が設定する方針を含む
+description: UI 層が Theme と CellStyle を所有し、platform の描画値へ段階的に解決する共通規則。ライブラリ所有の light / dark 既定色と未指定色の外観解決、明示した CellStyle 色 / Cell 固有色の外観契約と platform 別の切替手段、ライブラリ既定色を中立に保ち AiForms 互換色は利用側が設定する方針を含む
 tags: [styling, theme, cell-style, native-types, dark-appearance]
 timestamp: 2026-09-06
 ---
@@ -32,7 +32,7 @@ Theme、CellStyle、KsImage、色、font、寸法は UI 層が所有する。Cor
 3. 画面全体の `Theme`
 4. ライブラリ既定 (現在の外観の light / dark セット) または platform default
 
-`CellStyle` の未指定値は、Theme から継承する意思を表す。Theme の未指定値は「現在の外観のライブラリ既定を使う」意思を表し、描画時に解決する (下記「既定色と外観の追随」)。どの段にも値がなければライブラリ既定または platform default へ解決し、描画時に未解決値を残さない。未指定の表現は iOS が `nil`、Android の色が `Color.Unspecified` (色以外のフィールドは `null`) で、旧既定値との値比較で「未指定だったはず」と推測しない ([core/ADR-0030](../../../decisions/core/0030-theme-dark-appearance-library-owned-light-dark-defaults.md))。
+`CellStyle` の未指定値は、Theme から継承する意思を表す。Theme の未指定値は「現在の外観のライブラリ既定を使う」意思を表し、描画時に解決する (下記「既定色と外観の追随」)。どの段にも値がなければライブラリ既定または platform default へ解決し、描画時に未解決値を残さない。未指定の表現は iOS が `nil`、Android の色が `Color.Unspecified` で、旧既定値との値比較で「未指定だったはず」と推測しない ([core/ADR-0030](../../../decisions/core/0030-theme-dark-appearance-library-owned-light-dark-defaults.md))。Android の `Color.Unspecified` は Theme / CellStyle の色フィールドだけでなく、Cell 種別が意味上の固有値として持つ色 (`ButtonCell.titleColor`、選択系・入力系 Cell の `accentColor`、`EntryCell.placeholderColor`、`DatePickerCell.androidButtonColor`) と、対応する Compose DSL 関数の色引数も同じで、`null` を未指定として受ける色引数は無い (色以外のフィールドの未指定は `null`。[core/ADR-0031](../../../decisions/core/0031-explicit-cell-color-appearance-contract-and-beta-breaking-change.md))。
 
 ButtonCell の title 色や Switch / Checkbox の accent など、Cell 固有の意味値は CellStyle より先に解決する。無効状態の text 色は、通常の実効値へ視覚状態を重ねる段階で優先する。
 
@@ -96,13 +96,21 @@ iOS の title / description / ButtonCell title はシステム色のままで、
 
 | platform | 未指定の印と既定の解決 | 利用者が両外観の色を決める手段 | 表示中の外観変更 |
 |---|---|---|---|
-| iOS | 既定色の `public static let` 自体が `UIColor(dynamicProvider:)` の light / dark の対。描画側は `UIColor` を渡すだけで UIKit が解決する | dynamic な `UIColor` (asset catalog の色や `UIColor(dynamicProvider:)`) を渡す | trait 変更で既定色・利用者の dynamic 色とも描き直される。CGColor を layer に置く Section 装飾の Border だけはライブラリが trait 変更を受けて再解決する |
-| Android | `Color.Unspecified` が未指定。`KsSettingsView` が Theme を受け取った時点で現在の夜間モードのセットで未指定を埋めた解決済み Theme を 1 箇所で作り、描画に関わる全箇所はそれだけを読む。公開 factory は `KsSettingsViewDefaults` ([Android Native Host](../../android/api/android-native-host.md)) | 構築時に `isSystemInDarkTheme()` (Compose) または Configuration の uiMode (View) で light / dark の Theme を選んで渡す。Compose 入口の `theme` の既定値式は `KsSettingsViewDefaults.theme()` | 夜間モードの Configuration 変更を View が受けたら未指定色だけを再解決し、既存の Theme 更新経路で再適用する。明示指定色は変わらない (Activity が再生成される構成では再構築で切り替わる) |
-| MAUI | facade は未指定 (`null`) を native に渡し、native の既定に任せる。facade・DTO の変更なし | XAML の `AppThemeBinding` で色プロパティを書く (外観変更時に facade → bridge → native の Theme 再適用まで届く) | native と同じ |
+| iOS | 既定色の `public static let` 自体が `UIColor(dynamicProvider:)` の light / dark の対。描画側は `UIColor` を渡すだけで UIKit が解決する | Theme・CellStyle・Cell 固有値のどれにも dynamic な `UIColor` (asset catalog の色や `UIColor(dynamicProvider:)`) を渡す。Cell の差し替えは要らない | trait 変更で既定色・利用者の dynamic 色とも描き直され、固定色は変わらない。CGColor を layer に置く箇所 (Section 装飾の Border、`KsCheckBoxView` の accent の塗りと枠) はライブラリが trait 変更を受けて再解決する |
+| Android | `Color.Unspecified` が未指定 (Theme・CellStyle・Cell 固有色とも)。`KsSettingsView` が Theme を受け取った時点で現在の夜間モードのセットで未指定を埋めた解決済み Theme を 1 箇所で作り、描画に関わる全箇所はそれだけを読む。Cell 固有色は行の bind 時に `Unspecified` なら次の段へ倒す。公開 factory は `KsSettingsViewDefaults` ([Android Native Host](../../android/api/android-native-host.md)) | 構築時に `isSystemInDarkTheme()` (Compose) または Configuration の uiMode (View) で light / dark の Theme・CellStyle・Cell 固有色を選んで渡す。Compose 入口の `theme` の既定値式は `KsSettingsViewDefaults.theme()` | 夜間モードの Configuration 変更を View が受けたら未指定色だけを再解決し、既存の Theme 更新経路で再適用する。明示指定色は変わらない — Compose DSL では外観で選び直した色の再 composition が内容更新として行へ届き、Store / View 経路では `replaceCell` / `replaceCells` で style または Cell 固有色を差し替えた Cell に置き換える (どちらも行は作り直されない。Activity が再生成される構成では再構築で切り替わる) |
+| MAUI | facade は未指定 (`null`) を native に渡し、native の既定に任せる (Android bridge は Cell 固有色の `null` を `Color.Unspecified` へ写す)。facade・DTO の変更なし | `SettingsView` の Theme プロパティは XAML の `AppThemeBinding` で書く (外観変更時に facade → bridge → native の Theme 再適用まで届く)。Cell の色プロパティは `Application.RequestedThemeChanged` を購読して現在の外観の値を再代入する (下記「明示した CellStyle 色と Cell 固有色」) | native と同じ。再代入した Cell の色は facade → snapshot → bridge → native の Cell 置換として表示中の行に届く |
 
 Android の Cell title / description の既定は、解決済み Theme にも `KsSettingsViewDefaults` の factory が返す Theme にも載せず、実効 style の解決の最終段で外観から選ぶ。Theme の title が常に値を持つと ButtonCell の 4 段解決 (ButtonCell → CellStyle → Theme の title → ButtonCell 既定) が最終段へ到達せず、ButtonCell の title が通常の文字色になるためである。帰結として、端末がライトのまま `KsSettingsViewDefaults.darkTheme()` を渡すような食い違った組み合わせでは title / description だけ端末側の外観の既定になる (固定したい場合は返された Theme を `copy` して明示する)。
 
 Sample の dark プリセットは AiForms 互換色を暗色へ写した Sample 固有の配色で、ライブラリの dark 既定とは別物であり製品契約ではない (下記「Sample の AiForms 互換色」)。
+
+### 明示した CellStyle 色と Cell 固有色
+
+利用者が `CellStyle` または Cell 固有値として明示した色は、Theme の明示色と同じくライブラリが置き換えない。表示中に外観が変わっても明示色は変わらず、同じ行の未指定の色だけが現在の外観の既定へ再解決される。両外観で異なる色を使う手段は上の表のとおり platform の慣用に乗せ、ライブラリは Cell へ外観を渡す型やコールバックを公開しない — Cell 粒度の追随機構は、Store 経路の利用者が `replaceCell` を 1 回書く手間を省くために Cell 抽象か Store へ外観の概念を持ち込むことになり、見合わないと判断した ([core/ADR-0031](../../../decisions/core/0031-explicit-cell-color-appearance-contract-and-beta-breaking-change.md))。
+
+MAUI だけは `SettingsView` の Theme プロパティと Cell の色プロパティで手段が分かれる。Cell の色プロパティに書いた `AppThemeBinding` は外観変更で再評価されない — facade の `Section` / `Cell` は MAUI の element ツリーに属さず (`Parent` が `null`)、ツリー外の `Element` では binding が外観変更を受け取らないため (iOS / Android で実測した見立て。MAUI 本体の binding 実装は未読)。同じプロパティへの直接代入は同一 Activity / 同一 View のまま行に届くので、外観変更を購読して再代入する形になる。`Section` / `Cell` をツリーへ繋ぐ改修は `maui-appthemebinding-coverage` で別途探索中。
+
+Cell の色プロパティのうち見た目を変えるのは、その Cell がその platform で描画に使う項目だけ (`DatePickerCell.androidButtonColor` の iOS、表示していないスロットの色、`CustomCell` のテキスト系 style は届いても見た目を変えない)。
 
 ### iOS の提示物の外観
 
@@ -127,7 +135,8 @@ Theme は `SettingsRoot` の構造ではなく独立した表示状態である�
 - Core の Cell 抽象へ style 型を要求しない。
 - Cell 固有値、CellStyle、Theme、ライブラリ既定 (現在の外観の light / dark セット) または platform default の順で解決する。
 - Theme を渡さない・一部だけ上書きした利用者は、3 platform ともダーク外観で判読できる既定色で描かれる。ライトの既定色はセットの値で固定で、ホストや同梱テーマの属性から動的に変わらない。
-- 明示指定された色はライブラリが別の値へ置き換えない。外観が変わっても利用者が渡した値のまま描く。
+- 明示指定された色 (Theme・CellStyle・Cell 固有値のいずれも) はライブラリが別の値へ置き換えない。外観が変わっても利用者が渡した値のまま描き、同じ行の未指定色だけを再解決する。
+- Android の色の未指定は Theme・CellStyle・Cell 固有色とも `Color.Unspecified` の 1 流儀で、`Unspecified` 同士の Cell は等価。
 - dark セットの生値は 3 platform で同値 (iOS がシステム色のまま残すロールを除く)。
 - size 専用フィールドと valueText / hintText の fallback を通常の4段階と区別する。
 - canvas 背景と Cell 背景を別の表示領域として扱う。
@@ -141,6 +150,7 @@ Theme は `SettingsRoot` の構造ではなく独立した表示状態である�
 - 未指定を旧既定値との値比較で推測しない。未指定の印は iOS が既定色の dynamic 定数そのもの、Android が `Color.Unspecified`。
 - Android で `Color.Unspecified` を ARGB へ変換しない (透明な黒になる)。描画に関わる箇所へは解決済み Theme だけを渡す。
 - Theme 更新を `SettingsRootDiff` へ混ぜない。
+- Cell へ外観を渡す型やコールバックを公開しない。手段は platform の慣用に乗せる (上記「明示した CellStyle 色と Cell 固有色」、[core/ADR-0031](../../../decisions/core/0031-explicit-cell-color-appearance-contract-and-beta-breaking-change.md))。
 - ホストの XML テーマや Compose `MaterialTheme` でライブラリ UI の配色を調整できると想定しない — ライブラリ UI はホストテーマから視覚隔離されている ([android/ADR-0020](../../../decisions/android/0020-bundled-theme-always-wrap-host-independent.md))。
 
 ## 関連

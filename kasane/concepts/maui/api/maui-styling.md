@@ -1,7 +1,7 @@
 ---
 type: concept
 title: スタイルの MAUI 表現 (Theme / CellStyle / ListStyle)
-description: native の Theme / CellStyle / style 切替が KsSettingsView.Maui でどう公開されるか — 個別プロパティへの展開・ListStyle・Section 装飾 4 属性・プロパティ一覧
+description: native の Theme / CellStyle / style 切替が KsSettingsView.Maui でどう公開されるか — 個別プロパティへの展開・未設定の色と外観・Cell の色を外観ごとに変える手段・ListStyle・Section 装飾 4 属性・プロパティ一覧
 tags: [maui, facade, styling, theme]
 timestamp: 2026-09-06
 ---
@@ -16,7 +16,27 @@ timestamp: 2026-09-06
 
 ## 未設定の色と外観 (ライト / ダーク)
 
-色プロパティを設定しない (`null`) とき、facade は未指定のまま Native へ渡し、Native のライブラリ既定に任せる。Native の既定色は 3 platform 共通の light / dark セットで端末の外観に追随するため、色を設定しない SettingsView はダーク端末でも判読できる既定色で描かれ、facade は外観対応の仕組みを持たない ([スタイル解決](../../core/styling/style-resolution.md) の「既定色と外観の追随」)。設定した色は外観で変わらない。両外観の色を自分で決めるときは XAML の `AppThemeBinding` で色プロパティを書く — 外観変更時に facade のプロパティ変更 → snapshot → bridge DTO → Native の Theme 再適用まで届き、Android で Activity が再生成されないホストでも表示中に切り替わる (Simulator / Emulator で確認済み)。
+色プロパティを設定しない (`null`) とき、facade は未指定のまま Native へ渡し、Native のライブラリ既定に任せる。Native の既定色は 3 platform 共通の light / dark セットで端末の外観に追随するため、色を設定しない SettingsView はダーク端末でも判読できる既定色で描かれ、facade は外観を受け取る型やイベントを持たない ([スタイル解決](../../core/styling/style-resolution.md) の「既定色と外観の追随」)。設定した色は外観で変わらず、`null` に戻すと Native の未指定表現へ写されて Theme または外観既定へ継承する。
+
+両外観の色を自分で決める手段は、プロパティの段で分かれる ([core/ADR-0031](../../../decisions/core/0031-explicit-cell-color-appearance-contract-and-beta-breaking-change.md))。
+
+| 段 | 手段 |
+|---|---|
+| `SettingsView` の Theme プロパティ (`CellTitleColor` / `CellAccentColor` 等) | XAML の `AppThemeBinding` で書く。外観変更時に facade のプロパティ変更 → snapshot → bridge DTO → Native の Theme 再適用まで届き、Android で Activity が再生成されないホストでも表示中に切り替わる (Simulator / Emulator で確認済み) |
+| Cell の色プロパティ (`TitleColor` / `AccentColor` / `PlaceholderColor` / `AndroidButtonColor` 等) | `Application.RequestedThemeChanged` を購読し、現在の外観の値をプロパティへ再代入する。再代入はその Cell の内容更新として Native の Cell 置換まで届き、表示中の行が描き直される (iOS / Android で確認済み。検証ホスト `KsSettingsView.MauiHost` の既定シナリオが回帰資産) |
+
+Cell の色プロパティに書いた `AppThemeBinding` は外観変更で再評価されない。facade の `Section` / `Cell` は MAUI の element ツリーに属さず (`Parent` が `null`)、ツリー外の `Element` では binding が外観変更を受け取らないため (実測に基づく見立て。MAUI 本体の binding 実装は未読)。`Section` / `Cell` をツリーへ繋ぐ改修は `maui-appthemebinding-coverage` で別途探索中。
+
+```csharp
+// ページの Loaded で購読し Unloaded で解除する。購読中は外観に応じた値を入れ直す
+void ApplyThemeColors(bool isDark)
+    => logoutButton.TitleColor = isDark ? Colors.Magenta : Colors.Green;
+
+Application.Current!.RequestedThemeChanged += (_, e)
+    => ApplyThemeColors(e.RequestedTheme == AppTheme.Dark);
+```
+
+届いた色のうち見た目を変えるのは、その Cell がその platform で描画に使う項目だけ (`AndroidButtonColor` は iOS で無効、`CustomCell` のテキスト系 style は silent no-op)。
 
 ## ListStyle (設定 list の style 切替)
 

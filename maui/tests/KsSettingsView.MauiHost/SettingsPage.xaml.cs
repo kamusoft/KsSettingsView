@@ -98,7 +98,7 @@ public partial class SettingsPage : ContentPage
     /// </summary>
     /// <remarks>
     /// Cell の色プロパティに書いた AppThemeBinding は外観の変化で評価し直されないため、
-    /// 両外観で色を変えたい利用者はこの形で色を入れ直す。表示中の行がその色で描き直される
+    /// 両外観で色を変えたい利用者はこの形で色を入れ直す (core/ADR-0031)。表示中の行がその色で描き直される
     /// ことが、この画面で確かめたい挙動そのものになる。
     /// </remarks>
     /// <param name="isDark">現在の外観がダークかどうか</param>

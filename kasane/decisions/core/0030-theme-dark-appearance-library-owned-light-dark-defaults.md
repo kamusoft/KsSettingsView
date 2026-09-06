@@ -3,6 +3,7 @@ id: 0030
 title: Theme のダーク対応はライブラリ所有の light / dark 既定値と未指定色の描画時解決で行う
 status: accepted
 date: 2026-09-05
+amended-by: 0031
 ---
 
 ## Context

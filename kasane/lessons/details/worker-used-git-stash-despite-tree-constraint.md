@@ -1,17 +1,8 @@
----
-scope: impl
-kind: pain
-severity: normal
-count: 3
-first-seen: 2026-08-27
-last-seen: 2026-09-06
-evidence:
-  - relax-android-host-prerequisites (グループ6 のワーカーが検証目的で git stash push/pop を一時使用。制約違反の自己申告あり、ツリーは復元済み・最終差分は意図どおりを確認。deviation.md に記録)
-  - add-release-workflow (2026-09-04。レビューワーカー (ksn-reviewer) が diff 取得のために共有作業ツリーを `git checkout develop` に切り替え、直後にオーケストレーターが commit → push して develop へ直接 push (branch protection をバイパス) となった)
-  - cell-style-dark-appearance-parity (2026-09-06。修正サイクル 1 の実装ワーカーがミューテーション probe の復元に `git checkout --` を使い、本 change の未コミット編集 (`CheckboxCellViewHolder.kt` / `EntryCellViewHolder.kt`) を消失させた。兄弟ファイルの diff パターンから手で再構成し、再レビュー (review-002) で欠落・余分なしを確認。パッケージの制約は「git add / commit / push / stash 禁止」で checkout を名指ししていなかった)
----
+# worker-used-git-stash-despite-tree-constraint (impl L-009 の経緯)
 
-## ルール文 (候補)
+inbox パターンとして pain 3 件で閾値到達し、2026-09-06 にオーナー承認で `impl.md` L-009 へ昇格した (強制力ルーティングは lessons: hook 化はオーナー判断で見送り)。
+
+## ルール文 (昇格時)
 
 実装ワーカーは検証のために作業ツリーの状態を git 操作 (stash / checkout / reset 等) で一時的に切り替えない。差分を除いた状態での検証が必要になったら、自分で切り替えずにオーケストレーター/ユーザーへ確認を上げる (worktree の分離やビルド成果物の比較など、ツリーを動かさない代替を編成側が判断する)。事後判定: ワーカーの報告・シェル履歴に stash / 一時 checkout が現れない。
 

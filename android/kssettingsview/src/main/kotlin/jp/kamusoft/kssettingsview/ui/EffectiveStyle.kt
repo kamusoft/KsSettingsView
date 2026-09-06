@@ -512,7 +512,8 @@ internal data class EffectiveStyle(
  *
  * 未指定（`Color.Unspecified`）の色は ARGB へ変換せず、次の段で解決済みの [fallbackArgb] を返す。
  * `Color.Unspecified` をそのまま `toArgb()` に掛けると透明な黒になり、未指定の意味が失われるため、
- * Cell 固有色を ARGB で消費する箇所はこのヘルパを通す。
+ * Cell 固有色を ARGB で消費する箇所はこのヘルパを通す（Cell 固有色の未指定も Theme / CellStyle と
+ * 同じく `Color.Unspecified` の 1 流儀で表す。core/ADR-0031）。
  */
 @ColorInt
 internal fun Color.toArgbOrElse(@ColorInt fallbackArgb: Int): Int =

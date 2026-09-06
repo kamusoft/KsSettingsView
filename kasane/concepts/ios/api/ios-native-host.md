@@ -126,6 +126,16 @@ Theme 属性の未指定時に使われるライブラリ既定値は、`Theme` 
 
 Modern の Section 装飾の Border は CGColor を layer に置くため、装飾 view が最後に適用した `UIColor` を保持して外観の trait 変更で `layer.borderColor` を再解決する。利用者が dynamic な `sectionBorderColor` を渡しても、Border だけが古い外観で残らない。
 
+`CellStyle` と Cell 固有値 (`ButtonCell.titleColor`、選択系・入力系 Cell の `accentColor`、`EntryCell.placeholderColor`) に渡した `UIColor` も Theme と同じ扱いで、dynamic な色はその色自身の現在の外観の値へ解決され、固定色は両外観でその色のまま描かれる。CGColor を layer に置く `KsCheckBoxView` の accent (塗りと枠) はライブラリが trait 変更で再解決する。両外観で異なる色を使いたい Cell は dynamic な `UIColor` を渡すだけでよく、Cell の差し替えは要らない ([core/ADR-0031](../../../decisions/core/0031-explicit-cell-color-appearance-contract-and-beta-breaking-change.md))。
+
+```swift
+// 両外観の値を持つ色を CellStyle に渡す。UIKit が trait 変更で再解決する
+let brandTitle = UIColor { traits in
+    traits.userInterfaceStyle == .dark ? UIColor(named: "BrandTitleDark")! : UIColor(named: "BrandTitleLight")!
+}
+let versionCell = LabelCell(title: "バージョン", valueText: "1.0.0", style: CellStyle(titleColor: brandTitle))
+```
+
 | 定数 | 既定値の対象 |
 |---|---|
 | `defaultSeparatorColor` | 罫線色 |
@@ -153,7 +163,7 @@ Modern の Section 装飾の Border は CGColor を layer に置くため、装�
 - Store 方式では、初期状態と後続更新が同じ `SettingsRootStore → KsSettingsViewController` 経路へ流れる。
 - Store 接続済みなら、view load 完了時点の表示は Store の現在状態と一致する (取り付け順序に依存しない。[core/ADR-0019](../../../decisions/core/0019-host-restores-from-store-on-attach.md))。
 - Root / Section Accessory が空または `nil` なら、意味のない supplementary 領域を生成しない。
-- Theme を渡さない list はダーク外観で dark セットの既定色で描かれ、表示中の外観切替でも既定色と利用者の dynamic 色が描き直される。固定色で明示した値は変わらない。
+- Theme を渡さない list はダーク外観で dark セットの既定色で描かれ、表示中の外観切替でも既定色と利用者の dynamic 色 (Theme・CellStyle・Cell 固有値のいずれも) が描き直される。固定色で明示した値は変わらない。
 - Store が Controller より長命でも、Store 購読と UIKit の DataSource / Delegate が Controller を延命しない。
 - Registry の登録・解決は排他制御され、同じ Cell 型を再登録した場合は後の Renderer が使われる。
 - Cell の再利用時は前の内容を除去し、編集中の text field は不必要な再生成で first responder を失わない。

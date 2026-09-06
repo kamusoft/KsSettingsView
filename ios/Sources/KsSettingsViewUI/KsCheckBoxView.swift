@@ -81,6 +81,7 @@ internal final class KsCheckBoxView: UIView {
         layer.backgroundColor = UIColor.clear.cgColor
 
         // dark mode 等の color appearance 変化時に cgColor を再解決する。
+        // 利用者が accentColor に渡した dynamic な UIColor もここで現在の外観の値へ解決される（core/ADR-0031）。
         // iOS 17+ は deprecated な traitCollectionDidChange(_:) の代わりに
         // registerForTraitChanges(_:handler:) を使用する。
         if #available(iOS 17.0, *) {
