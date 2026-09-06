@@ -243,14 +243,14 @@ object SampleTheme {
      * @param sectionMargin Section 単位の外側余白（`null` で style ごとの既定）
      * @param sectionCornerRadius 箱の角丸半径（`null` で style ごとの既定）
      * @param sectionBorderWidth 箱のボーダー幅（`null` で実効 0dp）
-     * @param sectionBorderColor 箱のボーダー色（`null` で実効透明）
+     * @param sectionBorderColor 箱のボーダー色（`Color.Unspecified` で実効透明）
      */
     fun sectionDecorationDemo(
         dark: Boolean,
         sectionMargin: PaddingValues? = null,
         sectionCornerRadius: Dp? = null,
         sectionBorderWidth: Dp? = null,
-        sectionBorderColor: Color? = null,
+        sectionBorderColor: Color = Color.Unspecified,
     ): Theme = Theme(
         backgroundColor = if (dark) mauiDarkViewBackground else mauiViewBackground,
         cellAccentColor = demoAccentGreen,

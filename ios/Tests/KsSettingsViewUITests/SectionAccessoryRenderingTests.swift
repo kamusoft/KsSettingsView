@@ -267,8 +267,8 @@ final class SectionAccessoryRenderingTests: XCTestCase {
     }
 
     /// `Theme.footerTextColor` を明示指定しない（= 既定の `Theme.defaultFooterTextColor` のまま）
-    /// 場合、Footer ラベルの文字色は `defaultFooterTextColor` 相当の固定 RGB グレー（≒ #6D6D72）で
-    /// 描画される。AiForms.Maui.SettingsView オリジナルの `UIColor.Gray` 固定 RGB に揃える方針。
+    /// 場合、Footer ラベルの文字色は `defaultFooterTextColor` で描画される。
+    /// 既定色は両外観の値を持つため、外観ごとに解決した値で突き合わせる。
     func test_Footerの文字色は未指定時にdefaultFooterTextColorが使われる() {
         // 既定 Theme（footerTextColor を明示指定しない）。
         let theme = Theme()
@@ -290,15 +290,16 @@ final class SectionAccessoryRenderingTests: XCTestCase {
         ) as? UICollectionViewListCell
         let footerLabel = footerCell?.contentView.subviews.compactMap { $0 as? UILabel }.first
 
-        // 既定値（defaultFooterTextColor = UIColor(0.43, 0.43, 0.45, 1.0) ≒ #6D6D72）相当の
-        // 固定グレーが使用されることを期待する。dynamic color（UIColor.secondaryLabel）への
-        // 自動分岐は行わない。
-        let expected = Theme.defaultFooterTextColor
-        XCTAssertEqual(
-            footerLabel?.textColor,
-            expected,
-            "footerTextColor 未指定時は defaultFooterTextColor 相当の固定 RGB グレーが使われる"
-        )
+        // ライトはグレー（≒ #6D6D72）、ダークは dark セットのグレー（#8E8E93）に解決されることを
+        // 期待する。
+        for style in [UIUserInterfaceStyle.light, .dark] {
+            let traits = UITraitCollection(userInterfaceStyle: style)
+            XCTAssertEqual(
+                footerLabel?.textColor.resolvedColor(with: traits),
+                Theme.defaultFooterTextColor.resolvedColor(with: traits),
+                "\(style) で footerTextColor 未指定時は defaultFooterTextColor が使われる"
+            )
+        }
     }
 
     // MARK: - Header / Footer の垂直配置

@@ -18,7 +18,7 @@ import androidx.annotation.ColorInt
  *
  * @property background 背景ロール（`Theme.backgroundColor` の解決値）
  * @property accent 強調ロール（`Cell.accentColor` → `CellStyle.accentColor` → `Theme.cellAccentColor`）
- * @property text 通常文字ロール（`CellStyle.titleColor` → `Theme.cellTitleColor` → プラットフォーム既定）
+ * @property text 通常文字ロール（`CellStyle.titleColor` → `Theme.cellTitleColor` → 外観の既定）
  */
 internal data class PickerDialogColors(
     @ColorInt val background: Int,

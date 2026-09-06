@@ -69,8 +69,44 @@ class KsBridgeThemeTest {
 
         val applied = fixture.bridge.store.theme.value
         assertEquals("全項目未指定の DTO は既定 Theme と等価", Theme(), applied)
-        assertNull(applied.cellTitleColor)
         assertNull(applied.cellTitleFont)
+        // 色は 1 つ残らず未指定でなければならない。1 つでも固定既定で埋まると、その色だけが
+        // 外観に追随しなくなる。
+        val colors = listOf(
+            "separatorColor" to applied.separatorColor,
+            "backgroundColor" to applied.backgroundColor,
+            "cellBackgroundColor" to applied.cellBackgroundColor,
+            "selectedColor" to applied.selectedColor,
+            "cellAccentColor" to applied.cellAccentColor,
+            "disabledTextColor" to applied.disabledTextColor,
+            "headerTextColor" to applied.headerTextColor,
+            "headerBackgroundColor" to applied.headerBackgroundColor,
+            "footerTextColor" to applied.footerTextColor,
+            "footerBackgroundColor" to applied.footerBackgroundColor,
+            "cellTitleColor" to applied.cellTitleColor,
+            "cellValueTextColor" to applied.cellValueTextColor,
+            "cellDescriptionColor" to applied.cellDescriptionColor,
+            "cellHintTextColor" to applied.cellHintTextColor,
+            "cellPlaceholderColor" to applied.cellPlaceholderColor,
+            "sectionBorderColor" to applied.sectionBorderColor,
+        )
+        for ((name, value) in colors) {
+            assertEquals("$name は未指定のまま native へ渡る", Color.Unspecified, value)
+        }
+    }
+
+    /** 一部だけ明示した DTO は、その色だけが保たれ残りは未指定になる。 */
+    @Test
+    fun `setTheme の一部明示は明示分だけ保たれ残りは未指定になる`() {
+        val fixture = KsBridgeFixture.standard()
+
+        fixture.bridge.setTheme(KsBridgeTheme().apply { backgroundColor = OPAQUE_RED })
+
+        val applied = fixture.bridge.store.theme.value
+        assertEquals(Color(OPAQUE_RED), applied.backgroundColor)
+        assertEquals(Color.Unspecified, applied.cellBackgroundColor)
+        assertEquals(Color.Unspecified, applied.separatorColor)
+        assertEquals(Color.Unspecified, applied.cellAccentColor)
     }
 
     /** placeholder の Theme 段の色が Native の Theme へ写される。 */
@@ -90,7 +126,7 @@ class KsBridgeThemeTest {
 
         fixture.bridge.setTheme(KsBridgeTheme())
 
-        assertNull(fixture.bridge.store.theme.value.cellPlaceholderColor)
+        assertEquals(Color.Unspecified, fixture.bridge.store.theme.value.cellPlaceholderColor)
     }
 
     /** 余白の論理 4 成分は方向対応型へ組み立てられ、残る 3 属性もそのまま写される。 */
@@ -131,7 +167,7 @@ class KsBridgeThemeTest {
         assertNull(applied.sectionMargin)
         assertNull(applied.sectionCornerRadius)
         assertNull(applied.sectionBorderWidth)
-        assertNull(applied.sectionBorderColor)
+        assertEquals(Color.Unspecified, applied.sectionBorderColor)
     }
 
     /** 余白の 4 成分は全体で 1 つの指定であり、1 つでも欠けると余白全体が未指定になる。 */

@@ -496,6 +496,41 @@ class KsBridgeCellConversionTest {
         assertEquals(CellStyle(), cell?.style)
     }
 
+    /** 色項目が全て null の style DTO は、全ての色が未指定の CellStyle になる。 */
+    @Test
+    fun `色が全て null の style は全ての色が未指定の CellStyle になる`() {
+        val dto = KsBridgeLabelCell(title = "ラベル").apply {
+            style = KsBridgeCellStyle().apply { cellHeight = 60.0 }
+        }
+        val bridge = KsBridgeFixture.withCells(listOf(dto))
+
+        val style = KsBridgeFixture.storedCell<LabelCell>(bridge)?.style
+        assertEquals(Color.Unspecified, style?.titleColor)
+        assertEquals(Color.Unspecified, style?.descriptionColor)
+        assertEquals(Color.Unspecified, style?.valueTextColor)
+        assertEquals(Color.Unspecified, style?.hintTextColor)
+        assertEquals(Color.Unspecified, style?.backgroundColor)
+        assertEquals(Color.Unspecified, style?.accentColor)
+        assertEquals("色以外の明示は保たれる", 60.0.dp, style?.cellHeight)
+    }
+
+    /** 一部だけ ARGB を持つ style DTO は、その色だけ保たれ残りは未指定になる。 */
+    @Test
+    fun `一部だけ明示した style は明示分だけ保たれ残りは未指定になる`() {
+        val dto = KsBridgeLabelCell(title = "ラベル").apply {
+            style = KsBridgeCellStyle().apply { titleColor = 0xFF010203.toInt() }
+        }
+        val bridge = KsBridgeFixture.withCells(listOf(dto))
+
+        val style = KsBridgeFixture.storedCell<LabelCell>(bridge)?.style
+        assertEquals(Color(0xFF010203.toInt()), style?.titleColor)
+        assertEquals(Color.Unspecified, style?.descriptionColor)
+        assertEquals(Color.Unspecified, style?.valueTextColor)
+        assertEquals(Color.Unspecified, style?.hintTextColor)
+        assertEquals(Color.Unspecified, style?.backgroundColor)
+        assertEquals(Color.Unspecified, style?.accentColor)
+    }
+
     /** icon 輸送値の Drawable が Native の KsImage へ包まれる。 */
     @Test
     fun `icon 輸送値が KsImage へ包まれる`() {

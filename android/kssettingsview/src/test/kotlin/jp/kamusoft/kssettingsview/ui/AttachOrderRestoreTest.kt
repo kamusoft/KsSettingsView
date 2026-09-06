@@ -153,13 +153,13 @@ class AttachOrderRestoreTest {
         // 取り付け前は購読が張られておらず、更新は通知として届いていない
         // （収束が取り付け時の再取り込みによることを示す対照）。
         assertEquals("取り付け前は Store 更新が Host に届かない", listOf("A", "B", "C"), cellTitles(view))
-        assertEquals("取り付け前は Theme も Host に届かない", Theme(), view.internalTheme())
+        assertEquals("取り付け前は Theme も Host に届かない", Theme(), view.theme)
 
         val expectedRows = listOf("更新見出し", "A2", "E", "B2", "追加見出し", "D")
 
         activity.container.addView(view)
-        awaitConvergence(view, extraDiagnostics = { "Theme: ${view.internalTheme()}" }) {
-            committedTexts(view) == expectedRows && view.internalTheme() == newTheme
+        awaitConvergence(view, extraDiagnostics = { "Theme: ${view.theme}" }) {
+            committedTexts(view) == expectedRows && view.theme == newTheme
         }
         activity.layoutSettingsView(view)
 
@@ -168,7 +168,7 @@ class AttachOrderRestoreTest {
             expectedRows,
             visibleRowTexts(view),
         )
-        assertEquals("取り付け後は Store の現在 Theme が反映される", newTheme, view.internalTheme())
+        assertEquals("取り付け後は Store の現在 Theme が反映される", newTheme, view.theme)
         assertEquals(
             "RecyclerView 背景も Store の現在 Theme の色になる",
             newTheme.backgroundColor.toArgb(),
@@ -176,7 +176,7 @@ class AttachOrderRestoreTest {
         )
         assertEquals(
             "ItemDecoration も Store の現在 Theme で作り直される",
-            newTheme,
+            newTheme.resolvedFor(darkTheme = false),
             (view.internalCurrentDecoration() as ClassicSectionDecoration).theme,
         )
         assertEquals(

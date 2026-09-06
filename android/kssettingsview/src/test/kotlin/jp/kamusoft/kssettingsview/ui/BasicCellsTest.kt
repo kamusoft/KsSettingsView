@@ -378,13 +378,14 @@ class BasicCellsTest {
     @Test
     fun `accent 未指定時は Theme 既定の cellAccentColor が使われる`() {
         val vh = RadioCellViewHolder.create(parent)
+        val theme = KsSettingsViewDefaults.lightTheme()
         vh.bind(
             RadioCell(title = "Dark", groupId = "theme", value = "dark", selectedValue = "dark"),
-            Theme(),
+            theme,
         )
         val check = findSimpleCheck(vh.itemView as android.view.ViewGroup)
         assertNotNull(check)
-        assertEquals(Theme.DEFAULT_ACCENT_COLOR.toArgb(), check!!.color)
+        assertEquals(theme.cellAccentColor.toArgb(), check!!.color)
     }
 
     // MARK: - 表示状態同期の三層分離（core/ADR-0010）
@@ -846,13 +847,13 @@ class BasicCellsTest {
     }
 
     @Test
-    fun `ButtonCellViewHolder baseColor 全て未指定はテーマの colorPrimary か systemBlue にフォールバック`() {
+    fun `ButtonCellViewHolder baseColor 全て未指定はライブラリ既定の ButtonCell 色になる`() {
         val vh = ButtonCellViewHolder.create(parent)
         vh.bind(ButtonCell(title = "OK"), Theme())
         val tv = vh.buttonTextView
-        // テーマの colorPrimary が解決できなければ SYSTEM_BLUE (0xFF007AFF) にフォールバック。
-        // Robolectric の app theme 次第なので、少なくとも完全透明ではない (alpha = 0xFF) ことのみ担保。
-        assertEquals(0xFF, android.graphics.Color.alpha(tv.currentTextColor))
+        // 既定はホストのテーマ属性ではなく、外観に対応するライブラリ所有の色。
+        // 非夜間の Configuration なのでライト側が選ばれる。
+        assertEquals(KsThemePalette.Light.buttonTitle.toArgb(), tv.currentTextColor)
     }
 
     @Test

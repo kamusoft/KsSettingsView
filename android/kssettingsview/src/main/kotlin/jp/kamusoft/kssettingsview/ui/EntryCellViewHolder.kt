@@ -15,6 +15,7 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import androidx.annotation.ColorInt
+import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.graphics.toArgb
 import jp.kamusoft.kssettingsview.core.CellTitleAlignment
 
@@ -31,7 +32,7 @@ import jp.kamusoft.kssettingsview.core.CellTitleAlignment
  * - `keyboardType: Int` を `EditText.inputType` にそのまま代入（独自列挙型を経由しない）
  * - `isPassword = true` のときは keyboard の class に対応するパスワード variation へ差し替え
  * - `accentColor` を `textCursorDrawable` の tint に反映（API 29+、本ライブラリの `minSdk = 29`）
- * - 解決済み placeholder 色を hint 色へ反映し、未指定のときは生成時に捕捉したホスト既定の
+ * - 解決済み placeholder 色を hint 色へ反映し、未指定のときは現在の外観で解決した同梱テーマ既定の
  *   `ColorStateList` を復元する
  * - `isEnabled` で `EditText.isEnabled` および色置換
  * - `maxLength` 非 null のとき `InputFilter.LengthFilter(maxLength)` を設定
@@ -66,20 +67,30 @@ internal class EntryCellViewHolder(
     private var boundText: String? = null
 
     /**
-     * ホストテーマ由来の hint 色（`android:textColorHint`）。明示 placeholder 色を適用する前の
+     * 同梱テーマ（`Theme.Material3.DayNight` 派生）由来の hint 色（`android:textColorHint`）。明示 placeholder 色を適用する前の
      * 状態別表現（`ColorStateList`）をそのまま保持し、未指定へ戻すときの復元元にする。
      *
      * 単色へ潰さずに `ColorStateList` のまま持つことで、無効状態などの状態別の見え方も含めて
-     * ホストの既定へ戻せる。
+     * 同梱テーマの既定へ戻せる（ホストアプリの XML テーマは参照しない）。
      *
-     * ホストテーマが `android:textColorHint` を持つことを前提にする（Android Host が要求する
-     * `Theme.Material3.*` 派生テーマは必ず持つ）。`null` になる構成では戻し先が存在しないため、
-     * 復元は行えない。
+     * 同梱テーマが `android:textColorHint` を持つことを前提にする（`Theme.Material3.DayNight`
+     * 派生テーマは必ず持つ）。`null` になる構成では戻し先が存在しないため、復元は行えない。
+     *
+     * 値は外観（ライト／ダーク）ごとに変わるため、解決元の Context が変わったら
+     * [syncThemeHintTextColors] が引き直す。初期値は入力欄を生成した Context の解決結果。
      */
-    private val hostHintTextColors: ColorStateList? = editText.hintTextColors
+    private var themeHintTextColors: ColorStateList? = editText.hintTextColors
 
     /**
-     * 現在 hint へ適用済みの placeholder 色（ARGB）。`null` は「ホスト既定を適用中」を表す。
+     * [themeHintTextColors] を解決した同梱テーマ付き Context。
+     *
+     * [ksThemedContext] は外観が変わると別インスタンスを返すため、同一性の比較で「解決済みの値が
+     * 現在の外観のものか」を判定できる。
+     */
+    private var themeHintTextColorsSource: Context = editText.context
+
+    /**
+     * 現在 hint へ適用済みの placeholder 色（ARGB）。`null` は「同梱テーマ既定を適用中」を表す。
      * [placeholderColorApplied] が `false` の間はこの値に意味はない。
      */
     private var appliedPlaceholderColor: Int? = null
@@ -138,7 +149,7 @@ internal class EntryCellViewHolder(
     }
 
     override fun bind(cell: EntryCell, theme: Theme) {
-        val effective = EffectiveStyle.from(views.root.context, theme, cell.style)
+        val effective = EffectiveStyle.from(theme, cell.style, views.root.context.isKsDarkAppearance())
 
         // EntryCell は valueText を持たないため、共通行レイアウト関数には null を渡す。
         applyCellBaseLayout(
@@ -178,13 +189,13 @@ internal class EntryCellViewHolder(
             editText.hint = cell.placeholder
         }
 
-        // placeholder（hint）の文字色。解決順は Cell 固有値 → CellStyle → Theme → ホストテーマ既定。
+        // placeholder（hint）の文字色。解決順は Cell 固有値 → CellStyle → Theme → 同梱テーマ既定。
         applyPlaceholderColor(
             EffectiveStyle.effectivePlaceholderColor(
                 entryPlaceholderColor = cell.placeholderColor,
                 cellStyle = cell.style,
                 theme = theme,
-            )?.toArgb(),
+            ).takeIf { it.isSpecified }?.toArgb(),
         )
 
         // keyboardType は Native 型 Int をそのまま代入。`isPassword = true` のときは
@@ -314,27 +325,52 @@ internal class EntryCellViewHolder(
      * hint（placeholder）の文字色を反映する。
      *
      * [argb] が非 `null` のときは状態によらない単色として適用するため、無効状態でも placeholder の色は
-     * 変わらない。`null`（どの段にも指定が無い）のときは [hostHintTextColors] を復元し、ホストテーマの
-     * 状態別表現をそのまま使う。
+     * 変わらない。`null`（どの段にも指定が無い）のときは同梱テーマ既定
+     * （[syncThemeHintTextColors]）を復元し、同梱テーマの状態別表現をそのまま使う。
      *
      * 変化が無いときは代入しない。`EntryCell` は入力 1 文字ごとに同値の再バインドが走る経路があり、
      * 他の属性と同じく差分判定で無駄な再設定を避ける。
      */
     private fun applyPlaceholderColor(@ColorInt argb: Int?) {
+        // 差分判定の前に引く。外観が変わっていれば戻し先そのものが変わり、
+        // [syncThemeHintTextColors] が適用済みの記録を落として再適用させる。
+        val themeDefault = syncThemeHintTextColors()
         if (placeholderColorApplied && appliedPlaceholderColor == argb) return
         if (argb != null) {
             editText.setHintTextColor(argb)
         } else {
-            val hostDefault = hostHintTextColors
-            if (hostDefault == null) {
-                // 戻し先が無い（ホストテーマが hint 色を持たない）ため、適用済みとして記録しない。
+            if (themeDefault == null) {
+                // 戻し先が無い（同梱テーマが hint 色を持たない）ため、適用済みとして記録しない。
                 // 次の bind で改めて評価し、指定色が来たときは確実に反映されるようにする。
                 return
             }
-            editText.setHintTextColor(hostDefault)
+            editText.setHintTextColor(themeDefault)
         }
         appliedPlaceholderColor = argb
         placeholderColorApplied = true
+    }
+
+    /**
+     * 現在の外観の同梱テーマ既定 hint 色へ同期して返す。外観が変わっていれば hint 色を引き直し、
+     * 適用済みの placeholder 色の記録も初回扱いへリセットする（名前どおり「同期」であり、単なる getter ではない）。
+     *
+     * 行の View は生成時の同梱テーマ付き Context を持ち続けるが、その Context が抱えるテーマは
+     * 生成時に一度だけ組み立てられる（[KsThemedContext]）。Activity を再生成せずに外観が変わる
+     * ホストでは行が作り直されないため、生成時に捕まえた hint 色は切替前の外観のまま残る。
+     * [ksThemedContext] は外観が変わったラッパを渡すと現在の外観のラッパを返すので、その同一性で
+     * 古さを判定し、変わっていれば `android:textColorHint` を引き直す。
+     *
+     * 引き直したときは戻し先そのものが変わるため、[placeholderColorApplied] を落として次の適用を
+     * 初回扱いに戻す（差分判定で「未指定のまま変化なし」と見なされ、古い色が残るのを防ぐ）。
+     */
+    private fun syncThemeHintTextColors(): ColorStateList? {
+        val themed = views.root.context.ksThemedContext()
+        if (themed === themeHintTextColorsSource) return themeHintTextColors
+        themeHintTextColorsSource = themed
+        themeHintTextColors = themed.hintTextColorsFromTheme()
+        appliedPlaceholderColor = null
+        placeholderColorApplied = false
+        return themeHintTextColors
     }
 
     /**
@@ -420,8 +456,8 @@ internal class EntryCellViewHolder(
         currentHandler = null
         editText.setText("")
         editText.hint = null
-        // hint 色をホスト既定へ戻し、次の bind を「初回適用」として扱う。
-        hostHintTextColors?.let { editText.setHintTextColor(it) }
+        // hint 色を同梱テーマ既定へ戻し、次の bind を「初回適用」として扱う。
+        syncThemeHintTextColors()?.let { editText.setHintTextColor(it) }
         appliedPlaceholderColor = null
         placeholderColorApplied = false
         editText.filters = arrayOf()
@@ -475,5 +511,20 @@ internal class EntryCellViewHolder(
             addFillingInlineTrailing(views, edit)
             return EntryCellViewHolder(views = views, editText = edit)
         }
+    }
+}
+
+/**
+ * この Context のテーマから `android:textColorHint` の状態別表現を解決する。
+ *
+ * 単色ではなく `ColorStateList` で受け取り、無効状態などの状態別の見え方も同梱テーマの既定のまま
+ * 使えるようにする。テーマが属性を持たない構成では `null` を返す。
+ */
+private fun Context.hintTextColorsFromTheme(): ColorStateList? {
+    val attrs = obtainStyledAttributes(intArrayOf(android.R.attr.textColorHint))
+    return try {
+        attrs.getColorStateList(0)
+    } finally {
+        attrs.recycle()
     }
 }

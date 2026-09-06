@@ -243,19 +243,19 @@ class AdapterReattachTest {
         // 「届かないこと」は条件成立を待つ形にできないため、キューを流し切ってから状態を確かめる。
         store.applyTheme(newTheme)
         idle()
-        assertEquals("detach 中は Theme も View に届かない", Theme(), view.internalTheme())
+        assertEquals("detach 中は Theme も View に届かない", Theme(), view.theme)
 
         activity.container.addView(view)
         // attach のトラバーサル内で反映されること（メッセージを 1 つも回さない時点で確認する）。
         // 再 attach 後の最初のレイアウト・描画は attach と同じトラバーサルで走るため、
         // ここで未反映だと 1 フレーム古い配色で描かれる。
-        assertEquals("attach 直後に Store の現在 Theme が反映される", newTheme, view.internalTheme())
+        assertEquals("attach 直後に Store の現在 Theme が反映される", newTheme, view.theme)
 
         // 後続のアサーションはいずれも同期状態を見るため、残っているメッセージだけ流す。
         idle()
         activity.layoutSettingsView()
 
-        assertEquals("再 attach 後は Store の現在 Theme が反映される", newTheme, view.internalTheme())
+        assertEquals("再 attach 後は Store の現在 Theme が反映される", newTheme, view.theme)
         assertEquals(
             "RecyclerView 背景も新 Theme の色になる",
             newTheme.backgroundColor.toArgb(),
@@ -263,7 +263,7 @@ class AdapterReattachTest {
         )
         assertEquals(
             "ItemDecoration も新 Theme で作り直される",
-            newTheme,
+            newTheme.resolvedFor(darkTheme = false),
             (view.internalCurrentDecoration() as ClassicSectionDecoration).theme,
         )
     }

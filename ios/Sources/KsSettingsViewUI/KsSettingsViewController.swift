@@ -1161,7 +1161,7 @@ public final class KsSettingsViewController: UIViewController {
             accessory = nil
         }
         // Header / Footer の判定で文字色を切り替える。
-        // Header: headerTextColor、Footer: footerTextColor（既定値 ≒ #6D6D72 / 固定 RGB。AiForms オリジナル `UIColor.Gray` 準拠）。
+        // Header: headerTextColor、Footer: footerTextColor（既定値はライトが ≒ #6D6D72 のグレー、ダークが #8E8E93）。
         let isFooter = (kind == UICollectionView.elementKindSectionFooter)
         return makeAccessoryListCell(
             collectionView: collectionView,

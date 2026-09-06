@@ -470,16 +470,17 @@ class InputCellsTest {
     }
 
     @Test
-    fun `EntryCell の入力文字色は全段未指定なら同梱テーマの文字色になりホストテーマに追従しない`() {
+    fun `EntryCell の入力文字色は全段未指定ならライブラリ既定になりホストテーマに追従しない`() {
         val darkCtx = ContextThemeWrapper(
             ApplicationProvider.getApplicationContext(),
             MaterialR.style.Theme_Material3_Dark_NoActionBar,
         )
-        // 既定色の解決元はホストのテーマではなく同梱テーマ（常時ラップ。android/ADR-0020）。
-        val expected = hostTextColorPrimary(darkCtx.ksThemedContext())
+        // 既定色の出所はホストのテーマでもテーマ属性でもなく、ライブラリが所有する外観別の既定色。
+        // 端末の夜間モードでない Configuration なのでライトの既定が選ばれる（android/ADR-0020）。
+        val expected = KsThemePalette.Light.cellTitle.toArgb()
         val hostDark = hostTextColorPrimary(darkCtx)
-        // 空振り防止: 同梱テーマ（ライト側）とホストのダーク既定色が実際に異なることを前提にする。
-        assertNotEquals("前提: 同梱テーマとホストダークの textColorPrimary が異なる", hostDark, expected)
+        // 空振り防止: ライブラリ既定とホストのダーク既定色が実際に異なることを前提にする。
+        assertNotEquals("前提: ライブラリ既定とホストダークの textColorPrimary が異なる", hostDark, expected)
 
         val vh = EntryCellViewHolder.create(FrameLayout(darkCtx))
         vh.bind(EntryCell(title = "メモ", text = "入力済み"), Theme())

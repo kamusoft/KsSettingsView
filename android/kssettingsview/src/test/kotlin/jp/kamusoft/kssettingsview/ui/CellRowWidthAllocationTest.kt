@@ -970,7 +970,7 @@ class CellRowWidthAllocationTest {
             valueText = "送信",
             icon = null,
             hintText = null,
-            effective = EffectiveStyle.from(views.root.context, Theme(), CellStyle()),
+            effective = EffectiveStyle.from(Theme(), CellStyle(), darkTheme = false),
         )
         views.accessoryHolder.visibility = View.GONE
         layoutRow(views.root)

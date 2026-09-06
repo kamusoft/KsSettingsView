@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sample の単色アイコンの tint (夜間)。ライブラリ dark 既定の description 文字色 (#8E8E93) に合わせ、暗い Cell 背景上で判読できる明るいグレーにする。 -->
+<resources>
+    <color name="sample_icon_tint">#FF8E8E93</color>
+</resources>

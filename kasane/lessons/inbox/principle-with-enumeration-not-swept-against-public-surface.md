@@ -2,11 +2,12 @@
 scope: spec-review
 kind: pain
 severity: normal
-count: 1
+count: 2
 first-seen: 2026-09-01
-last-seen: 2026-09-01
+last-seen: 2026-09-05
 evidence:
   - add-android-maven-distribution (design Decision 6 / spec が「公開 ABI に露出する外部型の依存は `api`」という原理と具体列挙 4 件 (compose runtime / compose-ui / kotlinx-coroutines-core / androidx.annotation) を併記したが、公開宣言の全走査をせずに列挙を確定したため、公開クラス `CellViewHolder` が継承する `RecyclerView.ViewHolder` の依存 (androidx.recyclerview) が列挙から漏れた。実装ワーカーが公開宣言の全走査で検出しオーナー判断へ — `api` 追加 (B 案) を承認、deviation 記録で解消)
+  - fix-default-colors-dark-appearance (オーナー裁定「Cell title / description は Theme で埋めず実効 style の最終段で外観解決する」[案 B] を deviation に書く際、原理の適用先を internal な解決点 `resolvedFor` だけに限定し、同じ原理が当たる公開面 `KsSettingsViewDefaults.lightTheme()/darkTheme()` [spec の列挙が title / description を含む] と、その factory を既定値式に据える Compose DSL 入口を走査しなかった。結果、DSL 入口の ButtonCell title 既定が白 / 黒になる [ライトで #007AFF → #000000 の後退] 欠陥を視覚照合で発見。ユニットテストは `Theme()` 経由のみで検出せず)
 ---
 
 ## ルール文 (候補)
@@ -17,3 +18,4 @@ spec / design に「原理 + それを適用した具体列挙」を併記する
 
 - 2026-09-01 add-android-maven-distribution: Maven 発行メタデータの依存スコープ設計 (design Decision 6) で、`api` 対象の列挙が公開 ABI 走査を経ずに確定され、androidx.recyclerview が漏れた。実装ワーカーが `.ui` の public 宣言全走査で検出し停止・報告。オーナーが `api` 追加を承認し deviation で記録。列挙どおりの実装でも spec の Scenario は VALID になるため、verify では検出できない種類の漏れだった。
 - 2026-09-01 同 change (カウント外・同一 change 内の再発): 修正後もなお同型の漏れが 1 件残っていた — 公開 `Theme.sectionMargin` が露出する `PaddingValues` の宣言元 `androidx.compose.foundation:foundation-layout`。独立レビュー (review-001) が発行 aar の javap 全走査で検出し Major 指摘、`api` 追加で解消。個別発見の逐次追加では収束せず、原理の適用対象 (公開宣言全体) の機械走査を 1 回で完了させることが必要だったという裏付け。恒久策として Explicit API mode の別 change (adopt-android-explicit-api-mode) が簡易起票済み。
+- 2026-09-05 fix-default-colors-dark-appearance: spec 矛盾 (解決済み Theme が title を埋めると ButtonCell の 4 段最終段へ到達しない) の裁定を deviation に落とすとき、指揮側が「title / description は解決済み Theme で埋めない」を `resolvedFor` にだけ適用し、同じ矛盾を持つ公開 factory (`lightTheme()` / `darkTheme()` は title を埋める) と Compose 入口の既定値式 (`theme()`) を走査しなかった。原理 (title は最終段で外観解決) に対して「Theme に title を書き込む場所」を全走査すれば factory も同じ穴だと分かった。視覚照合 (8.2) で ButtonCell の白 / 黒として露呈。裁定を deviation に書く場面 (足場凍結下の spec 修正相当) でも同じ検算が要ることを示す観測。

@@ -2,6 +2,7 @@ package jp.kamusoft.kssettingsview.ui
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
@@ -121,7 +122,7 @@ internal data class SectionBoxMetrics(
                     0.0f
                 },
                 borderColor = if (isModern) {
-                    (theme.sectionBorderColor ?: DEFAULT_BORDER_COLOR).toArgb()
+                    theme.sectionBorderColor.takeOrElse { DEFAULT_BORDER_COLOR }.toArgb()
                 } else {
                     DEFAULT_BORDER_COLOR.toArgb()
                 },

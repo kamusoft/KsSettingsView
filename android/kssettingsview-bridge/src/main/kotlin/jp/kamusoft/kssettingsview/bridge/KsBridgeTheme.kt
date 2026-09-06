@@ -1,6 +1,7 @@
 package jp.kamusoft.kssettingsview.bridge
 
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import jp.kamusoft.kssettingsview.ui.Theme
 
@@ -140,47 +141,56 @@ class KsBridgeTheme {
     /** Section の箱のボーダー色（ARGB） */
     var sectionBorderColor: Int? = null
 
-    /** DTO から Native の `Theme` を解決する。未指定の項目は `Theme` の既定値を用いる。 */
+    /**
+     * DTO から Native の `Theme` を解決する。
+     *
+     * 未指定（`null`）の色は native の未指定表現（`Color.Unspecified`）へ写し、外観に応じた既定への
+     * 解決は native 側に委ねる。ここで固定の既定色を埋めると、ダーク外観での既定色の追随が効かなく
+     * なる。色以外の未指定は `Theme` の既定値を用いる。
+     */
     @JvmSynthetic
     internal fun resolve(): Theme {
         val base = Theme()
         return Theme(
-            separatorColor = KsBridgeColor.color(separatorColor) ?: base.separatorColor,
-            backgroundColor = KsBridgeColor.color(backgroundColor) ?: base.backgroundColor,
-            cellBackgroundColor = KsBridgeColor.color(cellBackgroundColor) ?: base.cellBackgroundColor,
-            selectedColor = KsBridgeColor.color(selectedColor) ?: base.selectedColor,
-            cellAccentColor = KsBridgeColor.color(cellAccentColor) ?: base.cellAccentColor,
-            disabledTextColor = KsBridgeColor.color(disabledTextColor) ?: base.disabledTextColor,
+            separatorColor = color(separatorColor),
+            backgroundColor = color(backgroundColor),
+            cellBackgroundColor = color(cellBackgroundColor),
+            selectedColor = color(selectedColor),
+            cellAccentColor = color(cellAccentColor),
+            disabledTextColor = color(disabledTextColor),
             scrollIndicatorVisible = scrollIndicatorVisible ?: base.scrollIndicatorVisible,
             rowHeight = rowHeight ?: base.rowHeight,
             hasUnevenRows = hasUnevenRows ?: base.hasUnevenRows,
-            headerTextColor = KsBridgeColor.color(headerTextColor) ?: base.headerTextColor,
-            headerBackgroundColor = KsBridgeColor.color(headerBackgroundColor) ?: base.headerBackgroundColor,
+            headerTextColor = color(headerTextColor),
+            headerBackgroundColor = color(headerBackgroundColor),
             headerFontSize = headerFontSize ?: base.headerFontSize,
             headerFont = headerFont?.resolve(),
             headerHeight = headerHeight ?: base.headerHeight,
-            footerTextColor = KsBridgeColor.color(footerTextColor) ?: base.footerTextColor,
-            footerBackgroundColor = KsBridgeColor.color(footerBackgroundColor) ?: base.footerBackgroundColor,
+            footerTextColor = color(footerTextColor),
+            footerBackgroundColor = color(footerBackgroundColor),
             footerFontSize = footerFontSize ?: base.footerFontSize,
             footerFont = footerFont?.resolve(),
-            cellTitleColor = KsBridgeColor.color(cellTitleColor),
+            cellTitleColor = color(cellTitleColor),
             cellTitleFont = cellTitleFont?.resolve(),
             cellTitleFontSize = cellTitleFontSize ?: base.cellTitleFontSize,
-            cellValueTextColor = KsBridgeColor.color(cellValueTextColor),
+            cellValueTextColor = color(cellValueTextColor),
             cellValueTextFont = cellValueTextFont?.resolve(),
-            cellDescriptionColor = KsBridgeColor.color(cellDescriptionColor),
+            cellDescriptionColor = color(cellDescriptionColor),
             cellDescriptionFont = cellDescriptionFont?.resolve(),
-            cellHintTextColor = KsBridgeColor.color(cellHintTextColor),
+            cellHintTextColor = color(cellHintTextColor),
             cellHintFont = cellHintFont?.resolve(),
-            cellPlaceholderColor = KsBridgeColor.color(cellPlaceholderColor),
+            cellPlaceholderColor = color(cellPlaceholderColor),
             cellIconSize = cellIconSize?.dp,
             cellIconRadius = cellIconRadius?.dp,
             sectionMargin = resolveSectionMargin(),
             sectionCornerRadius = sectionCornerRadius?.dp,
             sectionBorderWidth = sectionBorderWidth?.dp,
-            sectionBorderColor = KsBridgeColor.color(sectionBorderColor),
+            sectionBorderColor = color(sectionBorderColor),
         )
     }
+
+    /** ARGB を詰めた整数を色へ写す。`null`（未指定）は `Color.Unspecified` になる。 */
+    private fun color(argb: Int?): Color = KsBridgeColor.color(argb) ?: Color.Unspecified
 
     /**
      * margin の論理 4 成分から方向対応型を組み立てる。

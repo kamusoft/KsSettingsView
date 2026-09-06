@@ -32,7 +32,7 @@ internal class DatePickerCellViewHolder(
     internal var todayProvider: () -> LocalDate = { LocalDate.now() }
 
     override fun bind(cell: DatePickerCell, theme: Theme) {
-        val effective = EffectiveStyle.from(views.root.context, theme, cell.style)
+        val effective = EffectiveStyle.from(theme, cell.style, views.root.context.isKsDarkAppearance())
         val displayValueText: String = cell.valueText ?: formatDate(cell.date, cell.format)
 
         applyCellBaseLayout(
@@ -74,7 +74,7 @@ internal class DatePickerCellViewHolder(
      * - 背景: `Theme.backgroundColor`（Cell 背景ではなく SettingsView 全体の背景色）
      * - 強調: `DatePickerCell.accentColor` → `CellStyle.accentColor` → `Theme.cellAccentColor`
      *   （後半 2 段は [EffectiveStyle] の既存解決をそのまま使う）
-     * - 通常文字: `CellStyle.titleColor` → `Theme.cellTitleColor` → プラットフォーム既定
+     * - 通常文字: `CellStyle.titleColor` → `Theme.cellTitleColor` → 外観（ライト / ダーク）の既定
      */
     internal fun resolveDialogColors(
         cell: DatePickerCell,
@@ -210,7 +210,7 @@ internal fun LocalDate.toEpochMilliUtc(): Long =
  * - 背景: `Theme.backgroundColor`（Cell 背景ではなく SettingsView 全体の背景色）
  * - 強調: `DatePickerCell.accentColor` → `CellStyle.accentColor` → `Theme.cellAccentColor`
  *   （後半 2 段は [EffectiveStyle] の既存解決をそのまま使う）
- * - 通常文字: `CellStyle.titleColor` → `Theme.cellTitleColor` → プラットフォーム既定
+ * - 通常文字: `CellStyle.titleColor` → `Theme.cellTitleColor` → 外観（ライト / ダーク）の既定
  *
  * 行タップからの表示と Activity 再生成後の復元が同じ解決規則を使うため、ViewHolder の
  * 外側に置く。

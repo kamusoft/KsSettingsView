@@ -1,5 +1,6 @@
 package jp.kamusoft.kssettingsview.bridge
 
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import jp.kamusoft.kssettingsview.ui.CellStyle
 
@@ -53,21 +54,29 @@ class KsBridgeCellStyle {
     /** Cell 個別 accent 色（ARGB） */
     var accentColor: Int? = null
 
-    /** DTO から Native の `CellStyle` を解決する。未指定の項目は `null`（Theme 継承）のままにする。 */
+    /**
+     * DTO から Native の `CellStyle` を解決する。
+     *
+     * 未指定の項目は未指定のまま（色は `Color.Unspecified`、それ以外は `null`）にして Theme 継承へ
+     * 送る。明示された ARGB はそのまま色として保つ。
+     */
     @JvmSynthetic
     internal fun resolve(): CellStyle = CellStyle(
-        titleColor = KsBridgeColor.color(titleColor),
+        titleColor = color(titleColor),
         titleFont = titleFont?.resolve(),
-        descriptionColor = KsBridgeColor.color(descriptionColor),
+        descriptionColor = color(descriptionColor),
         descriptionFont = descriptionFont?.resolve(),
-        valueTextColor = KsBridgeColor.color(valueTextColor),
+        valueTextColor = color(valueTextColor),
         valueTextFont = valueTextFont?.resolve(),
         iconSize = iconSize?.dp,
         iconRadius = iconRadius?.dp,
         cellHeight = cellHeight?.dp,
-        hintTextColor = KsBridgeColor.color(hintTextColor),
+        hintTextColor = color(hintTextColor),
         hintTextFont = hintTextFont?.resolve(),
-        backgroundColor = KsBridgeColor.color(backgroundColor),
-        accentColor = KsBridgeColor.color(accentColor),
+        backgroundColor = color(backgroundColor),
+        accentColor = color(accentColor),
     )
+
+    /** ARGB を詰めた整数を色へ写す。`null`（未指定）は `Color.Unspecified` になる。 */
+    private fun color(argb: Int?): Color = KsBridgeColor.color(argb) ?: Color.Unspecified
 }

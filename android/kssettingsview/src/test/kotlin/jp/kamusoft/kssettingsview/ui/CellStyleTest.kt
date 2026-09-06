@@ -17,21 +17,21 @@ import org.junit.Test
 class CellStyleTest {
 
     @Test
-    fun `デフォルトコンストラクタは全フィールド null`() {
+    fun `デフォルトコンストラクタは全フィールド未指定`() {
         val style = CellStyle()
-        assertNull(style.titleColor)
+        assertEquals(Color.Unspecified, style.titleColor)
         assertNull(style.titleFont)
-        assertNull(style.descriptionColor)
+        assertEquals(Color.Unspecified, style.descriptionColor)
         assertNull(style.descriptionFont)
-        assertNull(style.valueTextColor)
+        assertEquals(Color.Unspecified, style.valueTextColor)
         assertNull(style.valueTextFont)
         assertNull(style.iconSize)
         assertNull(style.iconRadius)
         assertNull(style.cellHeight)
-        assertNull(style.hintTextColor)
+        assertEquals(Color.Unspecified, style.hintTextColor)
         assertNull(style.hintTextFont)
-        assertNull(style.backgroundColor)
-        assertNull(style.accentColor)
+        assertEquals(Color.Unspecified, style.backgroundColor)
+        assertEquals(Color.Unspecified, style.accentColor)
     }
 
     @Test
