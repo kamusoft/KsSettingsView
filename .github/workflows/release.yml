@@ -428,7 +428,10 @@ jobs:
       id-token: write
     # 既定の 360 分は長すぎる。Android の再ビルドと Central Portal の検証待ちを含む
     # 直列の publish に対する上限として置く。
-    timeout-minutes: 90
+    # 待ちは最悪で 3 本 (引き継いだ deployment の決着 30 分 → FAILED で再 upload
+    # した deployment の決着 30 分 → 公開待ち 30 分) 直列に並ぶ。本体の作業 (実測 11 分) を
+    # 足しても収まる予算にする。
+    timeout-minutes: 120
 
     env:
       KS_VERSION: ${{ inputs.version }}
@@ -574,27 +577,14 @@ jobs:
             deployment_id="$(tr -d '[:space:]' < "${id_file}")"
           fi
 
-          # 「release を送る必要があるか」を後段へ渡す。upload 直後 (VALIDATED) と、
-          # 前の attempt が VALIDATED のまま残した場合だけ true になる。
+          # 「release を送る必要があるか」を後段へ渡す。upload した直後 (検証の決着は後段の
+          # step で待つ) と、前の attempt が VALIDATED のまま残した場合だけ true になる。
           release_needed=false
 
           if [ -n "${deployment_id}" ]; then
             echo "前の attempt の deployment を引き継いだ: ${deployment_id}"
             # 検証中 (PENDING / VALIDATING) は結論が出ていないだけなので、決着を待つ。
-            deadline=$(( SECONDS + 1800 ))
-            while :; do
-              state="$(scripts/release/central-portal.sh status "${deployment_id}")"
-              case "${state}" in
-                PENDING|VALIDATING) ;;
-                *) break ;;
-              esac
-              if [ "${SECONDS}" -ge "${deadline}" ]; then
-                echo "::error::deployment の検証が終わらない (最後の状態 ${state}): ${deployment_id}"
-                exit 1
-              fi
-              echo "検証待ち (${state}): ${deployment_id}"
-              sleep 30
-            done
+            state="$(scripts/release/central-portal.sh wait-validated "${deployment_id}")"
             echo "状態: ${state}"
             case "${state}" in
               VALIDATED)
@@ -715,6 +705,27 @@ jobs:
           if-no-files-found: error
           # 再実行では前の attempt の内容を置き換える。
           overwrite: true
+
+      # Central Portal の検証は upload の内容と混雑で数秒〜数十分かかる。決着をここで待ち、
+      # 通らなければ NuGet へ push する前に止める (NuGet.org へ出したパッケージは unlist しか
+      # できないため、取り消せる段階で分かる失敗は先に出し切る)。deployment ID は直前の step で
+      # artifact に保存済みなので、この待ちの間に job が cancel / timeout されても次の attempt
+      # が同じ deployment を引き継げる。FAILED の deployment は失敗経路の後始末が drop する。
+      # 引き継いだ deployment が既に VALIDATED なら、照会 1 回で即座に通る。
+      - name: Wait for Central Portal validation
+        if: steps.maven.outputs.release-needed == 'true'
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          KS_DEPLOYMENT_ID: ${{ steps.maven.outputs.deployment-id }}
+        run: |
+          set -euo pipefail
+          state="$(scripts/release/central-portal.sh wait-validated "${KS_DEPLOYMENT_ID}")"
+          if [ "${state}" != "VALIDATED" ]; then
+            echo "::error::deployment が検証を通らなかった (状態 ${state}): ${KS_DEPLOYMENT_ID}"
+            exit 1
+          fi
+          echo "検証を通った: ${KS_DEPLOYMENT_ID}"
 
       # 長期の API key を持たず、この実行に紐づく短命な key を OIDC で受け取る。
       - name: Login to NuGet.org

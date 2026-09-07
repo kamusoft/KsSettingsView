@@ -5,7 +5,7 @@ applies-when:
   tasks: [リリースの実施, release workflow の secrets / Environment の設定, リリースの再実行, リリースのリハーサル]
 title: リリース手順
 description: main ブランチと branch protection の用意、Environment release と secrets の登録、配信リポジトリの deploy key、リリース PR と dispatch、失敗時の再実行、dry-run によるリハーサル
-timestamp: 2026-09-06
+timestamp: 2026-09-07
 ---
 
 # リリース手順
@@ -132,7 +132,7 @@ gh workflow run release.yml --ref main -f version=<version>
 gh run watch "$(gh run list --workflow=release.yml --limit 1 --json databaseId --jq '.[0].databaseId')"
 ```
 
-全体で 40 分前後かかる (初回リリース `0.1.0-beta.1` の実測は 39 分。消費者検証 MAUI の dry-run 12 分と publish 11 分が大半で、Maven Central の反映待ちは公式には 10〜30 分かかり得るが初回は数秒だった)。publish が終わると配信リポジトリと monorepo に tag が付き、prerelease の suffix を持つ version は prerelease として Release が作られる。そのあと公開レジストリへの反映を待って smoke が走る。
+全体で 40 分前後かかる (初回リリース `0.1.0-beta.1` の実測は 39 分。消費者検証 MAUI の dry-run 12 分と publish 11 分が大半で、Maven Central の反映待ちは公式には 10〜30 分かかり得るが初回は数秒だった)。publish は Maven の upload の直後に Central Portal の検証の決着を待ち (上限 30 分)、検証を通らなければ NuGet へ push する前に止まる。検証が長引くぶんは publish の所要時間に上乗せされる。publish が終わると配信リポジトリと monorepo に tag が付き、prerelease の suffix を持つ version は prerelease として Release が作られる。そのあと公開レジストリへの反映を待って smoke が走る。
 
 ### 公開後の確認
 
@@ -150,6 +150,8 @@ publish の各ステップは冪等なので、原因を取り除いてから **
 |---|---|
 | 配信リポジトリへの commit push | 差分が無ければ commit を skip して先へ進む |
 | Maven の upload | 前の attempt の deployment の状態で分岐する (検証済みなら upload せず release へ。削除済みなら upload をやり直す) |
+| Maven の検証待ち (上限超過) | 検証中の deployment は削除できないので ID が残り、次の attempt が同じ deployment の決着を待つところから続ける |
+| Maven の検証 (FAILED) | upload からやり直す (NuGet は未 push なので、原因を直せば同じ version で埋め直せる) |
 | NuGet の push | 公開済みのパッケージは skip される |
 | Maven の release | 保留中の deployment を release する |
 | tag / Release | 同じ内容の tag は skip、別内容なら失敗する |
