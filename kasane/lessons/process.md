@@ -1,6 +1,6 @@
 ---
 scope: process
-timestamp: 2026-09-01
+timestamp: 2026-09-07
 ---
 
 # lessons: process
@@ -13,3 +13,4 @@ timestamp: 2026-09-01
 - [L-006] 「〜が無い」「〜されていない」という不在の断定は、対象ファイルを末尾まで読むか、対象を特定できる検索を通してから行う。対象はコードとテストに限らず、conventions などの既存ドキュメントも同じ — 「手順が書かれていない」と報告する前にリポジトリ全体を対象語で検索する。スタブ起票 (exploration.md だけの change) を出発点に探索を始めるときも同じで、起票時点のレビュー指摘の写しを現状と見なさず、対象コードとテストの現状を実物で確認してから議論を組み立てる (指摘は同じ change の中で解消されていることがある)。裏取りのない断定はそのままスコープの決定根拠になり、後続フェーズで覆って手戻りになる。経緯は [details/absence-asserted-without-verification.md](details/absence-asserted-without-verification.md)。(昇格: 2026-08-30、出典: fix-maui-icon-lease-disposal-ordering / fix-ios-root-accessory-theme-refresh / add-question-form-and-english-screenshots)
 - [L-007] レビュー・セカンドオピニオンを起動する前に、渡す成果物が実態を反映しているかを確認する。確認済みで反映すべきものは 2 つ — (1) 既知の切り出し済み先送り問題 (関連 change のスタブ一覧と 1 行サマリ)、(2) 実施済みだが成果物に未反映の作業 (tasks.md のチェック・証跡ファイルの追加)。レビュアー、特にプロジェクト文脈を持たない相方は成果物だけを見るため、実態とのずれはそのまま blocking Major になり、判定の突き合わせとオーナー確認の往復が変更のたびに再発する。経緯は [details/known-deferred-issues-not-passed-to-reviewers.md](details/known-deferred-issues-not-passed-to-reviewers.md)。(昇格: 2026-08-31、出典: timepickercell-color-adjust / datepickercell-today-shortcut / add-verification-ci)
 - [L-008] `workers.*: counterpart` のプロジェクトで委譲パッケージを書くときは、counterpart の sandbox が届かない範囲を先に確認する。作業の一部だけが届かない (外部ボリューム上での `trash` 削除・dot ディレクトリ配下の既存ファイル編集) なら、その部分を指揮側 (ホスト) の担当に切り分けて同じ委譲に混ぜない。作業の完了条件が届かない (Simulator / Emulator での実行を完了条件とするタスク — codex sandbox は CoreSimulator へ接続できない) なら、切り分けでは解決しないため、その change ではワーカーの backend を host に切り替える。委譲前にゲートとなるコマンドをホストで 1 回通しておくと backend の選択を誤らない。経緯は [details/counterpart-sandbox-blocks-file-operations.md](details/counterpart-sandbox-blocks-file-operations.md)。(昇格: 2026-09-01、出典: consolidate-readmes-and-contribution (2 件) / fix-ios-test-pump-condition-wait)
+- [L-009] 合意済みスコープが名指ししていないファイルへ手を入れた瞬間に、同じ作業単位で `changes/<id>/deviation.md` へ 1 行書く。名指しの基準は、tasks.md を持つ変更では tasks が挙げたファイル、tasks.md を持たない S 級では exploration.md の決定事項が挙げた範囲。書く対象は付随修正 (`- [付随修正] <箇所>: <何を直したか>。理由: <一言> (YYYY-MM-DD)`) と、決定事項と違う形に落ち着いた実装 (レビュー指摘で設計・修正先が変わった場合を含む) の両方で、既存の付随修正を別ファイル・別箇所へ広げたときも行を足す。実装フェーズの終わりや蒸留時にまとめて書こうとすると、lint を通すための設定変更・メッセージ文言の追随・「指摘に従っただけ」と感じる数行修正から漏れる。事後判定: `git show --stat` に現れるファイルのうち合意済みスコープが名指ししていないものが、すべて deviation.md の行に箇所として現れている。経緯は [details/incidental-fix-recorded-after-the-fact-in-deviation.md](details/incidental-fix-recorded-after-the-fact-in-deviation.md)。(昇格: 2026-09-07、出典: add-consumer-verification / skills-install-version-drift / english-diagnostic-messages)
