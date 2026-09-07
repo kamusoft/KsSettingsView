@@ -34,8 +34,6 @@ DatePickerCell はカレンダー型とホイール型 (Spinner) を利用者が
 - 負: カレンダーの今日ジャンプ (ADR-0010 の機能) は Compose ダイアログ側で再実装が必要 (状態操作で正面から実現でき、View 階層駆動は不要になる)。
 - 負: 回転復元は Fragment 機構に代わる自前機構 (表示中状態の保存 + rememberSaveable) の新設が必要。
 
-> 追記 (2026-08-28、オーナー承認): 実装で確定した2点を補足する。
-> (1) **experimental API への依存はカレンダーダイアログの1箇所に限定**される — Compose 自体 (runtime / ui / foundation) は stable であり、`@ExperimentalMaterial3Api` の opt-in を要するのは material3 の `DatePicker` のみ。TimePickerCell は自作ホイールのため非依存。
-> (2) **版整合の既定は「Gradle コンパイル版を MAUI ランタイム解決版 (compose 1.11 系 / material3 1.4 系) に追随させる」**とする。MAUI 本体の依存連鎖が Compose ランタイム版を事実上固定するため、NuGet 側を下げる整合は成立しない (実測: kasane/changes/relax-android-host-prerequisites/evidence/spike-consumer-pin-build-log.md)。利用者アプリ側の直接ピン + ExcludeAssets による旧版固定は技術的には可能だが、運用負担と実行時リスクから既定にしない (同 evidence)。MAUI の minor 更新 (10.0.70 → 10.0.100) では AndroidX 依存集合が動かないことも実測済み (同 evidence/spike-maui-100-build-log.md)。
-
-出典: kasane/changes/relax-android-host-prerequisites/exploration.md (決定事項 2・現状の裏取り・検討した選択肢)
+出典: kasane/changes/archive/2026-08-28-relax-android-host-prerequisites/exploration.md (決定事項 2・現状の裏取り・検討した選択肢)
+整理: 2026-09-07 実装で確定した 2 点を述べた追記 (2026-08-28) を除いた。Compose 版整合の方向 (Gradle の BOM を NuGet 実行時版へ上げる) と `DatePicker` が experimental API であることは [Android のビルドツールチェーン](../../concepts/android/architecture/build-toolchain.md) の「Compose 版の整合」節が持つ。experimental への依存がカレンダーダイアログ 1 箇所に限られる点は同節にはないため、下の現行照合で接地する。あわせて出典のパスを archive 後の実配置へ直した。決定内容 (Context / Decision / Alternatives) は不変
+現行照合: 2026-09-07 確認。`androidx.compose.material3.DatePicker` を使う製品コードは `android/kssettingsview/src/main/kotlin/jp/kamusoft/kssettingsview/ui/DateCalendarDialog.kt` の 1 ファイルのみ (`@ExperimentalMaterial3Api` の opt-in はこれに加えて同ダイアログのテスト 2 本 `DateCalendarDialogTest.kt` / `DateCalendarRecreationTest.kt`)。opt-in の範囲は決定時点から変わっていない。判定: 維持

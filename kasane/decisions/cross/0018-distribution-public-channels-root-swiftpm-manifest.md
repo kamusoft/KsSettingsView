@@ -25,16 +25,6 @@ SwiftPM の git 配布はリポジトリルート直下の Package.swift しか�
 | Native Android | Maven Central (`jp.kamusoft:ks-settingsview-*`、cross/ADR-0002) |
 | .NET MAUI | NuGet.org |
 
-(2026-09-01 追記) 表の Native Android の座標は、Android の module 統合により
-`jp.kamusoft:kssettingsview` の単一 artifact になった (android/ADR-0016)。groupId は
-cross/ADR-0002 の `jp.kamusoft` のままで、artifactId が `ks-settingsview-*` の 3 本から
-`kssettingsview` 1 本に変わった。interop Bridge は Maven に公開しない。
-
-(2026-09-02 追記) 表の .NET MAUI の NuGet.org へ出す座標は、facade の
-`KsSettingsView.Maui` と binding 2 件の `KsSettingsView.Binding.iOS` /
-`KsSettingsView.Binding.Android` の 3 件である (maui/ADR-0025)。利用者が書くのは facade の
-1 件だけで、binding は platform TFM の依存として推移的に届く。
-
 GitHub Packages 等の private / 認証付きフィードは提供しない。SwiftPM が git を直接解決する都合上、リポジトリは public に切り替える (切り替えのタイミングは配信 CI の整備と合わせて決める)。
 
 Android の artifact 粒度 (module 間依存の公開スコープ、bridge module の公開可否) と MAUI のパッケージ分割は本 ADR の対象外とし、それぞれ別の決定で扱う。
@@ -47,7 +37,7 @@ Android の artifact 粒度 (module 間依存の公開スコープ、bridge modu
 - product は `KsSettingsView` 1 本とし、`KsSettingsViewCore` / `KsSettingsViewUI` / `KsSettingsViewSwiftUI` の 3 target を束ねる (umbrella product)。利用者はこの 1 product をリンクし、`import` は使う module 名で書く。target 構成・module 名・Bridge target の非公開・`platforms` (iOS 16 + テスト用 macOS) は変更しない
 - module 名は型名と別に保つ。module 名を `KsSettingsView` にすると型 `KsSettingsView` に吸われて `KsSettingsView.Section` のような修飾が解決できなくなるため、3 target を 1 target へ物理統合しない
 - 配信リポジトリの tag は monorepo の semver tag と同じ値を持つ (lockstep は cross/ADR-0019)。配信リポジトリへの push は SwiftPM の publish 工程であり、リリース手順上の位置づけは cross/ADR-0020 に従う
-- **配信リポジトリ名は `KsSettingsView-SPM`** (Package URL: `https://github.com/kamusoft/KsSettingsView-SPM`)。(2026-08-29 追記) SwiftPM の package identity は git URL の最終パスコンポーネント由来で `Package.swift` の `name:` は表示専用のため、利用者の Xcode 上の表示は package 名の `KsSettingsView` だが、`Package.swift` を書く利用者は `.product(name: "KsSettingsView", package: "KsSettingsView-SPM")` と identity を書き、`Package.resolved` にも `kssettingsview-spm` として残る。`-SPM` サフィックスは配信専用リポジトリの既存慣例に倣う (`airbnb/lottie-spm`・`RevenueCat/purchases-ios-spm`・`BranchMetrics/ios-branch-sdk-spm`・`forcedotcom/SalesforceMobileSDK-iOS-SPM`)。大文字表記は PascalCase の製品名に付ける Salesforce の形に合わせた。姉妹ライブラリも同型で展開する (`KsDialogs-SPM`)
+- **配信リポジトリ名は `KsSettingsView-SPM`** (Package URL: `https://github.com/kamusoft/KsSettingsView-SPM`)。SwiftPM の package identity は git URL の最終パスコンポーネント由来で `Package.swift` の `name:` は表示専用のため、利用者の Xcode 上の表示は package 名の `KsSettingsView` だが、`Package.swift` を書く利用者は `.product(name: "KsSettingsView", package: "KsSettingsView-SPM")` と identity を書き、`Package.resolved` にも `kssettingsview-spm` として残る。`-SPM` サフィックスは配信専用リポジトリの既存慣例に倣う (`airbnb/lottie-spm`・`RevenueCat/purchases-ios-spm`・`BranchMetrics/ios-branch-sdk-spm`・`forcedotcom/SalesforceMobileSDK-iOS-SPM`)。大文字表記は PascalCase の製品名に付ける Salesforce の形に合わせた。姉妹ライブラリも同型で展開する (`KsDialogs-SPM`)
 
 cross/ADR-0001 (リポジトリルートに共通ビルドファイルを置かない) への例外は不要になる。
 
@@ -84,5 +74,5 @@ cross/ADR-0001 (リポジトリルートに共通ビルドファイルを置か�
 出典: kasane/roadmaps/package-distribution/exploration.md (A・C) / kasane/roadmaps/package-distribution/phases/phase-2-public-readiness/history.md (2026-08-21: SwiftPM の配信形) / ../KsDialogs/kasane/decisions/cross/0008-distribution-model-standard-channels.md (翻案元)
 出典 (2026-08-29 配信リポジトリ名の確定): kasane/roadmaps/package-distribution/phases/phase-9-docs/history.md (2026-08-29「SwiftPM 配信リポジトリの名前」)
 出典 (2026-09-01 実装結果の追記と accepted 昇格): kasane/changes/archive/2026-09-01-add-spm-distribution/deviation.md / 同 review-001.md
-出典 (2026-09-01 Android 座標の統合の追記): kasane/decisions/android/0016-single-module-single-maven-artifact.md / kasane/roadmaps/package-distribution/phases/phase-5-android-packaging/history.md
-出典 (2026-09-02 MAUI の Package ID の追記): kasane/decisions/maui/0025-nuget-three-package-root-namespace.md / kasane/roadmaps/package-distribution/phases/phase-6-maui-packaging/history.md
+整理: 2026-09-07 Decision から Android / MAUI の配布座標の更新 2 件を除き、配信リポジトリ名の根拠に付いていた日付マーカーを溶かした。本 ADR は Decision 末尾で artifact 粒度とパッケージ分割を対象外と宣言しており、除いた 2 件は対象外領域の結果を後から書き戻したもので決定の改訂ではない。決定内容は不変
+現行照合: 2026-09-07 確認。Decision の表の座標は決定時点のもの。現況は [リポジトリとビルドの責務境界](../../concepts/cross/architecture/repository-boundaries.md) の build root の表が 3 platform 分持つ (Android は単一 artifact `jp.kamusoft:kssettingsview` へ統合 — android/ADR-0016、MAUI は NuGet 3 パッケージ — maui/ADR-0025)。判定: 維持

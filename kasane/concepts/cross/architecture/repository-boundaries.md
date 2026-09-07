@@ -22,9 +22,9 @@ timestamp: 2026-09-05
 
 各 build root は自身の module 構成、依存解決、toolchain、test 入口を所有する。一つの platform の build 成立は、別 platform の toolchain や build 成立を保証しない。
 
-iOS の SwiftPM 配布は monorepo を直接解決させず、専用の公開配信リポジトリ `KsSettingsView-SPM` から行う ([ADR-0018](../../../decisions/cross/0018-distribution-public-channels-root-swiftpm-manifest.md))。リリース時に `ios/Package.swift` / `ios/Sources/` / `ios/Tests/` と `LICENSE`・誘導 README のスナップショットを配信リポジトリのルートへ commit し、同じ version の tag を push する (ファイル配置は `scripts/spm-snapshot/` のスクリプト、commit / tag / push は release workflow の publish 段の責務)。monorepo のルートに Package.swift は置かず、`ios/Package.swift` が開発用かつ配信用の唯一のマニフェストである。利用者が解決できるのは tag の付いた版だけで、初回リリース `0.1.0-beta.1` から解決できる。commit は publish 段の先頭で push し、tag は Maven Central の release の後・monorepo の tag の直前に押す — 途中で失敗しても未 tag の commit は公開されない ([ADR-0020](../../../decisions/cross/0020-release-dispatch-tag-last-version-injection.md))。
+iOS の SwiftPM 配布は monorepo を直接解決させず、専用の公開配信リポジトリ `KsSettingsView-SPM` から行う ([ADR-0018](../../../decisions/cross/0018-distribution-public-channels-root-swiftpm-manifest.md))。monorepo のルートに Package.swift は置かず、`ios/Package.swift` が開発用かつ配信用の唯一のマニフェストである (配信リポジトリ側はそのコピー)。利用者が解決できるのは tag の付いた版だけで、初回リリース `0.1.0-beta.1` から解決できる。スナップショットの配置と commit / tag の押し方は [リリースパイプラインの構成](release-pipeline.md) が持つ。
 
-3 platform の公開は 1 本の release workflow (`.github/workflows/release.yml`、version を入力する手動起動) が担う。段は validate → 本体検証 ∥ 配布物の生成 → 消費者検証 (dry-run) → publish → 公開レジストリへの反映待ち → 消費者検証 (smoke) で、publish より前の段がすべて成功したときにだけ配信先へ書き込む。順序の根拠は [ADR-0020](../../../decisions/cross/0020-release-dispatch-tag-last-version-injection.md)、起動と再実行の手順は [リリース手順](../../../handbook/cross/release-procedure.md) にある。
+3 platform の公開は 1 本の release workflow (`.github/workflows/release.yml`、version を入力する手動起動) が担い、publish より前の段がすべて成功したときにだけ配信先へ書き込む。段の構成と各チャネルへの publish 機構は [リリースパイプラインの構成](release-pipeline.md)、起動と再実行の手順は [リリース手順](../../../handbook/cross/release-procedure.md) にある。
 
 Core、UI Host、宣言 UI wrapper は責務を分けるが、Core が platform 型から完全に独立していることまでは意味しない。現行の Accessory 型は、iOS では UIKit / SwiftUI、Android では Android View / Compose と接続する。
 
@@ -94,6 +94,7 @@ dry-run の参照先は本リポジトリ由来の座標について排他的で
 - [Android ビルドツールチェーンの契約](../../android/architecture/build-toolchain.md)
 - [MAUI facade の公開契約](../../maui/api/maui-facade.md)
 - [Native Bridge の interop 境界](../../maui/api/native-bridge.md)
+- [リリースパイプラインの構成](release-pipeline.md) — 段の構成・version 注入・各チャネルへの publish 機構と公開確認
 - [MAUI binding の Native artifact 統合](../../maui/architecture/binding-build-integration.md) — NuGet 3 パッケージの pack 構成
 
 ### 規約と手順 (handbook)
