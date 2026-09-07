@@ -336,7 +336,7 @@ public class PickerCell : CellBase
             if (items[i] is null)
             {
                 throw new ArgumentException(
-                    $"{nameof(ItemsSource)} の要素に null は指定できない (位置 {i})。",
+                    $"{nameof(ItemsSource)} must not contain a null element (index {i}).",
                     nameof(ItemsSource));
             }
         }

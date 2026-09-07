@@ -67,7 +67,7 @@ internal object KsBridgeValueTransport {
      * @param text `"HH:mm"` 形式の時刻文字列
      */
     fun time(text: String): LocalTime = parseTime(text) ?: run {
-        diagnose(kind = "時刻", text = text, format = TIME_FORMAT)
+        diagnose(kind = "time", text = text, format = TIME_FORMAT, fallback = LocalTime.MIDNIGHT.toString())
         LocalTime.MIDNIGHT
     }
 
@@ -77,7 +77,7 @@ internal object KsBridgeValueTransport {
      * @param text `"yyyy-MM-dd"` 形式の日付文字列
      */
     fun date(text: String): LocalDate = parseDate(text) ?: run {
-        diagnose(kind = "日付", text = text, format = DATE_FORMAT)
+        diagnose(kind = "date", text = text, format = DATE_FORMAT, fallback = EPOCH_DATE.toString())
         EPOCH_DATE
     }
 
@@ -91,7 +91,7 @@ internal object KsBridgeValueTransport {
     fun optionalDate(text: String?): LocalDate? {
         if (text == null) return null
         return parseDate(text) ?: run {
-            diagnose(kind = "日付", text = text, format = DATE_FORMAT)
+            diagnose(kind = "date", text = text, format = DATE_FORMAT, fallback = "null")
             null
         }
     }
@@ -222,10 +222,10 @@ internal object KsBridgeValueTransport {
     }
 
     /** 解釈失敗を診断出力する。 */
-    private fun diagnose(kind: String, text: String, format: String) {
+    private fun diagnose(kind: String, text: String, format: String, fallback: String) {
         android.util.Log.w(
             "KsSettingsViewBridge",
-            "${kind}文字列 '$text' が輸送書式 '$format' に一致しないため既定値で構築します",
+            "The $kind string '$text' does not match the transport format '$format'; using $fallback instead",
         )
     }
 }

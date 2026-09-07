@@ -26,6 +26,12 @@ internal enum KsBridgeValueTransport {
     /// 日付の輸送書式 (壁時計値・culture 非依存)。
     internal static let dateFormat = "yyyy-MM-dd"
 
+    /// 解釈できない時刻文字列の代わりに採る既定値 (輸送書式)。
+    private static let defaultTimeText = "00:00"
+
+    /// 解釈できない日付文字列の代わりに採る既定値 (輸送書式)。
+    private static let defaultDateText = "1970-01-01"
+
     // MARK: - 時刻 / 日付
 
     /// 輸送書式の時刻文字列を `Date` へ解釈する。解釈できない場合は 00:00 で構築する。
@@ -34,9 +40,9 @@ internal enum KsBridgeValueTransport {
         if let parsed = parse(text, format: timeFormat) {
             return parsed
         }
-        diagnose(kind: "時刻", text: text, format: timeFormat)
+        diagnose(kind: "time", text: text, format: timeFormat, fallback: defaultTimeText)
         // 解釈できない値は時刻の既定値 (00:00) へ倒す。書式自体は固定のため必ず解釈できる。
-        return parse("00:00", format: timeFormat) ?? Date(timeIntervalSince1970: 0)
+        return parse(defaultTimeText, format: timeFormat) ?? Date(timeIntervalSince1970: 0)
     }
 
     /// 輸送書式の日付文字列を `Date` へ解釈する。解釈できない場合は 1970-01-01 で構築する。
@@ -45,9 +51,9 @@ internal enum KsBridgeValueTransport {
         if let parsed = parse(text, format: dateFormat) {
             return parsed
         }
-        diagnose(kind: "日付", text: text, format: dateFormat)
+        diagnose(kind: "date", text: text, format: dateFormat, fallback: defaultDateText)
         // 解釈できない値は日付の既定値 (1970-01-01) へ倒す。
-        return parse("1970-01-01", format: dateFormat) ?? Date(timeIntervalSince1970: 0)
+        return parse(defaultDateText, format: dateFormat) ?? Date(timeIntervalSince1970: 0)
     }
 
     /// 未指定を許す日付文字列を `Date?` へ解釈する。
@@ -59,7 +65,7 @@ internal enum KsBridgeValueTransport {
         if let parsed = parse(text, format: dateFormat) {
             return parsed
         }
-        diagnose(kind: "日付", text: text, format: dateFormat)
+        diagnose(kind: "date", text: text, format: dateFormat, fallback: "nil")
         return nil
     }
 
@@ -188,9 +194,9 @@ internal enum KsBridgeValueTransport {
     }
 
     /// 解釈失敗を `DEBUG` ビルドでのみ診断出力する。
-    private static func diagnose(kind: String, text: String, format: String) {
+    private static func diagnose(kind: String, text: String, format: String, fallback: String) {
         #if DEBUG
-        print("KsSettingsViewBridge: \(kind)文字列 '\(text)' が輸送書式 '\(format)' に一致しないため既定値で構築します")
+        print("KsSettingsViewBridge: the \(kind) string '\(text)' does not match the transport format '\(format)'; using \(fallback) instead")
         #endif
     }
 }

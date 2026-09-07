@@ -67,7 +67,7 @@ internal final class SectionBoxDecorationView: UICollectionReusableView {
     }
 
     /// iOS 16 向けフォールバック。iOS 17+ では registerForTraitChanges(_:handler:) を使用する。
-    @available(iOS, deprecated: 17.0, message: "iOS 17+ では registerForTraitChanges(_:handler:) を使用する")
+    @available(iOS, deprecated: 17.0, message: "Use registerForTraitChanges(_:handler:) on iOS 17+")
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
         super.traitCollectionDidChange(previousTraitCollection)
         guard #unavailable(iOS 17.0) else { return }

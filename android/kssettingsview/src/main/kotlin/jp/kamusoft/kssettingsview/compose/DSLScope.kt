@@ -42,10 +42,10 @@ public class DSLSettingsRootScope internal constructor() {
         block: DSLSectionScope.() -> Unit = {},
     ): SectionHandle {
         require(!(header != null && headerContent != null)) {
-            "Section: header と headerContent は同時指定できません"
+            "Section: header and headerContent cannot both be specified"
         }
         require(!(footer != null && footerContent != null)) {
-            "Section: footer と footerContent は同時指定できません"
+            "Section: footer and footerContent cannot both be specified"
         }
         val headerAccessory: SectionAccessory? = when {
             header != null -> SectionAccessory.Text(header)

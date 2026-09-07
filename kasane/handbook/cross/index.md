@@ -9,6 +9,7 @@
 | [runtime-behavior-verification.md](runtime-behavior-verification.md) | 実行時挙動 (IME・フォーカス・アニメーション・タイミング) が絡む不具合を調査・修正し、完了を判定するとき | rule |
 | [sample-parity.md](sample-parity.md) | `samples/` のデモ画面・文言・デモデータを追加・変更するとき | rule |
 | [public-identifiers.md](public-identifiers.md) | 公開識別子・namespace・application ID・配布座標を決めるとき (`**/build.gradle.kts` / `ios/Package.swift` / `**/*.csproj` を触るとき) | rule |
+| [diagnostic-message-language.md](diagnostic-message-language.md) | 本体コードに例外・ログ・assert・deprecated 警告などの開発者向け文字列を追加・変更するとき | rule |
 | [aiforms-origin-reference.md](aiforms-origin-reference.md) | 未移植機能を実装するとき・移植元との挙動差や不具合を調査するとき (移植完了までの時限規約) | rule |
 | [user-skill-api-listing.md](user-skill-api-listing.md) | `skills/` を触るとき・docs-refresh の API 名網羅検査 (3e) の報告を仕分けるとき | rule |
 | [local-development-setup.md](local-development-setup.md) | 環境構築・Sample の起動・MAUI Sample へ native の変更を配備して確認するとき・Sample でダーク描画を確認するとき・本体のビルド / lint・消費者検証 (`verification/`) の手元実行・本体 source へのステップインが要るとき | guide |
