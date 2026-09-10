@@ -23,6 +23,9 @@ push 検査は範囲内の各コミット時点の blob を見る (途中のコ�
   - コマンドに `git push` を含む → まだどのリモートにも無いコミット (`HEAD --not --remotes`) を検査
   - `--no-verify` / commit の `-n` / `core.hooksPath` の上書きを含む → 検査の迂回として deny
     (代わりの動き: 違反行を log-sanitize.py かプレースホルダで直してから commit / push する)
+  - 判定はコマンドのオプション部分だけに掛ける。ヒアドキュメントの本体・`-m` / `-F` / `--message` / `--file` の値・
+    空白を含む引用文字列はコミットメッセージ本文とみなして判定前に取り除く (hook について書いたメッセージが
+    `--no-verify` / `core.hooksPath` の語を含むだけで止まる誤検知を防ぐ)
 
 git hook としての登録 (ksn-init が配る .githooks/ を使う):
   git config core.hooksPath .githooks
@@ -49,6 +52,45 @@ RE_ADD = re.compile(GIT_CMD + r"add\b")
 RE_NO_VERIFY = re.compile(r"--no-verify\b")
 RE_COMMIT_N = re.compile(GIT_CMD + r"commit\b[^|;&\n]*\s-[a-zA-Z]*n[a-zA-Z]*\b")  # commit -n / -an は --no-verify
 RE_HOOKSPATH = re.compile(r"core\.hooksPath", re.IGNORECASE)
+
+# メッセージ本文の除去 (--bash-hook)。判定はコマンドのオプション部分だけに掛ける
+RE_HEREDOC_OP = re.compile(r"<<-?\s*(['\"]?)(\w+)\1")
+RE_MSG_OPT = re.compile(
+    r"(?:(?<=\s)-[a-zA-Z]*[mF]|--message|--file)(?:\s*=\s*|\s+)"
+    r"(?:'[^']*'|\"(?:[^\"\\]|\\.)*\"|\S+)"
+)
+RE_QUOTED = re.compile(r"'[^']*'|\"(?:[^\"\\]|\\.)*\"")
+
+
+def _strip_heredocs(command: str) -> str:
+    """ヒアドキュメントの本体 (演算子の行末から終端行まで) を取り除く。"""
+    out = command
+    pos = 0
+    while True:
+        m = RE_HEREDOC_OP.search(out, pos)
+        if not m:
+            return out
+        delim = m.group(2)
+        line_end = out.find("\n", m.end())
+        if line_end < 0:
+            return out
+        body = re.compile(r"^\s*" + re.escape(delim) + r"\s*$", re.MULTILINE)
+        end = body.search(out, line_end + 1)
+        if not end:
+            return out[:line_end]
+        out = out[:line_end] + out[end.end():]
+        pos = m.end()
+
+
+def _strip_message_text(command: str) -> str:
+    """迂回判定の前にコミットメッセージ本文になりうる部分を取り除いたコマンドを返す。
+
+    取り除くのは、ヒアドキュメントの本体、`-m` / `-F` / `--message` / `--file` の値、空白を含む引用文字列。
+    空白を含まない引用トークン (`-c "core.hooksPath=/dev/null"` 等) はオプション扱いで残す。
+    """
+    out = _strip_heredocs(command)
+    out = RE_MSG_OPT.sub(lambda m: m.group(0).split("=")[0].split()[0] + " ''", out)
+    return RE_QUOTED.sub(lambda m: m.group(0) if not re.search(r"\s", m.group(0)) else "''", out)
 
 
 def _load(name: str):
@@ -225,6 +267,7 @@ def mode_range(root: str, spec: str) -> int:
 
 def bash_hook_decision(root: str, command: str) -> str | None:
     """Bash コマンドを見て、deny する理由を返す (問題なければ None)。"""
+    command = _strip_message_text(command)
     is_commit = bool(RE_COMMIT.search(command))
     is_push = bool(RE_PUSH.search(command))
     if not (is_commit or is_push):
@@ -343,6 +386,20 @@ def selftest() -> int:
         check(hook(root, 'git commit --no-verify -m "x"') is not None and "迂回" in hook(root, 'git commit --no-verify -m "x"'),
               "--bash-hook: --no-verify を deny")
         check(hook(root, "git -c core.hooksPath=/dev/null commit -m x") is not None, "--bash-hook: core.hooksPath 上書きを deny")
+        check(hook(root, 'git -c "core.hooksPath=/dev/null" commit -m x') is not None,
+              "--bash-hook: 引用された core.hooksPath 上書きも deny")
+        check(hook(root, 'git commit -qm "hook 設定 (core.hooksPath / --no-verify) の説明を追記"') is not None
+              and "迂回" not in hook(root, 'git commit -qm "hook 設定 (core.hooksPath / --no-verify) の説明を追記"'),
+              "--bash-hook: -m のメッセージ本文に core.hooksPath / --no-verify の語があっても迂回扱いしない")
+        heredoc = "git commit -F - <<'EOF'\nhook の迂回 (--no-verify / core.hooksPath) について\n\n本文 -n\nEOF"
+        check(hook(root, heredoc) is not None and "迂回" not in hook(root, heredoc),
+              "--bash-hook: ヒアドキュメントのメッセージ本文に迂回の語があっても迂回扱いしない")
+        check(hook(root, "git commit -F - <<'EOF'\ncore.hooksPath の話\nEOF\ngit push --no-verify") is not None
+              and "迂回" in hook(root, "git commit -F - <<'EOF'\ncore.hooksPath の話\nEOF\ngit push --no-verify"),
+              "--bash-hook: ヒアドキュメント終端の後の --no-verify は deny")
+        check(hook(root, 'git commit -m "core.hooksPath" --no-verify') is not None
+              and "迂回" in hook(root, 'git commit -m "core.hooksPath" --no-verify'),
+              "--bash-hook: メッセージ本文を除いた後の --no-verify は deny")
         check(hook(root, "git status") is None, "--bash-hook: commit / push 以外は素通し")
 
         hooks_dir = os.path.join(root, ".githooks")
