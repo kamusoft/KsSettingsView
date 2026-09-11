@@ -44,8 +44,15 @@
 # published サブコマンドは公開リポジトリを見るだけなので認証を要求しない。
 #
 # 待機の間隔と上限は環境変数で上書きできる (テストと運用の調整用):
-#   KSR_POLL_INTERVAL_SECONDS  wait-validated / wait-published のポーリング間隔 (既定 30)
-#   KSR_POLL_TIMEOUT_SECONDS   wait-validated / wait-published の上限 (既定 1800)
+#   KSR_POLL_INTERVAL_SECONDS   wait-validated / wait-published のポーリング間隔 (既定 30)
+#   KSR_POLL_TIMEOUT_SECONDS    wait-validated の上限 (既定 1800 = 30 分)
+#   KSR_PUBLISHED_TIMEOUT_SECONDS
+#                               wait-published の上限 (既定 5400 = 90 分)
+#
+# 公開待ちの上限を検証の決着待ちと分けているのは、両者の所要が桁で違うため。検証は
+# upload 内容の検査なので数分で決着するが、release 後に Maven Central の配信元へ同期
+# されるまでは 1 時間規模でかかることがある。片方を延ばすともう片方も延びる形にすると、
+# 検証で詰まった実行が無用に長く居座る。
 #
 # ネットワークへ出るのは実行本番だけで、--selftest は HTTP 送信関数をモックへ差し替えて
 # URL の組み立て・応答の解釈・状態分岐だけを検査する。
@@ -260,7 +267,7 @@ cmd_release() {
 cmd_wait_published() {
     local id="$1"
     local interval="${KSR_POLL_INTERVAL_SECONDS:-30}"
-    local timeout="${KSR_POLL_TIMEOUT_SECONDS:-1800}"
+    local timeout="${KSR_PUBLISHED_TIMEOUT_SECONDS:-5400}"
     local deadline=$(( SECONDS + timeout ))
     local state
 
@@ -350,6 +357,15 @@ selftest() {
     MOCK_CALLS="${work}/calls"
     MOCK_SCRIPT="${work}/script"
     MOCK_CURSOR="${work}/cursor"
+    # 台本が尽きたことを記録する印。モックの return は AND-OR 配下のコマンド置換では
+    # 呼び出し側へ伝わらないため、失敗を印として残し、最後にまとめて見る。
+    MOCK_EXHAUSTED="${work}/exhausted"
+
+    # 待機を回す検査の安全網。既定 (30 分 / 90 分) のままだと、照会回数が増える回帰が
+    # 「数秒で NG」ではなく「呼び出し側のタイムアウト」として出る。上限そのものを見る
+    # 検査は、これを各呼び出しで明示的に上書きする。
+    export KSR_POLL_TIMEOUT_SECONDS=5
+    export KSR_PUBLISHED_TIMEOUT_SECONDS=5
 
     local failures=0
 
@@ -400,6 +416,7 @@ selftest() {
         line="$(sed -n "${index}p" "${MOCK_SCRIPT}")"
         if [ -z "${line}" ]; then
             echo "モックの台本が尽きた (${index} 件目): ${method} ${url}" >&2
+            printf '%s\n' "${index} 件目: ${method} ${url}" >> "${MOCK_EXHAUSTED}"
             return 1
         fi
         printf '%s\n%s' "${line%% *}" "${line#* }"
@@ -516,8 +533,20 @@ selftest() {
         "FAILED になれば失敗する"
 
     arrange '200 {"deploymentState":"PUBLISHING"}' '200 {"deploymentState":"PUBLISHING"}'
-    check "$(if ( KSR_POLL_INTERVAL_SECONDS=0 KSR_POLL_TIMEOUT_SECONDS=0 cmd_wait_published abc > /dev/null 2>&1 ); then echo 1; else echo 0; fi)" \
+    check "$(if ( KSR_POLL_INTERVAL_SECONDS=0 KSR_PUBLISHED_TIMEOUT_SECONDS=0 cmd_wait_published abc > /dev/null 2>&1 ); then echo 1; else echo 0; fi)" \
         "上限を過ぎれば失敗する"
+
+    # 公開待ちと検証待ちの上限が互いに干渉しないこと。片方を 0 にしても、もう片方の
+    # 待ちは自分の上限に従って続く (この自己テストで効いているのは、冒頭で安全網として
+    # 置いた 5 秒であって既定値ではない)。
+    arrange '200 {"deploymentState":"PUBLISHING"}' '200 {"deploymentState":"PUBLISHED"}'
+    check "$(if ( KSR_POLL_INTERVAL_SECONDS=0 KSR_POLL_TIMEOUT_SECONDS=0 cmd_wait_published abc > /dev/null 2>&1 ); then echo 0; else echo 1; fi)" \
+        "検証待ちの上限は公開待ちを打ち切らない"
+
+    arrange '200 {"deploymentState":"VALIDATING"}' '200 {"deploymentState":"VALIDATED"}'
+    waited_state="$(KSR_POLL_INTERVAL_SECONDS=0 KSR_PUBLISHED_TIMEOUT_SECONDS=0 cmd_wait_validated abc 2>/dev/null)" || waited_state="exit $?"
+    check "$([ "${waited_state}" = "VALIDATED" ] && echo 0 || echo 1)" \
+        "公開待ちの上限は検証待ちを打ち切らない" "${waited_state}"
 
     echo "[published]"
     local published_code
@@ -549,6 +578,12 @@ selftest() {
     authorization="$(MAVEN_CENTRAL_USERNAME="user" MAVEN_CENTRAL_PASSWORD="token" portal_authorization)"
     check "$([ "${authorization}" = "Bearer dXNlcjp0b2tlbg==" ] && echo 0 || echo 1)" \
         "Bearer は user:token の base64" "${authorization}"
+
+    # 想定より多く照会する回帰は、空応答が状態の解釈失敗へ畳み込まれて見えなくなる。
+    # 台本を使い切った呼び出しが 1 件でもあれば、その場所を添えて失敗にする。
+    echo "[モックの台本]"
+    check "$(if [ -e "${MOCK_EXHAUSTED}" ]; then echo 1; else echo 0; fi)" \
+        "台本を使い切った検査は無い" "$(cat "${MOCK_EXHAUSTED}" 2>/dev/null | head -3)"
 
     if [ "${failures}" -eq 0 ]; then
         echo "失敗なし"

@@ -184,5 +184,27 @@ jobs:
       - name: Central Portal script selftest
         run: scripts/release/central-portal.sh --selftest
 
+      - name: Registry wait script selftest
+        run: scripts/release/wait-for-registries.sh --selftest
+
+      - name: Deployment handover script selftest
+        run: scripts/release/deployment-handover.sh --selftest
+
       - name: Install example version script selftest
         run: python3 scripts/release/set-readme-version.py --selftest
+
+      # 待ちは不可逆な公開の後にしか到達しないので、時間予算と step 順序が崩れても平時の
+      # 実行は緑のまま進む。どちらも定数と並びを読むだけの検査なのでここで回す。
+      - name: Release time budget check
+        run: python3 scripts/release/check-time-budget.py
+
+      - name: Release time budget check selftest
+        run: python3 scripts/release/check-time-budget.py --selftest
+
+      - name: Publish step order check
+        run: python3 scripts/release/check-publish-step-order.py
+
+      # 順序検査は「崩れていないこと」しか出力しないので、崩した入力を通す形に退化しても
+      # 平時は緑のままになる。検出力そのものを自己テストで確かめる。
+      - name: Publish step order check selftest
+        run: python3 scripts/release/check-publish-step-order.py --selftest
