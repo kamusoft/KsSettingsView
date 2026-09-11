@@ -37,7 +37,7 @@ repositories {
 }
 
 dependencies {
-    implementation("jp.kamusoft:kssettingsview:0.1.0-beta.2")
+    implementation("jp.kamusoft:kssettingsview:0.1.0-beta.3")
 }
 ```
 

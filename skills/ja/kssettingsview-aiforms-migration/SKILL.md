@@ -37,7 +37,7 @@ KsSettingsView は AiForms.SettingsView の骨格 — `SettingsView` に `Sectio
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="KsSettingsView.Maui" Version="0.1.0-beta.2" />
+  <PackageReference Include="KsSettingsView.Maui" Version="0.1.0-beta.3" />
 </ItemGroup>
 ```
 
