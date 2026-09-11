@@ -59,6 +59,8 @@ env:
   KS_ARTIFACT_MAUI: release-maui-nupkg
   # 保留中の deployment の ID を同じ実行の再実行へ引き継ぐための artifact。
   KS_ARTIFACT_DEPLOYMENT_ID: central-deployment-id
+  # validate が確定させた Release ノートを publish へ渡すための artifact。
+  KS_ARTIFACT_RELEASE_NOTES: release-notes
 
 jobs:
   # 不可逆な操作に入る前の入力検査。配布物の生成にも進ませない。
@@ -69,6 +71,13 @@ jobs:
     runs-on: ubuntu-24.04
     # 既定の 360 分は長すぎる。検査は clone と文字列比較だけなので短い上限を置く。
     timeout-minutes: 15
+
+    # Release ノートの材料として pull request 本文を読む。job レベルの permissions は
+    # 列挙しなかった権限を none にするため、pull-requests だけを足すと checkout と
+    # commit / Release の取得に要る contents が失われる。両方をここに書き切る。
+    permissions:
+      contents: read
+      pull-requests: read
 
     # 再利用可能 workflow の呼び出し (`with:`) では env コンテキストを参照できないため、
     # 冒頭の env に集約した artifact 名を出力として渡し直す。
@@ -149,10 +158,67 @@ jobs:
               ;;
           esac
 
-      - name: Verify install examples (README + Skills)
+      # Release ノートの材料を集め、検査し、本文まで確定させる。publish はこの成果物を
+      # そのまま使い、pull request 本文を読み直さない — 収集と公開を別の段に分けると、
+      # その間に本文が編集されたときに「公開の後で Release の作成だけが失敗する」経路が
+      # 残る。記載の不備で止まるのもこの位置であり、不可逆な公開には入っていない。
+      #
+      # リハーサルは `main` から起動したときだけ本番と同じ経路を通す。`main` 以外から
+      # 起動したリハーサルは pull request に紐づかない commit を範囲に含むため、収集を
+      # 行うと正当なリハーサルが記載の不備で落ちる。
+      #
+      # その分岐の条件はここで一度だけ評価し、後続の 3 つの step はこの出力だけを見る。
+      # 同じ条件式を書き写すと、片方だけを直したときに「収集は飛ばしたのに upload は
+      # 走り、成果物が無くて落ちる」という、条件の意味と無関係な失敗になる。
+      - name: Decide release notes scope
+        id: notes-scope
         env:
+          KS_DRY_RUN: ${{ inputs['dry-run'] }}
+          KS_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          if [ "${KS_DRY_RUN}" != "true" ] || [ "${KS_REF}" = "refs/heads/main" ]; then
+            collect=true
+          else
+            collect=false
+          fi
+          echo "collect=${collect}" >> "$GITHUB_OUTPUT"
+          echo "Release ノートの収集: ${collect} (dry-run: ${KS_DRY_RUN} / 起動 ref: ${KS_REF})"
+
+      - name: Build release notes
+        if: ${{ steps.notes-scope.outputs.collect == 'true' }}
+        env:
+          # API の照会にはこの token を使う (job の permissions が読み取り範囲を決める)。
+          GH_TOKEN: ${{ github.token }}
           KS_VERSION: ${{ inputs.version }}
-        run: python3 scripts/release/set-readme-version.py --check "${KS_VERSION}"
+        run: |
+          set -euo pipefail
+          python3 scripts/release/build-release-notes.py collect \
+            --repo "${GITHUB_REPOSITORY}" \
+            --version "${KS_VERSION}" \
+            --sha "${GITHUB_SHA}" \
+            --out "${RUNNER_TEMP}/release-notes"
+          {
+            echo "## Release ノート: ${KS_VERSION}"
+            echo ""
+            cat "${RUNNER_TEMP}/release-notes/notes.md"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload release notes
+        if: ${{ steps.notes-scope.outputs.collect == 'true' }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: ${{ env.KS_ARTIFACT_RELEASE_NOTES }}
+          path: ${{ runner.temp }}/release-notes
+          if-no-files-found: error
+          # `Re-run all jobs` で同じ名前を作り直せるようにする。
+          overwrite: true
+
+      # 収集を省いたことをログに残す。省いたのか、走って 0 件だったのかを後から区別する。
+      - name: Skip release notes
+        if: ${{ steps.notes-scope.outputs.collect != 'true' }}
+        run: |
+          echo "main 以外からのリハーサルなので Release ノートの収集と検査は行わない (起動 ref: ${GITHUB_REF})"
 
       - name: Export artifact names
         id: names
@@ -526,6 +592,14 @@ jobs:
           name: ${{ needs.validate.outputs.artifact-maui }}
           path: ${{ runner.temp }}/package-maui
 
+      # validate が確定させた Release ノート。publish は pull request 本文を読み直さない
+      # ので、検査を通した時点の内容がそのまま Release になる。
+      - name: Download release notes
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: ${{ env.KS_ARTIFACT_RELEASE_NOTES }}
+          path: ${{ runner.temp }}/release-notes
+
       # 秘密鍵はディスクに置かず agent に載せる。ホスト鍵は公開されている固定値を使う
       # (ssh-keyscan は取得した鍵をそのまま信頼するため、なりすましを検出できない)。
       - name: Configure distribution repository access
@@ -840,12 +914,18 @@ jobs:
             echo "Release ${KS_VERSION} は作成済み (本文は更新しない)"
             exit 0
           fi
-          args=(--generate-notes --title "${KS_VERSION}")
-          # prerelease の suffix を持つ version は prerelease として出す。
-          case "${KS_VERSION}" in
-            *-*) args+=(--prerelease) ;;
-          esac
-          gh release create "${KS_VERSION}" "${args[@]}"
+          notes="${RUNNER_TEMP}/release-notes/notes.md"
+          if [ ! -s "${notes}" ]; then
+            echo "::error::確定した Release ノートが無い (${notes})"
+            exit 1
+          fi
+          # semver の prerelease 表記を持つ版でも GitHub の prerelease 印は付けず、最新の
+          # リリースとして明示的に指定する。印を外すだけでは最新の選別が自動判定に委ねられ、
+          # 最新版の案内先が意図した版に着地する保証にならない (cross/ADR-0029)。
+          gh release create "${KS_VERSION}" \
+            --title "${KS_VERSION}" \
+            --notes-file "${notes}" \
+            --latest
 
       - name: Summarize
         if: always()

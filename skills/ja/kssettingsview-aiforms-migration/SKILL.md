@@ -37,9 +37,11 @@ KsSettingsView は AiForms.SettingsView の骨格 — `SettingsView` に `Sectio
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="KsSettingsView.Maui" Version="0.1.0-beta.2" />
+  <PackageReference Include="KsSettingsView.Maui" Version="{version}" />
 </ItemGroup>
 ```
+
+`{version}` はプレースホルダで、使う version に置き換える (そのままでは復元に失敗する)。現在の version は、常に最新のリリースへ解決される [latest release](https://github.com/kamusoft/KsSettingsView/releases/latest) のページで確認できる。
 
 参照はこの 1 行だけで、下層の binding パッケージは推移的に届く。
 

@@ -37,7 +37,7 @@ let package = Package(
     name: "MyApp",
     platforms: [.iOS(.v16)],
     dependencies: [
-        .package(url: "https://github.com/kamusoft/KsSettingsView-SPM", exact: "0.1.0-beta.2")
+        .package(url: "https://github.com/kamusoft/KsSettingsView-SPM", exact: "{version}")
     ],
     targets: [
         .target(
@@ -49,6 +49,10 @@ let package = Package(
     ]
 )
 ```
+
+`{version}` is a placeholder: replace it with the version you want to use, or resolution fails. To find the current version, open the [latest release](https://github.com/kamusoft/KsSettingsView/releases/latest) page, which always resolves to the most recent release.
+
+The declaration uses `exact:` so that it resolves to exactly the version you write, prerelease or not. `from:` also resolves prereleases when its lower bound is one, but its upper bound stays open up to the next major version, so it does not pin anything.
 
 You link that one product, but you `import` by module name: it bundles three modules, `KsSettingsViewCore` (settings tree), `KsSettingsViewUI` (cells, `Theme`, `CellStyle`, UIKit host), and `KsSettingsViewSwiftUI` (SwiftUI view and declarative DSL). The built-in cell types are covered one by one in [references/cells.md](references/cells.md); `CustomCell` and cell types of your own are in [references/custom-cells.md](references/custom-cells.md).
 

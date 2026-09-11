@@ -34,9 +34,11 @@ KsSettingsView は、iOS の設定アプリのようなリスト形式の設定�
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="KsSettingsView.Maui" Version="0.1.0-beta.2" />
+  <PackageReference Include="KsSettingsView.Maui" Version="{version}" />
 </ItemGroup>
 ```
+
+`{version}` はプレースホルダで、使う version に置き換える (そのままでは復元に失敗する)。現在の version は、常に最新のリリースへ解決される [latest release](https://github.com/kamusoft/KsSettingsView/releases/latest) のページで確認できる。
 
 足す参照はこの 1 本だけでよく、platform の Binding 層は NuGet の推移参照で入る。そのうえで起動時に 1 度だけ登録する。登録される Handler は 1 件だけで、Cell 種別ごとに足す Handler はない。
 

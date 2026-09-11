@@ -37,9 +37,11 @@ repositories {
 }
 
 dependencies {
-    implementation("jp.kamusoft:kssettingsview:0.1.0-beta.2")
+    implementation("jp.kamusoft:kssettingsview:{version}")
 }
 ```
+
+`{version}` はプレースホルダで、使う version に置き換える (そのままでは依存解決に失敗する)。現在の version は、常に最新のリリースへ解決される [latest release](https://github.com/kamusoft/KsSettingsView/releases/latest) のページで確認できる。
 
 artifact は Compose runtime / ui / foundation-layout・kotlinx-coroutines-core・androidx.annotation・RecyclerView を `api` 依存として宣言しているので、公開 API に対するコンパイルはこの依存 1 つで足りる。
 

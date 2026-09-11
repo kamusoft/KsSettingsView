@@ -173,14 +173,25 @@ jobs:
       - name: README example lint
         run: python3 scripts/readme-example-lint.py
 
+      # インストール例の契約 (プレースホルダ・`exact:`・最新リリースへの案内・英日の
+      # 同一構成) の検査。リリースは例を書き換えないので、契約が崩れても気づく機会は
+      # ここしかない。
+      - name: Install example lint
+        run: python3 scripts/install-example-lint.py
+
+      # 検査対象の見落としや検出力の退化は平時の緑では分からないので、検出力そのものを
+      # 自己テストで確かめる。
+      - name: Install example lint selftest
+        run: python3 scripts/install-example-lint.py --selftest
+
       # 配信リポジトリ同期スクリプトの安全弁 (破壊的操作前の 4 段検証) の回帰テスト。
       # bash と git しか使わないので macOS ランナーを起こさずこの job で回す。
       - name: SPM snapshot sync script test
         run: scripts/spm-snapshot/sync-snapshot-test.sh
 
       # リリース用スクリプトの自己テスト。Central Portal の API 呼び出しはモックへ
-      # 差し替わり、README / Skill のインストール例の置換は一時コピーに対して
-      # 行うので、ネットワークにも作業ツリーにも触らない。bash と python3 だけで回る。
+      # 差し替わるので、ネットワークにも作業ツリーにも触らない。bash と python3 だけで
+      # 回る。
       - name: Central Portal script selftest
         run: scripts/release/central-portal.sh --selftest
 
@@ -190,8 +201,11 @@ jobs:
       - name: Deployment handover script selftest
         run: scripts/release/deployment-handover.sh --selftest
 
-      - name: Install example version script selftest
-        run: python3 scripts/release/set-readme-version.py --selftest
+      # Release ノートの組み立てはリハーサルでも Release を作らないため、実地で結果を
+      # 確かめられるのは本番のリリースだけになる。解析・整形・対象の選び方は入力を
+      # 与えれば検査できるので、ここで回す (API は模したものへ差し替わる)。
+      - name: Release notes script selftest
+        run: python3 scripts/release/build-release-notes.py --selftest
 
       # 待ちは不可逆な公開の後にしか到達しないので、時間予算と step 順序が崩れても平時の
       # 実行は緑のまま進む。どちらも定数と並びを読むだけの検査なのでここで回す。

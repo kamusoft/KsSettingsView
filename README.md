@@ -37,15 +37,17 @@ Android is distributed as the single Maven artifact `jp.kamusoft:kssettingsview`
 
 The platform [Agent Skills](https://github.com/kamusoft/KsSettingsView/blob/main/skills/README.md) contain the detailed setup guidance. This section contains only dependency declarations and prerelease version selection.
 
+The declarations below write the version as the placeholder `{version}`. Replace it with the version you want to use; left as it is, dependency resolution fails. To find the current version, open the [latest release](https://github.com/kamusoft/KsSettingsView/releases/latest) page, which always resolves to the most recent release.
+
 ### iOS — Swift Package Manager
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/kamusoft/KsSettingsView-SPM", exact: "0.1.0-beta.2")
+    .package(url: "https://github.com/kamusoft/KsSettingsView-SPM", exact: "{version}")
 ]
 ```
 
-Reference the product as `.product(name: "KsSettingsView", package: "KsSettingsView-SPM")`. To select a prerelease, use its semantic version tag explicitly with `from: "X.Y.Z-beta.N"`, or pin it with `exact: "X.Y.Z-beta.N"`.
+Reference the product as `.product(name: "KsSettingsView", package: "KsSettingsView-SPM")`. The declaration uses `exact:` so that it resolves to exactly the version you write, prerelease or not. `from: "X.Y.Z-beta.N"` also resolves prereleases — a prerelease lower bound admits later prereleases of the same version — but its upper bound stays open up to the next major version, so it does not pin anything. Use `exact:` whenever you want one specific version.
 
 Publication status: the package is served from the `KsSettingsView-SPM` distribution repository, where each release is published as a semantic version tag.
 
@@ -53,7 +55,7 @@ Publication status: the package is served from the `KsSettingsView-SPM` distribu
 
 ```kotlin
 dependencies {
-    implementation("jp.kamusoft:kssettingsview:0.1.0-beta.2")
+    implementation("jp.kamusoft:kssettingsview:{version}")
 }
 ```
 
@@ -63,7 +65,7 @@ To select a prerelease, use a version such as `X.Y.Z-alpha.N`, `X.Y.Z-beta.N`, o
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="KsSettingsView.Maui" Version="0.1.0-beta.2" />
+  <PackageReference Include="KsSettingsView.Maui" Version="{version}" />
 </ItemGroup>
 ```
 

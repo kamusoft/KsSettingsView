@@ -12,5 +12,6 @@
 | [diagnostic-message-language.md](diagnostic-message-language.md) | 本体コードに例外・ログ・assert・deprecated 警告などの開発者向け文字列を追加・変更するとき | rule |
 | [aiforms-origin-reference.md](aiforms-origin-reference.md) | 未移植機能を実装するとき・移植元との挙動差や不具合を調査するとき (移植完了までの時限規約) | rule |
 | [user-skill-api-listing.md](user-skill-api-listing.md) | `skills/` を触るとき・docs-refresh の API 名網羅検査 (3e) の報告を仕分けるとき | rule |
+| [install-examples.md](install-examples.md) | README 2 枚と `skills/` のインストール例を書き換えるとき・利用者向け Skill を追加するとき | rule |
 | [local-development-setup.md](local-development-setup.md) | 環境構築・Sample の起動・MAUI Sample へ native の変更を配備して確認するとき・Sample でダーク描画を確認するとき・本体のビルド / lint・消費者検証 (`verification/`) の手元実行・本体 source へのステップインが要るとき | guide |
 | [release-procedure.md](release-procedure.md) | リリースを行うとき・release workflow の secrets / Environment を設定するとき・リリースを再実行 / リハーサルするとき | guide |

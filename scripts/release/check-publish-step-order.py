@@ -213,7 +213,13 @@ def selftest() -> int:
         ),
         (
             "他の成果物の取得が無くなると落ちる",
-            delete_step(delete_step(original, other_download), "Download MAUI packages"),
+            delete_step(
+                delete_step(
+                    delete_step(original, other_download),
+                    "Download MAUI packages",
+                ),
+                "Download release notes",
+            ),
             1,
         ),
     ]
