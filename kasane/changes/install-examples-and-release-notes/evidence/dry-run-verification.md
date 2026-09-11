@@ -1,4 +1,4 @@
-# dry-run 検証の証跡 (tasks 8.3b / 8.4 / 8.5 / 8.6)
+# dry-run 検証の証跡 (tasks 8.3b / 8.3c / 8.4 / 8.5 / 8.6)
 
 ## 実行
 
@@ -68,6 +68,77 @@ validate job の step:
 
 3 経路とも解決に失敗する。プレースホルダを埋めずに使った利用者は、ビルドの最初の段で気づく。
 
-## 未了
+## main からのリハーサルでは実際の経路を通る (tasks 8.3c)
 
-- tasks 8.3c (`main` からのリハーサルで収集・検査・受け渡しが実際に走ること) は、`main` に本変更が入っていないと旧 workflow が走るため、リリース pull request のマージ後に実施する
+`main` に本変更が入るまで実施できないため、リリース pull request のマージ後に別途起動した。
+
+| 項目 | 値 |
+|---|---|
+| 実行 | https://github.com/kamusoft/KsSettingsView/actions/runs/34611883314 |
+| 日付 | 2026-09-11 |
+| 対象 SHA | `9c97e13` (pull request #12 のマージ commit) |
+| ブランチ | `main` |
+| version | `0.1.0-beta.3` (monorepo・SwiftPM 配信リポジトリとも未使用) |
+| dry-run | true |
+
+### validate の step
+
+8.3b (`develop` から) と判定が反転し、`main` では収集・検査・整形・受け渡しが実際に走る。
+
+| step | 8.3b (`develop` から) | 8.3c (`main` から) |
+|---|---|---|
+| Decide release notes scope | success | success |
+| Build release notes | skipped | **success** |
+| Upload release notes | skipped | **success** |
+| Skip release notes | success | **skipped** |
+
+判定のログ: `Release ノートの収集: true (dry-run: true / 起動 ref: refs/heads/main)`
+
+### 対象の決定
+
+`起点: 0.1.0-beta.2 / 対象 commit: 9c97e13fde5ee7c9e88fc9c08e64c66d74e4cda0 / 対象 pull request: [12]`
+
+- 起点は `main` の first-parent 上で対象 commit の祖先となる、draft でない公開済み Release のうちもっとも近いもの (`0.1.0-beta.2`) に解決された
+- 対象は base が `main` の pull request に絞られ、#12 の 1 件になった
+
+### 成果物への受け渡し
+
+`release-notes` artifact (2 ファイル・620 bytes、Artifact ID 10268737480) に `notes.md` と `meta.json` が保存された。
+
+```json
+{
+  "version": "0.1.0-beta.3",
+  "base-tag": "0.1.0-beta.2",
+  "commit": "9c97e13fde5ee7c9e88fc9c08e64c66d74e4cda0",
+  "pulls": [12]
+}
+```
+
+```markdown
+## What's Changed
+
+### Bug Fixes
+- Exception messages, diagnostic logs, and deprecation warnings are now written in English (#12)
+
+### Documentation
+- Installation examples in the READMEs and Agent Skills no longer pin a version; the latest release page shows the version to use (#12)
+
+**Full Changelog**: https://github.com/kamusoft/KsSettingsView/compare/0.1.0-beta.2...0.1.0-beta.3
+```
+
+成果物の `notes.md` は、同じ pull request 本文を `render` に与えた手元の出力と `diff` で一致した。
+
+### Release を作らないこと
+
+| job | 結果 |
+|---|---|
+| validate / package-ios / package-android / package-maui | success |
+| ios / android / maui (各 verify) | success |
+| consumer-ios / consumer-android / consumer-maui (各 verify) | success |
+| publish / wait-for-registries / smoke-ios / smoke-android / smoke-maui | skipped |
+
+run 全体は success。実行の前後で配信先は変わっていない。
+
+- GitHub Release は `0.1.0-beta.2` が最新のまま (`0.1.0-beta.3` は作られていない)
+- monorepo の tag は `0.1.0-beta.1` / `0.1.0-beta.2` の 2 本のまま
+- SwiftPM 配信リポジトリの tag も同じ 2 本のまま

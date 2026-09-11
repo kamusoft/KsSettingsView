@@ -69,7 +69,7 @@
 - [x] 8.2 意図的に契約を破った状態 (具体 version・`from:` への書き換え・片言語だけの追加) を作り、lint が落ちることを確認する
 - [x] 8.3 セクションを持たない pull request を模した入力で、validate の検査が落ちることを確認する
 - [x] 8.3b `dry-run` を `main` 以外のブランチから起動し、記載が無いことを理由に失敗しないことを確認する (→ Scenario: 開発ブランチからのリハーサルでは対象を集めない)
-- [ ] 8.3c `dry-run` を `main` から起動し、収集・検査・成果物への受け渡しまでが実際に走ることを確認する (→ Scenario: main からのリハーサルでは実際の経路を通る)
+- [x] 8.3c `dry-run` を `main` から起動し、収集・検査・成果物への受け渡しまでが実際に走ることを確認する (→ Scenario: main からのリハーサルでは実際の経路を通る)
 - [x] 8.7 先行する change ([backport-release-workflow-hardening](../backport-release-workflow-hardening/tasks.md)) が既に適用されている場合、publish job の成果物の受け渡し順序と `ci.yml` の lint job の構成を再確認する (双方が同じ箇所を触るため)
 - [x] 8.4 `dry-run` で release を起動し、validate から消費者検証までが通ることを確認する
 - [x] 8.5 `dry-run` で生成された nupkg を展開し、同梱 README のインストール例がプレースホルダのままであることを確認する (→ Scenario: リリースしてもインストール例は変わらない)
