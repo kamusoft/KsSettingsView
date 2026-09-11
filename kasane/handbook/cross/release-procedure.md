@@ -157,7 +157,7 @@ git log --no-merges --reverse origin/main..origin/develop --pretty=format:'%h %s
 2. pull request を `develop` → `main` で作り、本文の `## Changes` セクションに利用者向けの変更だけを書く
 3. 7 件の check が通ったらマージする
 
-本文は `.github/pull_request_template.md` の雛形から始める。書式と種別の一覧は雛形の「記入の仕方」が持つ (利用者向けの変更が無いときは `- none` を単独で置く)。**このセクションの項目が GitHub Release 本文の材料になる** — 書いた順や字面がそのまま出るのではなく、workflow が項目を種別別に再編し、種別の見出し・pull request 番号・前回の版との比較リンクを付けて整形する。
+本文は `.github/pull_request_template.md` の雛形から始める。書式と種別の一覧は雛形の「記入の仕方」が持つ (利用者向けの変更が無いときは `- none` を単独で置く)。**説明は英語で書く** — Release ページは閲覧者の言語圏を仮定しない利用者向けの公開物であり、種別の見出しと定型文言も英語で出る。**このセクションの項目が GitHub Release 本文の材料になる** — 書いた順や字面がそのまま出るのではなく、workflow が項目を種別別に再編し、種別の見出し・pull request 番号・前回の版との比較リンクを付けて整形する。
 
 `## Changes` を持たない pull request、または認識できない行を含む pull request が範囲にあると、release は publish に入る前に止まる ([cross/ADR-0030](../../decisions/cross/0030-release-notes-from-pr-body-and-handbook-as-procedure-source.md))。範囲に入るのは前回の公開済み Release 以降に `main` へマージされた pull request すべてなので、書き忘れは次のリリースのときに露見する。手元で先に確かめるなら、`main` からのリハーサル (下記) を 1 回回す。
 

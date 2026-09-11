@@ -83,10 +83,10 @@ implementation("jp.kamusoft:kssettingsview:{version}")
 ```markdown
 ## What's Changed
 
-### 破壊的変更
+### Breaking Changes
 - Cell の色指定が非 null 型になった (#42)
 
-### 不具合修正
+### Bug Fixes
 - ダーク表示で行の背景が塗り残される問題を修正した (#45)
 
 **Full Changelog**: <前回 Release の tag>...<今回の tag> の比較

@@ -13,12 +13,12 @@
 記入例:
 
 ```
-- breaking: Cell の色指定が非 null 型になった
-- feature: 行の高さを個別に指定できるようになった
-- fix: ダーク表示で行の背景が塗り残される問題を修正した
+- breaking: Cell color properties are now non-nullable
+- feature: Row height can be specified per row
+- fix: Row backgrounds are no longer left unpainted in dark mode
 ```
 
-説明は利用者の言葉で書く。内部の作業やハーネスの整備は利用者向けの変更ではないので載せない。
+説明は利用者の言葉で、**英語で**書く (Release ページは閲覧者の言語圏を仮定しない公開物であり、種別の見出しと定型文言も英語で出るため)。内部の作業やハーネスの整備は利用者向けの変更ではないので載せない。
 
 ## 概要
 

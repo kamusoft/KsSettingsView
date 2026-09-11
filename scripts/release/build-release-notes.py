@@ -49,11 +49,12 @@ import urllib.error
 import urllib.request
 
 # 種別と、ノートに出す見出し。並び順もこの定義の順。
+# 見出しは Release ページに出る公開物なので英語で書く (利用者の言語圏を仮定しない)。
 KINDS: list[tuple[str, str]] = [
-    ("breaking", "破壊的変更"),
-    ("feature", "機能追加"),
-    ("fix", "不具合修正"),
-    ("docs", "ドキュメント"),
+    ("breaking", "Breaking Changes"),
+    ("feature", "Features"),
+    ("fix", "Bug Fixes"),
+    ("docs", "Documentation"),
 ]
 
 # 利用者向けの変更を書くセクションの見出しと、変更が無いことを示す単独の記載。
@@ -164,14 +165,14 @@ def render_notes(pulls: list[dict], repo: str, version: str, base_tag: str | Non
                 continue
             blocks.append(f"### {title}\n" + "\n".join(grouped[key]))
     else:
-        blocks.append("利用者向けの変更はありません。")
+        blocks.append("No user-facing changes in this release.")
 
     if base_tag:
         blocks.append(
             f"**Full Changelog**: https://github.com/{repo}/compare/{base_tag}...{version}"
         )
     else:
-        blocks.append("これは最初のリリースです。")
+        blocks.append("This is the first release.")
     return "\n\n".join(blocks) + "\n"
 
 
@@ -426,9 +427,10 @@ def selftest_parsing() -> list[tuple[str, bool]]:
         ],
         repo, "1.0.0", "0.9.0",
     )
-    check("種別ごとにまとまり、定義順に並ぶ", notes.index("破壊的変更") < notes.index("機能追加")
-          < notes.index("不具合修正"))
-    check("項目の無い種別の見出しは出さない", "ドキュメント" not in notes)
+    check("種別ごとにまとまり、定義順に並ぶ",
+          notes.index("Breaking Changes") < notes.index("Features")
+          < notes.index("Bug Fixes"))
+    check("項目の無い種別の見出しは出さない", "Documentation" not in notes)
     check("複数 pull request 分が連結される",
           "- 行の高さを指定できる (#45)" in notes and "- 塗り残しを直した (#42)" in notes)
     check("出所の pull request 番号が付く", "(#42)" in notes and "(#45)" in notes)
@@ -447,12 +449,13 @@ def selftest_parsing() -> list[tuple[str, bool]]:
 
     none_only = render_notes([{"number": 7, "body": changes_body("- none")}], repo, "1.0.0", "0.9.0")
     check("`- none` だけの pull request からは項目が載らない",
-          "利用者向けの変更はありません。" in none_only and "###" not in none_only)
+          "No user-facing changes in this release." in none_only and "###" not in none_only)
 
     empty = render_notes([], repo, "1.0.0", None)
-    check("対象が 0 件でも本文が決まる", "利用者向けの変更はありません。" in empty)
+    check("対象が 0 件でも本文が決まる",
+          "No user-facing changes in this release." in empty)
     check("初回のリリースでは比較の位置を含めない",
-          "compare" not in empty and "これは最初のリリースです。" in empty)
+          "compare" not in empty and "This is the first release." in empty)
 
     check("セクションが無いと失敗する",
           fails([{"number": 3, "body": "## Summary\n\n本文\n"}], "セクションが無い"))
@@ -466,7 +469,7 @@ def selftest_parsing() -> list[tuple[str, bool]]:
     check("認識できない非空行は失敗する",
           fails([{"number": 3, "body": changes_body("* feature: 別記法")}], "認識できない行"))
     check("地の文は失敗する",
-          fails([{"number": 3, "body": changes_body("利用者向けの変更はありません")}],
+          fails([{"number": 3, "body": changes_body("No user-facing changes in this release.")}],
                 "認識できない行"))
     check("空の説明は失敗する",
           fails([{"number": 3, "body": changes_body("- fix:")}], "説明が空"))
