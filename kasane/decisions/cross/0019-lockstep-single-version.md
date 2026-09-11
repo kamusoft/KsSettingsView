@@ -33,7 +33,7 @@ KsSettingsView は iOS (SwiftPM)・Android (Maven Central)・MAUI (NuGet.org) �
 - 負: 1 platform だけの修正でも全 platform の version が上がり、無変更の platform にも空リリースが出る。
 - 負: リリース CI は常に全 platform の一斉ビルドが前提になり、1 platform のビルド失敗がリリース全体を止める。
 - semver には prerelease 形式 `X.Y.Z-{alpha|beta|rc}.N` を含める。`-pre` / `-preview` は Maven の版比較で正式版より新しいと判定されるため使わない。NuGet と SwiftPM は suffix を prerelease として扱うが Maven Central では同格に見えるため、その旨は README の prerelease 節が担う。
-- 負: 「全部同じ番号を入れる」の案内に SwiftPM だけ例外がある。`from:` は prerelease を解決しないため、prerelease の間は README のインストール例を `exact:` で書く。MAUI の facade → binding は完全一致ではなく下限指定で、lockstep の同時発行と NuGet の最小版選択で同版に揃う。消費者検証はその一致を検査する。
+- 負: 「全部同じ番号を入れる」の案内に SwiftPM だけ例外がある。`from:` は下限が prerelease であれば prerelease も解決するが、上限が次のメジャーまで開くため特定の版に固定されない。prerelease の間は README のインストール例を `exact:` で書く。MAUI の facade → binding は完全一致ではなく下限指定で、lockstep の同時発行と NuGet の最小版選択で同版に揃う。消費者検証はその一致を検査する。
 
 出典: kasane/roadmaps/package-distribution/exploration.md (B) / ../KsDialogs/kasane/decisions/cross/0009-lockstep-single-version.md (翻案元)
 出典 (prerelease 形式): kasane/roadmaps/package-distribution/exploration.md (prerelease の扱い、2026-08-21 追記) / kasane/roadmaps/package-distribution/phases/phase-8-release-workflow/agenda.md (初回リリースの version) / kasane/changes/archive/2026-09-04-add-release-workflow/evidence/github-actions-runs.txt (12 節)
