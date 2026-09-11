@@ -32,7 +32,7 @@
 ## 5. 検証
 
 - [x] 5.1 `central-portal.sh --selftest` と `wait-for-registries.sh --selftest` が全件通ることを確認する
-- [ ] 5.2 `dry-run` で release を起動し、validate から消費者検証までが通ることを確認する
+- [x] 5.2 `dry-run` で release を起動し、validate から消費者検証までが通ることを確認する
 - [x] 5.3 1.4 と 3.5 の検査が lint job で実際に走り、意図的に定数を壊したときに失敗することを確認する
 - [x] 5.4 3.4 の自己テストが 5 状態すべてで通ることを確認する
 
