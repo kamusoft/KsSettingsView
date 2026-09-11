@@ -4,8 +4,8 @@ applies-when:
   always: false
   tasks: [リリースの実施, release workflow の secrets / Environment の設定, リリースの再実行, リリースのリハーサル]
 title: リリース手順
-description: main ブランチと branch protection の用意、Environment release と secrets の登録、配信リポジトリの deploy key、リリース PR と dispatch、失敗時の再実行、dry-run によるリハーサル
-timestamp: 2026-09-06
+description: main ブランチと branch protection の用意、Environment release と secrets の登録、配信リポジトリの deploy key、事前確認からリリース PR・起動・見守り・公開後の確認までの各段、失敗時の再実行、dry-run によるリハーサル
+timestamp: 2026-09-11
 ---
 
 # リリース手順
@@ -13,6 +13,17 @@ timestamp: 2026-09-06
 この文書は、3 platform (SwiftPM 配信リポジトリ / Maven Central / NuGet.org) へ同じ version を 1 回の操作で公開するまでの手順をまとめる。公開は `.github/workflows/release.yml` を手で起動して行い、その前提となる GitHub 側の設定 (ブランチ・Environment・鍵) はオーナーが手作業で用意する。
 
 コマンド例の `<version>` は `0.1.0` または `0.1.0-beta.1` の形の値に読み替える。リポジトリは `kamusoft/KsSettingsView` (monorepo) と `kamusoft/KsSettingsView-SPM` (SwiftPM 配信リポジトリ) の 2 つを扱う。
+
+## この手順書の使い方
+
+この文書がリリース手順の正であり、1 回のリリースはここを上から順に読めば完了する。
+
+1. **初回だけ行う設定** — 済んでいれば飛ばす
+2. **リリースのたびに行うこと** — 事前確認から公開後の確認まで、書かれた順に実行する
+3. **失敗したとき** — 実行が止まったときだけ開く
+4. **リハーサル** — 配信先を変えずに経路を通したいときだけ開く
+
+リリース用スキル (`.agents/skills/release/SKILL.md`) は、実行時にこの文書を読んで書かれた順に従う薄い層である。段の順序・節の並び・コマンドはいずれもこの文書が持ち、スキルの側には写しを持たない。手順を変えるときはこの文書だけを直せばよい ([cross/ADR-0030](../../decisions/cross/0030-release-notes-from-pr-body-and-handbook-as-procedure-source.md))。判断 — version 番号の決定、`## Changes` の最終的な文面、失敗したときに再実行するかどうか — は人が行い、スキルは代行しない。
 
 ## ブランチの役割
 
@@ -115,34 +126,96 @@ nuget.org 側には、この monorepo の `release.yml` と Environment `release
 
 ## リリースのたびに行うこと
 
-### リリース PR
+出す version を決めたら、次の 5 段を上から順に実行する。各段の見出しの下に、その段を終えた状態 (到達状態) を書く。到達していないまま次の段へ進まない。
 
-1. `docs-refresh` をオーナーが依頼し、`skills/` と README 群を現状へ追随させる
-2. `python3 scripts/release/set-readme-version.py <version>` で README 2 枚と利用者向け Skill 8 枚 (4 本 × 2 言語) のインストール例を新しい version に揃える
-3. 1 と 2 を含む pull request を `develop` → `main` で作り、7 件の check が通ったらマージする
+### 1. 事前確認
 
-version の置換を忘れると release workflow の validate がインストール例の不一致で止まる。手元で `python3 scripts/release/set-readme-version.py --check <version>` を先に通しておくと早く気づける。
+到達状態: `develop` の検証 CI が緑で、利用者向けドキュメントの追随の要否が判断できている。
 
-### 起動
+`develop` の先端に対する検証 CI が成功していることを確かめる。
+
+```bash
+gh run list --branch develop --workflow=ci.yml --limit 1 \
+  --json conclusion,headSha,url --jq '.[0]'
+```
+
+失敗しているときは先へ進まない。原因を直して緑にしてから戻る。
+
+`skills/` と README 群が現状から遅れていないかを見て、遅れていれば `docs-refresh` をオーナーが依頼する (このスキルは自発的に発動しない)。追随した更新はこの後のリリース PR に含める。
+
+### 2. リリース PR
+
+到達状態: `develop` → `main` の pull request が 7 件の check を通してマージされ、`main` の先端がリリース対象の commit になっている。
+
+1. `## Changes` に書く材料を集める。範囲は**この pull request が `main` へ新しく持ち込む差分**だけで、前回のリリース以降の全変更ではない (既に `main` へ入った変更は、それを持ち込んだ pull request の記載が既に持っている。両方に書くとノートへ二重に載る)。
+
+```bash
+git fetch origin main develop
+git log --no-merges --reverse origin/main..origin/develop --pretty=format:'%h %s'
+```
+
+2. pull request を `develop` → `main` で作り、本文の `## Changes` セクションに利用者向けの変更だけを書く
+3. 7 件の check が通ったらマージする
+
+本文は `.github/pull_request_template.md` の雛形から始める。書式と種別の一覧は雛形の「記入の仕方」が持つ (利用者向けの変更が無いときは `- none` を単独で置く)。**説明は英語で書く** — Release ページは閲覧者の言語圏を仮定しない利用者向けの公開物であり、種別の見出しと定型文言も英語で出る。**このセクションの項目が GitHub Release 本文の材料になる** — 書いた順や字面がそのまま出るのではなく、workflow が項目を種別別に再編し、種別の見出し・pull request 番号・前回の版との比較リンクを付けて整形する。
+
+`## Changes` を持たない pull request、または認識できない行を含む pull request が範囲にあると、release は publish に入る前に止まる ([cross/ADR-0030](../../decisions/cross/0030-release-notes-from-pr-body-and-handbook-as-procedure-source.md))。範囲に入るのは前回の公開済み Release 以降に `main` へマージされた pull request すべてなので、書き忘れは次のリリースのときに露見する。手元で先に確かめるなら、`main` からのリハーサル (下記) を 1 回回す。
+
+### 3. 起動
+
+到達状態: release workflow の run が始まり、その URL が分かる。
 
 `main` の先端がリリース対象の commit になっていることを確かめてから起動する。
 
 ```bash
 gh workflow run release.yml --ref main -f version=<version>
+```
+
+### 4. 見守り
+
+到達状態: 全 job が成功し、tag 2 本・GitHub Release・3 レジストリへの公開・smoke まで終わっている。
+
+```bash
 gh run watch "$(gh run list --workflow=release.yml --limit 1 --json databaseId --jq '.[0].databaseId')"
 ```
 
-全体で 40 分前後かかる (初回リリース `0.1.0-beta.1` の実測は 39 分。消費者検証 MAUI の dry-run 12 分と publish 11 分が大半で、Maven Central の反映待ちは公式には 10〜30 分かかり得るが初回は数秒だった)。publish が終わると配信リポジトリと monorepo に tag が付き、prerelease の suffix を持つ version は prerelease として Release が作られる。そのあと公開レジストリへの反映を待って smoke が走る。
+全体で 40 分前後かかる (初回リリース `0.1.0-beta.1` の実測は 39 分。消費者検証 MAUI の dry-run 12 分と publish 11 分が大半で、Maven Central の反映待ちは公式には 10〜30 分かかり得るが初回は数秒だった)。publish は Maven の upload の直後に Central Portal の検証の決着を待ち (上限 30 分)、検証を通らなければ NuGet へ push する前に止まる。検証が長引くぶんは publish の所要時間に上乗せされる。publish が終わると配信リポジトリと monorepo に tag が付き、GitHub Release が作られる。そのあと公開レジストリへの反映を待って smoke が走る。
 
-### 公開後の確認
+Release の本文は validate の段で確定済みで、publish は pull request 本文を読み直さない。version が prerelease の表記 (`-beta.1` 等) を持っていても GitHub の prerelease 印は付けず、作った Release を最新として明示的に指定する ([cross/ADR-0029](../../decisions/cross/0029-install-examples-without-pinned-version.md))。
+
+途中で止まったら「失敗したとき」へ。
+
+### 5. 公開後の確認
+
+到達状態: 3 経路の公開物と Release ページを実物で確認できている。
 
 - nuget.org の 3 パッケージのページ (README が表示されること)
 - Maven Central の `jp.kamusoft:kssettingsview` の当該 version
 - 配信リポジトリの tag と、monorepo の Release 本文
+- `https://github.com/kamusoft/KsSettingsView/releases/latest` が今回の版に解決すること (README と利用者向け Skill のインストール例は具体 version を持たず、この案内に委ねている)
 
-Release 本文は自動生成ノートのままにし、手で補わない (利用者向けの案内は README が担う。Release ページの見え方だけの問題であり、初回リリースもこの扱いで済ませた)。
+Release 本文は pull request の `## Changes` から組み立てられたものであり、手で補わない。文面を直したいときは次のリリースの `## Changes` の書き方を直す。
 
 ## 失敗したとき
+
+### publish に入る前 (validate) の失敗
+
+公開物には何も起きていない。原因を直してから同じ version で起動し直す。
+
+| 失敗の理由 | 直し方 |
+|---|---|
+| 対象の pull request に `## Changes` が無い / 認識できない行がある | ログが原因の pull request と行を示す。その pull request の本文を直してから `Re-run failed jobs` (ノートは実行時の本文を読むので、マージ済みでも直せば反映される) |
+| version の形式が不正 | 入力した version を見直す |
+| 同名の tag が別の commit を指す | その version は出し直せない。次の version で出す。同名の tag が**起動した commit を指している**場合は衝突ではなく、workflow は再実行として続行する (Release の作成だけが失敗したときなど、同じ version で続けるべき経路) |
+
+`## Changes` の記載の不備は、手元でも確かめられる。`render` は GitHub API も git も使わず、pull request 本文を模した JSON (`[{"number": 42, "body": "..."}]`) だけで組み立てを再現する。
+
+```bash
+python3 scripts/release/build-release-notes.py render \
+    --pulls <本文を並べた JSON> --repo kamusoft/KsSettingsView --version <version>
+```
+
+### publish の途中での失敗
 
 publish の各ステップは冪等なので、原因を取り除いてから **同じ version で「失敗した job から再実行」** する。済んでいる公開は skip され、残りだけが実行される。GitHub の実行画面の `Re-run failed jobs` を使う。`Re-run all jobs` でも成立する (artifact は同名を上書きし、保留中の deployment ID は attempt をまたいで引き継がれる) が、成功済みの本体検証と配布物の生成をやり直すぶん 1 時間近く余計にかかるので、原則として使わない。
 
@@ -150,6 +223,8 @@ publish の各ステップは冪等なので、原因を取り除いてから **
 |---|---|
 | 配信リポジトリへの commit push | 差分が無ければ commit を skip して先へ進む |
 | Maven の upload | 前の attempt の deployment の状態で分岐する (検証済みなら upload せず release へ。削除済みなら upload をやり直す) |
+| Maven の検証待ち (上限超過) | 検証中の deployment は削除できないので ID が残り、次の attempt が同じ deployment の決着を待つところから続ける |
+| Maven の検証 (FAILED) | upload からやり直す (NuGet は未 push なので、原因を直せば同じ version で埋め直せる) |
 | NuGet の push | 公開済みのパッケージは skip される |
 | Maven の release | 保留中の deployment を release する |
 | tag / Release | 同じ内容の tag は skip、別内容なら失敗する |
@@ -172,7 +247,12 @@ scripts/release/central-portal.sh drop <deployment-id>
 gh workflow run release.yml --ref <branch> -f version=<version> -f dry-run=true
 ```
 
-`<version>` には実際に出す予定の値を与える。README の version 検査もこの実行に含まれるため、リリース PR のマージ後に一度回すと、本番起動で validate が落ちる事態を避けられる。
+`<version>` には実際に出す予定の値を与える。Release ノートの扱いは起動ブランチで変わる。
+
+| 起動ブランチ | Release ノートの扱い |
+|---|---|
+| `main` | 対象の収集・検査・整形と成果物への受け渡しまでを本番と同じ経路で行う (Release だけ作らない)。リリース PR のマージ後に一度回すと、`## Changes` の不備で本番の validate が落ちる事態を避けられる |
+| `main` 以外 | 収集も検査も行わない。`main` の pull request に紐づかない commit なので、記載が無いことを理由に失敗させない |
 
 ## 関連
 

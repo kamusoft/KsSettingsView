@@ -19,7 +19,7 @@ cross/ADR-0022 は**利用者向け**ドキュメント (`skills/`) の提供形
 
 ## Decision
 
-- リポジトリの README は**ルートの 2 枚のみ**とする: 英語 `README.md` + 日本語 `README_ja.md`。`android/README.md`、`maui/README.md`、`samples/ios/README.md`、`samples/android/README.md`、`samples/maui/README.md` の 5 枚は廃止する。`skills/README.md` / `skills/README_ja.md` (Skill 索引、cross/ADR-0022) はこの決定の対象外で存置する。`maui/spike/README.md` も対象外とする (2026-08-29 追記): 完了済み検証 (binding toolchain の疎通) の記録であり docs-refresh の追従対象にも入っていない。**(2026-08-30 決着)** `maui/spike/` は**公開リポジトリに載せない** — 旧 private リポジトリへ保全し、公開ツリーからも今後の作業ツリーからも外す。長命の知識は既に蒸留済みで (iOS の手法は maui/architecture/binding-build-integration.md、Android は maui/ADR-0006 が spike の `AndroidGradleProject` 方式を却下)、spike README の BG8401 に関する結論は本番の Metadata.xml と逆のまま追従の仕組みを持たず、`maui/*.slnx` 外でビルドもされないため腐り続けるため。したがって公開リポジトリの README は 4 枚 (ルート 2・`skills/` 索引 2) になる。
+- リポジトリの README は**ルートの 2 枚のみ**とする: 英語 `README.md` + 日本語 `README_ja.md`。`android/README.md`、`maui/README.md`、`samples/ios/README.md`、`samples/android/README.md`、`samples/maui/README.md` の 5 枚は廃止する。`skills/README.md` / `skills/README_ja.md` (Skill 索引、cross/ADR-0022) はこの決定の対象外で存置する。`maui/spike/README.md` も対象外とする — 完了済み検証 (binding toolchain の疎通) の記録であり docs-refresh の追従対象にも入っていない。そのうえで `maui/spike/` は**公開リポジトリに載せない** — 旧 private リポジトリへ保全し、公開ツリーからも今後の作業ツリーからも外す。長命の知識は既に蒸留済みで (iOS の手法は maui/architecture/binding-build-integration.md、Android は maui/ADR-0006 が spike の `AndroidGradleProject` 方式を却下)、spike README の BG8401 に関する結論は本番の Metadata.xml と逆のまま追従の仕組みを持たず、`maui/*.slnx` 外でビルドもされないため腐り続けるため。したがって公開リポジトリの README は 4 枚 (ルート 2・`skills/` 索引 2) になる。
 - 開発者向けの知識は**契約・手順とも** `kasane/concepts/` に一本化する。concepts から README を知識の正として指す参照 (`maui/api/native-bridge.md` の 2 箇所) は解消する。
 - **ルート README は利用者の入口に純化する**: 概要・特徴・スクリーンショット・対応 platform・インストール・最小コード例・`skills/` への導線・リポジトリ構成・貢献・ライセンス・サンプルのサードパーティ通知。開発者向けの手順は載せない。
 - 廃止する README の中身は分類ごとに次のとおり扱う。
@@ -49,5 +49,7 @@ cross/ADR-0022 は**利用者向け**ドキュメント (`skills/`) の提供形
 - 負 (実装で判明): `maui/ADR-0006` が `maui/README.md` の「SDK 更新時に再検証する箇所」の表を「再検証の入口」として指しており、README の削除で参照が切れた。移送先 (`maui/architecture/binding-build-integration.md`) から ADR への逆リンクを張って表 → ADR は辿れるようにしたが、accepted な ADR の本文は不変のため **ADR → 表の向きは切れたまま**である。ADR-0006 の決定内容 (Android binding は `gradlew` を Exec で呼ぶ) は変わっていないため supersede はしない。文書を廃止する決定は、その文書を名指しする accepted な ADR の有無を確認する必要がある。
 
 ---
+整理: 2026-09-07 Decision の `maui/spike/` に関する記述から日付マーカー 2 つ (追記・決着) を落とし、1 つの文章として読める形に溶かした。決定内容は不変
 出典: kasane/roadmaps/package-distribution/phases/phase-9-docs/history.md (2026-08-29 の 2 節) / kasane/roadmaps/package-distribution/phases/phase-9-docs/agenda.md (決定事項「README はルート 2 枚 (英語 + 日本語) に集約する」)
 出典 (2026-08-30 改訂): kasane/roadmaps/package-distribution/phases/phase-2-public-readiness/history.md (2026-08-30「`maui/spike/` の公開可否」) / kasane/roadmaps/package-distribution/phases/phase-2-public-readiness/agenda.md (決定事項「`maui/spike/` は公開リポジトリに載せない」)
+現行照合: 2026-09-07 確認。追跡下の README はルートの `README.md` / `README_ja.md` と `skills/README.md` / `skills/README_ja.md` の 4 枚で、決定が廃止対象とした platform 別・Sample 別の 5 枚は存在しない (ほかに残るのは change 配下の検証・証跡用と `scripts/spm-snapshot/README.template.md` で、いずれも本決定の対象外)。判定: 維持

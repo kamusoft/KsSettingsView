@@ -20,6 +20,8 @@
 | [0027](0027-negative-verification-fixed-wait-exception.md) | 負の検証は条件ベース待機の対象外とし、意図を明示した固定時間待機で書く | accepted | no-op・不達の確認には正の完了条件が存在しないため条件ベース化しない。意図を名前で明示したヘルパで書き、収束待ちの直し漏れと区別可能にする。収束待ちへの適用は引き続き規約違反。 |
 | [0028](0028-ci-triggers-by-branch-role.md) | 検証 CI のトリガーはブランチの役割で分け、develop は直接 push、main は develop からの PR だけを検証する | accepted | develop 宛て PR トリガーを廃止し、develop push は lint + 本体検証 3 本、main 宛て PR はそれに消費者検証 3 本を加える。develop の必須 status check は撤去 (直接 push 運用に合わせる)、main は 7 件を維持。 |
 
+| [0029](0029-install-examples-without-pinned-version.md) | インストール例は具体 version を持たず、最新版は GitHub Releases が示す | proposed | ADR-0022 の閉世界性条項を Releases への案内に限って緩める (amends)。具体 version をやめプレースホルダ `{version}` を置き、置換機構一式 (set-readme-version.py・validate の検査・handbook 手順・AGENTS.md の例外規定) を撤去。0.x beta の間は GitHub Release に prerelease の印を付けず既存 2 件も解除する。workflow による develop 書き戻し・main 直接 commit・第三者バッジはいずれも却下。 |
+| [0030](0030-release-notes-from-pr-body-and-handbook-as-procedure-source.md) | Release ノートは main 宛て pull request 本文の Changes セクションから組み立て、リリース手順の正は handbook に置く | proposed | ラベルによる自動分類は集約 PR の粒度でしか効かないため廃止し、`## Changes` セクション (種別 4 つ・必須・無変更は none) を前回 tag 以降の全 PR から集めて workflow が連結する。`.github/release.yml` とラベルは持たない。手順の正は handbook に残し、リリース用スキルは下書き生成と実行を担う薄い層とする。 |
 欠番: 0012 (product-qualified-public-namespace) は移行トリアージで却下 (出典: kasane/changes/archive/2026-07-18-migrate-openspec/candidates/rejected-0012-product-qualified-public-namespace.md)。
 
 番号は旧フラット時代の採番を温存 (採番規則は [../index.md](../index.md) を参照)。

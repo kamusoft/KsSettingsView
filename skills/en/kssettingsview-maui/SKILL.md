@@ -34,9 +34,11 @@ Add the package reference in the `.csproj` of your app.
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="KsSettingsView.Maui" Version="0.1.0-beta.2" />
+  <PackageReference Include="KsSettingsView.Maui" Version="{version}" />
 </ItemGroup>
 ```
+
+`{version}` is a placeholder: replace it with the version you want to use, or restore fails. To find the current version, open the [latest release](https://github.com/kamusoft/KsSettingsView/releases/latest) page, which always resolves to the most recent release.
 
 That one reference is all you add; NuGet brings in the platform binding layer transitively. Then register the library once during startup. A single handler is registered; there is no per-cell handler to add.
 

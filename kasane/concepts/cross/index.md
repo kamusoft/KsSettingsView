@@ -5,6 +5,7 @@
 ## architecture/
 
 - [architecture/repository-boundaries.md](architecture/repository-boundaries.md) — 横断変更をまとめる monorepo と、独立した platform build・Sample・消費者検証 (`verification/`) の責務分担
+- [architecture/release-pipeline.md](architecture/release-pipeline.md) — 3 platform を 1 本の release workflow で公開する段の構成、publish 段の内部順序、version の注入経路、各チャネルへの publish 機構と公開確認の手段
 
 ## reference/
 

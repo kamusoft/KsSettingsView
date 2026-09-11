@@ -27,6 +27,7 @@ Cell の icon を MAUI からどう渡すか。native は `KsImage` の platform
 - 正: 「MAUI 側の非同期実体化 → 解決済み platform 値の輸送」は phase-5 (CustomCell)・phase-6 (Header/Footer 任意 View) の MauiView 実体化の先例になるパターン。
 - 負: 非同期解決に伴う競合管理 (要求トークン + 解決口世代) とリース破棄管理が facade 内部に入る。
 - 負: 既知の残課題 — (1) 置換・除去時のリース破棄が native への反映より先に走る窓がある (image loader 経路 = Uri / Stream のみ実害の可能性、file / resource 経路は破棄が no-op)。(2) 複数リースが同一 platform 画像インスタンスを包んだ場合の共有破棄。(3) ページを恒久的に離れて再訪問しない場合、リースにファイナライザが無いため後片付けは走らない。いずれも後続で追跡する (出典: 実装結果 review-002 Minor-10・保留(b))。
-- 追記 (2026-08-22): 上記 (1) は**解消済み** — 置換 (`StoreIcon`)・Cell 除去 (`UnregisterCell`)・Root 再構築 (`ClearRegistrations`) の 3 経路とも退役キュー経由となり「native への配信 → 破棄」の順序へ移行している (実装は add-maui-basic-input-cells 内)。順序を固定する回帰テストが `IconSourceTests` に 4 本あり、3 経路を即時破棄へ戻すミューテーションで当該 4 本だけが落ちることを実測で確認した。(2) は investigate-maui-icon-lease-sharing で追跡する。(3) は未解決のまま (出典: 実装結果 fix-maui-icon-lease-disposal-ordering の探索)。
 
 出典: add-maui-basic-input-cells design.md Decision 7 (採用はオーナー判断「B しかない。原典にその機構があるので重くない」) / review-002 (Minor-10・保留(a)(b) の評価)
+整理: 2026-09-07 残課題の消化状況を述べた追記 (2026-08-22) を Consequences から除いた。残課題そのもの (3 件) は決定の帰結なので本文に残し、現況は下の現行照合が持つ。決定内容 (Context / Decision / Alternatives) は不変
+現行照合: 2026-09-07 確認。Consequences の残課題 3 件のうち (1) 破棄順序は退役キュー経由への移行で解消済み (`maui/KsSettingsView.Maui/Internals/KsSettingsController.cs` の `RetiredView` / `DisposeRetired`、回帰テストは `maui/KsSettingsView.Maui.Tests/IconSourceTests.cs`)、(2) 共有破棄は maui/ADR-0026 が所有権分類で決着させた、(3) ページを恒久的に離れた場合の後片付けは未解決。判定: 乖離あり ((1)(2) は解消済み)

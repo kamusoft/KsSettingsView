@@ -37,7 +37,7 @@ let package = Package(
     name: "MyApp",
     platforms: [.iOS(.v16)],
     dependencies: [
-        .package(url: "https://github.com/kamusoft/KsSettingsView-SPM", exact: "0.1.0-beta.2")
+        .package(url: "https://github.com/kamusoft/KsSettingsView-SPM", exact: "{version}")
     ],
     targets: [
         .target(
@@ -49,6 +49,10 @@ let package = Package(
     ]
 )
 ```
+
+`{version}` はプレースホルダで、使う version に置き換える (そのままでは依存解決に失敗する)。現在の version は、常に最新のリリースへ解決される [latest release](https://github.com/kamusoft/KsSettingsView/releases/latest) のページで確認できる。
+
+依存宣言は `exact:` で書く。prerelease かどうかに関わらず、書いた version ちょうどに解決されるためである。`from:` も下限が prerelease であれば prerelease を解決するが、上限が次のメジャー version まで開いたままなので、特定の版には固定されない。
 
 リンクするのはこの 1 product だが、`import` はモジュール名で書く。含まれるモジュールは 3 つ: `KsSettingsViewCore` (設定ツリー)、`KsSettingsViewUI` (Cell・`Theme`・`CellStyle`・UIKit ホスト)、`KsSettingsViewSwiftUI` (SwiftUI View と宣言的 DSL)。組み込みの Cell は [references/cells.md](references/cells.md) で 1 種ずつ扱い、`CustomCell` と独自 Cell 型は [references/custom-cells.md](references/custom-cells.md) で扱う。
 

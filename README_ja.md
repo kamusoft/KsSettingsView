@@ -37,15 +37,17 @@ Androidは単一のMaven artifact `jp.kamusoft:kssettingsview`として配布し
 
 詳しい導入方法はplatform別の[Agent Skills](https://github.com/kamusoft/KsSettingsView/blob/main/skills/README_ja.md)を参照してください。この節には依存宣言とprerelease版の指定方法だけを示します。
 
+以下の依存宣言では、versionをプレースホルダ`{version}`で書いています。使用するversionに置き換えてください（そのままでは依存解決に失敗します）。現在のversionは、常に最新のリリースへ解決される[latest release](https://github.com/kamusoft/KsSettingsView/releases/latest)のページで確認できます。
+
 ### iOS — Swift Package Manager
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/kamusoft/KsSettingsView-SPM", exact: "0.1.0-beta.2")
+    .package(url: "https://github.com/kamusoft/KsSettingsView-SPM", exact: "{version}")
 ]
 ```
 
-productは`.product(name: "KsSettingsView", package: "KsSettingsView-SPM")`として参照します。prerelease版は、そのsemantic version tagを`from: "X.Y.Z-beta.N"`で明示するか、`exact: "X.Y.Z-beta.N"`で固定します。
+productは`.product(name: "KsSettingsView", package: "KsSettingsView-SPM")`として参照します。依存宣言は`exact:`で書いており、prerelease版かどうかに関わらず、書いたversionちょうどに解決されます。`from: "X.Y.Z-beta.N"`もprerelease版を解決します（下限がprereleaseであれば、同じversionの以降のprereleaseが対象に入ります）が、上限は次のメジャーversionまで開いたままなので、特定の版には固定されません。1つのversionに固定したい場合は`exact:`を使用してください。
 
 公開状況: packageは配信リポジトリ`KsSettingsView-SPM`から配布され、各リリースはsemantic version tagとして公開されます。
 
@@ -53,7 +55,7 @@ productは`.product(name: "KsSettingsView", package: "KsSettingsView-SPM")`と�
 
 ```kotlin
 dependencies {
-    implementation("jp.kamusoft:kssettingsview:0.1.0-beta.2")
+    implementation("jp.kamusoft:kssettingsview:{version}")
 }
 ```
 
@@ -63,7 +65,7 @@ prerelease版は、依存宣言のversionに`X.Y.Z-alpha.N`、`X.Y.Z-beta.N`、`
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="KsSettingsView.Maui" Version="0.1.0-beta.2" />
+  <PackageReference Include="KsSettingsView.Maui" Version="{version}" />
 </ItemGroup>
 ```
 

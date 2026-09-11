@@ -61,6 +61,7 @@ workers:
   scout: host
   extract: host
   live: host           # UI 調整でも counterpart 可 (結果確認はユーザーの目で行うため)
+  advise: counterpart  # 相談役 (ksn-advise)。counterpart = 相方 CLI の最上位モデル (読み取り専用なので持ち出しリスクは実装系より小さい)
 
 
 distill:
@@ -113,3 +114,10 @@ evolve:
     - ../KsSkills  # 汎用スキル群 (csharp-impl / dotnet-test 等)
     - ../KsApp     # ksapi-ksdb-impl-skill の実体
   promote-projects: 2            # スキル反映の閾値 (昇格済みプロジェクト数)
+
+# 関連リポジトリ (ksn-core references/relations.md)。相手は ../<リポジトリ名>/ で解決する
+relations:
+  - repo: KsDialogs
+    kind: sibling
+    note: "AiForms.Maui.Dialogs のリブランド (Native + MAUI + KMP)。同じ Native + MAUI 構成・CI / 消費者検証 / sample / skills の運用を共有"
+    overlap: [.github, scripts, samples, verification, skills]

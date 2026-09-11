@@ -37,9 +37,11 @@ repositories {
 }
 
 dependencies {
-    implementation("jp.kamusoft:kssettingsview:0.1.0-beta.2")
+    implementation("jp.kamusoft:kssettingsview:{version}")
 }
 ```
+
+`{version}` is a placeholder: replace it with the version you want to use, or resolution fails. To find the current version, open the [latest release](https://github.com/kamusoft/KsSettingsView/releases/latest) page, which always resolves to the most recent release.
 
 The artifact declares Compose runtime / ui / foundation-layout, kotlinx-coroutines-core, androidx.annotation and RecyclerView as `api` dependencies, so this one dependency is enough to compile against the public API.
 

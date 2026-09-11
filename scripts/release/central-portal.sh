@@ -4,6 +4,7 @@
 #
 # 使い方:
 #   scripts/release/central-portal.sh status <deployment-id>
+#   scripts/release/central-portal.sh wait-validated <deployment-id>
 #   scripts/release/central-portal.sh release <deployment-id>
 #   scripts/release/central-portal.sh wait-published <deployment-id>
 #   scripts/release/central-portal.sh drop <deployment-id>
@@ -17,8 +18,15 @@
 #                   存在しない (HTTP 404) 場合は、失敗ではなく `NOT_FOUND` を出す。
 #                   削除済みの ID を持ったまま再実行しても、呼び出し側が「引き継ぐ
 #                   deployment は無い」と判断して再 upload へ進めるようにするため。
+#   wait-validated  検証の決着を待つ。PENDING / VALIDATING の間はポーリングを続け、抜けたら
+#                   その状態 (VALIDATED / PUBLISHING / PUBLISHED / FAILED / NOT_FOUND) を
+#                   status と同じ語彙で標準出力へ 1 行で出す。失敗にするのは上限超過だけで、
+#                   FAILED や NOT_FOUND は失敗ではなく状態として返す。呼び出し側が結果を
+#                   コマンド置換で受けて分岐する (upload 直後は VALIDATED 以外を失敗に、
+#                   再実行の引き継ぎでは FAILED を drop して upload をやり直す、など) ため、
+#                   待機中の進捗行は標準エラーへ出す。
 #   release         VALIDATED であることを再確認してから release する。VALIDATED 以外なら
-#                   何も送らずに失敗する。
+#                   何も送らずに失敗する。検証の決着は wait-validated で先に待っておく。
 #   wait-published  PUBLISHED になるまで待つ。FAILED / NOT_FOUND になったら失敗する。
 #   drop            VALIDATED / FAILED のときだけ削除する。PUBLISHING / PUBLISHED は
 #                   API 上削除できないため、理由を出して正常終了する (失敗経路の後始末から
@@ -36,8 +44,15 @@
 # published サブコマンドは公開リポジトリを見るだけなので認証を要求しない。
 #
 # 待機の間隔と上限は環境変数で上書きできる (テストと運用の調整用):
-#   KSR_POLL_INTERVAL_SECONDS  wait-published のポーリング間隔 (既定 30)
-#   KSR_POLL_TIMEOUT_SECONDS   wait-published の上限 (既定 1800)
+#   KSR_POLL_INTERVAL_SECONDS   wait-validated / wait-published のポーリング間隔 (既定 30)
+#   KSR_POLL_TIMEOUT_SECONDS    wait-validated の上限 (既定 1800 = 30 分)
+#   KSR_PUBLISHED_TIMEOUT_SECONDS
+#                               wait-published の上限 (既定 5400 = 90 分)
+#
+# 公開待ちの上限を検証の決着待ちと分けているのは、両者の所要が桁で違うため。検証は
+# upload 内容の検査なので数分で決着するが、release 後に Maven Central の配信元へ同期
+# されるまでは 1 時間規模でかかることがある。片方を延ばすともう片方も延びる形にすると、
+# 検証で詰まった実行が無用に長く居座る。
 #
 # ネットワークへ出るのは実行本番だけで、--selftest は HTTP 送信関数をモックへ差し替えて
 # URL の組み立て・応答の解釈・状態分岐だけを検査する。
@@ -57,6 +72,7 @@ usage() {
 使い方: $(basename "${BASH_SOURCE[0]}") <サブコマンド> <引数>
 
   status <deployment-id>          deployment の状態を出力する
+  wait-validated <deployment-id>  検証の決着を待ち、決着した状態を出力する
   release <deployment-id>         VALIDATED を再確認してから release する
   wait-published <deployment-id>  PUBLISHED になるまで待つ
   drop <deployment-id>            VALIDATED / FAILED のときだけ削除する
@@ -204,6 +220,33 @@ cmd_status() {
     deployment_state "$1"
 }
 
+# 検証の決着を待つ。決着した状態を標準出力へ出し、上限超過だけを失敗にする。
+# 進捗は標準エラーへ出す (呼び出し側は結果をコマンド置換で受けるため)。
+cmd_wait_validated() {
+    local id="$1"
+    local interval="${KSR_POLL_INTERVAL_SECONDS:-30}"
+    local timeout="${KSR_POLL_TIMEOUT_SECONDS:-1800}"
+    local deadline=$(( SECONDS + timeout ))
+    local state
+
+    while :; do
+        state="$(deployment_state "${id}")"
+        case "${state}" in
+            PENDING|VALIDATING)
+                ;;
+            *)
+                printf '%s\n' "${state}"
+                return 0
+                ;;
+        esac
+        if [ "${SECONDS}" -ge "${deadline}" ]; then
+            fail "検証の決着を待ちきれなかった (上限 ${timeout} 秒、最後の状態 ${state}): ${id}"
+        fi
+        echo "検証待ち (${state}): ${id}" >&2
+        sleep "${interval}"
+    done
+}
+
 cmd_release() {
     local id="$1"
     local state
@@ -224,7 +267,7 @@ cmd_release() {
 cmd_wait_published() {
     local id="$1"
     local interval="${KSR_POLL_INTERVAL_SECONDS:-30}"
-    local timeout="${KSR_POLL_TIMEOUT_SECONDS:-1800}"
+    local timeout="${KSR_PUBLISHED_TIMEOUT_SECONDS:-5400}"
     local deadline=$(( SECONDS + timeout ))
     local state
 
@@ -314,6 +357,15 @@ selftest() {
     MOCK_CALLS="${work}/calls"
     MOCK_SCRIPT="${work}/script"
     MOCK_CURSOR="${work}/cursor"
+    # 台本が尽きたことを記録する印。モックの return は AND-OR 配下のコマンド置換では
+    # 呼び出し側へ伝わらないため、失敗を印として残し、最後にまとめて見る。
+    MOCK_EXHAUSTED="${work}/exhausted"
+
+    # 待機を回す検査の安全網。既定 (30 分 / 90 分) のままだと、照会回数が増える回帰が
+    # 「数秒で NG」ではなく「呼び出し側のタイムアウト」として出る。上限そのものを見る
+    # 検査は、これを各呼び出しで明示的に上書きする。
+    export KSR_POLL_TIMEOUT_SECONDS=5
+    export KSR_PUBLISHED_TIMEOUT_SECONDS=5
 
     local failures=0
 
@@ -364,6 +416,7 @@ selftest() {
         line="$(sed -n "${index}p" "${MOCK_SCRIPT}")"
         if [ -z "${line}" ]; then
             echo "モックの台本が尽きた (${index} 件目): ${method} ${url}" >&2
+            printf '%s\n' "${index} 件目: ${method} ${url}" >> "${MOCK_EXHAUSTED}"
             return 1
         fi
         printf '%s\n%s' "${line%% *}" "${line#* }"
@@ -394,6 +447,30 @@ selftest() {
     arrange '404 {"error":"not found"}'
     check "$([ "$(cmd_status abc)" = "NOT_FOUND" ] && echo 0 || echo 1)" \
         "404 は NOT_FOUND を返す (失敗にしない)"
+
+    echo "[wait-validated]"
+    arrange '200 {"deploymentState":"PENDING"}' '200 {"deploymentState":"VALIDATING"}' '200 {"deploymentState":"VALIDATED"}'
+    local waited_state
+    waited_state="$(KSR_POLL_INTERVAL_SECONDS=0 cmd_wait_validated abc 2>/dev/null)"
+    check "$([ "${waited_state}" = "VALIDATED" ] && echo 0 || echo 1)" \
+        "PENDING / VALIDATING を経て VALIDATED を返す" "${waited_state}"
+    check "$([ "$(calls | wc -l | tr -d ' ')" = "3" ] && echo 0 || echo 1)" "決着まで照会を繰り返す" "$(calls)"
+
+    for state in FAILED PUBLISHING PUBLISHED; do
+        arrange '200 {"deploymentState":"VALIDATING"}' "200 {\"deploymentState\":\"${state}\"}"
+        waited_state="$(KSR_POLL_INTERVAL_SECONDS=0 cmd_wait_validated abc 2>/dev/null)" || waited_state="exit $?"
+        check "$([ "${waited_state}" = "${state}" ] && echo 0 || echo 1)" \
+            "${state} は失敗にせず状態として返す" "${waited_state}"
+    done
+
+    arrange '404 {"error":"not found"}'
+    waited_state="$(KSR_POLL_INTERVAL_SECONDS=0 cmd_wait_validated abc 2>/dev/null)" || waited_state="exit $?"
+    check "$([ "${waited_state}" = "NOT_FOUND" ] && echo 0 || echo 1)" \
+        "存在しない deployment は NOT_FOUND を返す (失敗にしない)" "${waited_state}"
+
+    arrange '200 {"deploymentState":"VALIDATING"}' '200 {"deploymentState":"VALIDATING"}'
+    check "$(if ( KSR_POLL_INTERVAL_SECONDS=0 KSR_POLL_TIMEOUT_SECONDS=0 cmd_wait_validated abc > /dev/null 2>&1 ); then echo 1; else echo 0; fi)" \
+        "上限を過ぎれば失敗する"
 
     echo "[release]"
     arrange '200 {"deploymentState":"VALIDATED"}' '204 '
@@ -456,8 +533,20 @@ selftest() {
         "FAILED になれば失敗する"
 
     arrange '200 {"deploymentState":"PUBLISHING"}' '200 {"deploymentState":"PUBLISHING"}'
-    check "$(if ( KSR_POLL_INTERVAL_SECONDS=0 KSR_POLL_TIMEOUT_SECONDS=0 cmd_wait_published abc > /dev/null 2>&1 ); then echo 1; else echo 0; fi)" \
+    check "$(if ( KSR_POLL_INTERVAL_SECONDS=0 KSR_PUBLISHED_TIMEOUT_SECONDS=0 cmd_wait_published abc > /dev/null 2>&1 ); then echo 1; else echo 0; fi)" \
         "上限を過ぎれば失敗する"
+
+    # 公開待ちと検証待ちの上限が互いに干渉しないこと。片方を 0 にしても、もう片方の
+    # 待ちは自分の上限に従って続く (この自己テストで効いているのは、冒頭で安全網として
+    # 置いた 5 秒であって既定値ではない)。
+    arrange '200 {"deploymentState":"PUBLISHING"}' '200 {"deploymentState":"PUBLISHED"}'
+    check "$(if ( KSR_POLL_INTERVAL_SECONDS=0 KSR_POLL_TIMEOUT_SECONDS=0 cmd_wait_published abc > /dev/null 2>&1 ); then echo 0; else echo 1; fi)" \
+        "検証待ちの上限は公開待ちを打ち切らない"
+
+    arrange '200 {"deploymentState":"VALIDATING"}' '200 {"deploymentState":"VALIDATED"}'
+    waited_state="$(KSR_POLL_INTERVAL_SECONDS=0 KSR_PUBLISHED_TIMEOUT_SECONDS=0 cmd_wait_validated abc 2>/dev/null)" || waited_state="exit $?"
+    check "$([ "${waited_state}" = "VALIDATED" ] && echo 0 || echo 1)" \
+        "公開待ちの上限は検証待ちを打ち切らない" "${waited_state}"
 
     echo "[published]"
     local published_code
@@ -490,6 +579,12 @@ selftest() {
     check "$([ "${authorization}" = "Bearer dXNlcjp0b2tlbg==" ] && echo 0 || echo 1)" \
         "Bearer は user:token の base64" "${authorization}"
 
+    # 想定より多く照会する回帰は、空応答が状態の解釈失敗へ畳み込まれて見えなくなる。
+    # 台本を使い切った呼び出しが 1 件でもあれば、その場所を添えて失敗にする。
+    echo "[モックの台本]"
+    check "$(if [ -e "${MOCK_EXHAUSTED}" ]; then echo 1; else echo 0; fi)" \
+        "台本を使い切った検査は無い" "$(cat "${MOCK_EXHAUSTED}" 2>/dev/null | head -3)"
+
     if [ "${failures}" -eq 0 ]; then
         echo "失敗なし"
         return 0
@@ -513,7 +608,7 @@ main() {
         --selftest)
             selftest
             ;;
-        status|release|wait-published|drop|published)
+        status|wait-validated|release|wait-published|drop|published)
             if [ $# -ne 1 ]; then
                 usage
                 exit 2
@@ -525,6 +620,7 @@ main() {
             fi
             case "${subcommand}" in
                 status)         cmd_status "$1" ;;
+                wait-validated) cmd_wait_validated "$1" ;;
                 release)        cmd_release "$1" ;;
                 wait-published) cmd_wait_published "$1" ;;
                 drop)           cmd_drop "$1" ;;

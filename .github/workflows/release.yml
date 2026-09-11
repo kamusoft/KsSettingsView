@@ -59,6 +59,8 @@ env:
   KS_ARTIFACT_MAUI: release-maui-nupkg
   # 保留中の deployment の ID を同じ実行の再実行へ引き継ぐための artifact。
   KS_ARTIFACT_DEPLOYMENT_ID: central-deployment-id
+  # validate が確定させた Release ノートを publish へ渡すための artifact。
+  KS_ARTIFACT_RELEASE_NOTES: release-notes
 
 jobs:
   # 不可逆な操作に入る前の入力検査。配布物の生成にも進ませない。
@@ -69,6 +71,13 @@ jobs:
     runs-on: ubuntu-24.04
     # 既定の 360 分は長すぎる。検査は clone と文字列比較だけなので短い上限を置く。
     timeout-minutes: 15
+
+    # Release ノートの材料として pull request 本文を読む。job レベルの permissions は
+    # 列挙しなかった権限を none にするため、pull-requests だけを足すと checkout と
+    # commit / Release の取得に要る contents が失われる。両方をここに書き切る。
+    permissions:
+      contents: read
+      pull-requests: read
 
     # 再利用可能 workflow の呼び出し (`with:`) では env コンテキストを参照できないため、
     # 冒頭の env に集約した artifact 名を出力として渡し直す。
@@ -149,10 +158,67 @@ jobs:
               ;;
           esac
 
-      - name: Verify install examples (README + Skills)
+      # Release ノートの材料を集め、検査し、本文まで確定させる。publish はこの成果物を
+      # そのまま使い、pull request 本文を読み直さない — 収集と公開を別の段に分けると、
+      # その間に本文が編集されたときに「公開の後で Release の作成だけが失敗する」経路が
+      # 残る。記載の不備で止まるのもこの位置であり、不可逆な公開には入っていない。
+      #
+      # リハーサルは `main` から起動したときだけ本番と同じ経路を通す。`main` 以外から
+      # 起動したリハーサルは pull request に紐づかない commit を範囲に含むため、収集を
+      # 行うと正当なリハーサルが記載の不備で落ちる。
+      #
+      # その分岐の条件はここで一度だけ評価し、後続の 3 つの step はこの出力だけを見る。
+      # 同じ条件式を書き写すと、片方だけを直したときに「収集は飛ばしたのに upload は
+      # 走り、成果物が無くて落ちる」という、条件の意味と無関係な失敗になる。
+      - name: Decide release notes scope
+        id: notes-scope
         env:
+          KS_DRY_RUN: ${{ inputs['dry-run'] }}
+          KS_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          if [ "${KS_DRY_RUN}" != "true" ] || [ "${KS_REF}" = "refs/heads/main" ]; then
+            collect=true
+          else
+            collect=false
+          fi
+          echo "collect=${collect}" >> "$GITHUB_OUTPUT"
+          echo "Release ノートの収集: ${collect} (dry-run: ${KS_DRY_RUN} / 起動 ref: ${KS_REF})"
+
+      - name: Build release notes
+        if: ${{ steps.notes-scope.outputs.collect == 'true' }}
+        env:
+          # API の照会にはこの token を使う (job の permissions が読み取り範囲を決める)。
+          GH_TOKEN: ${{ github.token }}
           KS_VERSION: ${{ inputs.version }}
-        run: python3 scripts/release/set-readme-version.py --check "${KS_VERSION}"
+        run: |
+          set -euo pipefail
+          python3 scripts/release/build-release-notes.py collect \
+            --repo "${GITHUB_REPOSITORY}" \
+            --version "${KS_VERSION}" \
+            --sha "${GITHUB_SHA}" \
+            --out "${RUNNER_TEMP}/release-notes"
+          {
+            echo "## Release ノート: ${KS_VERSION}"
+            echo ""
+            cat "${RUNNER_TEMP}/release-notes/notes.md"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload release notes
+        if: ${{ steps.notes-scope.outputs.collect == 'true' }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: ${{ env.KS_ARTIFACT_RELEASE_NOTES }}
+          path: ${{ runner.temp }}/release-notes
+          if-no-files-found: error
+          # `Re-run all jobs` で同じ名前を作り直せるようにする。
+          overwrite: true
+
+      # 収集を省いたことをログに残す。省いたのか、走って 0 件だったのかを後から区別する。
+      - name: Skip release notes
+        if: ${{ steps.notes-scope.outputs.collect != 'true' }}
+        run: |
+          echo "main 以外からのリハーサルなので Release ノートの収集と検査は行わない (起動 ref: ${GITHUB_REF})"
 
       - name: Export artifact names
         id: names
@@ -426,9 +492,21 @@ jobs:
       contents: write
       # NuGet の Trusted Publishing (OIDC) に要る。
       id-token: write
-    # 既定の 360 分は長すぎる。Android の再ビルドと Central Portal の検証待ちを含む
-    # 直列の publish に対する上限として置く。
-    timeout-minutes: 90
+    # 既定の 360 分は長すぎる。Android の再ビルドと Central Portal の待機を含む
+    # 直列の publish に対する上限として置く。内訳は次のとおり。
+    #
+    #   待機の上限              検証の決着待ち 30 x 2 + 公開待ち 90              150 分
+    #   各待ちの最後の照会      照会 1 回あたりの応答上限 5 x 3 待ち              15 分
+    #   各待ちの巡回間隔の端数  巡回間隔 0.5 x 3 待ち                             2 分
+    #   待機外の照会            検証に失敗する分岐での要求 6 回 x 5               30 分
+    #   本体処理                成果物の取得・署名つき再ビルド・publish 操作      20 分
+    #   余裕                                                                     23 分
+    #   合計                                                                    240 分
+    #
+    # 待ちは最悪で 3 本 (引き継いだ deployment の決着 → FAILED で再 upload した
+    # deployment の決着 → 公開待ち) 直列に並ぶ。各項の定数とこの値の突き合わせは
+    # scripts/release/check-time-budget.py が行う (lint job で走る)。
+    timeout-minutes: 240
 
     env:
       KS_VERSION: ${{ inputs.version }}
@@ -476,6 +554,32 @@ jobs:
               ;;
           esac
 
+      # 同じ実行の前の attempt が保留中の deployment を残しているかを引き継ぐ。
+      # 初回の attempt には存在しないので、名前に完全一致する pattern で取りに行き、
+      # 0 件を正常として扱う (name 指定は不在も失敗にする)。通信や展開の失敗まで
+      # 「引き継ぐものが無い」と読み替えると、保留 deployment を二重に作ってしまう。
+      #
+      # 引き継ぎの読み込みは、他の成果物の取得より前に置く。後ろに置くと、成果物の取得に
+      # 失敗した attempt が引き継ぎを読まないまま終わり、保留中の deployment が
+      # どの attempt からも見えなくなる。この順序は
+      # scripts/release/check-publish-step-order.py が検査する (lint job で走る)。
+      - name: Download previous deployment id
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          pattern: ${{ env.KS_ARTIFACT_DEPLOYMENT_ID }}
+          merge-multiple: true
+          path: ${{ runner.temp }}/deployment
+
+      # 引き継ぎの有無を分類し、後段が読む形 (output) とログの両方へ残す。この step が
+      # 成功していること自体が「引き継ぎを読み込んだ」の印で、読み込みに失敗した場合は
+      # ここで publish が止まる (引き継ぎが無い初回と区別できないまま先へ進まない)。
+      - name: Inspect previous deployment handover
+        id: handover
+        run: |
+          set -euo pipefail
+          scripts/release/deployment-handover.sh inspect "${RUNNER_TEMP}/deployment" \
+            | tee -a "$GITHUB_OUTPUT"
+
       - name: Download Android artifacts
         uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
         with:
@@ -488,16 +592,13 @@ jobs:
           name: ${{ needs.validate.outputs.artifact-maui }}
           path: ${{ runner.temp }}/package-maui
 
-      # 同じ実行の前の attempt が保留中の deployment を残しているかを引き継ぐ。
-      # 初回の attempt には存在しないので、名前に完全一致する pattern で取りに行き、
-      # 0 件を正常として扱う (name 指定は不在も失敗にする)。通信や展開の失敗まで
-      # 「引き継ぐものが無い」と読み替えると、保留 deployment を二重に作ってしまう。
-      - name: Download previous deployment id
+      # validate が確定させた Release ノート。publish は pull request 本文を読み直さない
+      # ので、検査を通した時点の内容がそのまま Release になる。
+      - name: Download release notes
         uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
         with:
-          pattern: ${{ env.KS_ARTIFACT_DEPLOYMENT_ID }}
-          merge-multiple: true
-          path: ${{ runner.temp }}/deployment
+          name: ${{ env.KS_ARTIFACT_RELEASE_NOTES }}
+          path: ${{ runner.temp }}/release-notes
 
       # 秘密鍵はディスクに置かず agent に載せる。ホスト鍵は公開されている固定値を使う
       # (ssh-keyscan は取得した鍵をそのまま信頼するため、なりすましを検出できない)。
@@ -565,36 +666,21 @@ jobs:
           MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
           # upload のログ。この step が ID を保存する前に落ちたときの拾い直しでも読む。
           KS_CENTRAL_UPLOAD_LOG: ${{ runner.temp }}/central-upload.log
+          KS_HANDOVER_DEPLOYMENT_ID: ${{ steps.handover.outputs.deployment-id }}
         run: |
           set -euo pipefail
 
-          deployment_id=""
-          id_file="${RUNNER_TEMP}/deployment/deployment-id.txt"
-          if [ -f "${id_file}" ]; then
-            deployment_id="$(tr -d '[:space:]' < "${id_file}")"
-          fi
+          # 引き継ぎの読み込みは前段の step で済んでいる。ここはその結果を受け取るだけ。
+          deployment_id="${KS_HANDOVER_DEPLOYMENT_ID}"
 
-          # 「release を送る必要があるか」を後段へ渡す。upload 直後 (VALIDATED) と、
-          # 前の attempt が VALIDATED のまま残した場合だけ true になる。
+          # 「release を送る必要があるか」を後段へ渡す。upload した直後 (検証の決着は後段の
+          # step で待つ) と、前の attempt が VALIDATED のまま残した場合だけ true になる。
           release_needed=false
 
           if [ -n "${deployment_id}" ]; then
             echo "前の attempt の deployment を引き継いだ: ${deployment_id}"
             # 検証中 (PENDING / VALIDATING) は結論が出ていないだけなので、決着を待つ。
-            deadline=$(( SECONDS + 1800 ))
-            while :; do
-              state="$(scripts/release/central-portal.sh status "${deployment_id}")"
-              case "${state}" in
-                PENDING|VALIDATING) ;;
-                *) break ;;
-              esac
-              if [ "${SECONDS}" -ge "${deadline}" ]; then
-                echo "::error::deployment の検証が終わらない (最後の状態 ${state}): ${deployment_id}"
-                exit 1
-              fi
-              echo "検証待ち (${state}): ${deployment_id}"
-              sleep 30
-            done
+            state="$(scripts/release/central-portal.sh wait-validated "${deployment_id}")"
             echo "状態: ${state}"
             case "${state}" in
               VALIDATED)
@@ -716,6 +802,27 @@ jobs:
           # 再実行では前の attempt の内容を置き換える。
           overwrite: true
 
+      # Central Portal の検証は upload の内容と混雑で数秒〜数十分かかる。決着をここで待ち、
+      # 通らなければ NuGet へ push する前に止める (NuGet.org へ出したパッケージは unlist しか
+      # できないため、取り消せる段階で分かる失敗は先に出し切る)。deployment ID は直前の step で
+      # artifact に保存済みなので、この待ちの間に job が cancel / timeout されても次の attempt
+      # が同じ deployment を引き継げる。FAILED の deployment は失敗経路の後始末が drop する。
+      # 引き継いだ deployment が既に VALIDATED なら、照会 1 回で即座に通る。
+      - name: Wait for Central Portal validation
+        if: steps.maven.outputs.release-needed == 'true'
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          KS_DEPLOYMENT_ID: ${{ steps.maven.outputs.deployment-id }}
+        run: |
+          set -euo pipefail
+          state="$(scripts/release/central-portal.sh wait-validated "${KS_DEPLOYMENT_ID}")"
+          if [ "${state}" != "VALIDATED" ]; then
+            echo "::error::deployment が検証を通らなかった (状態 ${state}): ${KS_DEPLOYMENT_ID}"
+            exit 1
+          fi
+          echo "検証を通った: ${KS_DEPLOYMENT_ID}"
+
       # 長期の API key を持たず、この実行に紐づく短命な key を OIDC で受け取る。
       - name: Login to NuGet.org
         id: nuget-login
@@ -807,12 +914,18 @@ jobs:
             echo "Release ${KS_VERSION} は作成済み (本文は更新しない)"
             exit 0
           fi
-          args=(--generate-notes --title "${KS_VERSION}")
-          # prerelease の suffix を持つ version は prerelease として出す。
-          case "${KS_VERSION}" in
-            *-*) args+=(--prerelease) ;;
-          esac
-          gh release create "${KS_VERSION}" "${args[@]}"
+          notes="${RUNNER_TEMP}/release-notes/notes.md"
+          if [ ! -s "${notes}" ]; then
+            echo "::error::確定した Release ノートが無い (${notes})"
+            exit 1
+          fi
+          # semver の prerelease 表記を持つ版でも GitHub の prerelease 印は付けず、最新の
+          # リリースとして明示的に指定する。印を外すだけでは最新の選別が自動判定に委ねられ、
+          # 最新版の案内先が意図した版に着地する保証にならない (cross/ADR-0029)。
+          gh release create "${KS_VERSION}" \
+            --title "${KS_VERSION}" \
+            --notes-file "${notes}" \
+            --latest
 
       - name: Summarize
         if: always()
@@ -848,17 +961,27 @@ jobs:
           scripts/release/central-portal.sh drop "${KS_DEPLOYMENT_ID}"
           echo "deployment の状態は ${KS_PORTAL_DEPLOYMENTS_URL} でも確認できる"
           # 実際に消えたときだけ引き継ぎを断つ。削除できない状態 (公開処理が進行中) の
-          # deployment は次の attempt が状態を見て続きを行うので、ID を残す。
+          # deployment は次の attempt が状態を見て続きを行うので、ID を残す。判定は
+          # scripts/release/deployment-handover.sh が持つ (自己テストが掛かる)。この step は
+          # ID を持っているときだけ動くので、判定へ空の ID を渡すことはない。
           state="$(scripts/release/central-portal.sh status "${KS_DEPLOYMENT_ID}")"
-          if [ "${state}" = "NOT_FOUND" ]; then
-            # 空の内容で保存し直す (この artifact を読む側は空白だけの内容を
-            # 「ID なし」として扱う)。
-            mkdir -p "${RUNNER_TEMP}/deployment"
-            printf '\n' > "${RUNNER_TEMP}/deployment/deployment-id.txt"
-            echo "cleared=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "deployment は残っている (${state})。ID の引き継ぎはそのままにする"
-          fi
+          decision="$(scripts/release/deployment-handover.sh writeback "${KS_DEPLOYMENT_ID}" "${state}")"
+          case "${decision}" in
+            clear)
+              # 空の内容で保存し直す (この artifact を読む側は空白だけの内容を
+              # 「ID なし」として扱う)。
+              mkdir -p "${RUNNER_TEMP}/deployment"
+              printf '\n' > "${RUNNER_TEMP}/deployment/deployment-id.txt"
+              echo "cleared=true" >> "$GITHUB_OUTPUT"
+              ;;
+            store)
+              echo "deployment は残っている (${state})。ID の引き継ぎはそのままにする"
+              ;;
+            *)
+              echo "::error::引き継ぎの扱いを判定できない: ${decision}"
+              exit 1
+              ;;
+          esac
 
       # 後始末の直後に保存し直す。ここを飛ばすと、削除済みの ID を引き継いだ再実行が
       # 存在しない deployment を照会することになる。
@@ -878,7 +1001,18 @@ jobs:
     needs: publish
     if: ${{ !inputs['dry-run'] }}
     runs-on: ubuntu-24.04
-    # スクリプト側の上限 (45 分) を超えても job が居座らないようにする。
+    # 既定の 360 分は長すぎる。待機スクリプトが自分の上限を越えて居座らないための、
+    # 外側の歯止めとして置く。内訳は次のとおり。
+    #
+    #   待機の上限        反映待ちの上限 (既定 2700 秒)                     45 分
+    #   期限を跨げる照会  応答上限 120 秒 x 1 件                             2 分
+    #   job の前後        checkout と runner の起動                          5 分
+    #   余裕                                                                 8 分
+    #   合計                                                                60 分
+    #
+    # 照会は残り時間が正のときだけ始まり対象 1 件ごとに判定し直すので、期限を越えて走り
+    # 続けられるのは期限直前に始まった 1 件だけになる。各項の定数とこの値の突き合わせは
+    # scripts/release/check-time-budget.py が行う (lint job で走る)。
     timeout-minutes: 60
 
     steps:

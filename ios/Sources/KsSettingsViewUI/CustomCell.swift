@@ -135,7 +135,7 @@ public struct CustomCell: KsCell, DSLReidentifiable, DSLStyleModifiable, Visibil
             erasedBuilder: { erased in
                 guard let typed = erased.base as? C else {
                     // `builder` には常に自身の `content` が渡されるため到達しない。
-                    assertionFailure("CustomCell: content の型が builder の期待型と一致しない")
+                    assertionFailure("CustomCell: content type does not match the type expected by builder")
                     return AnyView(EmptyView())
                 }
                 return AnyView(builder(typed))
