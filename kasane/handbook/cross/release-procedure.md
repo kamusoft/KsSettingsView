@@ -5,7 +5,7 @@ applies-when:
   tasks: [リリースの実施, release workflow の secrets / Environment の設定, リリースの再実行, リリースのリハーサル]
 title: リリース手順
 description: main ブランチと branch protection の用意、Environment release と secrets の登録、配信リポジトリの deploy key、事前確認からリリース PR・起動・見守り・公開後の確認までの各段、失敗時の再実行、dry-run によるリハーサル
-timestamp: 2026-09-11
+timestamp: 2026-09-12
 ---
 
 # リリース手順
@@ -189,7 +189,7 @@ Release の本文は validate の段で確定済みで、publish は pull reques
 
 到達状態: 3 経路の公開物と Release ページを実物で確認できている。
 
-- nuget.org の 3 パッケージのページ (README が表示されること)
+- nuget.org の `KsSettingsView.Maui` のページ (README が表示されること) と、`KsSettingsView.Binding.iOS` / `KsSettingsView.Binding.Android` の公開。README を同梱するのは facade の 1 本だけで、Binding 2 本は間接参照専用のため description だけが出る
 - Maven Central の `jp.kamusoft:kssettingsview` の当該 version
 - 配信リポジトリの tag と、monorepo の Release 本文
 - `https://github.com/kamusoft/KsSettingsView/releases/latest` が今回の版に解決すること (README と利用者向け Skill のインストール例は具体 version を持たず、この案内に委ねている)
