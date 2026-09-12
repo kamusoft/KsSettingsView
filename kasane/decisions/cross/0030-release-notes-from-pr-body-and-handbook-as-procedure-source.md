@@ -1,7 +1,7 @@
 ---
 id: 0030
 title: Release ノートは main 宛て pull request 本文の Changes セクションから組み立て、リリース手順の正は handbook に置く
-status: proposed
+status: accepted
 date: 2026-09-11
 ---
 
@@ -19,26 +19,29 @@ GitHub の自動生成ノートは、マージされた pull request をラベ�
 
 ### Release ノートの出所
 
-- Release ノートは、**`main` 宛て pull request の本文に書かれた `## Changes` セクション**から組み立てる。
-- 対象は、**直前の GitHub Release に対応する tag** と今回のリリース対象 commit の間に入った commit に紐づく pull request のうち、**`main` を base とするもの**に限る。
-  - 起点は、**今回の version ではなく、draft でない公開済みの Release のうち、その tag が `main` の first-parent 上で対象 commit の祖先であり、対象 commit からもっとも近いもの**の tag とする。Release を伴わない tag、別の枝の Release、draft はいずれも起点にしない。今回の version の tag が既に存在する再実行でも、今回の version を除くため起点は変わらない。
-  - 条件を満たす Release が 1 つも無い場合 (初回のリリース) は、履歴の最初から今回の commit までを範囲とする。
-  - base を `main` に限るのは、commit への紐づけが base を問わないため。`develop` 宛ての pull request まで拾うと、集約 pull request と二重に載る。
-- 取得・解析・整形は publish より前の段で一度だけ行い、その結果を publish へ受け渡す。publish は pull request 本文を読み直さない。検査を通した本文と実際に公開されるノートを同一にするため。
-- セクションの各行は `- <種別>: <説明>` とし、種別は `breaking` / `feature` / `fix` / `docs` の 4 つ。
+Release ノートは、**`main` 宛て pull request の本文に書かれた `## Changes` セクション**から組み立てる。対象は、直前の GitHub Release に対応する tag と今回のリリース対象 commit の間に入った commit に紐づく pull request のうち、**`main` を base とするもの**に限る。base を `main` に限るのは、commit への紐づけが base を問わないためで、`develop` 宛ての pull request まで拾うと集約 pull request と二重に載る。
+
+起点は、今回の version ではなく、**draft でない公開済みの Release のうち、その tag が `main` の first-parent 上で対象 commit の祖先であり、対象 commit からもっとも近いもの**の tag とする。Release を伴わない tag、別の枝の Release、draft はいずれも起点にしない。今回の version の tag が既に存在する再実行でも、今回の version を除くため起点は変わらない。条件を満たす Release が 1 つも無い場合 (初回のリリース) は、履歴の最初から今回の commit までを範囲とする。
+
+セクションの書式と欠落時の扱いは次のとおり。
+
+- 各行は `- <種別>: <説明>` とし、種別は `breaking` / `feature` / `fix` / `docs` の 4 つ。
 - 開発ハーネスの作業と CI の整備は、行を書かないことでノートから外す。ラベルによる除外機構は持たない。
 - セクションは必須とする。利用者向けの変更が無い pull request は `- none` と明示する。セクションを持たない pull request が範囲に含まれる場合、release は止まる。
-- 組み立ては release workflow が行い、ノートの末尾に比較リンクを付ける。認識できない入力は黙って無視せず失敗させる。
-- 公開を伴わないリハーサル (dry-run) では、`main` から起動した場合に限り収集・検査・受け渡しまで行い、それ以外のブランチから起動した場合は収集と検査を行わない。起動ブランチの制限が外れているため (cross/ADR-0020) `main` の pull request に紐づかない commit から起動されうる一方、`main` からのリハーサルでは実際の経路を通しておく必要がある。
-- `.github/release.yml` (自動生成ノートの設定) は廃止し、分類用のラベルは作らない。
+
+取得・解析・整形は publish より前の段で一度だけ行い、その結果を publish へ受け渡す。publish は pull request 本文を読み直さない。検査を通した本文と実際に公開されるノートを同一にするためである。組み立ては release workflow が行い、ノートの末尾に比較リンクを付ける。認識できない入力は黙って無視せず失敗させる。
+
+公開を伴わないリハーサル (dry-run) では、`main` から起動した場合に限り収集・検査・受け渡しまで行い、それ以外のブランチから起動した場合は収集と検査を行わない。起動ブランチの制限が外れているため (cross/ADR-0020) `main` の pull request に紐づかない commit から起動されうる一方、`main` からのリハーサルでは実際の経路を通しておく必要がある。
+
+`.github/release.yml` (自動生成ノートの設定) は廃止し、分類用のラベルは作らない。
 
 ### リリース手順の正とスキルの役割
 
-- リリース手順の正は handbook `cross/release-procedure.md` に置いたままとする。
-- リリース用スキル (`.agents/skills/release/`、`.claude/skills/release` は symlink) は、**実行時に handbook の単一の入口を読み、そこに書かれた順序とコマンドに従う**。段の順序・節の並び・コマンドはいずれも handbook が所有し、スキル側に書き写さない。
-- スキル固有の内容は、`## Changes` の下書き生成の手順と、判断を人へ返す境界に限る。handbook のどの節をどの順に読むかはスキルが持たない (それ自体が順序の複製になるため)。
-- スキルが担う範囲は、事前確認 (`develop` の CI の状態、docs-refresh の依頼の要否)・**これから作る pull request が `main` へ持ち込む差分**からの `## Changes` の下書き生成・リリース pull request の作成・release の起動・実行の見守りと失敗時の handbook 該当箇所の案内・公開後の確認項目の実行。下書きの範囲を直前のリリース以降の全変更にすると、既に `main` へ入った pull request の記載と二重に載る。
-- スキルは判断を担わない。version 番号の決定、`## Changes` の最終文面、失敗時に再実行するかどうかは人が決める。
+リリース手順の正は handbook `cross/release-procedure.md` に置いたままとする。リリース用スキル (`.agents/skills/release/`、`.claude/skills/release` は symlink) は、**実行時に handbook の単一の入口を読み、そこに書かれた順序とコマンドに従う**。段の順序・節の並び・コマンドはいずれも handbook が所有し、スキル側に書き写さない。handbook のどの節をどの順に読むかもスキルは持たない (それ自体が順序の複製になるため)。スキル固有の内容は、`## Changes` の下書き生成の手順と、判断を人へ返す境界に限る。
+
+スキルが担う範囲は、事前確認 (`develop` の CI の状態、docs-refresh の依頼の要否)・**これから作る pull request が `main` へ持ち込む差分**からの `## Changes` の下書き生成・リリース pull request の作成・release の起動・実行の見守りと失敗時の handbook 該当箇所の案内・公開後の確認項目の実行である。下書きの範囲を直前のリリース以降の全変更にすると、既に `main` へ入った pull request の記載と二重に載る。
+
+スキルは判断を担わない。version 番号の決定、`## Changes` の最終文面、失敗時に再実行するかどうかは人が決める。
 
 ## Alternatives Considered
 
@@ -66,4 +69,4 @@ GitHub の自動生成ノートは、マージされた pull request をラベ�
 - ブランチ運用 (cross/ADR-0028) が改訂されたとき
 - `## Changes` の記入漏れによる release の停止が繰り返し起きたとき — 必須とする判断か、下書き生成の実効性を見直す
 
-出典: kasane/changes/install-examples-and-release-notes/exploration.md
+出典: kasane/changes/archive/2026-09-12-install-examples-and-release-notes/exploration.md / kasane/changes/archive/2026-09-12-install-examples-and-release-notes/design.md (Decision 2・3・6)

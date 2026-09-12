@@ -1,9 +1,9 @@
 ---
 type: concept
 title: リリースパイプラインの構成
-description: 3 platform を 1 本の release workflow で公開する段の構成、publish 段の内部順序、version の注入経路、各チャネルへの publish 機構と公開確認の手段
+description: 3 platform を 1 本の release workflow で公開する段の構成、publish 段の内部順序、version の注入経路、各チャネルへの publish 機構、Release ノートの出所、待ちの時間予算、公開確認の手段
 tags: [architecture, release, ci, distribution]
-timestamp: 2026-09-07
+timestamp: 2026-09-12
 ---
 
 # リリースパイプラインの構成
@@ -26,7 +26,7 @@ validate ──┤                                      ├─ publish → 反�
 
 | 段 | 何をするか |
 |---|---|
-| validate | 入力 version の形式、同じ version の tag が monorepo と配信リポジトリに無いこと、README と利用者向け Skill のインストール例が入力 version と一致することを検査する |
+| validate | 入力 version の形式と、同じ version の tag が monorepo と配信リポジトリに無いことを検査し、Release ノートを組み立てて検査する |
 | 本体検証 | 3 platform のビルドとテストを全件通す |
 | 配布物の生成 | 各チャネルへ出す成果物 (SwiftPM スナップショット・aar・NuGet パッケージ) を作る |
 | 消費者検証 (dry-run) | 生成した成果物を、利用者と同じ解決経路でローカルのフィードから引いてビルドする。公開はしない |
@@ -62,7 +62,7 @@ version の唯一の正 (SSoT) は `workflow_dispatch` の入力値 (= 生成さ
 | MAUI | `maui/Directory.Build.props` の `Version` を `-p:Version=` が上書きする | 開発用既定値 `0.0.0-dev` |
 | iOS | version 表現を持たない (tag が version) | — |
 
-README のインストール例だけは具体 version を書くため、リリース PR (`develop` → `main`) の中で `scripts/release/set-readme-version.py` が置換し、validate が一致を検査する。ビルドの version 宣言 (version catalog / `Directory.Build.props`) にリリースごとの bump コミットは積まない。
+README と利用者向け Skill のインストール例は具体 version を持たず、プレースホルダ `{version}` を置いて最新版の案内を GitHub Releases に委ねる ([ADR-0029](../../../decisions/cross/0029-install-examples-without-pinned-version.md))。リリースのたびに文書へ version を書き戻す経路は存在しない。ビルドの version 宣言 (version catalog / `Directory.Build.props`) にリリースごとの bump コミットも積まない。
 
 ## 各チャネルへの publish
 
@@ -87,6 +87,26 @@ Android の publish は dry-run が検証した未署名の成果物ではなく
 ### NuGet.org
 
 nuget.org への push は Trusted Publishing (OIDC) で認証する。push は `--skip-duplicate` で、既に公開済みの版は skip される。
+
+## Release ノート
+
+Release ノートは、`main` 宛て pull request 本文の `## Changes` セクションを集めて組み立てる ([ADR-0030](../../../decisions/cross/0030-release-notes-from-pr-body-and-handbook-as-procedure-source.md))。収集の範囲・書式・欠落時に止まる契約は ADR が持ち、実装は `scripts/release/build-release-notes.py` にある。
+
+**組み立ては validate 段で一度だけ行い、結果を artifact で publish へ渡す。** publish の Release 作成は渡された本文をそのまま使い、pull request 本文を読み直さない。検査を通した本文と実際に公開されるノートを同一にするためである。GitHub Release には prerelease の印を付けず、`--latest` で最新を明示する ([ADR-0029](../../../decisions/cross/0029-install-examples-without-pinned-version.md))。
+
+## 待ちの時間予算
+
+待ちを抱える job (publish と反映待ち) は、**待ちの上限がスクリプト側の定数、job の打ち切りが workflow 側の `timeout-minutes`** という二重管理になっている。片方だけを延ばしても平時の実行は緑のまま進むため、`scripts/release/check-time-budget.py` が両者を読んで突き合わせる。
+
+反映待ち側が満たすべき関係は次のとおり。
+
+```
+待機の上限 + 期限を跨げる照会 1 件ぶんの応答上限 + job の前後 (checkout と runner の起動) < timeout-minutes
+```
+
+「期限を跨げる照会は常に 1 件まで」という上界は、`wait-for-registries.sh` が対象を順に 1 件ずつ照会する巡回構造に依存する。**巡回の構造を変えたらこの式も変わる。**
+
+この関係は、上限に達して失敗するときに対象ごとの分類 (反映済み / 未反映 / 判定不能 / 未照会) を出力するという契約の前提でもある。job の打ち切りが先に来ると、待ちの結果を読み分ける材料が出力ごと消え、レジストリが遅いのか壊れているのかが分からないまま実行が終わる。
 
 ## 公開確認
 
@@ -116,3 +136,5 @@ nuget.org への push は Trusted Publishing (OIDC) で認証する。push は `
 - [ADR-0018: 配布チャネルと SwiftPM 配信リポジトリ](../../../decisions/cross/0018-distribution-public-channels-root-swiftpm-manifest.md)
 - [ADR-0019: lockstep の単一バージョン](../../../decisions/cross/0019-lockstep-single-version.md)
 - [ADR-0020: 手動起動・tag は最後・version 注入](../../../decisions/cross/0020-release-dispatch-tag-last-version-injection.md)
+- [ADR-0029: インストール例は具体 version を持たない](../../../decisions/cross/0029-install-examples-without-pinned-version.md)
+- [ADR-0030: Release ノートは pull request 本文から組み立てる](../../../decisions/cross/0030-release-notes-from-pr-body-and-handbook-as-procedure-source.md)
