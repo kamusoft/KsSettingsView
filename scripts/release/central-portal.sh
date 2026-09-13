@@ -207,7 +207,7 @@ readonly DEPLOYMENT_NOT_FOUND="NOT_FOUND"
 # release・drop は致命、公開待ちは単発なら吸収する)。失敗として返すと、呼び出しが必ず
 # コマンド置換になる以上、受け側の挙動が errexit の有無に左右される — 素のコマンドとして
 # 呼ぶ実行本番では代入の時点でスクリプトごと終わり、条件式の下で呼ぶ自己テストでは
-# 終わらない。状態値なら、どちらの文脈でも同じ経路が走る。
+# 終わらない。状態値なら、どちらの文脈でも同じ経路が走る (cross/ADR-0031)。
 readonly DEPLOYMENT_STATE_UNRESOLVED="UNRESOLVED"
 
 # 公開待ちが、状態を取り出せない照会を何回続けて許すか。公開待ちは release を送った後 —
