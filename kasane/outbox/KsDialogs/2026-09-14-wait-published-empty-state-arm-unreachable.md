@@ -73,7 +73,7 @@ source: kasane/changes/release-selftest-detection-audit/
 
 ## 提案する対応
 
-こちらは `deployment_state` の契約を変えて塞いだ。照会そのものが行えなかったことを `fail` ではなく
+こちらは `deployment_state` の契約を変えて塞いだ (判断と却下した代替案は `kasane/decisions/cross/0031-query-failure-as-state-value-not-fail.md`)。照会そのものが行えなかったことを `fail` ではなく
 状態値 (`UNRESOLVED`) で返し、致命かどうかの判断を呼び出し側へ移した。404 を `NOT_FOUND` という状態値で
 返す既存の設計と語彙が揃い、**代入の成否に依存しなくなるので errexit の効き方が結果を変えない**。
 呼び出し側は `status` / `release` / `drop` が失敗、`wait-validated` が 1 回で失敗、`wait-published` だけが

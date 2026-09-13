@@ -22,6 +22,7 @@
 
 | [0029](0029-install-examples-without-pinned-version.md) | インストール例は具体 version を持たず、最新版は GitHub Releases が示す | accepted (amends 0022) | ADR-0022 の外部参照の条項を、URL の有無ではなく目的による境界 (知識を委ねる参照は持たない / 操作対象の URL は持ってよい) へ置き換える (amends)。具体 version をやめプレースホルダ `{version}` を置き、置換機構一式 (set-readme-version.py・validate の検査・handbook 手順・AGENTS.md の例外規定) を撤去。0.x beta の間は GitHub Release に prerelease の印を付けず既存 2 件も解除する。workflow による develop 書き戻し・main 直接 commit・第三者バッジはいずれも却下。 |
 | [0030](0030-release-notes-from-pr-body-and-handbook-as-procedure-source.md) | Release ノートは main 宛て pull request 本文の Changes セクションから組み立て、リリース手順の正は handbook に置く | accepted | ラベルによる自動分類は集約 PR の粒度でしか効かないため廃止し、`## Changes` セクション (種別 4 つ・必須・無変更は none) を直前の公開済み Release の tag 以降に `main` へ入った PR (base が `main` のもの) から集めて workflow が連結する。`.github/release.yml` とラベルは持たない。手順の正は handbook に残し、リリース用スキルは下書き生成と実行を担う薄い層とする。 |
+| [0031](0031-query-failure-as-state-value-not-fail.md) | リリーススクリプトの照会失敗は状態値で表し、致命かどうかは呼び出し側が決める | accepted | 照会の失敗を `fail` で表すと、呼び出しがコマンド置換になる以上、受け側の分岐に到達するかが errexit の効き方で決まる — 素のコマンドで呼ぶ実行本番では代入の時点で終了し、条件部で呼ぶ自己テストでは到達するため、分岐が自己テストでだけ実行され本番では死ぬ。照会不能を状態値 `UNRESOLVED` で返し、致命かどうかは呼び出し側が決める (状態照会・release・drop と検証の決着待ちは失敗、公開待ちだけが連続回数で吸収)。代入への `|| state=""` 追加・`( set -e; ... )` による検査文脈の張り直し・継続状態を列挙する allowlist 型・公開待ちも 1 回で失敗させる案はいずれも却下。 |
 欠番: 0012 (product-qualified-public-namespace) は移行トリアージで却下 (出典: kasane/changes/archive/2026-07-18-migrate-openspec/candidates/rejected-0012-product-qualified-public-namespace.md)。
 
 番号は旧フラット時代の採番を温存 (採番規則は [../index.md](../index.md) を参照)。

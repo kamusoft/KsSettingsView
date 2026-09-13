@@ -3,7 +3,7 @@ type: concept
 title: リリースパイプラインの構成
 description: 3 platform を 1 本の release workflow で公開する段の構成、publish 段の内部順序、version の注入経路、各チャネルへの publish 機構、Release ノートの出所、待ちの時間予算、公開確認の手段
 tags: [architecture, release, ci, distribution]
-timestamp: 2026-09-12
+timestamp: 2026-09-14
 ---
 
 # リリースパイプラインの構成
@@ -121,6 +121,8 @@ Release ノートは、`main` 宛て pull request 本文の `## Changes` セク�
 - Portal の検証を通らない deployment は、不可逆な NuGet push (順序 5) より前に止まる。version を焼かずにやり直せる
 - publish 段の各 step は存在検査で冪等であり、失敗しても同じ version で再実行するだけで復旧できる。位置ごとの挙動は [リリース手順](../../../handbook/cross/release-procedure.md) の「失敗したとき」が持つ
 - 配信リポジトリの tag が付くのは Maven の release が成功した後だけである。途中失敗で残る未 tag の commit は利用者から解決できない
+- 公開待ちは Portal の単発の応答不良 (通信失敗・5xx・状態を取り出せない応答) を吸収し、続けて取り出せなかったときだけ失敗する ([cross/ADR-0031](../../../decisions/cross/0031-query-failure-as-state-value-not-fail.md))
+- 状態照会・release・drop と検証の決着待ちは 1 回で失敗する。公開待ちだけが吸収するのは、取り消せない release を送った後に回る位置だから
 - deployment ID は attempt をまたいで run の artifact で引き継ぐ。失敗経路で Portal の deployment をどう扱うか (破棄できる状態とできない状態) は [リリース手順](../../../handbook/cross/release-procedure.md) の「失敗したとき」が持つ
 
 ## してはいけないこと
