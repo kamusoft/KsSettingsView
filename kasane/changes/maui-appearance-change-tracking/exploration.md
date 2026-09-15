@@ -72,6 +72,18 @@ docs-refresh (2026-09-06) で、MAUI 利用者がライト / ダーク両外観�
 - (2026-09-15) iOS の描画経路が Theme の `headerBackgroundColor` / `footerBackgroundColor` を消費していない (Android は消費) ことが相方レビューの照合で判明。隣接課題として本 change に同梱する (design.md Decision 4)
 - (2026-09-15) ②-b の spike は記録のみとし、成立しても本 change には同梱しない。採用は core/ADR-0031 改訂込みの別 change として起票するかをオーナーが裁定する
 
+### spike ②-b の結果 (2026-09-15)
+
+**成立 (iOS / Android とも)。** Section / Cell を element ツリーへ繋ぐと、Cell の色プロパティに書いた `AppThemeBinding` は表示中の外観切替で再評価され、facade → snapshot → bridge → native の Cell 置換として行の描画まで届いた。exploration の見立て (「ツリー外の `Element` では `AppThemeBinding` が外観変更を受け取らない」) は実測で裏付けられ、`Parent` を入れるだけで解消した。ただし下の「試した改変」のとおり検証した改変は**実装案ではない** (外す経路が無い) ため、成立は「原因の同定」までであって設計の成立ではない。
+
+- **試した改変 (最小・一時)**: `maui/KsSettingsView.Maui/Internals/KsBindingContextBinder.cs` の `Distribute` に、`SetInheritedBindingContext` に続けて `owner.AddLogicalChild(child)` を 1 行足しただけ (`child.Parent` が null のときだけ)。この binder は SettingsView → Section と Section → Cell の両方で使われているため、1 箇所の改変で両段が論理子になる。Section / Cell / SettingsView 自体には手を入れていない
+- **Sample 側の一時改変**: `samples/maui/KsSettingsView.Sample.Maui/Pages/BasicCellsDemoPage.xaml` の ButtonCell「ログアウト」に `TitleColor="{AppThemeBinding Light=#FF008000, Dark=#FFFF00FF}"` を付け、code-behind の `LogoutButton.TitleColor = …` の直接代入を外して binding だけが値を決める状態にした (前回 change の 0.1 と同じ流儀)。Android は同一 Activity / 同一 View のまま届くかを見るため `Platforms/Android/MainActivity.cs` の `Recreate()` も一時的に外した
+- **iOS (Simulator / iOS 26.0)**: 「基本 Cell 7 種デモ」を外観「システム」で表示したまま外観をダークへ切り替えると、同じ画面・同じ行のまま title が緑 (`#FF008000`) → マゼンタ (`#FFFF00FF`) へ描き直された。診断出力も `cellParent=Section sectionParent=SettingsView` / `titleColor` が `#008000` → `#FF00FF` と変わったことを示した。証跡: `evidence/maui-spike-logical-child-ios-light.png` / `-ios-dark.png`
+- **Android (Emulator / API 35)**: `Recreate()` を外したビルドで夜間モードを on にすると、同じ結果 (緑 → マゼンタ、`cellParent=Section sectionParent=SettingsView`、`titleColor=#FF00FF`)。証跡: `evidence/maui-spike-logical-child-android-light.png` / `-android-dark.png`。dark 側の画像で最上部の「最後にタップ: (none)」の帯だけ白いのは、`Recreate()` を外した一時改変のため MAUI のページ下地が塗り直されないことによる (ライブラリの描画ではない)
+- **既存テストへの影響**: 改変を入れた状態で MAUI facade テスト全件 (`dotnet test maui/KsSettingsView.Maui.Tests/KsSettingsView.Maui.Tests.csproj`) は **528 件 / 失敗 0 件**。改変を戻した状態も同じ 528 件 / 失敗 0 件で、`LeakTests.cs` / `BindingContextTests.cs` / 多重配置の検査を含めて**この最小改変では 1 件も落ちなかった**
+- **副作用 (実測されなかったが構造上残る問題)**: 上の「落ちなかった」は安全の根拠にならない。この最小改変は `AddLogicalChild` を**片道でしか呼ばない** — Section を Root から外す・Cell を Section から外す・ItemsSource の再生成・Root 差し替えのいずれでも `RemoveLogicalChild` が対にならず、`Parent` が古い所有者を指したまま残る。実装として採るなら、外す側の経路 (`KsItemsSourceBinder` / controller の対応表と同じ 4 経路) を全部対にする必要があり、そこが本番の設計作業になる。また今回は `child.Parent is null` のときだけ足す形にしたため、既に `Parent` を持つ Cell は黙って繋がれない (多重配置の判定が controller の対応表と `Parent` の二系統になる論点は解消していない)。BindingContext の二重伝播・継承プロパティ伝播の変化は、改変込みのテスト全件が緑だった範囲では観測されなかった
+- **裁定待ち**: 成立したが本 change には同梱しない (2026-09-15 の決定どおり)。採用するなら core/ADR-0031 Decision 2 の MAUI 節 (「Cell の色プロパティは `AppThemeBinding` が再評価されないため購読 + 再代入」) と Revisit When の改訂を伴う別 change になる
+
 ## ADR 候補 (作成済み: なし / 未起票: design.md Decision 1 — iOS も本体が外観変化を観測して再適用する契約、core/ADR-0030 への追記候補)
 
 - ① の修正は core/ADR-0030 / 0031 の範囲内 (iOS 側の実装の穴埋め) で新規 ADR は不要と見る。spike の結果 ②-b を採用する場合は core/ADR-0031 Decision 2 の MAUI 節の改訂 (Revisit When に明記済み) が ADR 候補になる

@@ -57,7 +57,7 @@ struct ContentView: View {
             .navigationTitle("KsSettingsView Sample")
         }
         // 「システム」のときは上書きなし（端末の外観がそのまま効く）。
-        .preferredColorScheme(appearance.colorScheme)
+        .sampleAppearanceWindowStyle(appearance)
     }
 }
 

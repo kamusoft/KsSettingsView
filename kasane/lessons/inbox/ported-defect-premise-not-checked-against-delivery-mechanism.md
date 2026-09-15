@@ -2,11 +2,12 @@
 scope: spec-review
 kind: pain
 severity: normal
-count: 1
+count: 2
 first-seen: 2026-08-22
-last-seen: 2026-08-22
+last-seen: 2026-09-15
 evidence:
   - fix-ios-entrycell-writeback-race (Android の書き戻しレース修正を「同型の構造が iOS にもある (コードで確認済み)」として M 級提案化し、デルタスペック 5 Requirement + ios/ADR-0004 + 相方 spec-review まで作成。実装前の再現ゲート (tasks グループ 1) で Simulator 3 条件 + 実機 pixie4 の計 8 セットを実測して FAIL 0、修正前ビルドで欠陥を 1 件も再現できずゲート不成立)
+  - maui-appearance-change-tracking (前 change の tasks 注記「MAUI iOS の dark で行背景が白のまま残る」(2026-09-06 観察、証跡は archive で削除済み) を不具合の根拠として L 級提案化し、デルタスペック 2 能力 + design 4 Decision + 相方 spec-review まで作成。実装ゲート (tasks 0.1〜0.3) で HEAD をビルドし MauiHost iOS を 3 条件 × 2 OS 版で実測したが再現せず、iOS Native 単体も追随、containment も成立。仮説 2 本とも反証されゲート不成立)
 ---
 
 ## ルール文
@@ -22,3 +23,5 @@ evidence:
   ゲートが実装より前にあったため (process L-004) コード修正の手戻りは 0 だが、デルタスペック 5 Requirement・ADR・相方 spec-review 1 往復は前提が反証された状態で作られた。**spike の位置を「実装の前」から「提案化の前」へ引き上げる**のが、この型の再発時に効く差分。
 
   (2026-08-22 時点でオーナーの処遇判断は未確定 — 探索差し戻し / 予防的実装 / 対応不要アーカイブのいずれか。MAUI 経路 (`ScheduleFlush` の dispatcher post が**古い値を積んだまま**配信し得る) は proposal の Non-Goals により未計測で、そこに窓が残る可能性は否定されていない。判断確定後に本記録の射程を距離を置いて見直すこと)
+
+- 2026-09-15 maui-appearance-change-tracking: 移植ではなく「過去の観察記録」を前提にした変種。観察は前 change の 8.4 注記 1 段落だけで、再現手順の固定・証跡の保存・OS 版の記録が無く、探索・提案はその記録を再実測せずに原因候補 2 本 (iOS 本体の trait 観測不在 / MAUI containment 不成立) を机上で立てた。実装ゲートの実測で両方とも否定された。過去の観察を欠陥の根拠にするときも同じで、提案化の前に現 HEAD で再現手順を 1 回通し、再現しないなら提案を起こさない (または回帰資産の追加だけに縮める)。

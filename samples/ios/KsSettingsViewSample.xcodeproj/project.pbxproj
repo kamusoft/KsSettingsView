@@ -19,6 +19,7 @@
 		A1000001000000000000A00D /* InputCellsDemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002000000000000A00D /* InputCellsDemoView.swift */; };
 		A1000001000000000000A00E /* StoreDemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002000000000000A00E /* StoreDemoView.swift */; };
 		A1000001000000000000A019 /* SampleAppearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002000000000000A019 /* SampleAppearance.swift */; };
+		A1000001000000000000A01A /* SampleAppearanceWindowStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002000000000000A01A /* SampleAppearanceWindowStyle.swift */; };
 		A1000001000000000000A00F /* SampleScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002000000000000A00F /* SampleScreen.swift */; };
 		A1000001000000000000A010 /* SampleTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002000000000000A010 /* SampleTheme.swift */; };
 		A1000001000000000000A011 /* CustomCellDemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002000000000000A011 /* CustomCellDemoView.swift */; };
@@ -45,6 +46,7 @@
 		A1000002000000000000A00D /* InputCellsDemoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputCellsDemoView.swift; sourceTree = "<group>"; };
 		A1000002000000000000A00E /* StoreDemoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreDemoView.swift; sourceTree = "<group>"; };
 		A1000002000000000000A019 /* SampleAppearance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SampleAppearance.swift; sourceTree = "<group>"; };
+		A1000002000000000000A01A /* SampleAppearanceWindowStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SampleAppearanceWindowStyle.swift; sourceTree = "<group>"; };
 		A1000002000000000000A00F /* SampleScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SampleScreen.swift; sourceTree = "<group>"; };
 		A1000002000000000000A010 /* SampleTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SampleTheme.swift; sourceTree = "<group>"; };
 		A1000002000000000000A011 /* CustomCellDemoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomCellDemoView.swift; sourceTree = "<group>"; };
@@ -91,6 +93,7 @@
 				A1000002000000000000A00D /* InputCellsDemoView.swift */,
 				A1000002000000000000A00E /* StoreDemoView.swift */,
 				A1000002000000000000A019 /* SampleAppearance.swift */,
+				A1000002000000000000A01A /* SampleAppearanceWindowStyle.swift */,
 				A1000002000000000000A00F /* SampleScreen.swift */,
 				A1000002000000000000A010 /* SampleTheme.swift */,
 				A1000002000000000000A011 /* CustomCellDemoView.swift */,
@@ -210,6 +213,7 @@
 				A1000001000000000000A00D /* InputCellsDemoView.swift in Sources */,
 				A1000001000000000000A00E /* StoreDemoView.swift in Sources */,
 				A1000001000000000000A019 /* SampleAppearance.swift in Sources */,
+				A1000001000000000000A01A /* SampleAppearanceWindowStyle.swift in Sources */,
 				A1000001000000000000A00F /* SampleScreen.swift in Sources */,
 				A1000001000000000000A010 /* SampleTheme.swift in Sources */,
 				A1000001000000000000A011 /* CustomCellDemoView.swift in Sources */,
