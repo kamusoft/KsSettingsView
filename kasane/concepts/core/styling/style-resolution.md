@@ -108,7 +108,7 @@ Sample の dark プリセットは AiForms 互換色を暗色へ写した Sample
 
 利用者が `CellStyle` または Cell 固有値として明示した色は、Theme の明示色と同じくライブラリが置き換えない。表示中に外観が変わっても明示色は変わらず、同じ行の未指定の色だけが現在の外観の既定へ再解決される。両外観で異なる色を使う手段は上の表のとおり platform の慣用に乗せ、ライブラリは Cell へ外観を渡す型やコールバックを公開しない — Cell 粒度の追随機構は、Store 経路の利用者が `replaceCell` を 1 回書く手間を省くために Cell 抽象か Store へ外観の概念を持ち込むことになり、見合わないと判断した ([core/ADR-0031](../../../decisions/core/0031-explicit-cell-color-appearance-contract-and-beta-breaking-change.md))。
 
-MAUI だけは `SettingsView` の Theme プロパティと Cell の色プロパティで手段が分かれる。Cell の色プロパティに書いた `AppThemeBinding` は外観変更で再評価されない — facade の `Section` / `Cell` は MAUI の element ツリーに属さず (`Parent` が `null`)、ツリー外の `Element` では binding が外観変更を受け取らないため (iOS / Android で実測した見立て。MAUI 本体の binding 実装は未読)。同じプロパティへの直接代入は同一 Activity / 同一 View のまま行に届くので、外観変更を購読して再代入する形になる。`Section` / `Cell` をツリーへ繋ぐ改修は `maui-appthemebinding-coverage` で別途探索中。
+MAUI だけは `SettingsView` の Theme プロパティと Cell の色プロパティで手段が分かれる。Cell の色プロパティに書いた `AppThemeBinding` は外観変更で再評価されない — facade の `Section` / `Cell` は MAUI の element ツリーに属さず (`Parent` が `null`)、ツリー外の `Element` では binding が外観変更を受け取らないため (iOS / Android で実測した見立て。MAUI 本体の binding 実装は未読)。同じプロパティへの直接代入は同一 Activity / 同一 View のまま行に届くので、外観変更を購読して再代入する形になる。`Section` / `Cell` をツリーへ繋ぐ改修は `maui-appearance-change-tracking` (旧 `maui-appthemebinding-coverage` を統合) で別途探索中。
 
 Cell の色プロパティのうち見た目を変えるのは、その Cell がその platform で描画に使う項目だけ (`DatePickerCell.androidButtonColor` の iOS、表示していないスロットの色、`CustomCell` のテキスト系 style は届いても見た目を変えない)。
 

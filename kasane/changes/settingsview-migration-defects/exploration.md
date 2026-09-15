@@ -6,7 +6,7 @@
 
 いずれも移行先の画面が表示できない・挙動が退行する形で現れるため、AiForms からの移行者が最初に踏む可能性が高い。
 
-なお、同じ移行作業で見つかった「テーマ切替で Cell の色が追従しない」件は、既存の `maui-appthemebinding-coverage` に同じ見立てが起票済みだったため、そちらへ裏付けを追記した (`DynamicResource` でも `AppThemeBinding` と同じ挙動になる、という観測)。
+なお、同じ移行作業で見つかった「テーマ切替で Cell の色が追従しない」件は、既存の `maui-appthemebinding-coverage` (2026-09-15 に `maui-appearance-change-tracking` へ統合) に同じ見立てが起票済みだったため、そちらへ裏付けを追記した (`DynamicResource` でも `AppThemeBinding` と同じ挙動になる、という観測)。
 
 ## 検討した選択肢 (却下案と理由を含む)
 
@@ -116,7 +116,7 @@ concepts の乖離候補: `kasane/concepts/maui/api/maui-rendering-lifecycle.md:
 
 この記述は AiForms からの移行者が Cell の色指定をどう書くかを直接左右する。実際 ColorAnalyzer の移行では、この記述を根拠に「Cell 個別の `AccentColor` を画面全体の `CellAccentColor` へ集約する」という不要な設計変更が入りかけた (オーナーの指摘で撤回)。
 
-実測の詳細と裏付けは `maui-appthemebinding-coverage` の未決の論点 (2026-09-11 追記) に記録した。
+実測の詳細と裏付けは `maui-appearance-change-tracking` (旧 `maui-appthemebinding-coverage`) の課題 ②-b (2026-09-11 追記) に記録した。
 
 **探索での追加観測 (2026-09-15)**: 同じ記述の正本は concepts にある (`kasane/concepts/maui/api/maui-facade.md:90`「`x:Reference` と `DynamicResource` は届かない」)。skills は concepts からの派生物で、追従は docs-refresh 経由に限る (AGENTS.md)。よって本 change で直すのは concepts の記述で、skills (cells.md / api-mapping.md) と補足の移行対応表 (HeaderPadding 左右・HeaderHeight の加算) は蒸留後に docs-refresh を依頼して反映する。
 

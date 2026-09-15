@@ -25,7 +25,7 @@ timestamp: 2026-09-06
 | `SettingsView` の Theme プロパティ (`CellTitleColor` / `CellAccentColor` 等) | XAML の `AppThemeBinding` で書く。外観変更時に facade のプロパティ変更 → snapshot → bridge DTO → Native の Theme 再適用まで届き、Android で Activity が再生成されないホストでも表示中に切り替わる (Simulator / Emulator で確認済み) |
 | Cell の色プロパティ (`TitleColor` / `AccentColor` / `PlaceholderColor` / `AndroidButtonColor` 等) | `Application.RequestedThemeChanged` を購読し、現在の外観の値をプロパティへ再代入する。再代入はその Cell の内容更新として Native の Cell 置換まで届き、表示中の行が描き直される (iOS / Android で確認済み。検証ホスト `KsSettingsView.MauiHost` の既定シナリオが回帰資産) |
 
-Cell の色プロパティに書いた `AppThemeBinding` は外観変更で再評価されない。facade の `Section` / `Cell` は MAUI の element ツリーに属さず (`Parent` が `null`)、ツリー外の `Element` では binding が外観変更を受け取らないため (実測に基づく見立て。MAUI 本体の binding 実装は未読)。`Section` / `Cell` をツリーへ繋ぐ改修は `maui-appthemebinding-coverage` で別途探索中。
+Cell の色プロパティに書いた `AppThemeBinding` は外観変更で再評価されない。facade の `Section` / `Cell` は MAUI の element ツリーに属さず (`Parent` が `null`)、ツリー外の `Element` では binding が外観変更を受け取らないため (実測に基づく見立て。MAUI 本体の binding 実装は未読)。`Section` / `Cell` をツリーへ繋ぐ改修は `maui-appearance-change-tracking` (旧 `maui-appthemebinding-coverage` を統合) で別途探索中。
 
 ```csharp
 // ページの Loaded で購読し Unloaded で解除する。購読中は外観に応じた値を入れ直す
