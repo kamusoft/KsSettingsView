@@ -7,6 +7,7 @@ import android.widget.FrameLayout
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.fragment.app.FragmentActivity
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.R as MaterialR
 import jp.kamusoft.kssettingsview.core.Section
@@ -26,7 +27,7 @@ import org.robolectric.android.controller.ActivityController
 import org.robolectric.annotation.Config
 
 /**
- * detach → 再 attach をまたいでリスト内容が保たれることを検証する。
+ * detach → 再 attach をまたいでリスト内容とスクロール位置が保たれることを検証する。
  *
  * `onDetachedFromWindow` は内部 RecyclerView の adapter 参照を切るため、再 attach 時に戻し直さないと
  * 内部状態を保ったままリストだけが空で復帰する。ViewPager2 のオフスクリーンページや Compose
@@ -266,6 +267,94 @@ class AdapterReattachTest {
             newTheme.resolvedFor(darkTheme = false),
             (view.internalCurrentDecoration() as ClassicSectionDecoration).theme,
         )
+    }
+
+    /**
+     * スクロールを起こせる長さの root。
+     *
+     * 画面に収まり切らない件数が要るため、可視 Cell を 40 件並べる。
+     */
+    private fun longRoot(): SettingsRoot = SettingsRoot(
+        sections = listOf(
+            Section(
+                id = "s1",
+                cells = (0 until 40).map { index -> LabelCell(id = "c$index", title = "行 $index") },
+            ),
+        ),
+    )
+
+    /** 先頭に見えている行の位置と、その行の上端オフセット。 */
+    private fun scrollAnchor(view: KsSettingsView): Pair<Int, Int> {
+        val rv = view.internalRecyclerView()
+        val lm = rv.layoutManager as LinearLayoutManager
+        val position = lm.findFirstVisibleItemPosition()
+        val top = rv.getChildAt(0)?.top ?: 0
+        return position to top
+    }
+
+    @Test
+    fun `detach 後に再 attach してもスクロール位置が保たれる`() {
+        val ctrl = Robolectric.buildActivity(HostActivity::class.java).setup()
+        controller = ctrl
+        val activity = ctrl.get()
+        val view = activity.settingsView
+        view.setRootDirect(longRoot())
+        idle()
+        activity.layoutSettingsView()
+
+        // 途中までスクロールした状態を作る。offset を 0 以外にして、行位置だけでなく
+        // 行内オフセットまで戻ることを見る。
+        val lm = view.internalRecyclerView().layoutManager as LinearLayoutManager
+        lm.scrollToPositionWithOffset(20, -17)
+        activity.layoutSettingsView()
+
+        val before = scrollAnchor(view)
+        assertEquals("スクロール後の先頭行が 20 になっている", 20, before.first)
+        assertEquals("行内オフセットも指定どおり", -17, before.second)
+
+        // View 自体は作り直さずに detach → 再 attach する。
+        activity.container.removeView(view)
+        idle()
+        activity.container.addView(view)
+        idle()
+        activity.layoutSettingsView()
+
+        assertEquals("再 attach 後も先頭行と行内オフセットが detach 前と一致する", before, scrollAnchor(view))
+    }
+
+    @Test
+    fun `再 attach 後に動かした位置が次の付け外しで復元される`() {
+        val ctrl = Robolectric.buildActivity(HostActivity::class.java).setup()
+        controller = ctrl
+        val activity = ctrl.get()
+        val view = activity.settingsView
+        view.setRootDirect(longRoot())
+        idle()
+        activity.layoutSettingsView()
+
+        val lm = view.internalRecyclerView().layoutManager as LinearLayoutManager
+        lm.scrollToPositionWithOffset(20, 0)
+        activity.layoutSettingsView()
+
+        // 1 回目の付け外し。
+        activity.container.removeView(view)
+        idle()
+        activity.container.addView(view)
+        idle()
+        activity.layoutSettingsView()
+        assertEquals("1 回目の復元位置", 20, scrollAnchor(view).first)
+
+        // 復元後に別の位置へ動かし、2 回目の付け外しで「古い控え」ではなく現在位置が戻ることを見る。
+        lm.scrollToPositionWithOffset(5, 0)
+        activity.layoutSettingsView()
+
+        activity.container.removeView(view)
+        idle()
+        activity.container.addView(view)
+        idle()
+        activity.layoutSettingsView()
+
+        assertEquals("2 回目は直前の位置が戻る（古い控えが残らない）", 5, scrollAnchor(view).first)
     }
 
     @Test

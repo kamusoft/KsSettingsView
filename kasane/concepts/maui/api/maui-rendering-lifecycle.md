@@ -3,12 +3,12 @@ type: concept
 title: 表示への反映と Host の寿命 (KsSettingsView.Maui)
 description: facade への変更がいつどう表示へ届き (構造は即時・内容はバッチ・IconSource は非同期・View は参照が正で内容は live)、Host の解放と再生成をまたいで何が保たれるか、Android の measure 契約による配置の制約
 tags: [maui, facade, lifecycle, handler]
-timestamp: 2026-09-04
+timestamp: 2026-09-15
 ---
 
 # 表示への反映と Host の寿命 (KsSettingsView.Maui)
 
-この文書を読むと、`KsSettingsView.Maui` のプロパティやコレクションへの変更がどの単位・どのタイミングで画面へ反映されるか、ページ離脱と再訪問 (Handler の切断と再接続) をまたいで何が保たれるか、そして Android で避けるべき配置が分かる。公開面の骨格は [MAUI facade の公開契約](maui-facade.md)、前提となる Store の一般契約は [Store の状態と更新通知](../../core/architecture/store-and-update-streams.md) を先に読むと分かりやすい。決定の経緯は maui/ADR-0007 (releaseHost)・maui/ADR-0014 (Android measure 契約)・maui/ADR-0015 (IconSource 実体化)・maui/ADR-0016〜0018・0020 (accessory View と CustomCell.Content の更新セマンティクス)・maui/ADR-0022 (View 配置の検査)・maui/ADR-0026 (iOS icon の所有権分類)。
+この文書を読むと、`KsSettingsView.Maui` のプロパティやコレクションへの変更がどの単位・どのタイミングで画面へ反映されるか、Handler の切断と再接続 (ページを閉じて開き直す等) をまたいで何が保たれるか、そして Android で避けるべき配置が分かる。公開面の骨格は [MAUI facade の公開契約](maui-facade.md)、前提となる Store の一般契約は [Store の状態と更新通知](../../core/architecture/store-and-update-streams.md) を先に読むと分かりやすい。決定の経緯は maui/ADR-0007 (releaseHost)・maui/ADR-0014 (Android measure 契約)・maui/ADR-0015 (IconSource 実体化)・maui/ADR-0016〜0018・0020 (accessory View と CustomCell.Content の更新セマンティクス)・maui/ADR-0022 (View 配置の検査)・maui/ADR-0026 (iOS icon の所有権分類)。
 
 ## 更新の意味論
 
@@ -46,7 +46,9 @@ Section / CellBase そのものを複数箇所へ置くこと、および同一�
 
 ## lifecycle の保証
 
-ページ表示 (Handler 接続) で Native Host が生成され、その時点の状態が表示される。ページ離脱 (Handler 切断) で Host は解放されるが、**facade・Bridge・Store は生き続け、切断中の変更も Store へ流れ続ける** — 再訪問時は Store 現在状態から表示が復元される (maui/ADR-0007)。解放 → 再生成のたびに Host は新しい**世代**になる。復元の正はそれぞれ次が所有し、利用者から見ればいずれも再訪問後も保持されている:
+ページ表示 (Handler 接続) で Native Host が生成され、その時点の状態が表示される。Handler 切断で Host は解放されるが、**facade・Bridge・Store は生き続け、切断中の変更も Store へ流れ続ける** — 再訪問時は Store 現在状態から表示が復元される (maui/ADR-0007)。解放 → 再生成のたびに Host は新しい**世代**になる。
+
+Handler が切られるのは、ページがナビゲーションスタックから外れたとき (戻る操作で閉じたページ自身) と、Android の Activity 再生成のような platform 側の作り直しである。新しいページを push して背後に回っただけのページでは、両 OS とも Handler は切られず Host も生き続ける (Android は Fragment を作り直すが、同じ Activity なら Handler と platform view を新しい Fragment へ付け替える)。復元の正はそれぞれ次が所有し、利用者から見ればいずれも再訪問後も保持されている:
 
 | 対象 | 復元の正 | 切断中の変更 | 再接続時 |
 |---|---|---|---|

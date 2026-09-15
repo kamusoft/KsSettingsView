@@ -3,7 +3,7 @@ type: concept
 title: MAUI facade (KsSettingsView.Maui) の公開契約
 description: XAML / C# から SettingsView を利用する facade 層の入口 — 経路・導入と前提・型名衝突・Root / Section / Cell 階層と header / footer・ItemsSource / ItemTemplate・禁止事項と現時点の範囲
 tags: [maui, facade, xaml, handler]
-timestamp: 2026-09-04
+timestamp: 2026-09-15
 ---
 
 # MAUI facade (KsSettingsView.Maui) の公開契約
@@ -87,7 +87,7 @@ AndroidX Lifecycle の版競合 (NU1608 / NU1107) は ProjectReference 経路・
 
 ## してはいけないこと・制約
 
-Section / Cell は logical tree に載らない — `{Binding}` は BindingContext の明示配布で解決されるが、**`x:Reference` と `DynamicResource` は届かない**。accessory View と `CustomCell.Content` だけは例外で logical tree に接続される ([表示への反映と Host の寿命](maui-rendering-lifecycle.md))。
+Section / Cell は logical tree に載らない — `{Binding}` は BindingContext の明示配布で解決される。`x:Reference` と `DynamicResource` は**一度きりの初期解決は届くが、その後の追随がない**: リソース辞書を差し替えても通知が Cell まで伝播せず、`AppThemeBinding` も外観の変化で評価し直されない (実測: iOS Simulator で `DynamicResource` を書いた Cell が起動時の外観に応じた色で描かれ、表示中の外観切替では色が変わらない)。色を外観に追随させるには、利用側で値を入れ直す。accessory View と `CustomCell.Content` だけは例外で logical tree に接続される ([表示への反映と Host の寿命](maui-rendering-lifecycle.md))。
 
 - Binding assembly (`KsSettingsView.Binding.*`) の型を直接使わない — アプリ向け公開契約は facade のみ ([native-bridge.md](native-bridge.md) の禁止事項と同じ理由)
 - 内容サイズを問われる配置 ([表示への反映と Host の寿命](maui-rendering-lifecycle.md) の「配置の制約」) に Android で入力 Cell を置いて編集させない — フォーカス喪失の既知経路が残る

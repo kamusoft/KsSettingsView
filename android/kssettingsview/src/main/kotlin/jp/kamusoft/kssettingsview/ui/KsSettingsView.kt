@@ -141,6 +141,13 @@ public class KsSettingsView @JvmOverloads constructor(
     /** Window に attach されているか（復元走査の駆動条件のひとつ）。 */
     private var isAttachedToHostWindow: Boolean = false
 
+    /**
+     * detach 直前に控えた LayoutManager のスクロールアンカー。
+     *
+     * `onAttachedToWindow` で adapter を戻した直後に消費する。付け外しをまたがない限り `null`。
+     */
+    private var pendingScrollPosition: Parcelable? = null
+
     /** `SettingsRoot` が一度でも反映されたか（復元走査の駆動条件のひとつ）。 */
     private var isRootApplied: Boolean = false
 
@@ -283,12 +290,16 @@ public class KsSettingsView @JvmOverloads constructor(
         // ここで戻さないと ViewPager2 のオフスクリーンページや Compose `AndroidView` の付け外しの
         // ように View を作り直さず detach / attach するホストで、内部状態を保ったままリストが空で
         // 復帰する。`concatAdapter` と配下 3 つの Adapter は状態ごと保持されているため、戻すだけで
-        // detach 前の内容がそのまま出る（スクロール位置は復元対象に含まない）。
+        // detach 前の内容がそのまま出る。
         // 既に入っているときに代入し直さないのは、`RecyclerView.setAdapter` が同一インスタンスでも
         // `removeAndRecycleViews` を伴う作り直しになり、初回 attach のたびに全 ViewHolder が
         // 無駄に再生成されるためである。
         if (recyclerView.adapter == null) {
             recyclerView.adapter = concatAdapter
+            // adapter を戻すだけでは先頭から再レイアウトされる。`setAdapter` は同一インスタンスでも
+            // 全 ViewHolder を作り直し、LayoutManager のアンカーが失われるためである。detach 直前に
+            // 控えたアンカーをここで戻し、付け外しをまたいでスクロール位置を保つ。
+            restorePendingScrollPosition()
         }
 
         // attach 時点で pending Store があり、かつ購読が張られていなければ、
@@ -332,9 +343,39 @@ public class KsSettingsView @JvmOverloads constructor(
         // Store 購読 Job を cancel する（メモリリーク防止）。
         storeCollectJob?.cancel()
         storeCollectJob = null
+        // スクロール位置は adapter を切る前に控える。`setAdapter(null)` は LayoutManager から
+        // 全 View を取り上げ、アンカーの根拠になる子 View が無くなるため、後から控えても先頭を指す。
+        savePendingScrollPosition()
         // RecyclerView の adapter 参照を切る。切った参照は `onAttachedToWindow` で戻す。
         recyclerView.adapter = null
         super.onDetachedFromWindow()
+    }
+
+    /**
+     * LayoutManager のスクロールアンカーを控える。
+     *
+     * 控えるのは [onDetachedFromWindow] で adapter を切る直前だけであり、既に控えた値があれば
+     * 上書きする（最後の detach 時点の位置が正しいため）。
+     */
+    private fun savePendingScrollPosition() {
+        pendingScrollPosition = recyclerView.layoutManager?.onSaveInstanceState()
+    }
+
+    /**
+     * 控えたスクロールアンカーを LayoutManager へ戻し、控えを捨てる。
+     *
+     * [RecyclerView.LayoutManager.onRestoreInstanceState] は次のレイアウトで消費される保留状態を
+     * 置くだけなので、adapter を戻した直後に呼べばよい。内容の再投入（Store からの再同期）が後から
+     * 走っても、アンカーは同じレイアウトで解決される。
+     *
+     * これが成り立つのは、復元の相手が detach 前と同一の `concatAdapter` で、配下 3 つの Adapter が
+     * 内容ごと保持されているためである。[LinearLayoutManager] は保留状態を消費するレイアウトで
+     * item 数が 0 だとそれを捨てるので、空の adapter を当ててから復元する形にはできない。
+     */
+    private fun restorePendingScrollPosition() {
+        val saved = pendingScrollPosition ?: return
+        pendingScrollPosition = null
+        recyclerView.layoutManager?.onRestoreInstanceState(saved)
     }
 
     // MARK: - 公開 API
