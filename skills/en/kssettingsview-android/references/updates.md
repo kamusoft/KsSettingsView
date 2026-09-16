@@ -376,7 +376,7 @@ class SettingsActivity : AppCompatActivity() {
 }
 ```
 
-`bind` applies the current root and theme immediately, and every later change goes through the store. The view keeps up with the store across detach and reattach - a pager page scrolling off screen, for instance - by re-reading the current state, though the scroll position is not restored. Assigning `view.theme` directly after `bind` only changes the view until the next store notification overwrites it, so once a store is bound the theme belongs to `applyTheme`; `view.theme` is for a view you drive without one.
+`bind` applies the current root and theme immediately, and every later change goes through the store. The view keeps up with the store across detach and reattach - a pager page scrolling off screen, for instance - by re-reading the current state, so store changes made while it was detached are not lost. The scroll position comes back too: the view takes an anchor just before it detaches and restores it on the next attach. A view that is itself rebuilt - a recreated host, a recreated activity - starts at the top instead. Assigning `view.theme` directly after `bind` only changes the view until the next store notification overwrites it, so once a store is bound the theme belongs to `applyTheme`; `view.theme` is for a view you drive without one.
 
 `unbind()` releases the store: later store changes no longer reach the view, what is displayed stays as it is, and re-attaching the view does not resume the subscription - call `bind` again to follow a store. It is idempotent, so calling it on a view that has no store does nothing.
 

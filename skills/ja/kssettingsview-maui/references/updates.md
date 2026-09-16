@@ -164,5 +164,5 @@ public class CellTemplateSelector : DataTemplateSelector
 ## 更新にかかる決まり
 
 - ツリーの操作は UI スレッドから行う。ライブラリ側でスレッドの marshal は行わない。
-- `Section` / `CellBase` / Header・Footer・`CustomCell.Content` に置く View は、同時に 1 箇所にしか置けない。同じインスタンスを 2 箇所へ置くと `InvalidOperationException` になり、検査は反映前に行われるので画面が中途半端に更新されることはない。復旧は `Root` の組み直しで行う。
-- observable でないコレクション (素の `List<T>`) は接続時点の内容が描かれるだけで、以後の編集は表示に出ない。
+- `Section` / `CellBase` / Header・Footer・`CustomCell.Content` に置く View は、同時に 1 箇所にしか置けない。同じインスタンスを 2 箇所へ置くと `InvalidOperationException` になる — 他の Section / `SettingsView` が所有したままのインスタンスは追加した時点で、同じコレクションへの二重の追加は表示へ反映する時点で送出される。検査は反映前に行われるので、先に置かれていた方は動かず、画面が中途半端に更新されることもない。復旧は `Root` の組み直しで行う。
+- observable でないコレクション (素の `List<T>`) は接続時点の内容が描かれるだけで、以後の編集は表示に出ない。所属の始まりと終わりもその時点で数えられるので、そこから取り除いた要素を別の場所へ置き直せるのは、`Root` / `Cells` へ新しいコレクションを代入した後になる。

@@ -42,7 +42,7 @@ XAML と C# から参照するものはすべて 1 つの namespace に移り、
 | `CellBase.Tapped` (全 Cell が公開する public イベント) | `CommandCell` / `ButtonCell` / `CustomCell` の `Tapped` イベントのみ | 範囲が狭まった。発火は `Command` より先。`LabelCell` や `SwitchCell` などで購読していた場合は、その Cell を `CommandCell` または `CustomCell` に置き換える |
 | `CellBase.OnTapped()` (internal) | 提供しない | `CellBase` を継承して呼び出す・override していた場合にのみ関わる。タップは `Command` か `Tapped` で受ける |
 
-Section と Cell は logical tree に載らないため、`{Binding}` は解決するが `x:Reference` と `DynamicResource` は届かない。Header / Footer の View と `CustomCell.Content` だけは例外で、logical tree に接続され所有者の `BindingContext` を継承する。
+`Section` と Cell は所属先 (`SettingsView` / `Section`) の論理子である。`{Binding}` は継承した `BindingContext` で解決され、設定したどの BindableProperty でも `DynamicResource` と `AppThemeBinding` が再評価される — 祖先 (ページ / アプリ) の Resources を差し替えたとき、およびアプリの外観が変わったときに追随する。所属を解かれた Section / Cell (`Parent` が null) は旧所属先の Resources に追随しない。`x:Reference` は namescope 経由の別機構で、一度きりの初期解決は届くが、その後の追随はない。Header / Footer の View と `CustomCell.Content` も同じく論理子で、所有者の `BindingContext` を継承する。
 
 ## 全 Cell 共通のフィールドを読み替える
 
@@ -137,7 +137,7 @@ AiForms は `ButtonCell` で `Description` とそのフォント系プロパテ�
 </ks:Section>
 ```
 
-コレクションから Cell を生成する場合はもう一手要る。生成された Cell の `BindingContext` は対応する item であり、Cell には `x:Reference` が届かないため、グループの選択値を item 側から辿れるようにする。item の ViewModel に、所有者側の値を読み書きするプロパティを持たせ、それを `SelectedValue` にバインドする。
+コレクションから Cell を生成する場合はもう一手要る。生成された Cell の `BindingContext` は対応する item なので、グループの選択値を item 側から辿れるようにする。item の ViewModel に、所有者側の値を読み書きするプロパティを持たせ、それを `SelectedValue` にバインドする。
 
 ```xml
 <ks:Section ItemsSource="{Binding ThemeOptions}">
@@ -307,7 +307,18 @@ AiForms では色を設定しないときの既定は固定値だった — `Sec
 </ks:SettingsView>
 ```
 
-Cell 側の色プロパティ (`TitleColor` などの `CellBase` の色と、`AccentColor` / `PlaceholderColor` / `AndroidButtonColor` のように Cell 種別が意味として持つ色) は事情が違う。ここに書いた `AppThemeBinding` は外観が切り替わっても評価し直されない — `Section` と Cell はコントロールへ渡すデータであってページのツリーの要素ではなく、ツリーの外にあるバインドには外観の変化が伝わらないためである。AiForms の Cell で `AppThemeBinding` を使っていた画面は、`Application.RequestedThemeChanged` を購読して現在の外観の色をプロパティへ入れ直す形へ書き換える。入れ直しはその Cell の内容更新として表示中の行まで届く。完動するコードは kssettingsview-maui Skill のスタイル reference の「Cell 1 つの色を外観に合わせて変える」にある。新規に書く画面向けの画面全体の話題は同 reference の「ライト / ダーク外観に追随させる」が扱う。
+Cell 側の色プロパティ (`TitleColor` などの `CellBase` の色と、`AccentColor` / `PlaceholderColor` / `AndroidButtonColor` のように Cell 種別が意味として持つ色) も書き方は同じで、`AppThemeBinding` をそのまま書ける。`Section` と Cell は所属先の論理子なので、外観が切り替わるとここに書いた binding も再評価される。再評価された値は同じプロパティへ直接代入したときと同じ経路 — その Cell の内容更新 — で表示中の行まで届き、行は作り直されずに描き直される。外観を購読して色を入れ直すコードは要らない。AiForms の Cell で `AppThemeBinding` を使っていた画面は、prefix とメンバー名の読み替えだけで移せる。
+
+```xml
+<ks:Section HeaderText="Account">
+  <ks:ButtonCell Title="Sign out"
+                 TitleColor="{AppThemeBinding Light=#FF3B30, Dark=#FF453A}" />
+</ks:Section>
+```
+
+届いた色のうち見た目を変えるのは、その Cell がその platform で描画に使う項目だけである (`AndroidButtonColor` は iOS で効かず、`CustomCell` のテキスト系の色は届いても見た目を変えない)。
+
+`DynamicResource` を併せて使う場合を含む完動するコードは、kssettingsview-maui Skill のスタイル reference の「Cell 1 つの色を外観に合わせて変える」にある。新規に書く画面向けの画面全体の話題は同 reference の「ライト / ダーク外観に追随させる」が扱う。
 
 ## Header / Footer の設定を移す
 

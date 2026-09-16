@@ -1,6 +1,6 @@
 # Cell
 
-設定画面に Cell を置くためのレシピ。XAML の例はいずれも [SKILL.md](../SKILL.md) の最小動作コードにある `ks` 名前空間宣言を前提とする。`<ks:Section>` から始まる断片は `<ks:SettingsView>` の直下に、Cell 単体の断片は `<ks:Section>` の中に貼る — `SettingsView` の content property である `Root` が持つのは Section であって Cell ではない。バインドはページの `BindingContext` に対して解決されるので、参照しているプロパティは ViewModel 側に用意する。Section と Cell はページの visual tree には載らないため、`{Binding}` は効くが `{x:Reference}` と `{DynamicResource}` は解決されない — これらが使えるのは visual tree に載る Header / Footer の View と `CustomCell.Content` の中だけ。
+設定画面に Cell を置くためのレシピ。XAML の例はいずれも [SKILL.md](../SKILL.md) の最小動作コードにある `ks` 名前空間宣言を前提とする。`<ks:Section>` から始まる断片は `<ks:SettingsView>` の直下に、Cell 単体の断片は `<ks:Section>` の中に貼る — `SettingsView` の content property である `Root` が持つのは Section であって Cell ではない。バインドはページの `BindingContext` に対して解決されるので、参照しているプロパティは ViewModel 側に用意する。Section と Cell は置いた先の論理子なので、`{Binding}` も `{DynamicResource}` も `{AppThemeBinding}` も効き、上位の Resources を差し替えたときと外観が変わったときに評価し直される。`{x:Reference}` だけは別の機構で、ページの構築時に一度解決されるだけで、その後の変化には追従しない。
 
 ## Cell を Section にまとめる
 

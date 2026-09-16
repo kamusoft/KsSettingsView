@@ -376,7 +376,7 @@ class SettingsActivity : AppCompatActivity() {
 }
 ```
 
-`bind` は Store の現在 root と Theme を直ちに反映し、以後の変更はすべて Store を経由する。View は detach と再 attach をまたいでも (ページャのページが画面外へ出る場合など) Store の現在値を取り込み直して追従する。ただしスクロール位置は復元しない。`bind` の後に `view.theme` を直接代入しても、次の Store 通知が上書きするまでしか効かない。Store を bind した構成での Theme 変更は `applyTheme` の担当で、`view.theme` は Store を使わずに View を駆動する場合のもの。
+`bind` は Store の現在 root と Theme を直ちに反映し、以後の変更はすべて Store を経由する。View は detach と再 attach をまたいでも (ページャのページが画面外へ出る場合など) Store の現在値を取り込み直して追従するので、detach 中に行った Store の変更も失われない。スクロール位置も戻る — detach の直前にアンカーを控え、次の attach で復元する。View 自体が作り直される経路 (ホストの再生成・Activity の再生成) では先頭から始まる。`bind` の後に `view.theme` を直接代入しても、次の Store 通知が上書きするまでしか効かない。Store を bind した構成での Theme 変更は `applyTheme` の担当で、`view.theme` は Store を使わずに View を駆動する場合のもの。
 
 `unbind()` は Store を手放す。以後の Store 変更は View へ届かなくなり、表示中の内容はそのまま残り、View を再 attach しても購読は復活しない — 再び追従させるには `bind` を呼び直す。冪等なので、Store を持たない View で呼んでも何も起きない。
 

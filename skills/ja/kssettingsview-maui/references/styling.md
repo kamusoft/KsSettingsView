@@ -67,59 +67,29 @@
 
 ## Cell 1 つの色を外観に合わせて変える
 
-Cell のプロパティに書いた `AppThemeBinding` は、外観が切り替わっても評価し直されない。`Section` と Cell はコントロールへ渡すデータであってページのツリーの要素ではなく、ツリーの外にあるバインドには外観の変化が伝わらないため。代わりに `Application.RequestedThemeChanged` を購読し、現在の外観の色をプロパティへ入れ直す。入れ直しはその Cell の内容更新として表示中の行まで届き、行はその場で描き直される。
+`AppThemeBinding` の書き方は Section でも Cell でも同じ。Section は置いた `SettingsView` の、Cell は所属する Section の論理子なので、そのプロパティに書いたバインドは外観が切り替わると評価し直される。新しい値はその Cell の内容更新として届き、行は作り直されずにその場で描き直される。購読するコードは要らない。
 
 ```xml
-<ks:ButtonCell x:Name="LogoutButton" Title="Log out" />
+<ks:SettingsView CellTitleColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}">
+  <ks:Section HeaderText="Account">
+    <ks:ButtonCell Title="Log out"
+                   TitleColor="{AppThemeBinding Light=Green, Dark=Magenta}" />
+    <ks:EntryCell Title="Name"
+                  Placeholder="Taro Yamada"
+                  PlaceholderColor="{AppThemeBinding Light=#B0A98F, Dark=#636366}" />
+  </ks:Section>
+</ks:SettingsView>
 ```
 
-```csharp
-public partial class SettingsPage : ContentPage
-{
-    private Application? _subscribedTo;
+Cell に載る他の色も書き方は同じ — `CellBase` のテキスト系の色と `BackgroundColor`、それに `AccentColor` / `AndroidButtonColor` のように Cell 種別が意味として持つ色。再評価は色に限らず、この書き方をした bindable property で起きる。`Section.HeaderText` もそうで、この場合は Header の更新として届く。
 
-    public SettingsPage()
-    {
-        InitializeComponent();
+`DynamicResource` も同じ経路に乗る。Section と Cell はキーを上位のページとアプリの Resources に対して解決するので、そこへ次の値を入れれば追従する。
 
-        Loaded += OnLoaded;
-        Unloaded += OnUnloaded;
-        ApplyThemeColors(Application.Current?.RequestedTheme == AppTheme.Dark);
-    }
-
-    private void ApplyThemeColors(bool isDark)
-        => LogoutButton.TitleColor = isDark ? Colors.Magenta : Colors.Green;
-
-    private void OnLoaded(object? sender, EventArgs e)
-    {
-        ApplyThemeColors(Application.Current?.RequestedTheme == AppTheme.Dark);
-
-        if (_subscribedTo is not null || Application.Current is not { } application)
-        {
-            return;
-        }
-
-        application.RequestedThemeChanged += OnRequestedThemeChanged;
-        _subscribedTo = application;
-    }
-
-    private void OnUnloaded(object? sender, EventArgs e)
-    {
-        if (_subscribedTo is not { } application)
-        {
-            return;
-        }
-
-        application.RequestedThemeChanged -= OnRequestedThemeChanged;
-        _subscribedTo = null;
-    }
-
-    private void OnRequestedThemeChanged(object? sender, AppThemeChangedEventArgs e)
-        => ApplyThemeColors(e.RequestedTheme == AppTheme.Dark);
-}
+```xml
+<ks:LabelCell Title="Storage" TitleColor="{DynamicResource CellTitleColor}" />
 ```
 
-Cell に載る色はいずれもこの入れ直しで切り替える — `CellBase` のテキスト系の色と `BackgroundColor`、それに `AccentColor` / `PlaceholderColor` / `AndroidButtonColor` のように Cell 種別が意味として持つ色。
+追従が止まるところ: コレクションから外した Section / Cell は元の所属先の Resources に追従しなくなるので、値の変更は置かれている間に行う。また `Style` は `Section` にも Cell にも設定できない — どちらも View ではないため。Cell 間で値を共有する手段は Resources 側になる (`SettingsView` 自体には `Style` が効く)。
 
 ## スタイルプロパティの一覧
 
