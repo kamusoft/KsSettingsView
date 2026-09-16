@@ -11,7 +11,7 @@ namespace KsSettingsView.Internals;
 /// <remarks>
 /// Section / Cell にとっての所有の寿命は「コレクションへの所属」であり、その増減をここで見る。
 /// 論理子であることは Native Host の有無と関係なく成り立つ契約なので、付け外しは Handler の
-/// 生成・解放とは切り離してこの器が行う。論理子であることで、要素へ設定した
+/// 生成・解放とは切り離してこの器が行う (cross/ADR-0032)。論理子であることで、要素へ設定した
 /// <c>AppThemeBinding</c> / <c>DynamicResource</c> が祖先 (ページ / アプリ) の外観と Resources の
 /// 変更で再評価される。
 /// 配布と引き取りの順序は「継承 BindingContext を配ってから論理子にする」で固定する。逆にすると

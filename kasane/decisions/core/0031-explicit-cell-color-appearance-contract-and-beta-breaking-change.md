@@ -4,6 +4,7 @@ title: 未指定色の Unspecified 統一と明示色の外観契約を Cell 固
 status: accepted
 date: 2026-09-06
 amends: 0030
+amended-by: cross/0032
 ---
 
 ## Context

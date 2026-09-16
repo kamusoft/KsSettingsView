@@ -28,3 +28,5 @@
 | [0024](0024-sectionmargin-thickness-logical-direction.md) | SectionMargin は Thickness で公開し Left / Right を leading / trailing として解釈する | accepted | Thickness? (null = platform 既定委譲) で公開し論理方向として Native の directional 型へ直接写す。RTL は Native の解決機構に委ね MAUI 層は FlowDirection を監視しない。独自 directional 型・MAUI 側 FlowDirection 変換は却下。 |
 | [0025](0025-nuget-three-package-root-namespace.md) | MAUI は facade + binding 2 件の 3 NuGet パッケージで配布し、名前空間は `KsSettingsView`・Package ID は `KsSettingsView.Maui` とする | accepted | pack は SDK 標準経路のみ。名前空間は文脈内で読まれるため `.Maui` を外し、Package ID は文脈なしで読まれるため修飾を残す。メタデータは maui/Directory.Build.props、版は CPM。 |
 | [0026](0026-ios-icon-cleanup-via-ownership-classification.md) | iOS の icon 後片付けは解決時の所有権分類で守る (共有 UIImage を破棄しない) | accepted | キャッシュ所有画像には後片付け口を付けない。判定はキャッシュ引き直し + ReferenceEquals の実体同一性のみ (分岐ミラー禁止)、失敗は破棄しない側へ倒す。Android の破棄は現行維持 (Glide refcount で必須)。 |
+
+他ドメインに置かれた maui 系統の決定: [cross/ADR-0032](../cross/0032-maui-section-cell-as-logical-children.md) (Section / Cell を SettingsView の論理子にし、maui/ADR-0016 の論理所有の型を Section / Cell へ広げる。core/ADR-0031 を amends するため cross に置く)。

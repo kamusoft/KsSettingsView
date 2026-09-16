@@ -1,6 +1,6 @@
 ---
 scope: spec-review
-timestamp: 2026-09-06
+timestamp: 2026-09-16
 ---
 
 # lessons: spec-review
@@ -9,3 +9,4 @@ timestamp: 2026-09-06
 - [L-002] 提案レビューで自己レビューが指摘 0 になったとき、周回を重ねたことを spec 妥当性の根拠にしない。指摘 0 で 1 周終わったら、読み直す代わりに検査軸を変えて当てる — (1) Requirement 同士の交差 (モード・フラグ Requirement × 機能 Requirement、任意入力同士の組み合わせ)、(2) 記述が参照する現行リポジトリ・外部機構の実体 (パス・バージョン取得元・lint scope・ビルドツールの実挙動) との突合、(3) 決定が作る責務の閉路 (この手順を禁じたとき、誰がその作業をやるのか)。完了報告に「自己レビュー N 周・指摘なし」とだけ書かず、どの軸で当てたかを書く。経緯は [details/self-review-iteration-mistaken-for-spec-validity.md](details/self-review-iteration-mistaken-for-spec-validity.md)。(昇格: 2026-09-02、出典: retarget-docs-refresh-to-skills / adopt-android-explicit-api-mode / add-consumer-verification)
 - [L-003] 提案レビューで、spec が「現行を維持する」と定める画面・パラメータ (初期値・選択肢・寸法値・行構成・文言) について、mock が描く該当値を現行実装のソースと 1 つずつ照合し、一致しない値・行・文言は承認前に mock を現行へ修正させる。brief に「生値は非規範」と書くだけでは実装が mock の生値に引きずられた実例があるため、mock 側の値を合わせる。事後判定: brief.md の承認記録に、現行との照合を行った対象 (画面・値) が書かれている。経緯は [details/mock-shows-param-not-matching-current-impl.md](details/mock-shows-param-not-matching-current-impl.md)。(昇格: 2026-09-05、出典: align-sample-parity / fix-cell-accessory-vertical-fill / add-sample-dark-mode-toggle)
 - [L-004] 提案レビューでは条項単体の明確さで満足せず、SHALL / SHALL NOT を条項ペアで突き合わせて矛盾を検算する。照合対象は (1) 同一 spec 冒頭の共有契約段落、(2) 相方 platform spec の同一契約 (cross 変更)、(3) 横断 Requirement (実行フラグ・モード・全体規律) と個別機能 Requirement の交差ケース、(4) レビュー指摘への対処で足した条項と既存条項。矛盾条項は単体では実装可能なため spec lint も Scenario 対応表もすり抜け、実装後の視覚不一致や実装フェーズでのオーナー判断差し戻しとして初めて露呈する。事後判定: 提案レビューの報告に、突き合わせた条項ペアと結果 (矛盾なし / 修正) が書かれている。経緯は [details/sibling-platform-spec-clause-contradicts-shared-contract.md](details/sibling-platform-spec-clause-contradicts-shared-contract.md)。(昇格: 2026-09-06、出典: implement-modern-style / retarget-docs-refresh-to-skills / fix-default-colors-dark-appearance)
+- [L-005] ADDED / MODIFIED Requirement が保証 (表示反映・行 identity 維持・適用は一度だけ・ある時点で成立する等) を宣言する提案をレビューするときは、その保証が通る合流先の既存機構の契約 — concepts の記載・既存テストが固定している契約・既存経路が発行する diff 列・その機構が正式に受け付ける入力の集合 — を特定して突き合わせ、(1) 保証が既存契約と両立するか、(2) 既存経路との重複適用が生じないか、(3) 受け付ける入力の全種で保証が成立するか、を確認する。Requirement 単体で自然に読めることは根拠にならない — 合流先の契約と矛盾する spec は実装不能か二重適用になり、入力の一部で成立しない保証は実装レビューまで露見しない。事後判定: 提案レビューの報告に、突き合わせた合流先の契約 (文書・テスト名) と結果が書かれている。経緯は [details/new-requirement-not-checked-against-merge-point-contract.md](details/new-requirement-not-checked-against-merge-point-contract.md)。(昇格: 2026-09-16、出典: fix-dsl-header-height-diff / fix-ios-full-content-refresh / maui-cell-appthemebinding-logical-child)
