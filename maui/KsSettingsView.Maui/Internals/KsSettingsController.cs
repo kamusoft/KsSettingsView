@@ -1016,7 +1016,10 @@ internal sealed class KsSettingsController(SettingsView owner)
             return;
         }
 
+        owner.ReconcileSectionOwnership();
+
         List<Section> sections = Snapshot(_root);
+        ReconcileCellOwnership(sections);
         EnsureTreeHasNoDuplicates(sections);
 
         ClearRegistrations();
@@ -1133,6 +1136,7 @@ internal sealed class KsSettingsController(SettingsView owner)
 
     private void AddSections(List<Section> sections, int startIndex)
     {
+        ReconcileCellOwnership(sections);
         EnsureTreeHasNoDuplicates(sections);
         EnsureSectionsAreNotPlaced(sections);
 
@@ -1177,6 +1181,7 @@ internal sealed class KsSettingsController(SettingsView owner)
             added.Add(newSections[i]);
         }
 
+        ReconcileCellOwnership(added);
         EnsureTreeHasNoDuplicates(added);
         EnsureSectionsAreNotPlaced(added);
 
@@ -1416,6 +1421,10 @@ internal sealed class KsSettingsController(SettingsView owner)
     /// <param name="entry">対象 Section の登録内容</param>
     private void ReplaceSectionKeepingCellIds(Section section, SectionEntry entry)
     {
+        // Section 自身のプロパティ変更でも配下 Cell をそのまま native へ送るため、送る前に
+        // 論理上の所有を今の内容へ揃える。
+        section.ReconcileCellOwnership();
+
         List<CellBase> cells = Snapshot(section.Cells);
         List<string> retained = new(cells.Count);
         foreach (CellBase cell in cells)
@@ -1456,6 +1465,8 @@ internal sealed class KsSettingsController(SettingsView owner)
 
     private void RebuildSectionCells(Section section, SectionEntry entry)
     {
+        section.ReconcileCellOwnership();
+
         List<CellBase> cells = Snapshot(section.Cells);
         EnsureCellsHaveNoDuplicates(cells);
 
@@ -2110,6 +2121,25 @@ internal sealed class KsSettingsController(SettingsView owner)
         entry.CellsSubscription = subscription;
     }
 
+    // ---- 論理上の所有の照合 ----
+
+    /// <summary>これから変換する Section の配下 Cell の論理上の所有を、今の内容と照合し直す。</summary>
+    /// <remarks>
+    /// 増減を通知しないコレクションを <c>Section.Cells</c> に置いた場合、設定した後の Cell の
+    /// 出入りは所有の器へ届かない。表示へ送る Cell が論理親を持たないまま native へ渡ると、
+    /// 表示されているのに <c>AppThemeBinding</c> / <c>DynamicResource</c> が再評価されなくなる。
+    /// 増減が届くコレクションでは付け外しがその時点で済んでいるため、照合しても何も変わらない。
+    /// Root の Section 側は SettingsView が同じ規律で照合する。
+    /// </remarks>
+    /// <param name="sections">これから変換する Section</param>
+    private static void ReconcileCellOwnership(IReadOnlyList<Section> sections)
+    {
+        foreach (Section section in sections)
+        {
+            section?.ReconcileCellOwnership();
+        }
+    }
+
     // ---- 重複配置の検出 ----
 
     private void EnsureTreeHasNoDuplicates(IReadOnlyList<Section> sections)
@@ -2134,7 +2164,9 @@ internal sealed class KsSettingsController(SettingsView owner)
                 throw DuplicatePlacement("Section");
             }
 
+            EnsureNotOwnedElsewhere(section, section.HeaderView);
             AddSeenView(seenViews, section.HeaderView);
+            EnsureNotOwnedElsewhere(section, section.FooterView);
             AddSeenView(seenViews, section.FooterView);
 
             foreach (CellBase cell in Snapshot(section.Cells))
@@ -2151,6 +2183,7 @@ internal sealed class KsSettingsController(SettingsView owner)
 
                 if (cell is CustomCell custom)
                 {
+                    EnsureNotOwnedElsewhere(custom, custom.Content);
                     AddSeenView(seenViews, custom.Content);
                 }
             }
@@ -2189,9 +2222,9 @@ internal sealed class KsSettingsController(SettingsView owner)
                 throw DuplicatePlacement("Section");
             }
 
-            EnsureViewIsFree(section.HeaderView);
+            EnsureViewIsFree(section, section.HeaderView);
             AddSeenView(seen, section.HeaderView);
-            EnsureViewIsFree(section.FooterView);
+            EnsureViewIsFree(section, section.FooterView);
             AddSeenView(seen, section.FooterView);
             EnsureCellsAreNotPlaced(Snapshot(section.Cells), seen);
         }
@@ -2220,7 +2253,7 @@ internal sealed class KsSettingsController(SettingsView owner)
 
             if (cell is CustomCell custom)
             {
-                EnsureViewIsFree(custom.Content);
+                EnsureViewIsFree(custom, custom.Content);
                 AddSeenView(seen, custom.Content);
             }
         }
@@ -2246,6 +2279,7 @@ internal sealed class KsSettingsController(SettingsView owner)
                 continue;
             }
 
+            EnsureNotOwnedElsewhere(custom, content);
             AddSeenView(seen, content);
 
             if (_placedViews.ContainsKey(content))
@@ -2262,11 +2296,23 @@ internal sealed class KsSettingsController(SettingsView owner)
     }
 
     /// <summary>この View がどこにも置かれていないことを確かめる。</summary>
-    /// <remarks>accessory の位置と Cell の内容は同じ置き場所の集合として扱う。</remarks>
+    /// <remarks>
+    /// accessory の位置と Cell の内容は同じ置き場所の集合として扱う。この変換経路が知らない
+    /// 置き場所 — 別の SettingsView やその配下、設定ツリーから外れた Section / CustomCell —
+    /// に置かれたままの View は置き場所の集合に現れないため、論理上の所有者で見分ける。
+    /// </remarks>
+    /// <param name="expectedOwner">これから所有する側</param>
     /// <param name="view">確かめる View。null なら何もしない</param>
-    private void EnsureViewIsFree(View? view)
+    private void EnsureViewIsFree(Element expectedOwner, View? view)
     {
-        if (view is not null && (_placedViews.ContainsKey(view) || _placedContentViews.ContainsKey(view)))
+        if (view is null)
+        {
+            return;
+        }
+
+        if (_placedViews.ContainsKey(view)
+            || _placedContentViews.ContainsKey(view)
+            || KsPlacementDiagnostics.IsOwnedElsewhere(expectedOwner, view))
         {
             throw DuplicatePlacement("View");
         }
@@ -2288,6 +2334,11 @@ internal sealed class KsSettingsController(SettingsView owner)
         }
 
         if (_placedContentViews.ContainsKey(view))
+        {
+            throw DuplicatePlacement("View");
+        }
+
+        if (KsPlacementDiagnostics.IsOwnedElsewhere(OwnerOf(slot), view))
         {
             throw DuplicatePlacement("View");
         }
@@ -2314,13 +2365,24 @@ internal sealed class KsSettingsController(SettingsView owner)
             return false;
         }
 
-        if (_placedViews.ContainsKey(view))
+        if (_placedViews.ContainsKey(view) || KsPlacementDiagnostics.IsOwnedElsewhere(cell, view))
         {
             return true;
         }
 
         return _placedContentViews.TryGetValue(view, out CustomCell? holder)
             && !ReferenceEquals(holder, cell);
+    }
+
+    /// <summary>この View が期待する所有者以外の facade 所有者に置かれていないことを確かめる。</summary>
+    /// <param name="expectedOwner">これから所有する側</param>
+    /// <param name="view">確かめる View。null なら何もしない</param>
+    private static void EnsureNotOwnedElsewhere(Element expectedOwner, View? view)
+    {
+        if (KsPlacementDiagnostics.IsOwnedElsewhere(expectedOwner, view))
+        {
+            throw DuplicatePlacement("View");
+        }
     }
 
     /// <summary>重複判定の数えあげに View を加える。既に数えられていれば重複として弾く。</summary>
@@ -2335,7 +2397,7 @@ internal sealed class KsSettingsController(SettingsView owner)
     }
 
     private static InvalidOperationException DuplicatePlacement(string kind)
-        => new($"The same {kind} instance cannot be placed more than once.");
+        => KsPlacementDiagnostics.DuplicatePlacement(kind);
 
     // ---- 小道具 ----
 

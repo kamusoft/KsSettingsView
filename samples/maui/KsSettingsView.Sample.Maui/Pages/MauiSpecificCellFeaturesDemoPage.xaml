@@ -10,7 +10,7 @@
              xmlns:vm="clr-namespace:KsSettingsView.Sample.Maui.ViewModels"
              x:Class="KsSettingsView.Sample.Maui.Pages.MauiSpecificCellFeaturesDemoPage"
              x:DataType="vm:MauiSpecificCellFeaturesDemoViewModel">
-  <ks:SettingsView x:Name="Settings">
+  <ks:SettingsView x:Name="Settings" Style="{StaticResource SampleSettingsViewStyle}">
 
     <ks:Section HeaderText="SelectedCommand（単一選択）"
                 FooterText="選択項目そのものの TwoWay バインドと、選択完了を Command で受け取る経路のデモ。">

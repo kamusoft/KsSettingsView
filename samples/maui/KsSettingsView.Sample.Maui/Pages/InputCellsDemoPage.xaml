@@ -19,7 +19,9 @@
            FontSize="12"
            Text="{Binding LastEvent, StringFormat='最後のイベント: {0}'}" />
 
-    <ks:SettingsView x:Name="Settings" Grid.Row="1">
+    <ks:SettingsView x:Name="Settings"
+                     Grid.Row="1"
+                     Style="{StaticResource SampleSettingsViewStyle}">
 
       <ks:Section HeaderText="EntryCell"
                   FooterText="ニックネーム (callback) は値変更コールバックで状態を更新する経路のデモ。他の入力欄は双方向バインディング経路。表示名は placeholder 色を Cell 個別に指定した行。">

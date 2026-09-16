@@ -6,7 +6,7 @@ applies-when:
   tasks: [binding / facade の end-to-end 疎通確認]
 title: MAUI 検証ホストの実行規約
 description: IntegrationHost と MauiHost を起動して binding 層と facade 層の end-to-end 疎通を確認する手順
-timestamp: 2026-09-06
+timestamp: 2026-09-16
 ---
 
 # MAUI 検証ホストの実行規約
@@ -113,7 +113,7 @@ dotnet build maui/tests/KsSettingsView.MauiHost/KsSettingsView.MauiHost.csproj \
 4. 同じ「設定画面を開く」から再訪問し、ValueText が「更新 2」のまま表示されることを確認する。
 5. メニューへ戻って「離脱中に Cell を追加」を操作し、再訪問後に「追加 1」Cell が表示されることを確認する。
 
-設定画面の「表示」Section には「外観追随ボタン」の行がある。この行の title 色は、ページが表示されている間だけ持つ購読 (`Application.RequestedThemeChanged`) を受けて `ButtonCell.TitleColor` へ入れ直され、ライトでは緑 (`#FF008000`)、ダークではマゼンタ (`#FFFF00FF`) になる。設定画面を表示したまま OS の外観を切り替えると、同じ画面・同じ行のまま title がもう一方の色で描き直される。Cell の色プロパティに書いた `AppThemeBinding` は外観の変化で評価し直されないため、両外観で色を変える手段はこの入れ直しになる。
+設定画面の「表示」Section には「外観追随ボタン」の行がある。この行の `ButtonCell.TitleColor` は XAML の `AppThemeBinding` だけで書いてあり、ライトでは緑 (`#FF008000`)、ダークではマゼンタ (`#FFFF00FF`) になる。設定画面を表示したまま OS の外観を切り替えると、同じ画面・同じ行のまま title がもう一方の色で描き直される。Section / Cell は SettingsView の論理子であり binding が外観の変化で評価し直されるため、色を入れ直す購読コードは持たない ([スタイルの MAUI 表現](../../concepts/maui/api/maui-styling.md))。この行が追随しなくなったら、論理子の付け外しが壊れた疑いを先に見る。
 
 設定画面内の残りのボタンは、Header View の内容・固定高さ・Section 可視性・View の差し替えと取り外しを個別に確認する入口である。**完了条件には含まない**ので、該当箇所を触ったときに使う。
 

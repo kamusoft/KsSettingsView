@@ -21,7 +21,7 @@
              xmlns:vm="clr-namespace:KsSettingsView.Sample.Maui.ViewModels"
              x:Class="KsSettingsView.Sample.Maui.Pages.CustomCellDemoPage"
              x:DataType="vm:CustomCellDemoViewModel">
-  <ks:SettingsView x:Name="Settings">
+  <ks:SettingsView x:Name="Settings" Style="{StaticResource SampleSettingsViewStyle}">
 
     <!-- ① インライン CustomCell -->
     <ks:Section HeaderText="インライン CustomCell"

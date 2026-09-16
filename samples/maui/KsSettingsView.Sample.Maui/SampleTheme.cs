@@ -1,16 +1,14 @@
 using KsSettingsView;
-using Microsoft.Maui.ApplicationModel;
-using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
 
 namespace KsSettingsView.Sample.Maui;
 
 /// <summary>
-/// Sample アプリ共用の Theme 定義と、デモが Cell へ明示指定する色。
+/// Sample アプリ共用の配色定数。
 /// </summary>
 /// <remarks>
-/// 色定数と Theme をここに一元化し、基本 Cell 7 種デモ / 入力 Cell 5 種デモの双方が同じ定義を
-/// 参照する (色値の二重管理を作らない)。配色は AiForms.Maui.SettingsView の Sample に合わせてある。
+/// 色定数をここに一元化し、共用 Style (SampleStyles.xaml) と各デモ画面が同じ定義を参照する
+/// (色値の二重管理を作らない)。配色は AiForms.Maui.SettingsView の Sample に合わせてある。
 ///
 /// Sample はプラットフォーム間の検証装置であり、Cell へ渡す色は全 platform で同一の RGBA にする
 /// (cross/ADR-0016)。そのため platform 固有の semantic color は使わず、ここに固定値を置く。
@@ -128,74 +126,4 @@ public static class SampleTheme
         DemoAccentGreen,
         DemoTitleBlue,
     ];
-
-    /// <summary>実効外観がダークかどうか。</summary>
-    /// <remarks>
-    /// 外観の選択が「システム」なら端末の外観、それ以外なら選択値がそのまま実効外観になる。
-    /// </remarks>
-    public static bool IsDark => Application.Current?.RequestedTheme == AppTheme.Dark;
-
-    /// <summary>
-    /// 実効外観に対応する共用の Theme を <see cref="SettingsView"/> へ適用する。
-    /// </summary>
-    /// <remarks>
-    /// 行の高さは基準値なし (-1) + 行ごとの可変高さで、内容に応じて各行が伸縮する。
-    ///
-    /// dark 側は light 側の色ロールに加えて description と valueText の色も明示する。
-    /// この 2 つは未指定のままだと暗い下地に追随しない既定色へ解決されるため。
-    /// light 側は未指定のまま残す。
-    /// </remarks>
-    /// <param name="view">Theme を適用する SettingsView</param>
-    /// <param name="dark">実効外観がダークなら true</param>
-    public static void Apply(SettingsView view, bool dark)
-    {
-        ArgumentNullException.ThrowIfNull(view);
-
-        view.SeparatorColor = dark ? MauiDarkSeparator : MauiSeparator;
-        view.BackgroundColor = dark ? MauiDarkViewBackground : MauiViewBackground;
-        view.CellBackgroundColor = dark ? MauiDarkCellBackground : MauiCellBackground;
-        view.SelectedColor = MauiSelected;
-        view.CellAccentColor = MauiAccent;
-        view.DisabledTextColor = dark ? MauiDarkDisabledText : MauiDisabledText;
-        view.RowHeight = -1;
-        view.HasUnevenRows = true;
-        view.HeaderTextColor = dark ? MauiDarkHeaderText : MauiHeaderText;
-        view.HeaderBackgroundColor = dark ? MauiDarkViewBackground : MauiViewBackground;
-        view.FooterTextColor = dark ? MauiDarkFooterText : MauiFooterText;
-        view.FooterBackgroundColor = dark ? MauiDarkViewBackground : MauiViewBackground;
-        view.CellTitleColor = dark ? MauiDarkDeepText : MauiDeepText;
-        view.CellValueTextColor = dark ? MauiDarkValueText : null;
-        view.CellDescriptionColor = dark ? MauiDarkDescriptionText : null;
-    }
-
-    /// <summary>実効外観に対応する ButtonCell の <see cref="CellBase.TitleColor"/> 用の色。</summary>
-    /// <param name="dark">実効外観がダークなら true</param>
-    /// <returns>タイトル色 (ヘッダ文字色と同色)</returns>
-    public static Color MauiTitleText(bool dark) => dark ? MauiDarkHeaderText : MauiHeaderText;
-
-    /// <summary>
-    /// Section 装飾デモの下地 Theme を <see cref="SettingsView"/> へ適用する。
-    /// </summary>
-    /// <remarks>
-    /// 下地 (<see cref="VisualElement.BackgroundColor"/>) と Header / Footer の背景に実効外観に
-    /// 応じた下地色を敷き、箱 (<see cref="SettingsView.CellBackgroundColor"/>)・separator・
-    /// Header / Footer 文字色はライブラリ既定のまま残す。アイコンはバッジ型
-    /// (<see cref="SampleIconBadge"/>) に合わせたサイズ・角丸を指定する。
-    ///
-    /// Section 装飾の 4 属性はプリセット切替で変わるため、ここでは触らずページ側のバインドが持つ。
-    /// </remarks>
-    /// <param name="view">Theme を適用する SettingsView</param>
-    /// <param name="dark">実効外観がダークなら true</param>
-    public static void ApplySectionDecorationDemo(SettingsView view, bool dark)
-    {
-        ArgumentNullException.ThrowIfNull(view);
-
-        Color viewBackground = dark ? MauiDarkViewBackground : MauiViewBackground;
-        view.BackgroundColor = viewBackground;
-        view.CellAccentColor = DemoAccentGreen;
-        view.HeaderBackgroundColor = viewBackground;
-        view.FooterBackgroundColor = viewBackground;
-        view.CellIconSize = SampleIconBadge.Size;
-        view.CellIconRadius = SampleIconBadge.CornerRadius;
-    }
 }

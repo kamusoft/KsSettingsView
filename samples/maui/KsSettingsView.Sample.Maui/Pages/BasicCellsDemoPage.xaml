@@ -8,6 +8,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:ks="clr-namespace:KsSettingsView;assembly=KsSettingsView.Maui"
+             xmlns:local="clr-namespace:KsSettingsView.Sample.Maui"
              xmlns:vm="clr-namespace:KsSettingsView.Sample.Maui.ViewModels"
              x:Class="KsSettingsView.Sample.Maui.Pages.BasicCellsDemoPage"
              x:DataType="vm:BasicCellsDemoViewModel">
@@ -16,7 +17,9 @@
            FontSize="12"
            Text="{Binding LastTapped, StringFormat='最後にタップ: {0}'}" />
 
-    <ks:SettingsView x:Name="Settings" Grid.Row="1">
+    <ks:SettingsView x:Name="Settings"
+                     Grid.Row="1"
+                     Style="{StaticResource SampleSettingsViewStyle}">
 
       <ks:Section HeaderText="CommandCell" HeaderHeight="60">
         <ks:CommandCell Height="80"
@@ -73,10 +76,9 @@
       </ks:Section>
 
       <ks:Section HeaderText="ButtonCell">
-        <!-- タイトル色は実効外観で変わるため、コードビハインドが Theme と同じ経路で与える -->
-        <ks:ButtonCell x:Name="LogoutButton"
-                       Title="ログアウト"
+        <ks:ButtonCell Title="ログアウト"
                        TitleAlignment="Center"
+                       TitleColor="{AppThemeBinding Light={x:Static local:SampleTheme.MauiHeaderText}, Dark={x:Static local:SampleTheme.MauiDarkHeaderText}}"
                        Command="{Binding Tap}"
                        CommandParameter="ログアウト" />
       </ks:Section>

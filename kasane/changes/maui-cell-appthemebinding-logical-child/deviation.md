@@ -1,0 +1,16 @@
+# Deviation: maui-cell-appthemebinding-logical-child
+
+- [決定事項と違う形] `maui/KsSettingsView.Maui/Internals/KsBindingContextBinder.cs` を同名のまま育てず、`KsLogicalChildOwnership.cs` へ改名して置き換えた。理由: 器の責務が BindingContext の配布から論理所有の付け外しと多重配置の検出まで広がり、旧名が実体と食い違うため (design が命名を実装に委ねている) (2026-09-16)
+- [付随修正] `maui/KsSettingsView.Maui/Internals/KsPlacementDiagnostics.cs` (新規): 多重配置の判定 (`IsOwnedElsewhere`) と例外文言 (`DuplicatePlacement`) を所有の器と変換経路で共有する置き場。理由: 同じ契約の文言が 2 箇所に分かれて drift するのを避けるため (2026-09-16)
+- [付随修正] `maui/KsSettingsView.Maui/SettingsView.cs`: `Root` の購読順を「所有の器 → 変換経路」へ入れ替えた。理由: 他所に所有された Section の差し込みを、表示を作り直す前に弾くため。`Section.Cells` も同じ理由で器を先へ移した (ItemsSource 生成 Cell が生成と同時に論理子になるようにするため) (2026-09-16)
+- [付随修正] `maui/KsSettingsView.Maui/CellBase.cs` / `Section.cs` の公開 doc コメント: 論理子であることと binding の再評価、他所所有の追加が例外になることを追記した。理由: 利用者から見える契約が変わったため (2026-09-16)
+- [付随修正] `maui/KsSettingsView.Maui.Tests/ConversionPathTests.cs`: `ConnectingTreeWithDuplicateCellThrows` / `FailedConnectRollsBackAndAllowsReconnect` の前提を「別 Section へ同じ Cell」から「同じコレクションへ二重」に変えた。理由: 前者は新しい契約では追加の時点で例外になり、変換時の数えあげに届かないため (2026-09-16)
+- [付随修正] `samples/maui/KsSettingsView.Sample.Maui/SampleStyles.xaml` / `SampleStyles.xaml.cs` (新規) と `App.cs`: 共有 Style の置き場としてリソース辞書を新設し、アプリの Resources へ併合した。理由: Sample には App の XAML もリソース辞書も無く、Style を XAML で書く置き場が必要だったため (tasks 4.1 の「Sample の共有リソース」の具体化) (2026-09-16)
+- [付随修正] `samples/maui/KsSettingsView.Sample.Maui/SampleTheme.cs`: `ApplySectionDecorationDemo` も削除し、型の説明 (Theme 定義 → 配色定数) と using を追随させた。理由: 装飾デモの設定が Style へ移って未使用になるため (tasks 4.3 の削除一覧には無いが 4.1 の帰結) (2026-09-16)
+- [付随修正] `kasane/handbook/maui/integration-host-verification.md`: MauiHost の「外観追随ボタン」の節が旧契約 (`RequestedThemeChanged` の購読 + 再代入、`AppThemeBinding` は再評価されない) を語っていたため、現行の MauiHost の実装に合わせて書き換えた。理由: 手順の期待表示が実物と食い違うため (2026-09-16)
+- [付随修正] `kasane/concepts/core/styling/style-resolution.md`: platform 別の手段表の MAUI 行と「明示した CellStyle 色と Cell 固有色」の MAUI 段落を、`AppThemeBinding` 一本化へ追随させた。理由: tasks 5 は maui/ の concepts のみを挙げているが、同じ旧契約が core 側にも書かれていたため (2026-09-16)
+- [付随修正] `kasane/concepts/maui/index.md`: 本 change で触っていない 2 行 (binding-build-integration / view-materialization) の 1 行説明も 200 字以内へ縮めた。理由: 同ファイルの構造 lint 違反を 0 にするため (元から違反していた 2 件) (2026-09-16)
+- [決定事項と違う形] 非 observable なコレクション (`List<Section>` / `List<CellBase>`) を `Root` / `Cells` に置いた場合、所属の確定 (論理子としての付け外し) は設定した時点ではなく表示へ変換する時点になる。設定の後に足した要素は、変換の直前に器が現在の内容と照合し直すことで論理子になる。理由: 増減を通知しないコレクションでは追加を検知できず、そのままでは表示される要素の `AppThemeBinding` / `DynamicResource` が再評価されないため (spec は非 observable コレクションについて沈黙している) (2026-09-16)
+- [付随修正] `maui/KsSettingsView.Maui/Internals/KsSettingsController.cs`: 変換の直前に論理上の所有を照合する呼び出しを足し、`EnsureCellContentsAreFree` の検査と数えあげの順序を他の検査点へ揃えた。理由: 上記の照合の呼び口と、同じ契約を表す 2 箇所の書き方の統一 (2026-09-16)
+- [付随修正] `maui/KsSettingsView.Maui.Tests/AppearanceBindingTests.cs`: 非 observable コレクションでの再評価のテストを足し、再評価の配信テストで届いた色まで検証するようにした。理由: 上記の挙動の回帰固定と、検出力の補強 (2026-09-16)
+- [付随修正] `maui/KsSettingsView.Maui.Tests/LogicalChildTests.cs` / `maui/KsSettingsView.Maui/Internals/KsSettingsController.cs`: 接続済みの Root への Section 追加・Section 差し替え・Section 自身のプロパティ変更の 3 経路について、素の `List<CellBase>` に居る Cell が論理子になることのテストを足し、Section 単位の差し替えで所有を照合する意図を呼び出し側のコメントに添えた。理由: 照合の呼び口ごとの回帰検出力が Root 再構築の 1 経路に偏っていたため (2026-09-16)

@@ -444,8 +444,8 @@ public class ConversionPathTests
     public void FailedConnectRollsBackAndAllowsReconnect()
     {
         LabelCell shared = new();
-        Section first = new() { Cells = { shared } };
-        Section second = new() { Cells = { shared } };
+        Section first = new() { Cells = { shared, shared } };
+        Section second = new();
         SettingsView view = new() { Root = { first, second } };
 
         Assert.That(
@@ -454,7 +454,7 @@ public class ConversionPathTests
         Assert.That(view.Controller.IsConnected, Is.False);
         Assert.That(view.Controller.Gateway, Is.Null);
 
-        second.Cells.Remove(shared);
+        first.Cells.Remove(shared);
         GatewayScope scope = GatewayScope.Connect(view);
 
         Assert.That(scope.Single<GatewayCall.SetRoot>().Sections, Has.Count.EqualTo(2));
@@ -497,14 +497,17 @@ public class ConversionPathTests
         Assert.That(scope.Calls, Is.Empty);
     }
 
-    /// <summary>同じ Cell を 2 箇所に持つ設定ツリーは接続時に例外になる。</summary>
+    /// <summary>同じ Cell を同じコレクションへ二重に入れた設定ツリーは接続時に例外になる。</summary>
+    /// <remarks>
+    /// 別の Section へ入れた場合は所属の時点で弾かれる。同じコレクション内の重複だけは
+    /// 論理上の所有者で見分けられないため、表示へ変換する時点の数えあげで弾く。
+    /// </remarks>
     [Test]
     public void ConnectingTreeWithDuplicateCellThrows()
     {
         LabelCell shared = new();
-        Section first = new() { Cells = { shared } };
-        Section second = new() { Cells = { shared } };
-        SettingsView view = new() { Root = { first, second } };
+        Section section = new() { Cells = { shared, shared } };
+        SettingsView view = new() { Root = { section } };
 
         Assert.That(
             () => GatewayScope.Connect(view),

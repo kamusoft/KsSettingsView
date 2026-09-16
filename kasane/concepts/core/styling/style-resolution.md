@@ -3,7 +3,7 @@ type: concept
 title: スタイルの所有と実効値解決
 description: UI 層が Theme と CellStyle を所有し、platform の描画値へ段階的に解決する共通規則。ライブラリ所有の light / dark 既定色と未指定色の外観解決、明示した CellStyle 色 / Cell 固有色の外観契約と platform 別の切替手段、ライブラリ既定色を中立に保ち AiForms 互換色は利用側が設定する方針を含む
 tags: [styling, theme, cell-style, native-types, dark-appearance]
-timestamp: 2026-09-06
+timestamp: 2026-09-16
 ---
 
 この文書は、iOS / Android の Theme と CellStyle の所有境界と解決順を説明する。読むと、Core に style を置かない理由、Cell 固有値・CellStyle・Theme・ライブラリ既定・platform default の優先順位、既定色が外観 (ライト / ダーク) にどう追随するか、Theme 更新の境界が分かる。
@@ -98,7 +98,7 @@ iOS の title / description / ButtonCell title はシステム色のままで、
 |---|---|---|---|
 | iOS | 既定色の `public static let` 自体が `UIColor(dynamicProvider:)` の light / dark の対。描画側は `UIColor` を渡すだけで UIKit が解決する | Theme・CellStyle・Cell 固有値のどれにも dynamic な `UIColor` (asset catalog の色や `UIColor(dynamicProvider:)`) を渡す。Cell の差し替えは要らない | trait 変更で既定色・利用者の dynamic 色とも描き直され、固定色は変わらない。CGColor を layer に置く箇所 (Section 装飾の Border、`KsCheckBoxView` の accent の塗りと枠) はライブラリが trait 変更を受けて再解決する |
 | Android | `Color.Unspecified` が未指定 (Theme・CellStyle・Cell 固有色とも)。`KsSettingsView` が Theme を受け取った時点で現在の夜間モードのセットで未指定を埋めた解決済み Theme を 1 箇所で作り、描画に関わる全箇所はそれだけを読む。Cell 固有色は行の bind 時に `Unspecified` なら次の段へ倒す。公開 factory は `KsSettingsViewDefaults` ([Android Native Host](../../android/api/android-native-host.md)) | 構築時に `isSystemInDarkTheme()` (Compose) または Configuration の uiMode (View) で light / dark の Theme・CellStyle・Cell 固有色を選んで渡す。Compose 入口の `theme` の既定値式は `KsSettingsViewDefaults.theme()` | 夜間モードの Configuration 変更を View が受けたら未指定色だけを再解決し、既存の Theme 更新経路で再適用する。明示指定色は変わらない — Compose DSL では外観で選び直した色の再 composition が内容更新として行へ届き、Store / View 経路では `replaceCell` / `replaceCells` で style または Cell 固有色を差し替えた Cell に置き換える (どちらも行は作り直されない。Activity が再生成される構成では再構築で切り替わる) |
-| MAUI | facade は未指定 (`null`) を native に渡し、native の既定に任せる (Android bridge は Cell 固有色の `null` を `Color.Unspecified` へ写す)。facade・DTO の変更なし | `SettingsView` の Theme プロパティは XAML の `AppThemeBinding` で書く (外観変更時に facade → bridge → native の Theme 再適用まで届く)。Cell の色プロパティは `Application.RequestedThemeChanged` を購読して現在の外観の値を再代入する (下記「明示した CellStyle 色と Cell 固有色」) | native と同じ。再代入した Cell の色は facade → snapshot → bridge → native の Cell 置換として表示中の行に届く |
+| MAUI | facade は未指定 (`null`) を native に渡し、native の既定に任せる (Android bridge は Cell 固有色の `null` を `Color.Unspecified` へ写す)。facade・DTO の変更なし | `SettingsView` の Theme プロパティも Cell / Section のプロパティも、XAML の `AppThemeBinding` で書く (下記「明示した CellStyle 色と Cell 固有色」) | native と同じ。Theme プロパティは facade → bridge → native の Theme 再適用まで、Cell の色は facade → snapshot → bridge → native の Cell 置換として表示中の行に届く |
 
 Android の Cell title / description の既定は、解決済み Theme にも `KsSettingsViewDefaults` の factory が返す Theme にも載せず、実効 style の解決の最終段で外観から選ぶ。Theme の title が常に値を持つと ButtonCell の 4 段解決 (ButtonCell → CellStyle → Theme の title → ButtonCell 既定) が最終段へ到達せず、ButtonCell の title が通常の文字色になるためである。帰結として、端末がライトのまま `KsSettingsViewDefaults.darkTheme()` を渡すような食い違った組み合わせでは title / description だけ端末側の外観の既定になる (固定したい場合は返された Theme を `copy` して明示する)。
 
@@ -108,7 +108,7 @@ Sample の dark プリセットは AiForms 互換色を暗色へ写した Sample
 
 利用者が `CellStyle` または Cell 固有値として明示した色は、Theme の明示色と同じくライブラリが置き換えない。表示中に外観が変わっても明示色は変わらず、同じ行の未指定の色だけが現在の外観の既定へ再解決される。両外観で異なる色を使う手段は上の表のとおり platform の慣用に乗せ、ライブラリは Cell へ外観を渡す型やコールバックを公開しない — Cell 粒度の追随機構は、Store 経路の利用者が `replaceCell` を 1 回書く手間を省くために Cell 抽象か Store へ外観の概念を持ち込むことになり、見合わないと判断した ([core/ADR-0031](../../../decisions/core/0031-explicit-cell-color-appearance-contract-and-beta-breaking-change.md))。
 
-MAUI だけは `SettingsView` の Theme プロパティと Cell の色プロパティで手段が分かれる。Cell の色プロパティに書いた `AppThemeBinding` は外観変更で再評価されない — facade の `Section` / `Cell` は MAUI の element ツリーに属さず (`Parent` が `null`)、ツリー外の `Element` では binding が外観変更を受け取らないため (iOS / Android で実測した見立て。MAUI 本体の binding 実装は未読)。同じプロパティへの直接代入は同一 Activity / 同一 View のまま行に届くので、外観変更を購読して再代入する形になる。`Section` / `Cell` をツリーへ繋ぐ改修は `maui-appearance-change-tracking` (旧 `maui-appthemebinding-coverage` を統合) で別途探索中。
+MAUI では、どの段でも手段は XAML の `AppThemeBinding` で共通する。facade の `Section` / `CellBase` は所属先 (`SettingsView` / `Section`) の論理子であり、設定したどの BindableProperty でも binding が外観変更と祖先の Resources 変更で再評価されるためである ([MAUI facade の公開契約](../../maui/api/maui-facade.md))。再評価された値は同じプロパティへの直接代入と同じ経路で行に届くので、外観を購読して値を入れ直すコードは要らない ([cross/ADR-0032](../../../decisions/cross/0032-maui-section-cell-as-logical-children.md) が core/ADR-0031 Decision 2 の MAUI 節を改める)。
 
 Cell の色プロパティのうち見た目を変えるのは、その Cell がその platform で描画に使う項目だけ (`DatePickerCell.androidButtonColor` の iOS、表示していないスロットの色、`CustomCell` のテキスト系 style は届いても見た目を変えない)。
 

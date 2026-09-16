@@ -11,7 +11,7 @@ namespace KsSettingsView.Sample.Maui.Pages;
 /// CustomCell の MAUI facade 固有の意味論を確認するデモページ。
 /// </summary>
 /// <remarks>
-/// 配色は <see cref="SampleTheme"/> の共用 Theme を明示適用する。
+/// 配色は SampleStyles.xaml の共用 Style で与える。
 /// XAML で宣言できる内容は XAML 側に置き、差し替えのために作る View だけをここで組み立てる。
 /// </remarks>
 public partial class CustomCellMauiSpecificDemoPage : ContentPage
@@ -36,8 +36,6 @@ public partial class CustomCellMauiSpecificDemoPage : ContentPage
         _contentB = CreateContentView("① Content B", Color.FromArgb("#D2E7F4"));
         SwapCell.Content = _contentA;
         ReconnectCell.Content = CreateContentView("③ 離脱前の Content", Color.FromArgb("#DCE7EA"));
-
-        SampleThemeFollower.Attach(this, dark => SampleTheme.Apply(Settings, dark));
     }
 
     private static View CreateContentView(string text, Color background)

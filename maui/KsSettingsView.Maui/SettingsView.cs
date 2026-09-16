@@ -33,9 +33,12 @@ public class SettingsView : View
         propertyChanged: static (bindable, _, newValue) =>
         {
             SettingsView view = (SettingsView)bindable;
+
+            // 論理上の所有を先に確定させてから変換経路へ渡す。他所に所有された Section の
+            // 差し込みは、表示を作り直す前にここで弾ける。
+            view.SectionOwnership.OnTargetChanged();
             view.Controller.SetRootCollection(newValue as IList<Section>);
             view.SectionBinder.OnTargetChanged();
-            view.SectionContextBinder.OnTargetChanged();
         });
 
     /// <summary><see cref="RootHeaderText"/> のバッキングプロパティ。</summary>
@@ -482,13 +485,13 @@ public class SettingsView : View
 
     private KsSettingsController? _controller;
     private KsItemsSourceBinder<Section>? _sectionBinder;
-    private KsBindingContextBinder<Section>? _sectionContextBinder;
+    private KsLogicalChildOwnership<Section>? _sectionOwnership;
 
     /// <summary>空の SettingsView を作る。</summary>
     public SettingsView()
     {
+        SectionOwnership.OnTargetChanged();
         Controller.SetRootCollection(Root);
-        SectionContextBinder.OnTargetChanged();
     }
 
     /// <summary>設定画面を構成する Section 群。</summary>
@@ -909,9 +912,17 @@ public class SettingsView : View
     private KsItemsSourceBinder<Section> SectionBinder =>
         _sectionBinder ??= new KsItemsSourceBinder<Section>(this, () => Root);
 
-    /// <summary>BindingContext を配る器。生成時期の扱いは <see cref="Controller"/> と同じ。</summary>
-    private KsBindingContextBinder<Section> SectionContextBinder =>
-        _sectionContextBinder ??= new KsBindingContextBinder<Section>(this, () => Root);
+    /// <summary>Section を論理子として所有する器。生成時期の扱いは <see cref="Controller"/> と同じ。</summary>
+    private KsLogicalChildOwnership<Section> SectionOwnership =>
+        _sectionOwnership ??= new KsLogicalChildOwnership<Section>(this, () => Root, "Section");
+
+    /// <summary><see cref="Root"/> の今の内容と Section の論理上の所有を照合し直す。</summary>
+    /// <remarks>
+    /// 増減を通知しないコレクションを <see cref="Root"/> に置いた場合、設定した後の Section の
+    /// 出入りは所有の器へ届かない。表示へ変換する直前に変換経路がこれを呼ぶことで、表示へ送る
+    /// Section が論理子として繋がった状態に揃う。
+    /// </remarks>
+    internal void ReconcileSectionOwnership() => SectionOwnership.Reconcile();
 
     /// <summary>
     /// BindingContext の変更を <see cref="Root"/> の Section へ配る。
@@ -923,7 +934,7 @@ public class SettingsView : View
     protected override void OnBindingContextChanged()
     {
         base.OnBindingContextChanged();
-        SectionContextBinder.Apply();
+        SectionOwnership.Apply();
     }
 
     /// <summary>

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+  Sample アプリ共用のリソース辞書。アプリ全体の Resources に併合され、各デモページから
+  StaticResource で参照される。
+
+  SettingsView へ渡す配色は Setter の値に AppThemeBinding を置き、実効外観 (ライト / ダーク) の
+  変化に XAML だけで追随させる。色の実値は SampleTheme の定数を参照し、3 platform で同じ RGBA を
+  使う (cross/ADR-0016)。
+
+  暗黙 Style にすると同じアプリ内の他の SettingsView にも当たるため、いずれも x:Key を持つ
+  明示 Style にする。
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+                    xmlns:ks="clr-namespace:KsSettingsView;assembly=KsSettingsView.Maui"
+                    xmlns:local="clr-namespace:KsSettingsView.Sample.Maui"
+                    x:Class="KsSettingsView.Sample.Maui.SampleStyles">
+
+  <!--
+    デモ共用の配色。行の高さは基準値なし (-1) + 行ごとの可変高さで、内容に応じて各行が伸縮する。
+
+    valueText と description の色はダーク側だけ明示する。この 2 つは未指定のままだと暗い下地に
+    追随しない既定色へ解決されるため。ライト側は既定のまま残す (AppThemeBinding の Light を
+    書かなければ未指定が渡る)。
+  -->
+  <Style x:Key="SampleSettingsViewStyle" TargetType="ks:SettingsView">
+    <Setter Property="SeparatorColor"
+            Value="{AppThemeBinding Light={x:Static local:SampleTheme.MauiSeparator}, Dark={x:Static local:SampleTheme.MauiDarkSeparator}}" />
+    <Setter Property="BackgroundColor"
+            Value="{AppThemeBinding Light={x:Static local:SampleTheme.MauiViewBackground}, Dark={x:Static local:SampleTheme.MauiDarkViewBackground}}" />
+    <Setter Property="CellBackgroundColor"
+            Value="{AppThemeBinding Light={x:Static local:SampleTheme.MauiCellBackground}, Dark={x:Static local:SampleTheme.MauiDarkCellBackground}}" />
+    <Setter Property="SelectedColor" Value="{x:Static local:SampleTheme.MauiSelected}" />
+    <Setter Property="CellAccentColor" Value="{x:Static local:SampleTheme.MauiAccent}" />
+    <Setter Property="DisabledTextColor"
+            Value="{AppThemeBinding Light={x:Static local:SampleTheme.MauiDisabledText}, Dark={x:Static local:SampleTheme.MauiDarkDisabledText}}" />
+    <Setter Property="RowHeight" Value="-1" />
+    <Setter Property="HasUnevenRows" Value="True" />
+    <Setter Property="HeaderTextColor"
+            Value="{AppThemeBinding Light={x:Static local:SampleTheme.MauiHeaderText}, Dark={x:Static local:SampleTheme.MauiDarkHeaderText}}" />
+    <Setter Property="HeaderBackgroundColor"
+            Value="{AppThemeBinding Light={x:Static local:SampleTheme.MauiViewBackground}, Dark={x:Static local:SampleTheme.MauiDarkViewBackground}}" />
+    <Setter Property="FooterTextColor"
+            Value="{AppThemeBinding Light={x:Static local:SampleTheme.MauiFooterText}, Dark={x:Static local:SampleTheme.MauiDarkFooterText}}" />
+    <Setter Property="FooterBackgroundColor"
+            Value="{AppThemeBinding Light={x:Static local:SampleTheme.MauiViewBackground}, Dark={x:Static local:SampleTheme.MauiDarkViewBackground}}" />
+    <Setter Property="CellTitleColor"
+            Value="{AppThemeBinding Light={x:Static local:SampleTheme.MauiDeepText}, Dark={x:Static local:SampleTheme.MauiDarkDeepText}}" />
+    <Setter Property="CellValueTextColor"
+            Value="{AppThemeBinding Dark={x:Static local:SampleTheme.MauiDarkValueText}}" />
+    <Setter Property="CellDescriptionColor"
+            Value="{AppThemeBinding Dark={x:Static local:SampleTheme.MauiDarkDescriptionText}}" />
+  </Style>
+
+  <!--
+    Section 装飾デモの下地。下地 (BackgroundColor) と Header / Footer の背景に実効外観に応じた
+    下地色を敷き、箱 (CellBackgroundColor)・separator・Header / Footer 文字色はライブラリ既定の
+    まま残す。アイコンはバッジ型 (SampleIconBadge) に合わせたサイズ・角丸を指定する。
+
+    Section 装飾の 4 属性はプリセット切替で変わるため、ここでは触らずページ側のバインドが持つ。
+  -->
+  <Style x:Key="SampleSectionDecorationSettingsViewStyle" TargetType="ks:SettingsView">
+    <Setter Property="BackgroundColor"
+            Value="{AppThemeBinding Light={x:Static local:SampleTheme.MauiViewBackground}, Dark={x:Static local:SampleTheme.MauiDarkViewBackground}}" />
+    <Setter Property="CellAccentColor" Value="{x:Static local:SampleTheme.DemoAccentGreen}" />
+    <Setter Property="HeaderBackgroundColor"
+            Value="{AppThemeBinding Light={x:Static local:SampleTheme.MauiViewBackground}, Dark={x:Static local:SampleTheme.MauiDarkViewBackground}}" />
+    <Setter Property="FooterBackgroundColor"
+            Value="{AppThemeBinding Light={x:Static local:SampleTheme.MauiViewBackground}, Dark={x:Static local:SampleTheme.MauiDarkViewBackground}}" />
+    <Setter Property="CellIconSize" Value="{x:Static local:SampleIconBadge.Size}" />
+    <Setter Property="CellIconRadius" Value="{x:Static local:SampleIconBadge.CornerRadius}" />
+  </Style>
+
+</ResourceDictionary>

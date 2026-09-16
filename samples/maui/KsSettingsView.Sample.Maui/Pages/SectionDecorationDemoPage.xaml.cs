@@ -9,8 +9,8 @@ namespace KsSettingsView.Sample.Maui.Pages;
 /// style 切替と Section 装飾プリセット切替を観察するデモページ。
 /// </summary>
 /// <remarks>
-/// 下地の配色は <see cref="SampleTheme.ApplySectionDecorationDemo"/> で与え、Section 装飾の
-/// 4 属性はプリセットからのバインドで与える。
+/// 下地の配色は SampleStyles.xaml の装飾デモ用 Style で与え、Section 装飾の 4 属性は
+/// プリセットからのバインドで与える。
 ///
 /// iOS では操作部と設定 list に縦幅を譲るため、この画面だけタイトルを 1 行表示にする
 /// (iOS ネイティブサンプルの同デモ画面と揃える)。
@@ -23,6 +23,5 @@ public partial class SectionDecorationDemoPage : ContentPage
         InitializeComponent();
         On<iOS>().SetLargeTitleDisplay(LargeTitleDisplayMode.Never);
         BindingContext = new SectionDecorationDemoViewModel();
-        SampleThemeFollower.Attach(this, dark => SampleTheme.ApplySectionDecorationDemo(Settings, dark));
     }
 }

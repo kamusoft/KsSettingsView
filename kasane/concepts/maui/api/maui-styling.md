@@ -3,12 +3,12 @@ type: concept
 title: スタイルの MAUI 表現 (Theme / CellStyle / ListStyle)
 description: native の Theme / CellStyle / style 切替が KsSettingsView.Maui でどう公開されるか — 個別プロパティへの展開・未設定の色と外観・Cell の色を外観ごとに変える手段・ListStyle・Section 装飾 4 属性・プロパティ一覧
 tags: [maui, facade, styling, theme]
-timestamp: 2026-09-06
+timestamp: 2026-09-16
 ---
 
 # スタイルの MAUI 表現 (Theme / CellStyle / ListStyle)
 
-この文書を読むと、native の `Theme` (画面全体の既定値) と `CellStyle` (Cell 単位の上書き)、設定 list の style 切替が `KsSettingsView.Maui` でどのプロパティとして公開され、何が facade 側で検証されず Native に委ねられるかが分かる。facade の入口は [MAUI facade の公開契約](maui-facade.md)、視覚的契約の共通部分は [設定 list の外観](../../core/styling/list-appearance.md) を先に読むと分かりやすい。決定の経緯は maui/ADR-0008 (公開面方針)・maui/ADR-0023 (ListStyle)・maui/ADR-0024 (SectionMargin の論理方向解釈)。
+この文書を読むと、native の `Theme` (画面全体の既定値) と `CellStyle` (Cell 単位の上書き)、設定 list の style 切替が `KsSettingsView.Maui` でどのプロパティとして公開され、何が facade 側で検証されず Native に委ねられるかが分かる。facade の入口は [MAUI facade の公開契約](maui-facade.md)、視覚的契約の共通部分は [設定 list の外観](../../core/styling/list-appearance.md) を先に読むと分かりやすい。決定の経緯は maui/ADR-0008 (公開面方針)・maui/ADR-0023 (ListStyle)・maui/ADR-0024 (SectionMargin の論理方向解釈)・cross/ADR-0032 (Section / Cell の論理子化)。
 
 ## 公開の形
 
@@ -18,22 +18,23 @@ timestamp: 2026-09-06
 
 色プロパティを設定しない (`null`) とき、facade は未指定のまま Native へ渡し、Native のライブラリ既定に任せる。Native の既定色は 3 platform 共通の light / dark セットで端末の外観に追随するため、色を設定しない SettingsView はダーク端末でも判読できる既定色で描かれ、facade は外観を受け取る型やイベントを持たない ([スタイル解決](../../core/styling/style-resolution.md) の「既定色と外観の追随」)。設定した色は外観で変わらず、`null` に戻すと Native の未指定表現へ写されて Theme または外観既定へ継承する。
 
-両外観の色を自分で決める手段は、プロパティの段で分かれる ([core/ADR-0031](../../../decisions/core/0031-explicit-cell-color-appearance-contract-and-beta-breaking-change.md))。
+両外観の色を自分で決める手段は、どの段でも XAML の `AppThemeBinding` で共通する。段によって違うのは、再評価された値が表示へ届く経路だけである ([core/ADR-0031](../../../decisions/core/0031-explicit-cell-color-appearance-contract-and-beta-breaking-change.md)、[cross/ADR-0032](../../../decisions/cross/0032-maui-section-cell-as-logical-children.md))。
 
-| 段 | 手段 |
+| 段 | 手段と届き方 |
 |---|---|
 | `SettingsView` の Theme プロパティ (`CellTitleColor` / `CellAccentColor` 等) | XAML の `AppThemeBinding` で書く。外観変更時に facade のプロパティ変更 → snapshot → bridge DTO → Native の Theme 再適用まで届き、Android で Activity が再生成されないホストでも表示中に切り替わる (Simulator / Emulator で確認済み) |
-| Cell の色プロパティ (`TitleColor` / `AccentColor` / `PlaceholderColor` / `AndroidButtonColor` 等) | `Application.RequestedThemeChanged` を購読し、現在の外観の値をプロパティへ再代入する。再代入はその Cell の内容更新として Native の Cell 置換まで届き、表示中の行が描き直される (iOS / Android で確認済み。検証ホスト `KsSettingsView.MauiHost` の既定シナリオが回帰資産) |
+| Cell / Section の色プロパティ (`TitleColor` / `AccentColor` / `PlaceholderColor` / `AndroidButtonColor` 等) | 同じく XAML の `AppThemeBinding` で書く。再評価はその Cell の内容更新として Native の Cell 置換まで届き、表示中の行が描き直される (iOS / Android で確認済み。検証ホスト `KsSettingsView.MauiHost` の既定シナリオが回帰資産) |
 
-Cell の色プロパティに書いた `AppThemeBinding` は外観変更で再評価されない。facade の `Section` / `Cell` は MAUI の element ツリーに属さず (`Parent` が `null`)、ツリー外の `Element` では binding が外観変更を受け取らないため (実測に基づく見立て。MAUI 本体の binding 実装は未読)。`Section` / `Cell` をツリーへ繋ぐ改修は `maui-appearance-change-tracking` (旧 `maui-appthemebinding-coverage` を統合) で別途探索中。
+段で手段が分かれないのは、`Section` / `CellBase` が所属先 (`SettingsView` / `Section`) の論理子であり、設定したどの BindableProperty でも MAUI の binding 機構がそのまま働くためである ([MAUI facade の公開契約](maui-facade.md) の「してはいけないこと・制約」)。`DynamicResource` も同じく、所属先の祖先 (ページ / アプリ) の Resources を差し替えると再評価される。外観の追随のために値を入れ直す購読コードは要らない ([cross/ADR-0032](../../../decisions/cross/0032-maui-section-cell-as-logical-children.md))。
 
-```csharp
-// ページの Loaded で購読し Unloaded で解除する。購読中は外観に応じた値を入れ直す
-void ApplyThemeColors(bool isDark)
-    => logoutButton.TitleColor = isDark ? Colors.Magenta : Colors.Green;
-
-Application.Current!.RequestedThemeChanged += (_, e)
-    => ApplyThemeColors(e.RequestedTheme == AppTheme.Dark);
+```xml
+<!-- 段が違っても書き方は同じ -->
+<ks:SettingsView CellTitleColor="{AppThemeBinding Light=Black, Dark=White}">
+  <ks:Section HeaderText="アカウント">
+    <ks:ButtonCell Title="ログアウト"
+                   TitleColor="{AppThemeBinding Light=Green, Dark=Magenta}" />
+  </ks:Section>
+</ks:SettingsView>
 ```
 
 届いた色のうち見た目を変えるのは、その Cell がその platform で描画に使う項目だけ (`AndroidButtonColor` は iOS で無効、`CustomCell` のテキスト系 style は silent no-op)。
@@ -86,4 +87,4 @@ CustomCell ではテキスト系のスタイル項目は表示に影響しない
 - [設定 list の外観](../../core/styling/list-appearance.md) — Classic / Modern と Section Container の視覚的契約
 - [MAUI Native Bridge の interop 境界](native-bridge.md) — Theme / CellStyle / style / Section 装飾の DTO 輸送
 
-決定の経緯: maui/ADR-0008 (AiForms 互換公開面の方針)、maui/ADR-0023 (ListStyle の Theme 独立経路)、maui/ADR-0024 (SectionMargin の論理方向解釈)
+決定の経緯: maui/ADR-0008 (AiForms 互換公開面の方針)、maui/ADR-0023 (ListStyle の Theme 独立経路)、maui/ADR-0024 (SectionMargin の論理方向解釈)、cross/ADR-0032 (Section / Cell を SettingsView の論理子にする)

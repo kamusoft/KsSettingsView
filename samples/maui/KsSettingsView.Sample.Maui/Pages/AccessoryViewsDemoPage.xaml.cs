@@ -10,7 +10,7 @@ namespace KsSettingsView.Sample.Maui.Pages;
 /// Root / Section の Header・Footer へ任意の View を置いて、その表示と更新を確認するデモページ。
 /// </summary>
 /// <remarks>
-/// 配色は <see cref="SampleTheme"/> の共用 Theme を明示適用する。
+/// 配色は SampleStyles.xaml の共用 Style で与える。
 /// XAML で宣言できる accessory は XAML 側に置き、実行中に作り直すものだけをここで組み立てる。
 /// </remarks>
 public partial class AccessoryViewsDemoPage : ContentPage
@@ -36,7 +36,6 @@ public partial class AccessoryViewsDemoPage : ContentPage
         InitializeComponent();
         BindingContext = _viewModel;
         SwapSection.HeaderView = CreateSwapHeaderView();
-        SampleThemeFollower.Attach(this, dark => SampleTheme.Apply(Settings, dark));
     }
 
     private static View CreateAccessoryView(string text, Color background, Color textColor)

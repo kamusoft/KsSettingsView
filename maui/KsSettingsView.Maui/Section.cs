@@ -18,7 +18,11 @@ namespace KsSettingsView;
 /// コレクションのときだけ、以後の構造変更が表示へ反映される。
 /// <see cref="Cells"/> への操作とプロパティの変更は UI スレッドから行う (呼び出し側契約であり、
 /// facade はスレッド marshal を行わない)。
-/// 同じ Cell インスタンスを複数の Section へ配置することはできない。
+/// 同じ Cell インスタンスを複数の Section へ配置することはできない (他所に所有された
+/// インスタンスの追加はその時点で例外になる)。同じ制約は Section 自身にも掛かる。
+/// <see cref="SettingsView.Root"/> へ所属している間はその論理子であり、プロパティに設定した
+/// <c>AppThemeBinding</c> / <c>DynamicResource</c> は外観の変更と祖先 (ページ / アプリ) の
+/// Resources の差し替えで再評価される。
 /// </remarks>
 [ContentProperty(nameof(Cells))]
 public class Section : Element
@@ -131,8 +135,8 @@ public class Section : Element
         propertyChanged: static (bindable, _, _) =>
         {
             Section section = (Section)bindable;
+            section._cellOwnership.OnTargetChanged();
             section._cellBinder.OnTargetChanged();
-            section._cellContextBinder.OnTargetChanged();
         });
 
     /// <summary><see cref="ItemsSource"/> のバッキングプロパティ。</summary>
@@ -163,7 +167,7 @@ public class Section : Element
             ((Section)bindable)._cellBinder.SetTemplateStartIndex((int)newValue));
 
     private readonly KsItemsSourceBinder<CellBase> _cellBinder;
-    private readonly KsBindingContextBinder<CellBase> _cellContextBinder;
+    private readonly KsLogicalChildOwnership<CellBase> _cellOwnership;
 
     private WeakReference<IKsAccessoryViewGuard>? _accessoryGuard;
 
@@ -171,8 +175,8 @@ public class Section : Element
     public Section()
     {
         _cellBinder = new KsItemsSourceBinder<CellBase>(this, () => Cells);
-        _cellContextBinder = new KsBindingContextBinder<CellBase>(this, () => Cells);
-        _cellContextBinder.OnTargetChanged();
+        _cellOwnership = new KsLogicalChildOwnership<CellBase>(this, () => Cells, "Cell");
+        _cellOwnership.OnTargetChanged();
     }
 
     /// <summary>Section の上に表示するヘッダテキスト。null でヘッダなし。</summary>
@@ -306,6 +310,14 @@ public class Section : Element
         set => _accessoryGuard = value is null ? null : new WeakReference<IKsAccessoryViewGuard>(value);
     }
 
+    /// <summary><see cref="Cells"/> の今の内容と Cell の論理上の所有を照合し直す。</summary>
+    /// <remarks>
+    /// 増減を通知しないコレクションを <see cref="Cells"/> に置いた場合、設定した後の Cell の
+    /// 出入りは所有の器へ届かない。表示へ変換する直前に変換経路がこれを呼ぶことで、表示へ送る
+    /// Cell が論理子として繋がった状態に揃う。
+    /// </remarks>
+    internal void ReconcileCellOwnership() => _cellOwnership.Reconcile();
+
     /// <summary>
     /// BindingContext の変更を <see cref="Cells"/> の Cell へ配る。
     /// </summary>
@@ -315,6 +327,6 @@ public class Section : Element
     protected override void OnBindingContextChanged()
     {
         base.OnBindingContextChanged();
-        _cellContextBinder.Apply();
+        _cellOwnership.Apply();
     }
 }

@@ -3,7 +3,7 @@ type: concept
 title: MauiView の native 実体化機構 (materializer seam と platform lease)
 description: VisualElement を platform view へ実体化する facade 内の共有基盤 — seam 契約・自己計測 wrapper・論理所有と lease の寿命分離・退役順序・native への埋め込みの継ぎ目
 tags: [maui, materialization, handler, lifecycle]
-timestamp: 2026-09-05
+timestamp: 2026-09-16
 ---
 
 # MauiView の native 実体化機構 (materializer seam と platform lease)
@@ -38,15 +38,17 @@ iOS の wrapper は `IntrinsicContentSize` を override し、`MeasureInvalidate
 
 | | 論理所有 | platform lease |
 |---|---|---|
-| 実体 | logical tree 接続 + 継承 BindingContext (共通処理は `KsAccessoryViewOwnership`) | wrapper + Handler |
+| 実体 | logical tree 接続 + 継承 BindingContext (View の共通処理は `KsAccessoryViewOwnership`) | wrapper + Handler |
 | 寿命 | **View を置くプロパティの寿命** — 配置時に確定し、解除・差し替え・所有者の削除で解放する | **Host 世代の寿命** — Handler 切断 (= Host 解放) で破棄し、再接続時に新しい MauiContext で再実体化して明示経路で再発行する |
 | Handler との関係 | Handler の有無に依らず維持されるため、XAML 構築時や Host 解放中も BindingContext の継承と変更伝播が働く | 復元の正は facade が所有する VisualElement であり、platform 実体は世代ごとの派生物 |
+
+論理所有そのものは View に限らない — `Section` / `CellBase` も所属先の論理子であり (所有の器は `KsLogicalChildOwnership`、寿命はコレクションへの所属)、platform lease は持たない。何をもって「他所に所有されている」とするかの判定と多重配置の例外文言は、View と Section / Cell で 1 箇所 (`KsPlacementDiagnostics`) を共有する — `Parent` が**期待する所有者以外の facade 所有者** (SettingsView / Section / CustomCell) を指していることを条件とし、設定ツリーから外れた Section / CustomCell が所有したままの場合も含める。利用者が組んだレイアウトの中に置かれた View は所有者が facade ではないため、多重配置に当たらない。
 
 設定ツリーに未参加の所有者 (XAML 構築中の Section 等) の受け皿経路 (設定ツリーに参加するまで配置を預かる経路) は、**他所に所有されている View を引き取らない** — 既存配置を黙って奪う代わりに、所有者が変換経路へ参加した時点で多重配置例外になり、既存配置は無傷で残る。
 
 ### cell content の検査時点
 
-cell content も同じ契約に乗る (論理所有は `KsAccessoryViewOwnership` — こちらも名前は accessory 由来だが両用途で共用する — が担い、多重配置は accessory と同じ検査表で判定する)。ただし検査の**時点**が異なり、`CustomCell.Content` は BindableProperty の `validateValue` で**値が確定する前に**問い合わせる (`IKsCellContentGuard`)。値が確定してからでは、それまでの内容の論理所有が先に解かれており、後から多重配置を見つけても元へ戻せない — `BindableObject` は変更通知中の再 set を後回しにするため、値を書き戻す形のロールバックも当てにできない。検査を通った後の論理所有の確定は、変更通知を受けた変換経路が行う。
+cell content も同じ契約に乗る (論理所有は `KsAccessoryViewOwnership` — こちらも名前は accessory 由来だが両用途で共用する — が担い、多重配置は accessory と同じ検査表と同じ他所所有の判定で決める)。ただし検査の**時点**が異なり、`CustomCell.Content` は BindableProperty の `validateValue` で**値が確定する前に**問い合わせる (`IKsCellContentGuard`)。値が確定してからでは、それまでの内容の論理所有が先に解かれており、後から多重配置を見つけても元へ戻せない — `BindableObject` は変更通知中の再 set を後回しにするため、値を書き戻す形のロールバックも当てにできない。検査を通った後の論理所有の確定は、変更通知を受けた変換経路が行う。
 
 検査の失敗は `validateValue` の false 返却ではなく `InvalidOperationException` の送出で表す。false を返すと BindableProperty 側が `ArgumentException` に変換してしまい、多重配置が公開契約どおりの例外型で観測できなくなる。
 
