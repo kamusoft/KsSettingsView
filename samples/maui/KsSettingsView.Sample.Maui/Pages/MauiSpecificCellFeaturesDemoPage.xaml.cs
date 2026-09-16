@@ -11,6 +11,5 @@ public partial class MauiSpecificCellFeaturesDemoPage : ContentPage
     {
         InitializeComponent();
         BindingContext = new MauiSpecificCellFeaturesDemoViewModel();
-        SampleThemeFollower.Attach(this, dark => SampleTheme.Apply(Settings, dark));
     }
 }

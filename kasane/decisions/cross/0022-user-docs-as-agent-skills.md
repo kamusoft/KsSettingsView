@@ -4,6 +4,7 @@ title: 利用者向けドキュメントは Agent Skills (skills/、en/ja 2 版)
 status: accepted
 date: 2026-08-26
 supersedes: 0014
+amended-by: 0029
 ---
 
 ## Context

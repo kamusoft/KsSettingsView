@@ -10,7 +10,7 @@
 // samples/android/app/src/main/kotlin/jp/kamusoft/kssettingsview/samples/android/SampleAppearance.kt
 // samples/maui/KsSettingsView.Sample.Maui/SampleAppearance.cs
 
-import SwiftUI
+import UIKit
 
 /// ルートメニューで選ぶアプリ全体の外観。
 enum SampleAppearance: String, CaseIterable, Identifiable {
@@ -32,10 +32,10 @@ enum SampleAppearance: String, CaseIterable, Identifiable {
         }
     }
 
-    /// アプリ全体へ適用する配色。`nil` は上書きなし（端末の外観がそのまま効く）。
-    var colorScheme: ColorScheme? {
+    /// アプリ全体へ適用する配色。`.unspecified` は上書きなし（端末の外観がそのまま効く）。
+    var userInterfaceStyle: UIUserInterfaceStyle {
         switch self {
-        case .system: nil
+        case .system: .unspecified
         case .light: .light
         case .dark: .dark
         }

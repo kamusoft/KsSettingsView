@@ -1,14 +1,14 @@
 ---
 type: concept
 title: 表示への反映と Host の寿命 (KsSettingsView.Maui)
-description: facade への変更がいつどう表示へ届き (構造は即時・内容はバッチ・IconSource は非同期・View は参照が正で内容は live)、Host の解放と再生成をまたいで何が保たれるか、Android の measure 契約による配置の制約
+description: facade への変更がいつどう表示へ届き (構造は即時・内容はバッチ・IconSource は非同期・View は参照が正で内容は live)、Section / Cell と View の論理所有と多重配置の例外、Host の解放と再生成をまたいで何が保たれるか、Android の measure 契約による配置の制約
 tags: [maui, facade, lifecycle, handler]
-timestamp: 2026-09-04
+timestamp: 2026-09-16
 ---
 
 # 表示への反映と Host の寿命 (KsSettingsView.Maui)
 
-この文書を読むと、`KsSettingsView.Maui` のプロパティやコレクションへの変更がどの単位・どのタイミングで画面へ反映されるか、ページ離脱と再訪問 (Handler の切断と再接続) をまたいで何が保たれるか、そして Android で避けるべき配置が分かる。公開面の骨格は [MAUI facade の公開契約](maui-facade.md)、前提となる Store の一般契約は [Store の状態と更新通知](../../core/architecture/store-and-update-streams.md) を先に読むと分かりやすい。決定の経緯は maui/ADR-0007 (releaseHost)・maui/ADR-0014 (Android measure 契約)・maui/ADR-0015 (IconSource 実体化)・maui/ADR-0016〜0018・0020 (accessory View と CustomCell.Content の更新セマンティクス)・maui/ADR-0022 (View 配置の検査)・maui/ADR-0026 (iOS icon の所有権分類)。
+この文書を読むと、`KsSettingsView.Maui` のプロパティやコレクションへの変更がどの単位・どのタイミングで画面へ反映されるか、Handler の切断と再接続 (ページを閉じて開き直す等) をまたいで何が保たれるか、そして Android で避けるべき配置が分かる。公開面の骨格は [MAUI facade の公開契約](maui-facade.md)、前提となる Store の一般契約は [Store の状態と更新通知](../../core/architecture/store-and-update-streams.md) を先に読むと分かりやすい。決定の経緯は maui/ADR-0007 (releaseHost)・maui/ADR-0014 (Android measure 契約)・maui/ADR-0015 (IconSource 実体化)・maui/ADR-0016〜0018・0020 (accessory View と CustomCell.Content の更新セマンティクス)・maui/ADR-0022 (View 配置の検査)・maui/ADR-0026 (iOS icon の所有権分類)・cross/ADR-0032 (Section / Cell の論理子化)。
 
 ## 更新の意味論
 
@@ -30,23 +30,39 @@ iOS で UIKit の名前付き画像キャッシュが所有する画像 (asset c
 
 **accessory View** = Root / Section の header / footer に置く View (`RootHeaderView` / `RootFooterView` / `Section.HeaderView` / `FooterView`)。accessory View の更新は「参照が正、内容は live」(maui/ADR-0018): View プロパティへ別インスタンスを設定すると表示が差し替わる。同一インスタンスの内部変化 (バインド値の更新等) はプロパティ再設定なしに表示へ反映され、サイズが変わる場合は自動高さの領域が追従する (`HeaderHeight` 指定時は固定高さで切り詰め)。`CustomCell.Content` も同じ規律に従う (maui/ADR-0020)。
 
-accessory View と `CustomCell.Content` は (Section / Cell と異なり) **logical tree に接続され**、所有者の `BindingContext` を継承する。View 自身に明示的な BindingContext があれば上書きしない。継承と変更伝播は Handler 接続の有無に依らない。
+### 論理子と BindingContext の継承
 
-| View 配置プロパティ | 所有者 (BindingContext の継承元) |
+`Section` / `CellBase` と accessory View / `CustomCell.Content` は、いずれも所有者の**論理子**として logical tree に接続され、所有者の `BindingContext` を継承する。View 自身に明示的な BindingContext があれば上書きしない。継承と変更伝播は Handler 接続の有無に依らない。
+
+| 配置 | 論理親 (BindingContext の継承元) |
 |---|---|
+| `SettingsView.Root` に並べた `Section` | SettingsView |
+| `Section.Cells` に並べた `CellBase` | 所有 Section |
 | `SettingsView.RootHeaderView` / `RootFooterView` | SettingsView |
 | `Section.HeaderView` / `FooterView` | 所有 Section |
 | `CustomCell.Content` | 所有 CustomCell (ItemsSource / ItemTemplate 生成では item が BindingContext) |
 
-### 同一 View インスタンスの多重配置
+Section / Cell の論理所有は**所属の寿命**で決まる。コレクションへの所属が始まった時点で論理子になり、除去・コレクションの差し替え・Reset・ItemsSource の再生成で所属が終わった時点で `Parent` が null に戻る。この時点が「操作した時点」になるのは実体が `INotifyCollectionChanged` の場合で、observable でない実体 (素の `List<T>`) では設定後の増減が所属先へ届かないため、付け外しは表示へ**変換する時点**に揃う (静的描画と同じ区切り)。変換の直前に現在の内容と照合し直すので、そこに居る要素だけが論理子として繋がり、外れた要素の `Parent` はその時点で null に戻る。論理子であることで、設定したどの BindableProperty でも `DynamicResource` / `AppThemeBinding` が祖先 (ページ / アプリ) の Resources 変更と外観変更で再評価される (cross/ADR-0032。利用者から見た書き方は [スタイルの MAUI 表現](maui-styling.md))。再評価された値は同じプロパティへ直接代入したときと同じ経路で届く — Cell の内容プロパティなら内容更新として表示中の行が作り直されずに描き直され、Section の header / footer text なら accessory 更新として届く。
 
-Section / CellBase そのものを複数箇所へ置くこと、および同一の View インスタンスを複数の accessory View / `CustomCell.Content` へ置くことは、いずれも `InvalidOperationException` (ItemsSource のテンプレートが既配置インスタンスを返す場合も同様)。View 配置プロパティ (accessory View / `Content`) の検査は値が確定する**前**に行われ、失敗しても公開値・論理所有・表示はいずれも動かない。構造変更バッチ (Section / Cell の追加・差し替え・Root 再構築) 内の重複は native へ触れる前に全件検査され、どの位置の要素が衝突しても部分更新を残さない。
+### 同一インスタンスの多重配置
+
+Section / CellBase そのものを複数箇所へ置くこと、および同一の View インスタンスを複数の accessory View / `CustomCell.Content` へ置くことは、いずれも `InvalidOperationException` (ItemsSource のテンプレートが既配置インスタンスを返す場合も同様)。例外になる時点は、何が既にそれを所有しているかで分かれる。
+
+| 置こうとしたもの | 例外の時点 |
+|---|---|
+| 他所 (期待する所有者以外の facade 所有者 — SettingsView / Section / CustomCell) が所有したままの Section / Cell | `Root` / `Cells` への**追加の時点** (Handler の有無に依らない。observable でない実体では追加が届かないため変換の時点)。別の SettingsView が所有する場合も、SettingsView から外れた Section が所有したままの場合も同じ |
+| 同じコレクションへ二重に入れた Section / Cell | 配置を表示へ**変換する時点** |
+| 他所が所有したままの View を accessory / `Content` へ | 所有者が既に変換経路に加わっていればその**設定の時点**、未参加なら所有者が変換経路に加わった時点 |
+
+追加の時点で弾かれた場合、既存の配置 (`Parent` / 継承 `BindingContext` / 表示) は動かない。View 配置プロパティ (accessory View / `Content`) の検査は値が確定する**前**に行われ、失敗しても公開値・論理所有・表示はいずれも動かない。構造変更バッチ (Section / Cell の追加・差し替え・Root 再構築) 内の重複は native へ触れる前に全件検査され、どの位置の要素が衝突しても部分更新を残さない。
 
 失敗後も公開コレクション (`Root` / `Cells`) はロールバックされず、回復は呼び出し元による Root の全体再構築 (再代入 / Reset) で行う (maui/ADR-0022)。設定ツリーに未参加の Section (XAML 構築中等) へ既配置の View を設定した場合は既存配置を奪わず、その Section が SettingsView の変換経路 (Section / Cell ツリーを Bridge の写しへ変換して native へ配信する経路) に加わった時点で例外になる — null に戻した View の別 slot への再利用はいつでも可。
 
 ## lifecycle の保証
 
-ページ表示 (Handler 接続) で Native Host が生成され、その時点の状態が表示される。ページ離脱 (Handler 切断) で Host は解放されるが、**facade・Bridge・Store は生き続け、切断中の変更も Store へ流れ続ける** — 再訪問時は Store 現在状態から表示が復元される (maui/ADR-0007)。解放 → 再生成のたびに Host は新しい**世代**になる。復元の正はそれぞれ次が所有し、利用者から見ればいずれも再訪問後も保持されている:
+ページ表示 (Handler 接続) で Native Host が生成され、その時点の状態が表示される。Handler 切断で Host は解放されるが、**facade・Bridge・Store は生き続け、切断中の変更も Store へ流れ続ける** — 再訪問時は Store 現在状態から表示が復元される (maui/ADR-0007)。解放 → 再生成のたびに Host は新しい**世代**になる。
+
+Handler が切られるのは、ページがナビゲーションスタックから外れたとき (戻る操作で閉じたページ自身) と、Android の Activity 再生成のような platform 側の作り直しである。新しいページを push して背後に回っただけのページでは、両 OS とも Handler は切られず Host も生き続ける (Android は Fragment を作り直すが、同じ Activity なら Handler と platform view を新しい Fragment へ付け替える)。復元の正はそれぞれ次が所有し、利用者から見ればいずれも再訪問後も保持されている:
 
 | 対象 | 復元の正 | 切断中の変更 | 再接続時 |
 |---|---|---|---|

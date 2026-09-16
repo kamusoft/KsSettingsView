@@ -8,7 +8,7 @@ namespace KsSettingsView.Sample.Maui.Pages;
 /// </summary>
 /// <remarks>
 /// 各 Cell の値は ViewModel と双方向にバインドしてあり、ユーザー操作による値の変更が
-/// 画面上部の直近イベント表示に現れる。配色は <see cref="SampleTheme"/> の共用 Theme を明示適用する。
+/// 画面上部の直近イベント表示に現れる。配色は SampleStyles.xaml の共用 Style で与える。
 /// </remarks>
 public partial class InputCellsDemoPage : ContentPage
 {
@@ -17,6 +17,5 @@ public partial class InputCellsDemoPage : ContentPage
     {
         InitializeComponent();
         BindingContext = new InputCellsDemoViewModel();
-        SampleThemeFollower.Attach(this, dark => SampleTheme.Apply(Settings, dark));
     }
 }

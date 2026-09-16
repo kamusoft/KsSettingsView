@@ -67,59 +67,29 @@ To decide both appearances yourself, write the color properties of `SettingsView
 
 ## Change the colors of one cell with the appearance
 
-`AppThemeBinding` written on a cell property is not re-evaluated when the appearance changes: a `Section` and a cell are data you hand to the control rather than elements of the page's tree, and a binding outside that tree is not told about the change. Subscribe to `Application.RequestedThemeChanged` and assign the color of the current appearance to the property instead. The assignment reaches the row on display as a content update, so the row is redrawn where it is.
+`AppThemeBinding` is written the same way on a section and on a cell. A section is a logical child of the `SettingsView` it sits in and a cell of its section, so a binding on their properties is re-evaluated when the appearance changes, and the new value arrives as a content update that redraws the row where it is instead of rebuilding it. No subscription code is involved.
 
 ```xml
-<ks:ButtonCell x:Name="LogoutButton" Title="Log out" />
+<ks:SettingsView CellTitleColor="{AppThemeBinding Light=#000000, Dark=#FFFFFF}">
+  <ks:Section HeaderText="Account">
+    <ks:ButtonCell Title="Log out"
+                   TitleColor="{AppThemeBinding Light=Green, Dark=Magenta}" />
+    <ks:EntryCell Title="Name"
+                  Placeholder="Taro Yamada"
+                  PlaceholderColor="{AppThemeBinding Light=#B0A98F, Dark=#636366}" />
+  </ks:Section>
+</ks:SettingsView>
 ```
 
-```csharp
-public partial class SettingsPage : ContentPage
-{
-    private Application? _subscribedTo;
+The other colors that sit on a cell are written the same way - the text colors and `BackgroundColor` of `CellBase`, and the colors a cell type owns by meaning such as `AccentColor` and `AndroidButtonColor`. Re-evaluation is not limited to colors: it happens for any bindable property you write this way, `Section.HeaderText` included, where the new value arrives as a header update.
 
-    public SettingsPage()
-    {
-        InitializeComponent();
+`DynamicResource` follows the same path. A section or a cell resolves the key against the resources of the page and the application above it, and picks up the value you put there next.
 
-        Loaded += OnLoaded;
-        Unloaded += OnUnloaded;
-        ApplyThemeColors(Application.Current?.RequestedTheme == AppTheme.Dark);
-    }
-
-    private void ApplyThemeColors(bool isDark)
-        => LogoutButton.TitleColor = isDark ? Colors.Magenta : Colors.Green;
-
-    private void OnLoaded(object? sender, EventArgs e)
-    {
-        ApplyThemeColors(Application.Current?.RequestedTheme == AppTheme.Dark);
-
-        if (_subscribedTo is not null || Application.Current is not { } application)
-        {
-            return;
-        }
-
-        application.RequestedThemeChanged += OnRequestedThemeChanged;
-        _subscribedTo = application;
-    }
-
-    private void OnUnloaded(object? sender, EventArgs e)
-    {
-        if (_subscribedTo is not { } application)
-        {
-            return;
-        }
-
-        application.RequestedThemeChanged -= OnRequestedThemeChanged;
-        _subscribedTo = null;
-    }
-
-    private void OnRequestedThemeChanged(object? sender, AppThemeChangedEventArgs e)
-        => ApplyThemeColors(e.RequestedTheme == AppTheme.Dark);
-}
+```xml
+<ks:LabelCell Title="Storage" TitleColor="{DynamicResource CellTitleColor}" />
 ```
 
-Re-assignment is how every color that sits on the cell is switched - the text colors and `BackgroundColor` of `CellBase`, and the colors a cell type owns by meaning such as `AccentColor`, `PlaceholderColor`, and `AndroidButtonColor`.
+Where this stops: a section or a cell you take out of its collection no longer follows the resources of its former owner, so change its values while it is still placed. And a `Style` cannot be set on a `Section` or a cell, because neither is a view - values shared across cells go through resources, while a `Style` still applies to the `SettingsView` itself.
 
 ## Style property list
 

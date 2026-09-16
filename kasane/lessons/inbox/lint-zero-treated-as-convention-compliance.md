@@ -2,10 +2,11 @@
 scope: code-review
 kind: pain
 severity: normal
-count: 1
+count: 2
 first-seen: 2026-08-23
-last-seen: 2026-08-23
+last-seen: 2026-09-16
 evidence:
+  - maui-cell-appthemebinding-logical-child (ホスト review-001 は `comment-policy-lint.py` の「禁止 0 件」を根拠に comment-policy 適合と判定したが、`CellBase` / `Section` の公開 doc コメントに `cross/ADR-0032` (proposed) が入っていた。ADR ID の公開 doc 混入は lint が要確認 (advisory) としてしか報告しない類型で、`--advisory` を掛けていなかった。相方 codex が規約本文 (公開 doc コメントに内部用語を入れない) から判定して Minor で検出し採用)
   - fix-cell-icon-size-parity (ホスト側 review-001 は `comment-policy-lint.py` の「禁止 0 件」を根拠に comment-policy 適合と判定したが、実際にはアーカイブ配下 PNG への参照 1 件が残っていた。相方 codex が規約本文から判定して検出し採用。それを起点に同ファイルを掃き出すと、変更提案内のタスク通番 2 件・履歴記述型コメント 1 件も同じく lint をすり抜けて残っていた)
 ---
 
@@ -16,3 +17,4 @@ evidence:
 ## 経緯
 
 - 2026-08-23 fix-cell-icon-size-parity: 実装ワーカー・ホスト側レビューとも `python3 scripts/comment-policy-lint.py` の「禁止 0 件」を根拠に comment-policy 適合と報告したが、テスト KDoc に `ui/verification/after-buttoncell-center-alignment-pixel6a.png` (実体は `kasane/changes/archive/2026-08-01-fix-android-cell-width-allocation/` 配下) への参照が残っていた。lint のパターンは `.md` 系の文書パスを中心に組まれており、PNG パスと「タスク N」形式の通番をカバーしていない。相方 (codex) が `comment-policy.md` の禁止類型から直接判定して検出。採用後にオーケストレーターが同ファイルを 4 軸で掃き出したところ、`（タスク 2.4 / 3.3）`・`（ADR-0002 検証事項 / タスク 1.3）` の通番参照と履歴記述型コメント 1 件も同じくすり抜けていた。**昇格時の注意 (この change での実施結果)**: 当初「lint パターンを足せば塞がる」と考えて 3 型を追加したが、オーナー判断により最終的に残ったのは 1 型 (タスク通番) だけになった。履歴記述は「書き手の作業を語る文」と「実行時の状態を語る文」が語彙を共有し、パス参照は change 配下のパスと外部 URL が文字列として同型であるため、いずれも例外を足すほど誤検出が増える構造だった (素朴なパターンで 44〜45 件の偽陽性、`references?` の `?` ひとつで Android 公式ドキュメントが hook exit 2)。**強制力ルーティングで lint を第一候補にするのは「機械的に一意に判定できる」ことが前提であり、規約が禁止しているという事実だけでは lint 化の根拠にならない**。判定できない類型はレビューで見るしかなく、このルール文が対象とするのもその範囲 (= lint の検出範囲は規約より狭いという前提で読むこと)。
+- 2026-09-16 maui-cell-appthemebinding-logical-child: ホスト review-001 は禁止 0 件 (796 ファイル) を根拠に適合と報告したが、公開 doc コメント 2 箇所に ADR ID が入っていた。handbook cross/comment-policy.md は ADR ID の公開 doc 混入を「要確認 (advisory)」として lint に載せ、可視性の推定がヒューリスティックなためレビューが判定すると明記している — つまり規約本文が「禁止 0 件では判定できない類型」を自ら宣言している。相方が規約本文から検出し、review-002 以降のホストレビューは `--advisory` を毎回掛けるようになった。

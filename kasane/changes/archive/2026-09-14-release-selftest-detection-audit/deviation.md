@@ -1,0 +1,5 @@
+# Deviation: release-selftest-detection-audit
+
+- [決定事項と違う形] `scripts/release/wait-for-registries.sh` の `wait_for_registries`: 決定事項 3 (自己テスト冒頭の安全網) だけでは巡回上限判定を外した誤実装が停止のまま残ったため、照会件数 (`POLL_PROBE_COUNT`) を数えて空回りした巡回で待機を打ち切る 2 段目の歯止めを本体側に足した。理由: 安全網は上限の「値」を短くするだけで、上限判定そのものを失った待機の出口にはならず、決定事項 4 (停止 0 件) に届かなかった (2026-09-13)
+- [決定事項の緩和] `scripts/release/central-portal.sh` の `cmd_wait_published`: 決定事項 1 の「空文字を失敗として受け止める」を、即時の失敗から連続して取り出せなかったときの失敗 (`PUBLISHED_UNRESOLVED_STATE_LIMIT`) へ緩めた。理由: オーナー裁定。公開待ちは release を送った後 — 取り消せない操作の後 — に回るため、Portal の単発の 5xx / 429 で待機を捨てない (検出力は自己テストで空文字が連続するため維持される。`cmd_wait_validated` は即時の失敗のまま) (2026-09-13)
+- [決定事項と違う形] `scripts/release/central-portal.sh` の `deployment_state`: 照会そのものが行えなかったことを `fail` ではなく状態値 `UNRESOLVED` で返す契約に変え、致命かどうかの判断を呼び出し側 (`cmd_status` / `cmd_release` / `cmd_drop` は失敗、`cmd_wait_published` は連続回数で判断) へ移した。理由: `fail` はコマンド置換のサブシェルしか終わらせないという前提が errexit の抑止された文脈でしか成り立たず、素のコマンドとして呼ぶ実行本番では代入の時点でスクリプトが終わって吸収に到達しなかったため。各サブコマンドの失敗するかどうかは従来どおり (2026-09-14)

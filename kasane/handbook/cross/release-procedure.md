@@ -5,7 +5,7 @@ applies-when:
   tasks: [リリースの実施, release workflow の secrets / Environment の設定, リリースの再実行, リリースのリハーサル]
 title: リリース手順
 description: main ブランチと branch protection の用意、Environment release と secrets の登録、配信リポジトリの deploy key、事前確認からリリース PR・起動・見守り・公開後の確認までの各段、失敗時の再実行、dry-run によるリハーサル
-timestamp: 2026-09-11
+timestamp: 2026-09-14
 ---
 
 # リリース手順
@@ -189,7 +189,7 @@ Release の本文は validate の段で確定済みで、publish は pull reques
 
 到達状態: 3 経路の公開物と Release ページを実物で確認できている。
 
-- nuget.org の 3 パッケージのページ (README が表示されること)
+- nuget.org の `KsSettingsView.Maui` のページ (README が表示されること) と、`KsSettingsView.Binding.iOS` / `KsSettingsView.Binding.Android` の公開。README を同梱するのは facade の 1 本だけで、Binding 2 本は間接参照専用のため description だけが出る
 - Maven Central の `jp.kamusoft:kssettingsview` の当該 version
 - 配信リポジトリの tag と、monorepo の Release 本文
 - `https://github.com/kamusoft/KsSettingsView/releases/latest` が今回の版に解決すること (README と利用者向け Skill のインストール例は具体 version を持たず、この案内に委ねている)
@@ -227,6 +227,7 @@ publish の各ステップは冪等なので、原因を取り除いてから **
 | Maven の検証 (FAILED) | upload からやり直す (NuGet は未 push なので、原因を直せば同じ version で埋め直せる) |
 | NuGet の push | 公開済みのパッケージは skip される |
 | Maven の release | 保留中の deployment を release する |
+| Maven の公開待ち (照会が続けて答えない) | 公開処理中の deployment は削除できないので ID が残り、次の attempt が同じ deployment の公開待ちから続ける。単発の応答不良は吸収され、続けて答えなかったときだけ失敗する ([cross/ADR-0031](../../decisions/cross/0031-query-failure-as-state-value-not-fail.md)) |
 | tag / Release | 同じ内容の tag は skip、別内容なら失敗する |
 
 publish が途中で失敗すると、保留中の Maven deployment は失敗経路の後始末で削除され、次の attempt へ引き継ぐ ID も同時に破棄される (再実行は upload からやり直す)。削除できない状態 (検証中か公開処理中) のときは何もせず理由が出て ID もそのまま残るので (次の attempt がその状態を見て続きを行う)、[Central Portal の deployment 一覧](https://central.sonatype.com/publishing/deployments) で状態を見る。手で操作するときは次を使う。

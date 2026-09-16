@@ -19,8 +19,12 @@ public class App : Application
     // Activity だけが作り直される経路すべて (システムによる破棄からの復帰など) で保たれる。
     private Window? _window;
 
-    /// <summary>アプリを作り、保存済みの外観の選択を反映する。</summary>
-    public App() => SampleAppearanceStore.Apply(SampleAppearanceStore.Load());
+    /// <summary>アプリを作り、共用のリソース辞書を併合して、保存済みの外観の選択を反映する。</summary>
+    public App()
+    {
+        Resources.MergedDictionaries.Add(new SampleStyles());
+        SampleAppearanceStore.Apply(SampleAppearanceStore.Load());
+    }
 
     /// <inheritdoc/>
     protected override Window CreateWindow(IActivationState? activationState)

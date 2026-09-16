@@ -18,20 +18,27 @@
 #                   存在しない (HTTP 404) 場合は、失敗ではなく `NOT_FOUND` を出す。
 #                   削除済みの ID を持ったまま再実行しても、呼び出し側が「引き継ぐ
 #                   deployment は無い」と判断して再 upload へ進めるようにするため。
+#                   照会そのものが行えなかった (応答が成功を示さない・状態を読み取れない)
+#                   場合は失敗する。
 #   wait-validated  検証の決着を待つ。PENDING / VALIDATING の間はポーリングを続け、抜けたら
 #                   その状態 (VALIDATED / PUBLISHING / PUBLISHED / FAILED / NOT_FOUND) を
 #                   status と同じ語彙で標準出力へ 1 行で出す。失敗にするのは上限超過だけで、
 #                   FAILED や NOT_FOUND は失敗ではなく状態として返す。呼び出し側が結果を
 #                   コマンド置換で受けて分岐する (upload 直後は VALIDATED 以外を失敗に、
 #                   再実行の引き継ぎでは FAILED を drop して upload をやり直す、など) ため、
-#                   待機中の進捗行は標準エラーへ出す。
+#                   待機中の進捗行は標準エラーへ出す。状態を取り出せなかった照会は、決着した
+#                   状態として表明せずに失敗する。
 #   release         VALIDATED であることを再確認してから release する。VALIDATED 以外なら
-#                   何も送らずに失敗する。検証の決着は wait-validated で先に待っておく。
+#                   何も送らずに失敗する。状態を確認できなかった場合も送らずに失敗する。
+#                   検証の決着は wait-validated で先に待っておく。
 #   wait-published  PUBLISHED になるまで待つ。FAILED / NOT_FOUND になったら失敗する。
+#                   状態を取り出せなかった照会は、単発なら吸収して待ち続け、続けて
+#                   取り出せなかったときだけ失敗する (release を送った後の待機のため)。
 #   drop            VALIDATED / FAILED のときだけ削除する。PUBLISHING / PUBLISHED は
 #                   API 上削除できないため、理由を出して正常終了する (失敗経路の後始末から
 #                   呼ばれるので、削除できない状態を失敗にしない)。NOT_FOUND は既に
-#                   存在しないので、同じく何も送らず正常終了する。
+#                   存在しないので、同じく何も送らず正常終了する。状態を確認できなかった
+#                   場合は、削除しないまま正常終了させず失敗する。
 #   published       公開済みなら exit 0、未公開なら exit 1、判定できなければ exit 2。
 #                   Publisher API は「座標 + version が公開済みか」を返すエンドポイントを
 #                   公開していない (https://central.sonatype.org/publish/publish-portal-api/
@@ -193,11 +200,32 @@ print(state)
 # deployment が存在しないときに状態の代わりに返す値。API の状態名と衝突しない名前にする。
 readonly DEPLOYMENT_NOT_FOUND="NOT_FOUND"
 
-# deployment の状態を照会して 1 行で返す。
+# 照会そのものが行えなかったときに状態の代わりに返す値。NOT_FOUND と同じく、API の状態名と
+# 衝突しない名前にする。
+#
+# 照会の失敗を「状態値」で返すのは、致命かどうかが呼び出し側ごとに違うため (状態照会・
+# release・drop は致命、公開待ちは単発なら吸収する)。失敗として返すと、呼び出しが必ず
+# コマンド置換になる以上、受け側の挙動が errexit の有無に左右される — 素のコマンドとして
+# 呼ぶ実行本番では代入の時点でスクリプトごと終わり、条件式の下で呼ぶ自己テストでは
+# 終わらない。状態値なら、どちらの文脈でも同じ経路が走る (cross/ADR-0031)。
+readonly DEPLOYMENT_STATE_UNRESOLVED="UNRESOLVED"
+
+# 公開待ちが、状態を取り出せない照会を何回続けて許すか。公開待ちは release を送った後 —
+# 取り消せない操作の後 — に回るので、Portal が一度返した 5xx / 429 で即座に失敗させず、
+# 続けて取り出せなかったときだけ失敗させる。
+readonly PUBLISHED_UNRESOLVED_STATE_LIMIT=3
+
+# deployment の状態を照会して 1 行で返す。照会できなかった場合も失敗にはせず UNRESOLVED を
+# 返し、理由を標準エラーへ 1 行残す。理由を注釈 (::error::) にしないのは、吸収される照会でも
+# ここを通るため — 成功した実行に赤い注釈が並ぶのを避け、注釈は致命と判断した呼び出し側が出す。
 deployment_state() {
     local id="$1"
     local response status state
-    response="$(http_request POST "$(status_url "${id}")" auth)"
+    if ! response="$(http_request POST "$(status_url "${id}")" auth)"; then
+        printf '%s\n' "${DEPLOYMENT_STATE_UNRESOLVED}"
+        echo "deployment の状態を照会できない (要求が失敗した): ${id}" >&2
+        return 0
+    fi
     status="$(response_status "${response}")"
     # 404 は「その ID の deployment はもう無い」であって照会の失敗ではない。drop 済みの
     # ID を引き継いだ再実行がここで止まらないよう、状態として区別できる形で返す。
@@ -206,10 +234,14 @@ deployment_state() {
         return 0
     fi
     if [ "${status}" != "200" ]; then
-        fail "deployment の状態を照会できない (HTTP ${status}): ${id}"
+        printf '%s\n' "${DEPLOYMENT_STATE_UNRESOLVED}"
+        echo "deployment の状態を照会できない (HTTP ${status}): ${id}" >&2
+        return 0
     fi
     if ! state="$(response_body "${response}" | parse_deployment_state)"; then
-        fail "状態照会の応答から deploymentState を取り出せない: ${id}"
+        printf '%s\n' "${DEPLOYMENT_STATE_UNRESOLVED}"
+        echo "状態照会の応答から deploymentState を取り出せない: ${id}" >&2
+        return 0
     fi
     printf '%s\n' "${state}"
 }
@@ -217,7 +249,12 @@ deployment_state() {
 # --- サブコマンド --------------------------------------------------------------------
 
 cmd_status() {
-    deployment_state "$1"
+    local state
+    state="$(deployment_state "$1")"
+    if [ "${state}" = "${DEPLOYMENT_STATE_UNRESOLVED}" ]; then
+        fail "deployment の状態を取り出せなかった: $1"
+    fi
+    printf '%s\n' "${state}"
 }
 
 # 検証の決着を待つ。決着した状態を標準出力へ出し、上限超過だけを失敗にする。
@@ -231,6 +268,14 @@ cmd_wait_validated() {
 
     while :; do
         state="$(deployment_state "${id}")"
+        # 照会できなかった (UNRESOLVED) 照会は、決着としても継続としても扱わない。
+        # そのまま流すと、決着していない照会結果を「決着した状態」として呼び出し側へ
+        # 表明することになる。UNRESOLVED は deployment_state が返す状態値なので、この
+        # 判定は代入が成功したかどうか (errexit の効き方) に依存しない。API が返す未知の
+        # 状態名は上限まで待つ (Portal が状態名を足したときに即失敗させないため)。
+        if [ "${state}" = "${DEPLOYMENT_STATE_UNRESOLVED}" ]; then
+            fail "deployment の状態を取り出せなかった: ${id}"
+        fi
         case "${state}" in
             PENDING|VALIDATING)
                 ;;
@@ -251,6 +296,9 @@ cmd_release() {
     local id="$1"
     local state
     state="$(deployment_state "${id}")"
+    if [ "${state}" = "${DEPLOYMENT_STATE_UNRESOLVED}" ]; then
+        fail "release する前の状態確認ができなかった: ${id}"
+    fi
     if [ "${state}" != "VALIDATED" ]; then
         fail "release できる状態ではない (VALIDATED を期待、実際は ${state}): ${id}"
     fi
@@ -269,10 +317,30 @@ cmd_wait_published() {
     local interval="${KSR_POLL_INTERVAL_SECONDS:-30}"
     local timeout="${KSR_PUBLISHED_TIMEOUT_SECONDS:-5400}"
     local deadline=$(( SECONDS + timeout ))
+    local started="${SECONDS}"
     local state
+    local unresolved=0
 
     while :; do
         state="$(deployment_state "${id}")"
+        # 照会できなかった (UNRESOLVED) 照会を数える。この case は決着する状態だけを列挙
+        # して残りをすべて継続とするので、素通しすると答えの返らない照会を上限まで繰り返す
+        # ことになる。単発の不調は吸収し、続けて取り出せなかったときだけ失敗させる。
+        # 検証待ち側が 1 回で失敗するのに対してここだけ続けて見るのは、公開待ちが release の
+        # 後に回るため。UNRESOLVED は deployment_state が返す状態値なので、この数え方は
+        # 代入が成功したかどうか (errexit の効き方) に依存しない。API が返す未知の状態名は
+        # 上限まで待つ (Portal が状態名を足したときに即失敗させないため)。
+        if [ "${state}" = "${DEPLOYMENT_STATE_UNRESOLVED}" ]; then
+            unresolved=$(( unresolved + 1 ))
+            if [ "${unresolved}" -ge "${PUBLISHED_UNRESOLVED_STATE_LIMIT}" ]; then
+                fail "deployment の状態を ${unresolved} 回続けて取り出せなかった (経過 $(( SECONDS - started )) 秒): ${id}"
+            fi
+            # 吸収したことを 1 行残す。直前に理由が出ているので、それが致命なのか
+            # 待機を続ける判断なのかを実行ログの上で読み分けられるようにする。
+            echo "状態を取り出せなかった (${unresolved}/${PUBLISHED_UNRESOLVED_STATE_LIMIT}): 待機を続ける"
+        else
+            unresolved=0
+        fi
         case "${state}" in
             PUBLISHED)
                 echo "公開された: ${id}"
@@ -303,6 +371,9 @@ cmd_drop() {
         "${DEPLOYMENT_NOT_FOUND}")
             echo "削除しない (deployment が存在しない): ${id}"
             return 0
+            ;;
+        "${DEPLOYMENT_STATE_UNRESOLVED}")
+            fail "drop する前の状態確認ができなかった: ${id}"
             ;;
         *)
             # PUBLISHING / PUBLISHED は API 上削除できない。PENDING / VALIDATING は
@@ -448,6 +519,54 @@ selftest() {
     check "$([ "$(cmd_status abc)" = "NOT_FOUND" ] && echo 0 || echo 1)" \
         "404 は NOT_FOUND を返す (失敗にしない)"
 
+    # 照会できなかったことは、失敗ではなく状態値で返る。ここが失敗 (非 0) へ戻ると、
+    # 受け側の挙動が errexit の効き方に左右され、素のコマンドとして呼ぶ実行本番と
+    # 条件式の下で呼ぶこの自己テストとで経路が分かれる。
+    echo "[照会できなかった状態]"
+    local unresolved_state unresolved_code
+    arrange '503 '
+    unresolved_code=0
+    unresolved_state="$(deployment_state abc 2>/dev/null)" || unresolved_code=$?
+    check "$([ "${unresolved_code}" = "0" ] && echo 0 || echo 1)" \
+        "照会できない応答でも状態照会は失敗として返らない" "exit ${unresolved_code}"
+    check "$([ "${unresolved_state}" = "UNRESOLVED" ] && echo 0 || echo 1)" \
+        "照会できない応答は UNRESOLVED を状態として返す" "${unresolved_state}"
+    local unresolved_reason
+    unresolved_reason="$(arrange '503 '; deployment_state abc 2>&1 >/dev/null)"
+    check "$([ "$(contains "${unresolved_reason}" "HTTP 503")" = "0" ] \
+        && [ "$(contains "${unresolved_reason}" "::error::")" = "1" ] && echo 0 || echo 1)" \
+        "照会できない理由は注釈にせず標準エラーへ出す" "${unresolved_reason}"
+
+    # 要求そのものが失敗した照会も同じ扱いにする。関数の差し替えはコマンド置換の
+    # サブシェルに閉じるので、以降の検査は本物のモックのまま走る。
+    #
+    # 理由の文言まで見るのは、要求の失敗を受け止めずに素通しすると、応答が空のまま
+    # 「応答が 200 でない」の側へ流れ着いて同じ UNRESOLVED になるため。状態値だけでは
+    # 両者を区別できず、要求の失敗を受け止めているかどうかが検査から抜ける。
+    arrange '200 {"deploymentState":"VALIDATED"}'
+    unresolved_code=0
+    unresolved_state="$( http_request() { return 1; }; deployment_state abc 2>/dev/null )" || unresolved_code=$?
+    check "$([ "${unresolved_code}" = "0" ] && [ "${unresolved_state}" = "UNRESOLVED" ] && echo 0 || echo 1)" \
+        "要求が失敗した照会も UNRESOLVED を状態として返す" "exit ${unresolved_code} / ${unresolved_state}"
+    local transport_reason
+    transport_reason="$( http_request() { return 1; }; deployment_state abc 2>&1 >/dev/null )"
+    check "$(contains "${transport_reason}" "要求が失敗した")" \
+        "要求が失敗した照会は応答の解釈へ流さず理由を分ける" "${transport_reason}"
+
+    arrange '503 '
+    check "$(if ( cmd_drop abc > /dev/null 2>&1 ); then echo 1; else echo 0; fi)" \
+        "状態を確認できない drop は失敗する"
+    check "$([ "$(calls | wc -l | tr -d ' ')" = "1" ] && echo 0 || echo 1)" \
+        "状態を確認できない drop は DELETE を送らない" "$(calls)"
+
+    arrange '503 '
+    local release_output
+    release_output="$(cmd_release abc 2>&1)" || true
+    check "$(contains "${release_output}" "状態確認ができなかった")" \
+        "状態を確認できない release は理由を名指しして失敗する" "${release_output}"
+    check "$([ "$(calls | wc -l | tr -d ' ')" = "1" ] && echo 0 || echo 1)" \
+        "状態を確認できない release は POST を送らない" "$(calls)"
+
     echo "[wait-validated]"
     arrange '200 {"deploymentState":"PENDING"}' '200 {"deploymentState":"VALIDATING"}' '200 {"deploymentState":"VALIDATED"}'
     local waited_state
@@ -471,6 +590,20 @@ selftest() {
     arrange '200 {"deploymentState":"VALIDATING"}' '200 {"deploymentState":"VALIDATING"}'
     check "$(if ( KSR_POLL_INTERVAL_SECONDS=0 KSR_POLL_TIMEOUT_SECONDS=0 cmd_wait_validated abc > /dev/null 2>&1 ); then echo 1; else echo 0; fi)" \
         "上限を過ぎれば失敗する"
+    # 上限を名乗る検査も、上限で終わったのか別の理由で終わったのかを区別できない。
+    # 上限判定を失った実装は台本を食い尽くして別の経路で失敗するので、照会回数で分ける。
+    check "$([ "$(calls | wc -l | tr -d ' ')" = "1" ] && echo 0 || echo 1)" \
+        "上限を過ぎた検証待ちは 1 回目の照会で終わる" "$(calls)"
+
+    # 状態を取り出せなかった照会 (ここでは deploymentState の無い応答) は、決着した状態
+    # として表明せずに失敗する。空文字を通すと、決着していない照会結果が呼び出し側へ
+    # 「決着した状態」として届く。
+    arrange '200 {"deploymentId":"abc"}'
+    waited_state="$(KSR_POLL_INTERVAL_SECONDS=0 cmd_wait_validated abc 2>/dev/null)" || waited_state="exit $?"
+    check "$([ "${waited_state}" = "exit 1" ] && echo 0 || echo 1)" \
+        "状態を取り出せない照会は検証待ちを失敗させる" "${waited_state}"
+    check "$([ "$(calls | wc -l | tr -d ' ')" = "1" ] && echo 0 || echo 1)" \
+        "状態を取り出せない検証待ちは 1 回目の照会で終わる" "$(calls)"
 
     echo "[release]"
     arrange '200 {"deploymentState":"VALIDATED"}' '204 '
@@ -515,6 +648,10 @@ selftest() {
     arrange '404 {"error":"not found"}'
     check "$(if ( KSR_POLL_INTERVAL_SECONDS=0 cmd_wait_published abc > /dev/null 2>&1 ); then echo 1; else echo 0; fi)" \
         "存在しない deployment の公開待ちは失敗する"
+    # 終端を名乗る検査は、終端を見て終わったのか上限に達して終わったのかを区別できない。
+    # 照会回数を突き合わせて、安全網の秒数ではなく状態の検出で失敗したことを担保する。
+    check "$([ "$(calls | wc -l | tr -d ' ')" = "1" ] && echo 0 || echo 1)" \
+        "存在しない deployment の公開待ちは 1 回目の照会で終わる" "$(calls)"
 
     arrange '404 {"error":"not found"}'
     check "$(if ( cmd_release abc > /dev/null 2>&1 ); then echo 1; else echo 0; fi)" \
@@ -531,10 +668,59 @@ selftest() {
     arrange '200 {"deploymentState":"PUBLISHING"}' '200 {"deploymentState":"FAILED"}'
     check "$(if ( KSR_POLL_INTERVAL_SECONDS=0 cmd_wait_published abc > /dev/null 2>&1 ); then echo 1; else echo 0; fi)" \
         "FAILED になれば失敗する"
+    check "$([ "$(calls | wc -l | tr -d ' ')" = "2" ] && echo 0 || echo 1)" \
+        "FAILED の公開待ちは FAILED を見た照会で終わる" "$(calls)"
+
+    # 状態を取り出せなかった照会 (ここでは 5xx) が続いたら、継続へ落とさずに失敗する。
+    # 決着する状態だけを列挙する case では、空文字がそのまま「まだ決着していない」として
+    # 扱われ、答えの返らない照会を上限まで繰り返すことになる。照会回数も併せて見て、
+    # 上限ではなく連続の検出で終わることを担保する。
+    arrange '503 ' '503 ' '503 '
+    local gave_up_output
+    gave_up_output="$(KSR_POLL_INTERVAL_SECONDS=0 cmd_wait_published abc 2>&1)" || true
+    check "$(contains "${gave_up_output}" "回続けて取り出せなかった")" \
+        "状態を続けて取り出せなければ公開待ちは失敗する" "${gave_up_output}"
+    # 諦めるまでの実時間は応答の速さで 60 秒〜16.5 分と幅がある。回数だけでは
+    # 「遅いのか壊れているのか」が読めないので、経過を添える。
+    check "$(contains "${gave_up_output}" "経過")" \
+        "諦めた理由に経過を添える" "${gave_up_output}"
+    check "$([ "$(calls | wc -l | tr -d ' ')" = "${PUBLISHED_UNRESOLVED_STATE_LIMIT}" ] && echo 0 || echo 1)" \
+        "状態を取り出せない公開待ちは許す回数で終わる" "$(calls)"
+
+    # 単発の不調は吸収する。release を送った後の待機なので、Portal が一度返した 5xx で
+    # 公開待ちを捨てない。
+    arrange '503 ' '200 {"deploymentState":"PUBLISHED"}'
+    local absorbed_output
+    absorbed_output="$(KSR_POLL_INTERVAL_SECONDS=0 cmd_wait_published abc 2>/dev/null)" || absorbed_output="exit $?"
+    check "$(contains "${absorbed_output}" "公開された")" \
+        "状態を 1 度取り出せなくても公開待ちは続く" "${absorbed_output}"
+    check "$([ "$(calls | wc -l | tr -d ' ')" = "2" ] && echo 0 || echo 1)" \
+        "吸収した後は次の照会で決着する" "$(calls)"
+    # 吸収したことが実行ログに残る。直前の理由だけでは、致命なのか待機を続ける判断なのかが
+    # 読み分けられない。
+    check "$(contains "${absorbed_output}" "状態を取り出せなかった (1/${PUBLISHED_UNRESOLVED_STATE_LIMIT}): 待機を続ける")" \
+        "吸収した照会は何回目まで許したかを出す" "${absorbed_output}"
+
+    # 境界の手前。許す回数より 1 つ少ない連続は吸収して待機を続ける。
+    arrange '503 ' '503 ' '200 {"deploymentState":"PUBLISHED"}'
+    check "$(if ( KSR_POLL_INTERVAL_SECONDS=0 cmd_wait_published abc > /dev/null 2>&1 ); then echo 0; else echo 1; fi)" \
+        "許す回数より 1 つ少ない連続は吸収する"
+    check "$([ "$(calls | wc -l | tr -d ' ')" = "3" ] && echo 0 || echo 1)" \
+        "許す回数の手前で終わらない" "$(calls)"
+
+    # 数え直しの検査。取り出せた照会を挟んだら連続は途切れる。途切れないと、離れた位置の
+    # 不調が積み上がって公開待ちが道半ばで落ちる。
+    arrange '503 ' '200 {"deploymentState":"PUBLISHING"}' '503 ' '503 ' '200 {"deploymentState":"PUBLISHED"}'
+    check "$(if ( KSR_POLL_INTERVAL_SECONDS=0 cmd_wait_published abc > /dev/null 2>&1 ); then echo 0; else echo 1; fi)" \
+        "取り出せた照会を挟めば連続は途切れる"
+    check "$([ "$(calls | wc -l | tr -d ' ')" = "5" ] && echo 0 || echo 1)" \
+        "途切れた後は許す回数を数え直す" "$(calls)"
 
     arrange '200 {"deploymentState":"PUBLISHING"}' '200 {"deploymentState":"PUBLISHING"}'
     check "$(if ( KSR_POLL_INTERVAL_SECONDS=0 KSR_PUBLISHED_TIMEOUT_SECONDS=0 cmd_wait_published abc > /dev/null 2>&1 ); then echo 1; else echo 0; fi)" \
         "上限を過ぎれば失敗する"
+    check "$([ "$(calls | wc -l | tr -d ' ')" = "1" ] && echo 0 || echo 1)" \
+        "上限を過ぎた公開待ちは 1 回目の照会で終わる" "$(calls)"
 
     # 公開待ちと検証待ちの上限が互いに干渉しないこと。片方を 0 にしても、もう片方の
     # 待ちは自分の上限に従って続く (この自己テストで効いているのは、冒頭で安全網として

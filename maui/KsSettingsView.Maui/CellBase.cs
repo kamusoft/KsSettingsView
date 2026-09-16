@@ -10,7 +10,11 @@ namespace KsSettingsView;
 /// <remarks>
 /// Cell は表示内容を保持する model であり、描画は Native 側が受け持つ。プロパティの変更は
 /// UI スレッドから行う (呼び出し側契約であり、facade はスレッド marshal を行わない)。
-/// 同じインスタンスを複数の <see cref="Section"/> へ配置することはできない。
+/// 同じインスタンスを複数の <see cref="Section"/> へ配置することはできない (他所に所有された
+/// インスタンスの追加はその時点で例外になる)。
+/// <see cref="Section"/> へ所属している間はその論理子であり、プロパティに設定した
+/// <c>AppThemeBinding</c> / <c>DynamicResource</c> は外観の変更と祖先 (ページ / アプリ) の
+/// Resources の差し替えで再評価される。
 /// スタイル系のプロパティは未指定 (null) のとき <see cref="SettingsView"/> の既定スタイルを継承し、
 /// 指定した行だけがその値で描かれる。
 /// </remarks>

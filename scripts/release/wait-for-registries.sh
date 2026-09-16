@@ -333,10 +333,15 @@ probe_target() {
     fi
 }
 
+# 直前の巡回が実際に送った照会の件数。巡回が空回りしたこと (期限を過ぎていて 1 件も
+# 送れなかったこと) を、待機の側から判定できるようにするために残す。
+POLL_PROBE_COUNT=0
+
 # 反映済みでない対象だけを 1 巡照会し、保持している分類を更新する。
 poll_once() {
     local version="$1"
     local index result
+    POLL_PROBE_COUNT=0
     for index in "${!TARGET_KIND[@]}"; do
         if [ "${TARGET_STATE[${index}]}" = "${STATE_REFLECTED}" ]; then
             continue
@@ -347,6 +352,7 @@ poll_once() {
             break
         fi
         result="$(probe_target "${index}" "${version}")"
+        POLL_PROBE_COUNT=$(( POLL_PROBE_COUNT + 1 ))
         TARGET_STATE[${index}]="${result%% *}"
         TARGET_DETAIL[${index}]="${result#* }"
     done
@@ -402,6 +408,15 @@ wait_for_registries() {
             return 0
         fi
 
+        # 期限の歯止めは 2 段で掛ける。こちらは巡回が空回りした (期限を過ぎていて 1 件も
+        # 送れなかった) ときの受け皿。待機を終わらせる出口が下の判定だけになると、照会を
+        # 送れないまま回り続ける実装を「失敗」ではなく「止まらない待機」として抱え込む。
+        if [ "${POLL_PROBE_COUNT}" -eq 0 ]; then
+            echo "対象ごとの最後の分類:" >&2
+            print_states stderr
+            fail "反映を待ちきれませんでした (上限 ${timeout} 秒、巡回 ${round} 回、照会を送れませんでした)"
+        fi
+
         # 次の巡回は sleep の後に始まる。そこが期限を過ぎるなら巡回に入らず、ここで
         # 打ち切る。期限後に始めた巡回は 1 件も照会できず、同じ分類をもう一度出すだけ。
         if [ $(( SECONDS + interval )) -ge "${deadline}" ]; then
@@ -435,6 +450,11 @@ selftest() {
     MOCK_EXHAUSTED="${work}/exhausted"
     # 応答に時間がかかる相手を模す秒数。ファイルがあればその秒数だけ待ってから応答する。
     MOCK_DELAY="${work}/delay"
+
+    # 待機を回す検査の安全網。いまある呼び出しはすべて上限を明示的に渡しているので、この
+    # 既定が効く検査は 1 つも無い。上限を渡さない検査が足されたときに、既定 (45 分) の
+    # まま回って「数秒で NG」が「呼び出し側のタイムアウト」へ化けるのを防ぐために置く。
+    export KSR_POLL_TIMEOUT_SECONDS=5
 
     local failures=0
 
@@ -662,6 +682,17 @@ selftest() {
     check "$([ "$(contains "${output}" "巡回 2 の分類")" = "1" ] && echo 0 || echo 1)" \
         "期限後に巡回を始めない (空回りの巡回を出さない)" "${output}"
 
+    # 期限を過ぎた状態で始まった待機は、照会を 1 件も送れない。ここで打ち切らないと、
+    # 同じ分類を出し続けるだけの巡回を上限の判定なしに回し続けることになる。
+    arrange '200 '
+    code=0
+    output="$(KSR_POLL_INTERVAL_SECONDS=0 KSR_POLL_TIMEOUT_SECONDS=0 wait_for_registries 1.2.3 2>&1)" || code=$?
+    check "$([ "${code}" != "0" ] && echo 0 || echo 1)" "照会を送れない巡回は待機を打ち切る" "exit ${code}"
+    check "$(contains "${output}" "照会を送れませんでした")" \
+        "打ち切りの理由に照会を送れなかったことが出る" "${output}"
+    check "$([ "$(calls | wc -l | tr -d ' ')" = "0" ] && echo 0 || echo 1)" \
+        "打ち切るまでに照会を送らない" "$(calls)"
+
     # 1 巡目で反映済みになった対象は 2 巡目で照会しない。台本は 2 巡目に Maven の
     # 応答を置いていないので、再照会すれば nuget 用の応答を食い違って消費する。
     arrange \
@@ -711,12 +742,27 @@ selftest() {
         "1 度も照会していない対象は未照会のまま残る" "${TARGET_STATE[0]}"
     check "$([ "${TARGET_STATE[1]}" = "${STATE_UNKNOWN_STATUS}" ] && [ "${TARGET_DETAIL[1]}" = "HTTP 503" ] && echo 0 || echo 1)" \
         "判定不能の対象は種別ごと残る" "${TARGET_STATE[1]} ${TARGET_DETAIL[1]}"
+    # 空回りした巡回は照会件数 0 として残る。待機側はこれを見て打ち切るので、数え方が
+    # 崩れると「照会を送れないまま回り続ける」実装が失敗として現れなくなる。
+    check "$([ "${POLL_PROBE_COUNT}" = "0" ] && echo 0 || echo 1)" \
+        "空回りした巡回の照会件数は 0" "${POLL_PROBE_COUNT}"
 
     # 期限までまだ余裕があれば、同じ入口から 4 対象すべてを照会する。
     POLL_DEADLINE=$(( SECONDS + 3600 ))
     poll_once 1.2.3
     check "$([ "$(calls | wc -l | tr -d ' ')" = "4" ] && echo 0 || echo 1)" \
         "期限内なら 4 対象すべてを照会する" "$(calls)"
+    check "$([ "${POLL_PROBE_COUNT}" = "4" ] && echo 0 || echo 1)" \
+        "照会した巡回の照会件数は送った数と一致する" "${POLL_PROBE_COUNT}"
+
+    # 照会を送った巡回の後にもう一度空回りさせ、件数が巡回ごとに 0 から数え直されることを
+    # 見る。持ち越すと 2 巡目以降は決して 0 にならず、空回りの受け皿が黙って死ぬ。
+    reset_targets
+    POLL_DEADLINE=$(( SECONDS - 1 ))
+    poll_once 1.2.3
+    check "$([ "${POLL_PROBE_COUNT}" = "0" ] && echo 0 || echo 1)" \
+        "空回りした巡回の照会件数は前の巡回を持ち越さない" "${POLL_PROBE_COUNT}"
+    POLL_DEADLINE=$(( SECONDS + 3600 ))
     check "$(not_exhausted)" "期限の検査で台本を使い切らない" "$(cat "${MOCK_EXHAUSTED}" 2>/dev/null)"
 
     # 1 巡目の途中で期限に達する場合。照会が済んだ対象はその結果を、まだ照会していない

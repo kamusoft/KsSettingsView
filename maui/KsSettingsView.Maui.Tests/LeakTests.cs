@@ -42,7 +42,13 @@ public sealed class LeakTests
         Assert.That(view.Root, Has.Count.EqualTo(1));
     }
 
-    /// <summary>外部がコレクションと Cell を保持していても facade と gateway は回収される。</summary>
+    /// <summary>
+    /// 外部がコレクションと Cell を保持していても facade と gateway は回収される。
+    /// </summary>
+    /// <remarks>
+    /// Section / Cell は所属している間 SettingsView / Section の論理子であり、MAUI 本体が
+    /// 子から親への参照を弱く保つことに依存する。論理子のまま回収されることをここで固定する。
+    /// </remarks>
     [Test]
     public void FacadeAndGatewayAreCollectedWhileExternalHoldsModel()
     {
@@ -62,7 +68,11 @@ public sealed class LeakTests
         Assert.That(cells, Does.Contain(cell));
     }
 
-    /// <summary>外部が内容を置いた CustomCell を保持していても facade と gateway は回収される。</summary>
+    /// <summary>
+    /// 外部が内容を置いた CustomCell を保持していても facade と gateway は回収される。
+    /// </summary>
+    /// <remarks>論理子であることへの依存は
+    /// <see cref="FacadeAndGatewayAreCollectedWhileExternalHoldsModel"/> と同じ。</remarks>
     [Test]
     public void FacadeAndGatewayAreCollectedWhileExternalHoldsCustomCell()
     {
@@ -182,6 +192,11 @@ public sealed class LeakTests
         SettingsViewHandler handler = new();
         view.Handler = handler;
         view.Handler = null;
+
+        // 回収を確かめる前に、Section / Cell が論理子として繋がっていることを固定する。
+        // 繋がっていない状態で回収されても、この検証は意味を持たない。
+        Assert.That(root[0].Parent, Is.SameAs(view), "Section は論理子である");
+        Assert.That(root[0].Cells[0].Parent, Is.SameAs(root[0]), "Cell は論理子である");
 
         return (new WeakReference(view), new WeakReference(scope.Gateway));
     }

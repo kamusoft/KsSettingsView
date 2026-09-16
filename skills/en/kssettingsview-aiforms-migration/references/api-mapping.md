@@ -42,7 +42,7 @@ The container types keep their names. The section header string is the one renam
 | `CellBase.Tapped` (public event on every cell) | `Tapped` event on `CommandCell`, `ButtonCell` and `CustomCell` only | Narrower than before: fires before `Command`. A `LabelCell`, `SwitchCell` or other cell whose `Tapped` you subscribed to has to become a `CommandCell` or a `CustomCell` |
 | `CellBase.OnTapped()` (internal) | Not provided | Only reachable if you derived from `CellBase` and called or overrode it; raise taps through `Command` or `Tapped` |
 
-Sections and cells are not part of the logical tree, so `{Binding}` resolves but `x:Reference` and `DynamicResource` do not reach them. Header / footer views and `CustomCell.Content` are the exception: they are connected and inherit their owner's `BindingContext`.
+A `Section` and a cell are logical children of what they belong to (`SettingsView` and `Section`). `{Binding}` resolves through the inherited `BindingContext`, and `DynamicResource` and `AppThemeBinding` are re-evaluated on any bindable property you set - they follow a swap of an ancestor's resources (page or app) and a change of the app's appearance. A section or cell taken out of its owner (`Parent` is null) no longer follows the old owner's resources. `x:Reference` is a separate mechanism that goes through the namescope: the one-time initial resolution reaches the cell, nothing after it does. Header / footer views and `CustomCell.Content` are logical children in the same way and inherit their owner's `BindingContext`.
 
 ## Translate the fields every cell shares
 
@@ -137,7 +137,7 @@ After, in KsSettingsView:
 </ks:Section>
 ```
 
-Cells generated from a collection need one more step. Each generated cell takes the item as its `BindingContext`, and `x:Reference` does not reach a cell, so the group's selected value has to be reachable from the item: give the item view model a property that reads and writes the value on its owner, and bind `SelectedValue` to that.
+Cells generated from a collection need one more step. Each generated cell takes the item as its `BindingContext`, so the group's selected value has to be reachable from the item: give the item view model a property that reads and writes the value on its owner, and bind `SelectedValue` to that.
 
 ```xml
 <ks:Section ItemsSource="{Binding ThemeOptions}">
@@ -307,7 +307,18 @@ That is what to watch for in a screen carrying a light palette in its XAML - `Ce
 </ks:SettingsView>
 ```
 
-The color properties on a cell are a different story - the `CellBase` colors such as `TitleColor`, and the colors a cell type owns by meaning such as `AccentColor`, `PlaceholderColor` and `AndroidButtonColor`. `AppThemeBinding` written on one of them is not re-evaluated when the appearance changes: a `Section` and a cell are data you hand to the control rather than elements of the page's tree, and a binding outside that tree is not told about the change. A screen that used `AppThemeBinding` on AiForms cells becomes a subscription to `Application.RequestedThemeChanged` that assigns the color of the current appearance to the property; the assignment reaches the row on display as a content update. Working code is in the kssettingsview-maui Skill's styling reference under "Change the colors of one cell with the appearance"; the screen-wide side of the same ground, for a screen written from scratch, is under "Follow the light and dark appearance" there.
+The color properties on a cell are written the same way - the `CellBase` colors such as `TitleColor`, and the colors a cell type owns by meaning such as `AccentColor`, `PlaceholderColor` and `AndroidButtonColor` all take `AppThemeBinding` directly. A `Section` and a cell are logical children of what they belong to, so a binding written there is re-evaluated when the appearance changes. The re-evaluated value reaches the row on display through the same path as a direct assignment to that property - a content update for that cell - and the row is redrawn rather than rebuilt. No subscription that reassigns the colors is needed. A screen that used `AppThemeBinding` on AiForms cells moves over on the prefix and member renames alone.
+
+```xml
+<ks:Section HeaderText="Account">
+  <ks:ButtonCell Title="Sign out"
+                 TitleColor="{AppThemeBinding Light=#FF3B30, Dark=#FF453A}" />
+</ks:Section>
+```
+
+Of the colors that arrive, the ones that change what you see are those the cell draws with on that platform (`AndroidButtonColor` has no effect on iOS, and the text colors of a `CustomCell` arrive without changing its look).
+
+Working code, including the `DynamicResource` form alongside it, is in the kssettingsview-maui Skill's styling reference under "Change the colors of one cell with the appearance"; the screen-wide side of the same ground, for a screen written from scratch, is under "Follow the light and dark appearance" there.
 
 ## Move the header and footer settings
 

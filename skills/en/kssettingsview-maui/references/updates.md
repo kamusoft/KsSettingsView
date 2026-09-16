@@ -164,5 +164,5 @@ Leaving the page keeps the settings tree you handed to the `SettingsView` - the 
 ## Rules the updates follow
 
 - Change the tree from the UI thread. The library does not marshal calls for you.
-- A `Section`, a `CellBase`, or a view used as a header, footer, or `CustomCell.Content` belongs to one place at a time. Placing the same instance twice throws `InvalidOperationException`, and the check runs before anything is applied, so the visible screen never ends up half updated. Recovery is to rebuild `Root`.
-- A collection that is not observable (a plain `List<T>`) is drawn once at the moment it is connected; later edits to it are not shown.
+- A `Section`, a `CellBase`, or a view used as a header, footer, or `CustomCell.Content` belongs to one place at a time. Placing the same instance twice throws `InvalidOperationException`: an instance another section or `SettingsView` still owns throws as you add it, and a duplicate inside one collection throws when the placement is drawn. The check runs before anything is applied, so the placement that was already there is untouched and the visible screen never ends up half updated. Recovery is to rebuild `Root`.
+- A collection that is not observable (a plain `List<T>`) is drawn once at the moment it is connected; later edits to it are not shown. Joining and leaving such a collection also counts at that moment, so an element you removed from it can be placed elsewhere only after a new collection is assigned to `Root` or `Cells`.

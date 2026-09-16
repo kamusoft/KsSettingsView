@@ -33,9 +33,12 @@ public class SettingsView : View
         propertyChanged: static (bindable, _, newValue) =>
         {
             SettingsView view = (SettingsView)bindable;
-            view._controller.SetRootCollection(newValue as IList<Section>);
-            view._sectionBinder.OnTargetChanged();
-            view._sectionContextBinder.OnTargetChanged();
+
+            // 論理上の所有を先に確定させてから変換経路へ渡す。他所に所有された Section の
+            // 差し込みは、表示を作り直す前にここで弾ける。
+            view.SectionOwnership.OnTargetChanged();
+            view.Controller.SetRootCollection(newValue as IList<Section>);
+            view.SectionBinder.OnTargetChanged();
         });
 
     /// <summary><see cref="RootHeaderText"/> のバッキングプロパティ。</summary>
@@ -45,7 +48,7 @@ public class SettingsView : View
         typeof(SettingsView),
         default(string),
         propertyChanged: static (bindable, _, newValue) =>
-            ((SettingsView)bindable)._controller
+            ((SettingsView)bindable).Controller
                 .SetRootAccessoryText(KsAccessoryTarget.RootHeader, (string?)newValue));
 
     /// <summary><see cref="RootFooterText"/> のバッキングプロパティ。</summary>
@@ -55,7 +58,7 @@ public class SettingsView : View
         typeof(SettingsView),
         default(string),
         propertyChanged: static (bindable, _, newValue) =>
-            ((SettingsView)bindable)._controller
+            ((SettingsView)bindable).Controller
                 .SetRootAccessoryText(KsAccessoryTarget.RootFooter, (string?)newValue));
 
     /// <summary><see cref="RootHeaderView"/> のバッキングプロパティ。</summary>
@@ -66,7 +69,6 @@ public class SettingsView : View
     /// 検査の失敗は validateValue の false 返却ではなく <see cref="InvalidOperationException"/> の
     /// 送出で表す。false を返すと BindableProperty 側が ArgumentException に変換してしまい、
     /// 多重配置が公開契約どおりの例外型で観測できなくなるため (maui/ADR-0022)。
-    /// 変換経路は SettingsView の構築時に作られるため、それより前に値が来ても検査は行わない。
     /// </remarks>
     public static readonly BindableProperty RootHeaderViewProperty = BindableProperty.Create(
         nameof(RootHeaderView),
@@ -75,12 +77,12 @@ public class SettingsView : View
         default(View),
         validateValue: static (bindable, value) =>
         {
-            ((SettingsView)bindable)._controller?
+            ((SettingsView)bindable).Controller
                 .EnsureRootAccessoryViewCanBePlaced(KsAccessoryTarget.RootHeader, value as View);
             return true;
         },
         propertyChanged: static (bindable, _, newValue) =>
-            ((SettingsView)bindable)._controller
+            ((SettingsView)bindable).Controller
                 .SetRootAccessoryView(KsAccessoryTarget.RootHeader, newValue as View));
 
     /// <summary><see cref="RootFooterView"/> のバッキングプロパティ。</summary>
@@ -92,12 +94,12 @@ public class SettingsView : View
         default(View),
         validateValue: static (bindable, value) =>
         {
-            ((SettingsView)bindable)._controller?
+            ((SettingsView)bindable).Controller
                 .EnsureRootAccessoryViewCanBePlaced(KsAccessoryTarget.RootFooter, value as View);
             return true;
         },
         propertyChanged: static (bindable, _, newValue) =>
-            ((SettingsView)bindable)._controller
+            ((SettingsView)bindable).Controller
                 .SetRootAccessoryView(KsAccessoryTarget.RootFooter, newValue as View));
 
     /// <summary><see cref="ItemsSource"/> のバッキングプロパティ。</summary>
@@ -107,7 +109,7 @@ public class SettingsView : View
         typeof(SettingsView),
         default(IEnumerable),
         propertyChanged: static (bindable, _, newValue) =>
-            ((SettingsView)bindable)._sectionBinder.SetItemsSource(newValue as IEnumerable));
+            ((SettingsView)bindable).SectionBinder.SetItemsSource(newValue as IEnumerable));
 
     /// <summary><see cref="ItemTemplate"/> のバッキングプロパティ。</summary>
     public static readonly BindableProperty ItemTemplateProperty = BindableProperty.Create(
@@ -116,7 +118,7 @@ public class SettingsView : View
         typeof(SettingsView),
         default(DataTemplate),
         propertyChanged: static (bindable, _, newValue) =>
-            ((SettingsView)bindable)._sectionBinder.SetItemTemplate(newValue as DataTemplate));
+            ((SettingsView)bindable).SectionBinder.SetItemTemplate(newValue as DataTemplate));
 
     /// <summary><see cref="TemplateStartIndex"/> のバッキングプロパティ。</summary>
     public static readonly BindableProperty TemplateStartIndexProperty = BindableProperty.Create(
@@ -125,7 +127,7 @@ public class SettingsView : View
         typeof(SettingsView),
         0,
         propertyChanged: static (bindable, _, newValue) =>
-            ((SettingsView)bindable)._sectionBinder.SetTemplateStartIndex((int)newValue));
+            ((SettingsView)bindable).SectionBinder.SetTemplateStartIndex((int)newValue));
 
     /// <summary><see cref="ListStyle"/> のバッキングプロパティ。</summary>
     /// <remarks>
@@ -138,7 +140,7 @@ public class SettingsView : View
         typeof(SettingsView),
         SettingsViewStyle.Classic,
         propertyChanged: static (bindable, _, newValue) =>
-            ((SettingsView)bindable)._controller.SetStyle((SettingsViewStyle)newValue));
+            ((SettingsView)bindable).Controller.SetStyle((SettingsViewStyle)newValue));
 
     /// <summary><see cref="SeparatorColor"/> のバッキングプロパティ。</summary>
     public static readonly BindableProperty SeparatorColorProperty = BindableProperty.Create(
@@ -481,18 +483,15 @@ public class SettingsView : View
         default(Color),
         propertyChanged: static (bindable, _, _) => ((SettingsView)bindable).ApplyTheme());
 
-    private readonly KsSettingsController _controller;
-    private readonly KsItemsSourceBinder<Section> _sectionBinder;
-    private readonly KsBindingContextBinder<Section> _sectionContextBinder;
+    private KsSettingsController? _controller;
+    private KsItemsSourceBinder<Section>? _sectionBinder;
+    private KsLogicalChildOwnership<Section>? _sectionOwnership;
 
     /// <summary>空の SettingsView を作る。</summary>
     public SettingsView()
     {
-        _controller = new KsSettingsController(this);
-        _sectionBinder = new KsItemsSourceBinder<Section>(this, () => Root);
-        _sectionContextBinder = new KsBindingContextBinder<Section>(this, () => Root);
-        _controller.SetRootCollection(Root);
-        _sectionContextBinder.OnTargetChanged();
+        SectionOwnership.OnTargetChanged();
+        Controller.SetRootCollection(Root);
     }
 
     /// <summary>設定画面を構成する Section 群。</summary>
@@ -901,7 +900,29 @@ public class SettingsView : View
     }
 
     /// <summary>変換経路。テストから内部状態を確かめるために公開する。</summary>
-    internal KsSettingsController Controller => _controller;
+    /// <remarks>
+    /// 初めて必要になった時点で作る。基底コンストラクタは暗黙 Style の Setter を適用するため、
+    /// プロパティの変更通知は SettingsView 自身のコンストラクタ本体より先に届きうる。遅延生成に
+    /// することで、その通知も他の変更と同じ経路で受け取れる (生成時期を待って取りこぼすと、
+    /// Style で指定した値が表示へ届かない)。
+    /// </remarks>
+    internal KsSettingsController Controller => _controller ??= new KsSettingsController(this);
+
+    /// <summary>items から Section を生成する器。生成時期の扱いは <see cref="Controller"/> と同じ。</summary>
+    private KsItemsSourceBinder<Section> SectionBinder =>
+        _sectionBinder ??= new KsItemsSourceBinder<Section>(this, () => Root);
+
+    /// <summary>Section を論理子として所有する器。生成時期の扱いは <see cref="Controller"/> と同じ。</summary>
+    private KsLogicalChildOwnership<Section> SectionOwnership =>
+        _sectionOwnership ??= new KsLogicalChildOwnership<Section>(this, () => Root, "Section");
+
+    /// <summary><see cref="Root"/> の今の内容と Section の論理上の所有を照合し直す。</summary>
+    /// <remarks>
+    /// 増減を通知しないコレクションを <see cref="Root"/> に置いた場合、設定した後の Section の
+    /// 出入りは所有の器へ届かない。表示へ変換する直前に変換経路がこれを呼ぶことで、表示へ送る
+    /// Section が論理子として繋がった状態に揃う。
+    /// </remarks>
+    internal void ReconcileSectionOwnership() => SectionOwnership.Reconcile();
 
     /// <summary>
     /// BindingContext の変更を <see cref="Root"/> の Section へ配る。
@@ -913,7 +934,7 @@ public class SettingsView : View
     protected override void OnBindingContextChanged()
     {
         base.OnBindingContextChanged();
-        _sectionContextBinder.Apply();
+        SectionOwnership.Apply();
     }
 
     /// <summary>
@@ -957,15 +978,15 @@ public class SettingsView : View
     {
         ArgumentNullException.ThrowIfNull(gatewayFactory);
 
-        if (_controller.Gateway is not { } connected)
+        if (Controller.Gateway is not { } connected)
         {
             connected = gatewayFactory();
-            _controller.Connect(connected, dispatcher);
+            Controller.Connect(connected, dispatcher);
         }
 
-        _controller.AttachInteractions();
-        _controller.AttachImages(images);
-        _controller.AttachViews(views);
+        Controller.AttachInteractions();
+        Controller.AttachImages(images);
+        Controller.AttachViews(views);
         return (T)connected;
     }
 
@@ -977,14 +998,14 @@ public class SettingsView : View
     /// accessory と Cell の内容の View の実体も Host と同じ寿命を持つ。Host が view 階層へ
     /// 取り付けられた後にここを通す。
     /// </remarks>
-    internal void ApplyHostViews() => _controller.ApplyHostViews();
+    internal void ApplyHostViews() => Controller.ApplyHostViews();
 
     /// <summary>Native Host だけを解放する。設定ツリーの状態と購読は維持される。</summary>
-    internal void ReleaseHost() => _controller.ReleaseHost();
+    internal void ReleaseHost() => Controller.ReleaseHost();
 
     /// <summary>現在の既定スタイルを写し取って表示へ反映する。</summary>
     /// <remarks>未接続の間は写しを持つだけで、接続時にまとめて適用される。</remarks>
-    private void ApplyTheme() => _controller.SetTheme(CreateThemeSnapshot());
+    private void ApplyTheme() => Controller.SetTheme(CreateThemeSnapshot());
 
     /// <summary>
     /// 既定スタイルを interop 境界へ運ぶ形へ写し取る。

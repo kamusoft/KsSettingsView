@@ -1,9 +1,9 @@
 ---
 type: concept
 title: MAUI facade (KsSettingsView.Maui) の公開契約
-description: XAML / C# から SettingsView を利用する facade 層の入口 — 経路・導入と前提・型名衝突・Root / Section / Cell 階層と header / footer・ItemsSource / ItemTemplate・禁止事項と現時点の範囲
+description: XAML / C# から SettingsView を利用する facade 層の入口 — 経路・導入と前提・型名衝突・Root / Section / Cell 階層と header / footer・ItemsSource / ItemTemplate・論理子と binding の解決・禁止事項と現時点の範囲
 tags: [maui, facade, xaml, handler]
-timestamp: 2026-09-04
+timestamp: 2026-09-16
 ---
 
 # MAUI facade (KsSettingsView.Maui) の公開契約
@@ -87,8 +87,9 @@ AndroidX Lifecycle の版競合 (NU1608 / NU1107) は ProjectReference 経路・
 
 ## してはいけないこと・制約
 
-Section / Cell は logical tree に載らない — `{Binding}` は BindingContext の明示配布で解決されるが、**`x:Reference` と `DynamicResource` は届かない**。accessory View と `CustomCell.Content` だけは例外で logical tree に接続される ([表示への反映と Host の寿命](maui-rendering-lifecycle.md))。
+`Section` / `Cell` は所属先 (`SettingsView` / `Section`) の**論理子**であり、`{Binding}` は継承 BindingContext で解決される。設定したどの BindableProperty でも `DynamicResource` と `AppThemeBinding` が再評価される — 祖先 (ページ / アプリ) の Resources を差し替えたとき、およびアプリの外観が変わったときに追随し、色を入れ直す購読コードは要らない。所属を解かれた Section / Cell (`Parent` が null) は旧所属先の Resources に追随しない。`x:Reference` は namescope 経由の別機構で、**一度きりの初期解決は届くが、その後の追随がない**。accessory View と `CustomCell.Content` も同じく論理子になる ([表示への反映と Host の寿命](maui-rendering-lifecycle.md))。
 
+- 同じ Section / Cell / View のインスタンスを複数箇所へ置かない — 他所に所有されたままの Section / Cell の追加は、その時点 (増減を通知しない素の `List<T>` では変換の時点) で `InvalidOperationException` になる ([表示への反映と Host の寿命](maui-rendering-lifecycle.md))
 - Binding assembly (`KsSettingsView.Binding.*`) の型を直接使わない — アプリ向け公開契約は facade のみ ([native-bridge.md](native-bridge.md) の禁止事項と同じ理由)
 - 内容サイズを問われる配置 ([表示への反映と Host の寿命](maui-rendering-lifecycle.md) の「配置の制約」) に Android で入力 Cell を置いて編集させない — フォーカス喪失の既知経路が残る
 
@@ -107,4 +108,4 @@ Section / Cell は logical tree に載らない — `{Binding}` は BindingConte
 - [MauiView の native 実体化機構](../architecture/view-materialization.md) — accessory View と `CustomCell.Content` を native へ届ける内部機構
 - [MAUI binding の Native artifact 統合](../architecture/binding-build-integration.md) — pack の構成と最低 OS 版のビルド時ガード
 
-決定の経緯: maui/ADR-0025 (3 パッケージ構成と名前空間 `KsSettingsView`)、maui/ADR-0008 (AiForms 互換公開面の方針)、maui/ADR-0009 (net10.0 TFM + テスト seam)、maui/ADR-0010 (AndroidX 版競合の binding 層吸収)、maui/ADR-0011 (per-type 輸送)、maui/ADR-0016〜0018 (accessory View の実体化・輸送・更新セマンティクス)、core/ADR-0023 (Header / Footer の表示トグル)
+決定の経緯: cross/ADR-0032 (Section / Cell を SettingsView の論理子にする)、maui/ADR-0025 (3 パッケージ構成と名前空間 `KsSettingsView`)、maui/ADR-0008 (AiForms 互換公開面の方針)、maui/ADR-0009 (net10.0 TFM + テスト seam)、maui/ADR-0010 (AndroidX 版競合の binding 層吸収)、maui/ADR-0011 (per-type 輸送)、maui/ADR-0016〜0018 (accessory View の実体化・輸送・更新セマンティクス)、core/ADR-0023 (Header / Footer の表示トグル)

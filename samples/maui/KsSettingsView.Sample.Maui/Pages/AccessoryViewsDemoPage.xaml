@@ -11,7 +11,7 @@
              xmlns:vm="clr-namespace:KsSettingsView.Sample.Maui.ViewModels"
              x:Class="KsSettingsView.Sample.Maui.Pages.AccessoryViewsDemoPage"
              x:DataType="vm:AccessoryViewsDemoViewModel">
-  <ks:SettingsView x:Name="Settings">
+  <ks:SettingsView x:Name="Settings" Style="{StaticResource SampleSettingsViewStyle}">
 
     <!-- ① list 全体の先頭と末尾に置く View。 -->
     <ks:SettingsView.RootHeaderView>

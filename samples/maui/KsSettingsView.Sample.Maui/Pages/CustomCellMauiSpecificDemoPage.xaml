@@ -14,7 +14,7 @@
              xmlns:vm="clr-namespace:KsSettingsView.Sample.Maui.ViewModels"
              x:Class="KsSettingsView.Sample.Maui.Pages.CustomCellMauiSpecificDemoPage"
              x:DataType="vm:CustomCellMauiSpecificDemoViewModel">
-  <ks:SettingsView x:Name="Settings">
+  <ks:SettingsView x:Name="Settings" Style="{StaticResource SampleSettingsViewStyle}">
 
     <!-- ① Content を別インスタンスへ差し替え、null との往復も通す。 -->
     <ks:Section HeaderText="① Content の差し替えと null 遷移"

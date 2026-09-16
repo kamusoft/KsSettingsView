@@ -47,6 +47,7 @@
 
     <ks:SettingsView x:Name="Settings"
                      Grid.Row="1"
+                     Style="{StaticResource SampleSectionDecorationSettingsViewStyle}"
                      ListStyle="{Binding Style}"
                      SectionMargin="{Binding Preset.SectionMargin}"
                      SectionCornerRadius="{Binding Preset.SectionCornerRadius}"

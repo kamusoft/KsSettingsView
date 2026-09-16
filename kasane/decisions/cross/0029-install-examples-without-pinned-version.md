@@ -1,7 +1,7 @@
 ---
 id: 0029
 title: インストール例は具体 version を持たず、最新版は GitHub Releases が示す
-status: proposed
+status: accepted
 date: 2026-09-11
 amends: 0022
 ---
@@ -10,10 +10,7 @@ amends: 0022
 
 README 2 枚と利用者向け Skill 8 枚のインストール例には、公開した version を具体的に書く運用があった。リリースのたびにオーナーがリリース PR (`develop` → `main`) の中で `scripts/release/set-readme-version.py <version>` を実行して置換 commit を積み、release workflow の validate job が `--check` で不一致を止める。
 
-この置換をリリース手順から消すため、workflow に書かせる案を検討したところ、書き戻し先がどこにも収まらないことが分かった。
-
-- `main` へ直接 commit する案は、`main` の branch protection が pull request を必須にしており必須 status check も 7 件あるため、`GITHUB_TOKEN` では push できない。`enforce_admins` が false なので管理者の PAT なら通るが、長命の書き込み資格情報を secrets に置くことになる (このリポジトリは NuGet publish を Trusted Publishing にして長命 key を持たない方針)。ruleset へ移して bypass actor を登録する道もあるが、リリース対象ブランチの保護に CI のバイパス経路を作ることになる。
-- `develop` だけに書き戻す案は protection に触れずに済むが、`main` が追いつくのは次のリリース PR なので、**既定ブランチが常に 1 リリースぶん古い version を示し続ける**。GitHub で README を読む利用者が見るのは `main` であり、手作業方式より正確さが下がる。
+この置換をリリース手順から消すため、workflow に書かせる案を検討したところ、書き戻し先がどこにも収まらないことが分かった。`main` へ直接 commit する案は、`main` の branch protection が pull request を必須にしており必須 status check も 7 件あるため、`GITHUB_TOKEN` では push できない。`enforce_admins` が false なので管理者の PAT なら通るが、長命の書き込み資格情報を secrets に置くことになる (このリポジトリは NuGet publish を Trusted Publishing にして長命 key を持たない方針)。ruleset へ移して bypass actor を登録する道もあるが、リリース対象ブランチの保護に CI のバイパス経路を作ることになる。`develop` だけに書き戻す案は protection に触れずに済むが、`main` が追いつくのは次のリリース PR なので、既定ブランチが常に 1 リリースぶん古い version を示し続ける。GitHub で README を読む利用者が見るのは `main` であり、手作業方式より正確さが下がる。
 
 そこで維持している仕組みの重さを見直した。`set-readme-version.py` (566 行) とその自己テスト、validate の検査 step、handbook のリリース手順 1 つ、AGENTS.md の例外規定を抱えて得ているのは「README の行をそのままコピーできる」ことだけである。
 
@@ -23,19 +20,37 @@ GitHub Releases を最新版の案内先にするにあたって、GitHub の pr
 
 ## Decision
 
-- **インストール例は具体 version を持たない。** version の位置にはプレースホルダ `{version}` を置く。
-  - プレースホルダは version として解決できない形にする。埋め忘れは依存解決の失敗として必ず露見し、古い version が黙って入ることがない。
-  - `<version>` は使わない。NuGet の例が XML 属性値 (`Version="..."`) であり、山括弧が XML を壊すため。
-- **最新版は GitHub Releases が示す。** README と利用者向け Skill は、インストール手順の位置から Releases への案内を持つ。
-  - これに伴い、[cross/ADR-0022](0022-user-docs-as-agent-skills.md) の「SKILL.md と references は Skill 外のファイル・URL への参照を持たない」という条項を、**URL の有無ではなく目的による境界**へ置き換える (オーナー判断 2026-09-11)。
-    - **持たない**: Skill 外の文書へ知識を委ねる参照。索引・兄弟 Skill・リポジトリ内部の文書への言及はスキル名のみとし、リンクを張らない (ADR-0022 の続く一文が定める扱いをそのまま引き継ぐ)。
-    - **持ってよい**: 操作の対象となる URL。配布座標、最新版の確認先、Issue の窓口、frontmatter の `source` がこれに当たる。
-    - この置き換えは、条項の字面が既に実態と合っていないことにも対応する。現行の Skill には配布リポジトリ・本体リポジトリ・`metadata.source` の URL が既に存在する。
-    - ADR-0022 の他の決定 (分割軸・2 言語のロックステップ・manifest・知識の正の所在など) は維持する。
-- **リリース時の置換機構を撤去する。** `scripts/release/set-readme-version.py`、validate job の検査 step、`ci.yml` の自己テスト呼び出し、handbook のリリース PR 手順、AGENTS.md / CLAUDE.md の例外規定を削除する。配布物の生成時にも置換しない (置換する対象が無い)。
-- **0.x の beta を配信している間、GitHub Release に prerelease の印を付けず、作成する Release を明示的に最新として指定する。** 印を外すだけでは最新の選別が自動判定に委ねられるため、案内先が意図した版に着地する保証にならない。 version 文字列の semver prerelease 表記 (`X.Y.Z-{alpha|beta|rc}.N`、cross/ADR-0019) は従来どおり維持する。既に発行済みの `0.1.0-beta.1` / `0.1.0-beta.2` の印も解除する。
-  - 0.x の beta を配信している間は、入力される version が alpha / beta / rc のいずれであっても同じ扱いとする。正式版を配信した後の扱いは Revisit When に従って決め直す。
-- prerelease の期間に SwiftPM で `exact:` を使う必要があること (cross/ADR-0019 の帰結) は、引き続き散文で案内する。
+### インストール例の version 表記
+
+**インストール例は具体 version を持たない。** version の位置にはプレースホルダ `{version}` を置く。
+
+- プレースホルダは version として解決できない形にする。埋め忘れは依存解決の失敗として必ず露見し、古い version が黙って入ることがない。
+- `<version>` は使わない。NuGet の例が XML 属性値 (`Version="..."`) であり、山括弧が XML を壊すため。
+
+**最新版は GitHub Releases が示す。** README と利用者向け Skill は、インストール手順の位置から Releases への案内を持つ。
+
+prerelease の期間に SwiftPM で `exact:` を使う必要があること (cross/ADR-0019 の帰結) は、引き続き散文で案内する。
+
+### Skill の外部参照の境界 (ADR-0022 の一部改訂)
+
+最新版の案内を Skill に持たせるため、[cross/ADR-0022](0022-user-docs-as-agent-skills.md) の「SKILL.md と references は Skill 外のファイル・URL への参照を持たない」という条項を、**URL の有無ではなく目的による境界**へ置き換える (オーナー判断 2026-09-11)。
+
+| 扱い | 対象 | 書き方 |
+|---|---|---|
+| 持たない | Skill 外の文書へ知識を委ねる参照 (索引・兄弟 Skill・リポジトリ内部の文書) | スキル名のみを言及し、リンクを張らない (ADR-0022 の続く一文が定める扱いをそのまま引き継ぐ) |
+| 持ってよい | 操作の対象となる URL (配布座標・最新版の確認先・Issue の窓口・frontmatter の `source`) | URL を書いてよい |
+
+この置き換えは、条項の字面が既に実態と合っていないことにも対応する。現行の Skill には配布リポジトリ・本体リポジトリ・`metadata.source` の URL が既に存在する。ADR-0022 の他の決定 (分割軸・2 言語のロックステップ・manifest・知識の正の所在など) は維持する。
+
+### 置換機構の撤去
+
+**リリース時の置換機構を撤去する。** `scripts/release/set-readme-version.py`、validate job の検査 step、`ci.yml` の自己テスト呼び出し、handbook のリリース PR 手順、AGENTS.md / CLAUDE.md の例外規定を削除する。配布物の生成時にも置換しない (置換する対象が無い)。
+
+### GitHub Release の prerelease 印
+
+**0.x の beta を配信している間、GitHub Release に prerelease の印を付けず、作成する Release を明示的に最新として指定する。** 印を外すだけでは最新の選別が自動判定に委ねられるため、案内先が意図した版に着地する保証にならない。version 文字列の semver prerelease 表記 (`X.Y.Z-{alpha|beta|rc}.N`、cross/ADR-0019) は従来どおり維持する。既に発行済みの `0.1.0-beta.1` / `0.1.0-beta.2` の印も解除する。
+
+0.x の beta を配信している間は、入力される version が alpha / beta / rc のいずれであっても同じ扱いとする。正式版を配信した後の扱いは Revisit When に従って決め直す。
 
 ## Alternatives Considered
 
@@ -62,4 +77,4 @@ GitHub Releases を最新版の案内先にするにあたって、GitHub の pr
 - 正式版 (`0.1.0` 等、semver の prerelease 表記を持たない版) を配信したとき — 正式版を最新のリリースに保ったまま候補版を出す必要が生じうるため、prerelease の印と最新の指定の扱いを決め直す
 - 利用者から「インストール例をそのままコピーしたい」という要望が繰り返し届いたとき — プレースホルダ方式が負わせている手間が、同期機構の重さを上回っていないかを見直す
 
-出典: kasane/changes/install-examples-and-release-notes/exploration.md (分離前は kasane/changes/backport-release-workflow-hardening/exploration.md)
+出典: kasane/changes/archive/2026-09-12-install-examples-and-release-notes/exploration.md (分離前は kasane/changes/archive/2026-09-12-backport-release-workflow-hardening/exploration.md)
