@@ -1,7 +1,7 @@
 ---
 type: concept
 title: スタイルの MAUI 表現 (Theme / CellStyle / ListStyle)
-description: native の Theme / CellStyle / style 切替が KsSettingsView.Maui でどう公開されるか — 個別プロパティへの展開・未設定の色と外観・Cell の色を外観ごとに変える手段・ListStyle・Section 装飾 4 属性・プロパティ一覧
+description: native の Theme / CellStyle / style 切替が KsSettingsView.Maui でどう公開されるか — 個別プロパティへの展開・未設定の色と外観・Cell の色を外観ごとに変える手段とマルチウィンドウでの制約・Style が当たる範囲・ListStyle・Section 装飾 4 属性・プロパティ一覧
 tags: [maui, facade, styling, theme]
 timestamp: 2026-09-16
 ---
@@ -38,6 +38,12 @@ timestamp: 2026-09-16
 ```
 
 届いた色のうち見た目を変えるのは、その Cell がその platform で描画に使う項目だけ (`AndroidButtonColor` は iOS で無効、`CustomCell` のテキスト系 style は silent no-op)。
+
+`AppThemeBinding` が見る外観は、対象が `VisualElement` かどうかで変わる。`Section` / `CellBase` は素の `Element` のため window ごとの外観を見ず `Application.Current` の外観に落ちる。窓ごとに異なる外観を持たせるマルチウィンドウ構成では、Cell / Section に書いた `AppThemeBinding` が窓の外観と食い違う色を引き得る ([cross/ADR-0032](../../../decisions/cross/0032-maui-section-cell-as-logical-children.md))。`SettingsView` の Theme プロパティは `View` なのでこの制約を受けない。
+
+## Style の扱い
+
+`SettingsView` は `View` なので XAML の `Style` (暗黙 Style・`x:Key` 付き明示 Style とも) が当たる。`Section` / `CellBase` は素の `Element` であり、暗黙 Style が当たる `NavigableElement` に届かないため **`Style` を設定できない** — 論理子であることと `Style` が当たることは別で、Cell / Section の見た目は上の「プロパティ一覧」のプロパティで指定する ([cross/ADR-0032](../../../decisions/cross/0032-maui-section-cell-as-logical-children.md) の前提)。設定 list 全体の style 切替は `Style` ではなく次の `ListStyle` が担う。
 
 ## ListStyle (設定 list の style 切替)
 
