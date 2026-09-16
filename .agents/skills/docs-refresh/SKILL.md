@@ -294,13 +294,13 @@ DOCS_REFRESH_DECISIONS=/tmp/docs-refresh-decisions.json \
 
 予定 manifest は検査の入力にすぎず、ディスクへの反映は Step 7 で行う (中断時に次回が同じ差分を再検出できる規律は変わらない)。Step 7 で書き出す `targets` / `excluded` は、この予定 manifest と同一内容にする。
 
-**環境変数はコマンド行にインラインで渡す。** エージェント実行環境ではコードブロックごとにシェルが分かれるため、`export` は次のブロックへ持続しない。予定 manifest を読ませたいスクリプト (下の対象一覧生成、6-①、6-②、6-③、6-④) はすべて、コマンド行の先頭に `DOCS_REFRESH_MANIFEST=/tmp/docs-refresh-manifest-planned.json` を付けて起動する。付け忘れると既定値のディスク manifest (旧状態) へ**エラーを出さずにフォールバックする**ので、ブロックごとに必ず書く。`--readme-only` 実行時は同じ要領で `DOCS_REFRESH_README_ONLY=1` も併記し、検査対象を `readmes` に絞る。
+**環境変数はコマンド行にインラインで渡す。** エージェント実行環境ではコードブロックごとにシェルが分かれるため、`export` は次のブロックへ持続しない。予定 manifest を読ませたいスクリプト (下の対象一覧生成、6-①、6-②、6-③、6-④) はすべて、コマンド行の先頭に `DOCS_REFRESH_MANIFEST=/tmp/docs-refresh-manifest-planned.json` を付けて起動する。付け忘れると既定値のディスク manifest (旧状態) へ**エラーを出さずにフォールバックする**ので、ブロックごとに必ず書く。`--readme-only` 実行時は同じ要領で `DOCS_REFRESH_README_ONLY=1` も併記し、検査対象を `readmes` に絞る。6-⑥ は manifest ではなく対象一覧ファイルを読むため、同じくコマンド行で `DOCS_REFRESH_TARGETS` を渡す (既定パスの衝突については 6-⑥ の注記)。
 
 検査対象ファイルの一覧も予定 manifest から導く:
 
 ```bash
 DOCS_REFRESH_MANIFEST=/tmp/docs-refresh-manifest-planned.json \
-  python3 .agents/skills/docs-refresh/scripts/targets-list.py > /tmp/docs-refresh-targets.txt
+  python3 .agents/skills/docs-refresh/scripts/targets-list.py > /tmp/docs-refresh-kssettingsview-targets.txt
 ```
 
 `targets` を en/ja に展開したものと `readmes` を 1 行 1 パスで書き出す。`--readme-only` 実行時は `DOCS_REFRESH_README_ONLY=1` も併記して起動する (対象一覧は `readmes` のみになる)。
@@ -354,7 +354,7 @@ DOCS_REFRESH_MANIFEST=/tmp/docs-refresh-manifest-planned.json \
 廃止 API・`docs/` への参照新設・openspec 参照を検出する:
 
 ```bash
-TARGETS=($(cat /tmp/docs-refresh-targets.txt))
+TARGETS=($(cat /tmp/docs-refresh-kssettingsview-targets.txt))
 if [ ${#TARGETS[@]} -eq 0 ]; then
   echo "検査対象が空です (manifest の targets / readmes を確認してから再実行)"
 else
@@ -375,21 +375,24 @@ fi
 #### 6-⑥ 内部リンク解決
 
 ```bash
-python3 .agents/skills/docs-refresh/scripts/link-resolution-check.py
+DOCS_REFRESH_TARGETS=/tmp/docs-refresh-kssettingsview-targets.txt \
+  python3 .agents/skills/docs-refresh/scripts/link-resolution-check.py
 ```
 
-未解決の相対リンク・欠落ファイルがあれば行が出る。無ければ `All internal links resolve`。対象一覧 (`/tmp/docs-refresh-targets.txt`) が空のときは検査せずその旨を出す (0 件を適合と誤読しないための空ガード)。
+未解決の相対リンク・欠落ファイルがあれば行が出る。無ければ `All internal links resolve`。対象一覧が空のときは検査せずその旨を出す (0 件を適合と誤読しないための空ガード)。一覧そのものを読めないときは標準エラーへ理由を出して exit 1 で終わる。
+
+> 対象一覧のパス注記: このスクリプトが読む一覧は `DOCS_REFRESH_TARGETS` で決まり、**未指定時の既定 `/tmp/docs-refresh-targets.txt` は姉妹リポジトリ (KsDialogs) の docs-refresh と共通**である。そのため本スキルは一覧をリポジトリ別の `/tmp/docs-refresh-kssettingsview-targets.txt` に置き、6-⑥ にはこの環境変数を必ず付けて渡す (KsDialogs 側は `docs-refresh-ksdialogs-targets.txt` を使う)。付け忘れて既定パスを読むと、姉妹リポジトリの残骸を検査して他所のファイル名で `MISSING` を並べるか、最悪の場合は本来の対象を一度も検査しないまま `All internal links resolve` を返す。一覧の置き場所を変えるなら、`targets-list.py` の出力先・6-⑤/6-⑦/6-⑧ の `cat` のパス・この環境変数をすべて同じ値に揃えること。
 
 #### 6-⑦ ローカル絶対パス・個体/個人/秘密の検査 (identity-lint)
 
 `skills/` は公開対象の成果物なので、Kasane 標準 lint の検査範囲に含める (`kasane/config.yaml` の `lint.identity.scope` に `skills` を登載済み)。
 
 ```bash
-if [ ! -s /tmp/docs-refresh-targets.txt ]; then
+if [ ! -s /tmp/docs-refresh-kssettingsview-targets.txt ]; then
   echo "検査対象が空です (manifest の targets / readmes を確認してから再実行)"
 else
-  python3 scripts/local-path-lint.py --paths $(cat /tmp/docs-refresh-targets.txt)
-  python3 scripts/identity-lint.py   --paths $(cat /tmp/docs-refresh-targets.txt)
+  python3 scripts/local-path-lint.py --paths $(cat /tmp/docs-refresh-kssettingsview-targets.txt)
+  python3 scripts/identity-lint.py   --paths $(cat /tmp/docs-refresh-kssettingsview-targets.txt)
 fi
 ```
 
@@ -404,7 +407,7 @@ fi
 公開識別子の正は [kasane/handbook/cross/public-identifiers.md](../../../kasane/handbook/cross/public-identifiers.md)。ecosystem ごとの表記規則 (SwiftPM は PascalCase、Android namespace は lowercase reverse-DNS、Android の artifact / project 名は lowercase でブランド名の内部にハイフンを入れない) を崩した表記を検出する:
 
 ```bash
-TARGETS=($(cat /tmp/docs-refresh-targets.txt))
+TARGETS=($(cat /tmp/docs-refresh-kssettingsview-targets.txt))
 if [ ${#TARGETS[@]} -eq 0 ]; then
   echo "検査対象が空です (manifest の targets / readmes を確認してから再実行)"
 else
