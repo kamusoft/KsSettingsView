@@ -87,5 +87,5 @@ Section の Root への所属、Cell の Section への所属が始まる時点�
 - マルチウィンドウで窓ごとに外観が異なる構成を公式に支えるとき
 
 ---
-出典: kasane/changes/archive/2026-09-16-maui-cell-appthemebinding-logical-child/exploration.md (論点 1〜4 の比較表と決定事項) / 同 design.md (Decision 1〜4 の採用案・理由・代替案) / kasane/changes/maui-appearance-change-tracking/exploration.md (spike ②-b の結果、2026-09-15) / 2026-09-15 ksn-explore での議論 (論点 1・2・4 の採用と SettingsView をまたぐ配置の例外化はオーナー判断)
+出典: kasane/changes/archive/2026-09-16-maui-cell-appthemebinding-logical-child/exploration.md (論点 1〜4 の比較表と決定事項) / 同 design.md (Decision 1〜4 の採用案・理由・代替案) / kasane/changes/archive/2026-09-17-maui-appearance-change-tracking/exploration.md (spike ②-b の結果、2026-09-15) / 2026-09-15 ksn-explore での議論 (論点 1・2・4 の採用と SettingsView をまたぐ配置の例外化はオーナー判断)
 関連: maui/ADR-0016 (論理所有と platform lease の寿命分離 — 本決定が Section / Cell に広げる型) / maui/ADR-0022 (View 配置プロパティの多重配置検査の時点 — 本決定が維持する契約)
