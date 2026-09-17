@@ -39,6 +39,7 @@
 - 初回の問い合わせ時点で `Bounds.Width` が実機で実際に 0 になるか、高さ変化が実際にアニメーションとして出る条件は、コードだけでは断定できていない。これを固定するテストも見つかっていない
 - iOS シミュレータ (iPhone 17 Pro) の自動確認では気づかれなかった (取得粒度の問題か、機種・幅の問題かは不明)
 - accessory (Header / Footer の View) も同じ wrapper を通るので、同種の初回高さのブレが起きるかは未検証 (利用側の観察では、iOS の解析設定ページのフッターに遅延・アニメーションは出ていない)
+- 競合する原因仮説 (2026-09-17、`kasane/changes/android-accessory-view-late-insert-animation` の探索より): CustomCell の content も初回配信には載らず `Loaded` 後に遅れて届く (`maui/KsSettingsView.Maui/Internals/KsSettingsController.cs:346-354`)。iOS は内容差し替えを `animatingDifferences: true` で適用するので、「無限幅での初回計測」ではなく「content の後着」でも同じ見え方になり得る。あちらの change が content も初回配信に間に合わせる形になった場合は、その後に再現確認をすると切り分けになる
 - 直し方は未検討
 
 ## UI 素材 (ui/references/ の一覧と注釈)
