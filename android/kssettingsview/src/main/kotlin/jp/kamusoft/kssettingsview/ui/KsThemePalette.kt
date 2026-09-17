@@ -6,9 +6,12 @@ import androidx.compose.ui.graphics.Color
  * ライブラリが所有する既定色の生値（light / dark の 2 セット）。
  *
  * 公開面にはロール名の `Theme` を返す [KsSettingsViewDefaults] の factory だけを出し、生値は本
- * パレットに閉じる。light は既存利用者の見た目を変えないための現行値、dark はライト側と同じ出所
- * （iOS の外観別システムパレットを不透明に近似した値）から採った対であり、iOS 側の dark 既定と
- * 同じ生値を置く（core/ADR-0030）。
+ * パレットに閉じる。light / dark は iOS の外観別システムパレットを不透明に近似した対であり、
+ * iOS 側の既定と同じ生値を置く（core/ADR-0030）。
+ *
+ * ただし Header / Footer の背景だけは両外観とも透明であり、何も指定しない Header / Footer の
+ * 領域には list 下地がそのまま見える。未指定の印（`Color.Unspecified`）とは別の値であることに
+ * 注意する — 透明は「解決済みの既定値」であり、未指定色の解決の仕組みを通らない。
  *
  * valueText / hintText / placeholder / Section の枠線色は本パレットに持たない。これらは他の
  * フィールドへのフォールバックか platform 既定に委ねる契約であり、外観で決まる既定値を持たない。
@@ -36,14 +39,14 @@ internal object KsThemePalette {
         /** `isEnabled = false` の文字。 */
         val disabledText: Color = Color(0xFF999999)
 
-        /** Header の背景。 */
-        val headerBackground: Color = Color(0xFFF2F2F7)
+        /** Header の背景。透明であり、下に敷かれた list 下地がそのまま見える。 */
+        val headerBackground: Color = Color.Transparent
 
         /** Header の文字。 */
         val headerText: Color = Color(0xFF6D6D72)
 
-        /** Footer の背景。 */
-        val footerBackground: Color = Color(0xFFF2F2F7)
+        /** Footer の背景。ライトの Header と同じく透明。 */
+        val footerBackground: Color = Color.Transparent
 
         /** Footer の文字。 */
         val footerText: Color = Color(0xFF6D6D72)
@@ -79,14 +82,14 @@ internal object KsThemePalette {
         /** `isEnabled = false` の文字。 */
         val disabledText: Color = Color(0xFF636366)
 
-        /** Header の背景。 */
-        val headerBackground: Color = Color(0xFF000000)
+        /** Header の背景。ライトと同じく透明。 */
+        val headerBackground: Color = Color.Transparent
 
         /** Header の文字。 */
         val headerText: Color = Color(0xFF8E8E93)
 
-        /** Footer の背景。 */
-        val footerBackground: Color = Color(0xFF000000)
+        /** Footer の背景。ダークの Header と同じく透明。 */
+        val footerBackground: Color = Color.Transparent
 
         /** Footer の文字。 */
         val footerText: Color = Color(0xFF8E8E93)

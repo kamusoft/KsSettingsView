@@ -5,6 +5,7 @@ import android.app.Application
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.res.Configuration
+import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.view.ContextThemeWrapper
 import java.lang.ref.WeakReference
@@ -120,6 +121,26 @@ internal fun Context.ksThemedContext(): Context {
 internal fun ViewGroup.ksThemedContext(): Context = context.ksThemedContext()
 
 /**
+ * 縦スクロールバーを持ち得る `RecyclerView`（設定リストと選択面の候補リスト）を生成するための
+ * Context を返す。
+ *
+ * 同梱テーマ（[ksThemedContext]）へ `recyclerViewStyle` のオーバーレイを重ねたもの。縦スクロール
+ * バーを描ける View にするための `android:scrollbars` は、`RecyclerView` が構築時に
+ * `recyclerViewStyle` から読む。属性を同梱テーマ自体へ置くと、同じテーマから作られる回転ホイール
+ * のようなリストにもスクロールバーが付くため、対象の生成箇所だけに重ねる。
+ *
+ * 実際に表示するかどうかは `Theme.scrollIndicatorVisible` が実行時に切り替える。本ラッパは
+ * 「スクロールバーを持ち得る View にする」ところまでを担う。
+ *
+ * ラップ元が同梱テーマ付き Context であることは変えていないので、`RecyclerView` 自身の属性解決は
+ * 従来どおりホストのテーマから隔離される（android/ADR-0020）。行や accessory の生成は親から
+ * [ksThemedContext] を解決し直す経路であり、本ラッパはそこでも素通りされる（[themeBaseContext]
+ * が [Activity] まで降り、キャッシュ済みの [KsThemedContext] が返る）。
+ */
+internal fun Context.ksScrollIndicatorContext(): Context =
+    ContextThemeWrapper(ksThemedContext(), R.style.ThemeOverlay_KsSettingsView_ScrollIndicator)
+
+/**
  * 利用者所有コンテンツ（[CustomCell] の content・`KsAnyView` 経由の利用者 View）を生成するための
  * Context を返す。
  *
@@ -128,3 +149,21 @@ internal fun ViewGroup.ksThemedContext(): Context = context.ksThemedContext()
  */
 internal fun Context.ksHostContext(): Context =
     if (this is KsThemedContext) baseContext else this
+
+/**
+ * 利用者所有コンテンツを生成するための Context を、行や accessory の親 View から求める。
+ *
+ * 行と accessory の親は内部 `RecyclerView` であり、その Context は同梱テーマをかぶせたラッパである。
+ * ラップ元は [themeBaseContext] が [Activity] まで降りた結果なので、そこから [ksHostContext] で
+ * 戻しても、ホストが `KsSettingsView` に渡した Context（ホストがテーマを与えるために被せたラッパ等）
+ * には戻らない。利用者の View が参照するテーマ属性はホストが与えたテーマで解決させる
+ * （android/ADR-0020）ため、親を辿って `KsSettingsView` 自身が受け取った Context を正とする。
+ *
+ * ライブラリ所有 UI の Context 解決（[ksThemedContext]）は中間ラッパを素通りしたままでよい。
+ * そちらはホストのテーマを参照しないので、ラップ元を [Activity] に寄せてテーマを保持する Context の
+ * 数を抑える利点だけが残る。
+ *
+ * `KsSettingsView` の外で単体の行を組み立てた場合は辿れないため、手元の Context から解決する。
+ */
+internal fun View.ksUserContentContext(): Context =
+    (findKsSettingsViewHost()?.context ?: context).ksHostContext()

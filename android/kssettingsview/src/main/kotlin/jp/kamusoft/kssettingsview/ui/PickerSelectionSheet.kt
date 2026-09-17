@@ -192,6 +192,7 @@ internal class PickerSheetRowViews(
  * @param initialSelectedIndices 複数選択モードの初期選択集合
  * @param maxSelectedNumber 複数選択の上限（`0` 以下で無制限）
  * @param sheetStyle 解決済みのスタイル値
+ * @param scrollIndicatorVisible 候補リストの縦スクロールバーを表示するか（開いた時点の Theme の値）
  * @param onSingleSelected 単一選択の確定 callback
  * @param onMultiConfirmed 複数選択の確定 callback
  */
@@ -204,6 +205,7 @@ internal class PickerSelectionSheet(
     initialSelectedIndices: Set<Int>,
     private val maxSelectedNumber: Int,
     private val sheetStyle: PickerSheetStyle,
+    private val scrollIndicatorVisible: Boolean,
     private val onSingleSelected: (Int) -> Unit,
     private val onMultiConfirmed: (Set<Int>) -> Unit,
 ) : BottomSheetDialog(hostContext.ksThemedContext()) {
@@ -252,8 +254,13 @@ internal class PickerSelectionSheet(
     /** ヘッダー右のスロット（確定ラベルの当たり判定を担う）。 */
     internal val confirmSlot: FrameLayout get() = headerView.confirmSlot
 
-    /** 候補リスト。 */
-    internal val listView: RecyclerView = SelfContainedRecyclerView(context)
+    /**
+     * 候補リスト。
+     *
+     * 設定リストと同じく縦スクロールバーを持ち得る Context から生成する。同じ選択面の中でも回転
+     * ホイールは対象外なので、ラップはこのリストの生成だけに掛ける。
+     */
+    internal val listView: RecyclerView = SelfContainedRecyclerView(context.ksScrollIndicatorContext())
 
     /**
      * 触覚フィードバックの実行経路。要求が受け付けられたかを返す。
@@ -336,6 +343,8 @@ internal class PickerSelectionSheet(
         listView.apply {
             layoutManager = LinearLayoutManager(context)
             adapter = itemsAdapter
+            // 縦スクロールバーの表示は、選択面を開いた時点の Theme の設定に従う。
+            isVerticalScrollBarEnabled = scrollIndicatorVisible
             // 最後の行までスクロールしきったときに下端の余白を確保する。
             clipToPadding = false
             setPadding(0, 0, 0, dp(LIST_PADDING_BOTTOM_DP))

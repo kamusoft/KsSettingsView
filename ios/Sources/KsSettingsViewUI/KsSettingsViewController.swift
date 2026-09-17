@@ -382,6 +382,7 @@ public final class KsSettingsViewController: UIViewController {
     public func applyTheme(_ theme: Theme) {
         self.currentTheme = theme
         applyBackgroundColor(theme: theme)
+        applyScrollIndicatorVisibility(theme: theme)
         // Section 装飾（余白・角丸・ボーダー・箱の塗り色）を layout へ反映する。
         // 余白は sectionProvider が、装飾値は decoration が読むため、双方を再評価させる。
         refreshSectionBoxAppearance()
@@ -420,6 +421,8 @@ public final class KsSettingsViewController: UIViewController {
         // （viewDidLoad での applyBackgroundColor までの間、`.systemBackground` で
         // 一瞬表示されるのを防ぐ）。
         cv.backgroundColor = currentTheme.backgroundColor
+        // Theme.scrollIndicatorVisible も背景色と同じく初期化時から反映する。
+        cv.showsVerticalScrollIndicator = currentTheme.scrollIndicatorVisible
         // AiForms 互換: スクロール時に編集中のキーボードを閉じる挙動を有効化する
         // （`EntryCell` 編集中にドラッグするとキーボードが自動的に閉じる）。
         cv.keyboardDismissMode = .onDrag
@@ -444,6 +447,8 @@ public final class KsSettingsViewController: UIViewController {
         applyFullSnapshot(root: root, animated: false)
         // Theme.backgroundColor を反映
         applyBackgroundColor(theme: currentTheme)
+        // Theme.scrollIndicatorVisible を反映（Store 接続時は resync で取り込んだ Theme が正）
+        applyScrollIndicatorVisibility(theme: currentTheme)
         // Section 単位の余白のうち list 端に接する分を反映
         applyListEdgeMargin()
     }
@@ -479,6 +484,14 @@ public final class KsSettingsViewController: UIViewController {
     private func applyBackgroundColor(theme: Theme) {
         guard let cv = self.collectionView else { return }
         cv.backgroundColor = theme.backgroundColor
+    }
+
+    /// `Theme.scrollIndicatorVisible` を `UICollectionView.showsVerticalScrollIndicator` に反映する。
+    ///
+    /// 設定リストは縦にしかスクロールしないため、横方向のインジケータは扱わない。
+    private func applyScrollIndicatorVisibility(theme: Theme) {
+        guard let cv = self.collectionView else { return }
+        cv.showsVerticalScrollIndicator = theme.scrollIndicatorVisible
     }
 
     // MARK: - レイアウト構築
@@ -1172,6 +1185,11 @@ public final class KsSettingsViewController: UIViewController {
             textColor: isFooter
                 ? currentTheme.footerTextColor
                 : currentTheme.headerTextColor,
+            // `Theme.headerBackgroundColor` / `Theme.footerBackgroundColor` をテキスト accessory の
+            // 領域全体へ塗る。
+            backgroundColor: isFooter
+                ? currentTheme.footerBackgroundColor
+                : currentTheme.headerBackgroundColor,
             // Header テキストは下端揃え（AiForms `TextHeaderView.SetVerticalAlignment(LayoutAlignment.End)` 既定）、
             // Footer テキストは上端揃え（AiForms `TextFooterView` 既定の TopAnchor 制約挙動）。
             verticalAlignment: isFooter ? .top : .bottom,
@@ -1200,6 +1218,11 @@ public final class KsSettingsViewController: UIViewController {
             accessoryText: accessory.flatMap(rootTextValue),
             accessoryView: accessory.flatMap(rootViewValue),
             textColor: currentTheme.headerTextColor,
+            // 背景色は Header / Footer それぞれの Theme 属性から解決する（文字色が headerTextColor を
+            // 流用するのと異なる点。背景色は Section accessory と同じ規則に揃える）。
+            backgroundColor: isFooter
+                ? currentTheme.footerBackgroundColor
+                : currentTheme.headerBackgroundColor,
             verticalAlignment: isFooter ? .top : .bottom,
             // Root も Section と同じく Theme.headerFont / footerFont を反映する。
             font: isFooter
@@ -1232,6 +1255,7 @@ public final class KsSettingsViewController: UIViewController {
         accessoryText: String?,
         accessoryView: KsAnyView?,
         textColor: UIColor,
+        backgroundColor: UIColor,
         verticalAlignment: AccessoryVerticalAlignment = .center,
         font: UIFont? = nil,
         extraContentInsets: UIEdgeInsets = .zero
@@ -1263,6 +1287,7 @@ public final class KsSettingsViewController: UIViewController {
             accessoryText: accessoryText,
             accessoryView: accessoryView,
             textColor: textColor,
+            backgroundColor: backgroundColor,
             verticalAlignment: verticalAlignment,
             font: font,
             extraContentInsets: extraContentInsets,
@@ -2118,6 +2143,9 @@ public final class KsSettingsViewController: UIViewController {
                 accessoryText: accessory.flatMap(rootTextValue),
                 accessoryView: accessory.flatMap(rootViewValue),
                 textColor: textColor,
+                backgroundColor: isFooter
+                    ? currentTheme.footerBackgroundColor
+                    : currentTheme.headerBackgroundColor,
                 verticalAlignment: verticalAlignment,
                 font: isFooter
                     ? Self.resolveFooterFont(theme: currentTheme)
@@ -2192,6 +2220,10 @@ public final class KsSettingsViewController: UIViewController {
                 textColor: isFooter
                     ? currentTheme.footerTextColor
                     : currentTheme.headerTextColor,
+                // 背景色も文字色と同じく Header / Footer で別の Theme 属性から解決する。
+                backgroundColor: isFooter
+                    ? currentTheme.footerBackgroundColor
+                    : currentTheme.headerBackgroundColor,
                 verticalAlignment: isFooter ? .top : .bottom,
                 font: isFooter
                     ? Self.resolveFooterFont(theme: currentTheme)
@@ -2219,7 +2251,8 @@ public final class KsSettingsViewController: UIViewController {
     /// テキスト accessory も専用の再利用 View 型を挟まず本関数を経由する。
     ///
     /// - テキスト accessory（`accessoryText != nil`）→ `applyAccessoryLabel` で UILabel +
-    ///   AutoLayout 制約により Header = 下端揃え / Footer = 上端揃え。
+    ///   AutoLayout 制約により Header = 下端揃え / Footer = 上端揃え。背景は `backgroundColor` で
+    ///   領域全体を塗る。
     /// - SwiftUI View（`KsAnyView.swiftUI`）→ `UIHostingConfiguration` を `contentConfiguration` に適用。
     /// - UIKit View（`KsAnyView.uiKit`）→ `contentView` に `addSubview` + 四辺制約。
     /// - いずれもなし → contentView をクリアして空表示。
@@ -2231,6 +2264,7 @@ public final class KsSettingsViewController: UIViewController {
         accessoryText: String?,
         accessoryView: KsAnyView?,
         textColor: UIColor,
+        backgroundColor: UIColor,
         verticalAlignment: AccessoryVerticalAlignment,
         font: UIFont? = nil,
         extraContentInsets: UIEdgeInsets = .zero,
@@ -2239,6 +2273,13 @@ public final class KsSettingsViewController: UIViewController {
         // 既存 subview をクリア（uiKit backing で addSubview したものを残さない）
         listCell.contentView.subviews.forEach { $0.removeFromSuperview() }
         listCell.contentConfiguration = nil
+
+        // 背景色はテキスト accessory にだけ塗る。View 形式の accessory は利用者の View が見た目を
+        // 決める領域なのでライブラリからは塗らず、再利用で前回の色を持ち越さないよう明示的に消す。
+        // 塗る範囲を cell 全体にするため inset / 角丸を持たない `.clear()` を土台に使う。
+        var background = UIBackgroundConfiguration.clear()
+        background.backgroundColor = (accessoryText != nil) ? backgroundColor : nil
+        listCell.backgroundConfiguration = background
 
         // テキスト accessory: UILabel + AutoLayout。
         if let text = accessoryText {

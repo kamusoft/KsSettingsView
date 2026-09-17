@@ -276,11 +276,15 @@ extension Theme {
             ? Theme.darkAccentColorValue
             : UIColor(red: 0.0, green: 0.478, blue: 1.0, alpha: 1.0)
     }
-    /// ヘッダ既定背景色。ライトはシステムグループ化背景に近い #F2F2F7、ダークは黒。
+    /// ヘッダ既定背景色。ライト・ダークとも透明で、何も指定しない Header には list 下地が見える。
+    ///
+    /// 他の既定色と同じ「両外観の値を持つ色」の形を保つ。これにより等価性の扱いも他の既定色と揃う
+    /// ため、この定数を明示した Theme は既定 Theme と等価になり、同じ見た目の固定色を明示した
+    /// Theme は等価にならない。
     public static let defaultHeaderBackgroundColor = UIColor { trait in
         trait.userInterfaceStyle == .dark
             ? Theme.darkHeaderBackgroundColorValue
-            : UIColor(red: 0.95, green: 0.95, blue: 0.97, alpha: 1.0)
+            : Theme.lightHeaderBackgroundColorValue
     }
     /// フッタ既定背景色（ヘッダ既定背景色と同じ）
     public static let defaultFooterBackgroundColor: UIColor = defaultHeaderBackgroundColor
@@ -344,7 +348,7 @@ extension Theme {
     public static let defaultHeaderFooterFont: UIFont = UIFont.preferredFont(forTextStyle: .footnote)
 }
 
-// MARK: - ダーク外観の既定色の生値（core/ADR-0030。Android の KsThemePalette.Dark と同じ値を置く）
+// MARK: - 既定色の生値（core/ADR-0030。ダーク外観の値と、両外観で透明な Header / Footer 背景。Android の KsThemePalette と同じ値を置く）
 
 extension Theme {
     /// `0xRRGGBB` 形式の値から不透明な `UIColor` を作る。
@@ -369,8 +373,10 @@ extension Theme {
     internal static let darkAccentColorValue = Theme.opaqueColor(0x0A84FF)
     /// ダークの `isEnabled = false` の文字色。
     internal static let darkDisabledTextColorValue = Theme.opaqueColor(0x636366)
-    /// ダークの Header 背景。
-    internal static let darkHeaderBackgroundColorValue = Theme.opaqueColor(0x000000)
+    /// ライトの Header 背景。透明であり、下に敷かれた list 下地がそのまま見える。
+    internal static let lightHeaderBackgroundColorValue = UIColor.clear
+    /// ダークの Header 背景。ライトと同じく透明。
+    internal static let darkHeaderBackgroundColorValue = UIColor.clear
     /// ダークの Footer 背景。
     internal static let darkFooterBackgroundColorValue = Theme.darkHeaderBackgroundColorValue
     /// ダークの Header 文字。

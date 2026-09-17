@@ -35,6 +35,12 @@ internal final class PickerListViewController: UITableViewController {
     /// 複数選択モードの選択集合（編集中状態を保持）。
     private var currentMulti: Set<Int>
 
+    /// 候補リストの縦スクロールインジケータを表示するか。
+    ///
+    /// 選択面を開いた時点の `Theme.scrollIndicatorVisible` を控える。表示中の選択面は後からの Theme
+    /// 差し替えに追従せず、次に開いたときから新しい値に従う。
+    private let scrollIndicatorVisible: Bool
+
     /// 初期スクロールを実施済みか（レイアウト確定後に 1 度だけ行うためのフラグ）。
     private var hasPerformedInitialScroll = false
 
@@ -71,6 +77,7 @@ internal final class PickerListViewController: UITableViewController {
         self.maxSelectedNumber = maxSelectedNumber
         let effective = EffectiveStyle(theme: theme, cellStyle: cellStyle)
         self.effective = effective
+        self.scrollIndicatorVisible = theme.scrollIndicatorVisible
         self.resolvedAccentColor = cellAccentColor ?? effective.accentColor
         self.onSingleDone = onSingleDone
         self.onMultiDone = onMultiDone
@@ -91,6 +98,8 @@ internal final class PickerListViewController: UITableViewController {
         // 面の背景・区切り線は呼び出し元 Cell の実効値を継承する。
         tableView.backgroundColor = effective.cellBackgroundColor
         tableView.separatorColor = effective.separatorColor
+        // 候補リストの縦スクロールインジケータも設定リストと同じ Theme の設定に従う。
+        tableView.showsVerticalScrollIndicator = scrollIndicatorVisible
 
         switch selectionMode {
         case .single:

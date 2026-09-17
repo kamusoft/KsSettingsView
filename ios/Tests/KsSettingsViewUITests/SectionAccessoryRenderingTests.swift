@@ -173,6 +173,7 @@ final class SectionAccessoryRenderingTests: XCTestCase {
             accessoryText: nil,
             accessoryView: KsAnyView.swiftUI { Text("v1") },
             textColor: .label,
+            backgroundColor: .clear,
             verticalAlignment: .center
         )
         XCTAssertNotNil(listCell.contentConfiguration, "1 回目: contentConfiguration が設定されていない")
@@ -185,6 +186,7 @@ final class SectionAccessoryRenderingTests: XCTestCase {
             accessoryText: nil,
             accessoryView: KsAnyView.uiKit { markerView },
             textColor: .label,
+            backgroundColor: .clear,
             verticalAlignment: .center
         )
         XCTAssertNil(listCell.contentConfiguration, "uiKit backing 適用時に contentConfiguration がクリアされていない")
@@ -199,6 +201,7 @@ final class SectionAccessoryRenderingTests: XCTestCase {
             accessoryText: nil,
             accessoryView: KsAnyView.swiftUI { Text("v3") },
             textColor: .label,
+            backgroundColor: .clear,
             verticalAlignment: .center
         )
         XCTAssertNotNil(listCell.contentConfiguration, "3 回目: SwiftUI backing 再適用時に contentConfiguration が再設定されていない")

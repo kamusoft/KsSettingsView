@@ -27,6 +27,7 @@ public sealed class InputCellsDemoViewModel : SampleViewModel
     private string _nickname = string.Empty;
     private string _displayName = string.Empty;
     private int? _themeIndex = 0;
+    private int? _prefectureIndex = 12;
     private IList<int> _notificationSelection = [0, 2];
     private SampleMember? _assignee = SampleMember.NotificationTargets[0];
     private IList<int> _memberSelection = [0, 2];
@@ -145,6 +146,32 @@ public sealed class InputCellsDemoViewModel : SampleViewModel
             if (Set(ref _themeIndex, value))
             {
                 LastEvent = $"テーマ → {FormatTheme(value)}";
+            }
+        }
+    }
+
+    /// <summary>PickerCell「都道府県」の選択候補。候補が画面に収まらない長さの選択面のデモ。</summary>
+    public IList<string> Prefectures { get; } =
+    [
+        "北海道", "青森県", "岩手県", "宮城県", "秋田県", "山形県",
+        "福島県", "茨城県", "栃木県", "群馬県", "埼玉県", "千葉県",
+        "東京都", "神奈川県", "新潟県", "富山県", "石川県", "福井県",
+        "山梨県", "長野県", "岐阜県", "静岡県", "愛知県", "三重県",
+        "滋賀県", "京都府", "大阪府", "兵庫県", "奈良県", "和歌山県",
+        "鳥取県", "島根県", "岡山県", "広島県", "山口県", "徳島県",
+        "香川県", "愛媛県", "高知県", "福岡県", "佐賀県", "長崎県",
+        "熊本県", "大分県", "宮崎県", "鹿児島県", "沖縄県",
+    ];
+
+    /// <summary>PickerCell「都道府県」の選択位置。</summary>
+    public int? PrefectureIndex
+    {
+        get => _prefectureIndex;
+        set
+        {
+            if (Set(ref _prefectureIndex, value))
+            {
+                LastEvent = $"都道府県 → {FormatPrefecture(value)}";
             }
         }
     }
@@ -345,6 +372,12 @@ public sealed class InputCellsDemoViewModel : SampleViewModel
     private string FormatTheme(int? index)
         => index is int position && position >= 0 && position < Themes.Count
             ? Themes[position]
+            : "(未選択)";
+
+    /// <summary>選択位置に対応する都道府県名。未選択・範囲外では "(未選択)"。</summary>
+    private string FormatPrefecture(int? index)
+        => index is int position && position >= 0 && position < Prefectures.Count
+            ? Prefectures[position]
             : "(未選択)";
 
     /// <summary>選択位置の並びに対応する通知種別名。未選択では "(未選択)"。</summary>

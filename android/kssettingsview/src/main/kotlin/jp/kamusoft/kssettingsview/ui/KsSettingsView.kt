@@ -32,8 +32,9 @@ import java.time.LocalDate
 /**
  * この View を載せている [KsSettingsView] を親方向へ辿って返す（見つからなければ `null`）。
  *
- * 行の ViewHolder から、表示中の選択面を預ける先を解決するために使う。`KsSettingsView` の外で
- * 単体の行を組み立てた場合は `null` になり、そのときは表示継続の対象にならない。
+ * 行の ViewHolder から、表示中の選択面を預ける先と、利用者所有コンテンツへ渡す Context（ホストが
+ * `KsSettingsView` に渡したもの）を解決するために使う。`KsSettingsView` の外で単体の行を組み立てた
+ * 場合は `null` になり、そのときは表示継続の対象にならず、Context は手元のものから解決される。
  */
 internal fun View.findKsSettingsViewHost(): KsSettingsView? {
     var current: View? = this
@@ -72,8 +73,21 @@ public class KsSettingsView @JvmOverloads constructor(
     attrs: AttributeSet? = null,
 ) : FrameLayout(context, attrs) {
 
-    /** 内部 RecyclerView。 */
-    private val recyclerView: RecyclerView = RecyclerView(context).apply {
+    /**
+     * 内部 RecyclerView。
+     *
+     * ライブラリ所有の chrome なので同梱テーマをかぶせた Context から生成する（android/ADR-0020）。
+     * 生成に使う Context はスクロールバーを持つリスト用のもので、`recyclerViewStyle` 経由で
+     * `android:scrollbars="vertical"` を渡す。これを通さないと [Theme.scrollIndicatorVisible] を
+     * `true` にしてもスクロールバーが描かれない。
+     *
+     * この View は生成時の Context を持ち続け、外観（夜間モード）が切り替わっても作り直さない。
+     * 作り直すと adapter とスクロール位置を失うためである。構築時に Context のテーマから解決される
+     * もののうち、スクロールバーの drawable は [applyScrollbarThumbForAppearance] が外観の切り替えで
+     * 差し替える。overscroll の edge effect の色だけは差し替え口が無いため、Activity が作り直される
+     * までは構築時の外観のまま残る。
+     */
+    private val recyclerView: RecyclerView = RecyclerView(context.ksScrollIndicatorContext()).apply {
         layoutParams = LayoutParams(
             LayoutParams.MATCH_PARENT,
             LayoutParams.MATCH_PARENT,
@@ -125,6 +139,14 @@ public class KsSettingsView @JvmOverloads constructor(
 
     /** [internalTheme] を解決した時点の外観がダークだったか。再解決の要否判定に使う。 */
     private var resolvedDarkTheme: Boolean = false
+
+    /**
+     * スクロールバーの thumb をどの外観で解決したか（ダークなら `true`）。
+     *
+     * `null` は「このプロパティがまだ値を持たない」ことを表す。`RecyclerView` が自分の Context から
+     * 解決する thumb の外観をここでは前提にせず、最初の反映で必ず引き直して値を確定させる。
+     */
+    private var scrollbarThumbDarkTheme: Boolean? = null
 
     /** Store 購読の Job。`onDetachedFromWindow` で cancel する。 */
     private var storeCollectJob: Job? = null
@@ -282,6 +304,50 @@ public class KsSettingsView @JvmOverloads constructor(
         headerAdapter.theme = internalTheme
         footerAdapter.theme = internalTheme
         recyclerView.setBackgroundColor(internalTheme.backgroundColor.toArgb())
+        applyScrollIndicatorVisible(internalTheme)
+    }
+
+    /**
+     * [Theme.scrollIndicatorVisible] を内部 RecyclerView の縦スクロールバーに反映する。
+     *
+     * 設定リストは縦にしかスクロールしないため、横スクロールバーは扱わない。
+     */
+    private fun applyScrollIndicatorVisible(theme: Theme) {
+        recyclerView.isVerticalScrollBarEnabled = theme.scrollIndicatorVisible
+        applyScrollbarThumbForAppearance()
+    }
+
+    /**
+     * スクロールバーの thumb を現在の外観で解決し直す。
+     *
+     * `RecyclerView` は構築時の Context を持ち続けるため、Activity を再生成しないホストで夜間モードが
+     * 切り替わっても、構築時に解決された thumb はそのまま残る。現在の外観で組み直された同梱テーマ付き
+     * Context から引き直して差し替える。
+     *
+     * 解決済みの外観を覚えておき、変化したときだけ引き直す。Theme の差し替えのたびに解決すると、
+     * 外観が変わっていなくても drawable を作り直すことになる。
+     *
+     * すでにスクロールバーの描画状態を持つ `RecyclerView` だけを対象にする。`View` の thumb の setter は
+     * 描画状態ごと作るため、`android:scrollbars` が届いていない View に代入すると、スクロールバーを
+     * 持たないはずの View が描けるようになってしまう。表示できる View にするのは生成時の Context の
+     * 役目であり、ここはその外観を追わせるだけに留める。
+     */
+    private fun applyScrollbarThumbForAppearance() {
+        // 描画状態が無い（= 生成時の Context がスクロールバー用の style を運んでいない）なら何もしない。
+        if (recyclerView.verticalScrollbarThumbDrawable == null) return
+        val darkTheme = context.isKsDarkAppearance()
+        if (scrollbarThumbDarkTheme == darkTheme) return
+        val attrs = intArrayOf(android.R.attr.scrollbarThumbVertical)
+        val typed = context.ksThemedContext().obtainStyledAttributes(attrs)
+        val thumb = try {
+            typed.getDrawable(0)
+        } finally {
+            typed.recycle()
+        }
+        // 解決できなかったときは構築時の thumb を残す。null を入れるとスクロールバーが消える。
+        if (thumb == null) return
+        scrollbarThumbDarkTheme = darkTheme
+        recyclerView.verticalScrollbarThumbDrawable = thumb
     }
 
     override fun onAttachedToWindow() {
@@ -629,6 +695,7 @@ public class KsSettingsView @JvmOverloads constructor(
         headerAdapter.theme = theme
         footerAdapter.theme = theme
         recyclerView.setBackgroundColor(theme.backgroundColor.toArgb())
+        applyScrollIndicatorVisible(theme)
         if (themeChanged) {
             // 表示中の行へ再 bind を促す。`themeBacking` をここで直接書き換えるため、この後に
             // Store の `theme` StateFlow が同じ値を流しても `theme` setter の同値スキップに阻まれ、
@@ -855,6 +922,7 @@ public class KsSettingsView @JvmOverloads constructor(
         footerAdapter.theme = theme
         // Theme.backgroundColor を RecyclerView に反映する
         recyclerView.setBackgroundColor(theme.backgroundColor.toArgb())
+        applyScrollIndicatorVisible(theme)
         notifyThemeChangedToAdapters()
         // ItemDecoration を新 Theme で再構築（separator 色等の反映）
         applyDecoration(style)

@@ -67,6 +67,7 @@ internal class PickerCellViewHolder(
             initialSelectedIndices = cell.selectedIndices,
             maxSelectedNumber = cell.maxSelectedNumber,
             sheetStyle = PickerSheetStyle.from(cell, theme, effective),
+            scrollIndicatorVisible = theme.scrollIndicatorVisible,
             onSingleSelected = { index -> cell.onSelectionChanged?.invoke(index) },
             onMultiConfirmed = { indices -> cell.onMultiSelectionChanged?.invoke(indices) },
         ).showAnchoredTo(views.root)

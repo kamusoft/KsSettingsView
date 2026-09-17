@@ -196,7 +196,7 @@ internal class SectionAnyViewAccessoryViewHolder(view: FrameLayout) : RecyclerVi
         fun create(parent: ViewGroup): SectionAnyViewAccessoryViewHolder {
             // container の中身は利用者所有の View なので、ホストの Context のまま生成する
             // （利用者 View のテーマ属性はホストのテーマで解決させる。android/ADR-0020）。
-            val ctx = parent.context.ksHostContext()
+            val ctx = parent.ksUserContentContext()
             val container = createAccessoryContainer(ctx)
             return SectionAnyViewAccessoryViewHolder(container)
         }
@@ -271,7 +271,7 @@ internal class RootAnyViewAccessoryViewHolder(view: FrameLayout) : RecyclerView.
         fun create(parent: ViewGroup): RootAnyViewAccessoryViewHolder {
             // container の中身は利用者所有の View なので、ホストの Context のまま生成する
             // （利用者 View のテーマ属性はホストのテーマで解決させる。android/ADR-0020）。
-            val ctx = parent.context.ksHostContext()
+            val ctx = parent.ksUserContentContext()
             val container = createAccessoryContainer(ctx)
             return RootAnyViewAccessoryViewHolder(container)
         }
