@@ -3,7 +3,7 @@ type: concept
 title: スタイルの MAUI 表現 (Theme / CellStyle / ListStyle)
 description: native の Theme / CellStyle / style 切替が KsSettingsView.Maui でどう公開されるか — 個別プロパティへの展開・未設定の色と外観・Cell の色を外観ごとに変える手段とマルチウィンドウでの制約・Style が当たる範囲・ListStyle・Section 装飾 4 属性・プロパティ一覧
 tags: [maui, facade, styling, theme]
-timestamp: 2026-09-16
+timestamp: 2026-09-17
 ---
 
 # スタイルの MAUI 表現 (Theme / CellStyle / ListStyle)
@@ -17,6 +17,8 @@ timestamp: 2026-09-16
 ## 未設定の色と外観 (ライト / ダーク)
 
 色プロパティを設定しない (`null`) とき、facade は未指定のまま Native へ渡し、Native のライブラリ既定に任せる。Native の既定色は 3 platform 共通の light / dark セットで端末の外観に追随するため、色を設定しない SettingsView はダーク端末でも判読できる既定色で描かれ、facade は外観を受け取る型やイベントを持たない ([スタイル解決](../../core/styling/style-resolution.md) の「既定色と外観の追随」)。設定した色は外観で変わらず、`null` に戻すと Native の未指定表現へ写されて Theme または外観既定へ継承する。
+
+`ScrollIndicatorVisible` と `HeaderBackgroundColor` / `FooterBackgroundColor` も、未指定 (`null`) は未指定のまま native へ渡り、facade は自前の既定値で埋めない。そのため見た目は native の契約にそのまま追随する — 未指定または `true` なら両 platform で設定 list と PickerCell の候補リストに縦スクロールバーが出て (`false` で両方消える。回転ホイールには出ない)、背景色が未指定なら text の Header / Footer の領域に list 下地が見える ([core/ADR-0032](../../../decisions/core/0032-header-footer-background-default-transparent.md))。指定した背景色は両 platform とも同じ範囲 (text 形式の Section / Root Header・Footer) に描かれる ([設定 list の外観](../../core/styling/list-appearance.md))。
 
 両外観の色を自分で決める手段は、どの段でも XAML の `AppThemeBinding` で共通する。段によって違うのは、再評価された値が表示へ届く経路だけである ([core/ADR-0031](../../../decisions/core/0031-explicit-cell-color-appearance-contract-and-beta-breaking-change.md)、[cross/ADR-0032](../../../decisions/cross/0032-maui-section-cell-as-logical-children.md))。
 

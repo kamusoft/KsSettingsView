@@ -3,7 +3,7 @@ type: reference
 title: iOS Native Host の利用と更新境界
 description: SettingsRootStore と KsSettingsViewController を使って UIKit の設定画面を構築・更新・拡張する方法
 tags: [ios, uikit, host, public-api]
-timestamp: 2026-09-06
+timestamp: 2026-09-17
 ---
 
 この文書は、iOS の Native API で設定画面を組み込むための公開 API 利用契約と責務境界を整理した reference である。読むと、`SettingsRootStore` と `KsSettingsViewController` の役割、表示後の更新方法、独自 Cell の登録方法、既定色が外観 (ライト / ダーク) に追随する仕組みが分かる。SwiftUI から使う場合は [iOS SwiftUI Bridge と宣言 DSL](ios-swiftui.md) を参照する。設定ツリーと差分の型自体は [SettingsRoot・Section・Cell の設定ツリー](../../core/core-model/settings-tree.md) と [SettingsRootDiff による構造変更](../../core/core-model/structural-changes.md) を先に読む。
@@ -123,6 +123,8 @@ Cell 個別高さは Theme の行高さより優先され、iOS の最終行高�
 Theme 属性の未指定時に使われるライブラリ既定値は、`Theme` の public static 定数として公開される。利用者は「既定へ戻す」「既定値を基準に派生値を作る」用途でこれらを参照できる。
 
 色の定数は `UIColor(dynamicProvider:)` で light / dark の対を持つ dynamic な `UIColor` で、`Theme()` の既定引数が同じ定数を参照する (`init` の `cellBackgroundColor` の既定は `defaultCellBackgroundColor`)。描画側は `UIColor` を渡すだけで UIKit の trait 解決に乗るため、既定 Theme・利用者の dynamic 色とも外観の切替で描き直される。`defaultCellTitleColor` (`.label`) / `defaultCellDescriptionColor` (`.secondaryLabel`) / `defaultButtonTitleColor` (`.systemBlue`) はシステム色のまま。生値と 3 platform の対応は [スタイルの所有と実効値解決](../../core/styling/style-resolution.md) の「既定色と外観の追随」。既定と同じ生値を固定色で明示した Theme は既定 Theme と等価ではなく、その色はダークでも変わらない (dynamic な既定定数を明示した Theme は既定と等価)。
+
+`defaultHeaderBackgroundColor` / `defaultFooterBackgroundColor` は両外観の値がどちらも透明だが、他の既定色定数と同じ「両外観の値を持つ `UIColor`」の形を保つ。このため等価性の扱いも他の既定色と同じで、固定の透明色 (`.clear`) を明示した Theme は見た目が同じでも既定 Theme と等価ではない ([core/ADR-0032](../../../decisions/core/0032-header-footer-background-default-transparent.md))。
 
 Modern の Section 装飾の Border は CGColor を layer に置くため、装飾 view が最後に適用した `UIColor` を保持して外観の trait 変更で `layer.borderColor` を再解決する。利用者が dynamic な `sectionBorderColor` を渡しても、Border だけが古い外観で残らない。
 

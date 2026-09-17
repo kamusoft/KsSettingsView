@@ -3,7 +3,7 @@ type: concept
 title: スタイルの所有と実効値解決
 description: UI 層が Theme と CellStyle を所有し、platform の描画値へ段階的に解決する共通規則。ライブラリ所有の light / dark 既定色と未指定色の外観解決、明示した CellStyle 色 / Cell 固有色の外観契約と platform 別の切替手段、ライブラリ既定色を中立に保ち AiForms 互換色は利用側が設定する方針を含む
 tags: [styling, theme, cell-style, native-types, dark-appearance]
-timestamp: 2026-09-16
+timestamp: 2026-09-17
 ---
 
 この文書は、iOS / Android の Theme と CellStyle の所有境界と解決順を説明する。読むと、Core に style を置かない理由、Cell 固有値・CellStyle・Theme・ライブラリ既定・platform default の優先順位、既定色が外観 (ライト / ダーク) にどう追随するか、Theme 更新の境界が分かる。
@@ -68,13 +68,13 @@ platform default の最終段は各 platform の標準的な既定値へ解決�
 
 Android で同梱テーマから解決される値 (chrome・選択面の配色、EntryCell の placeholder の既定 `textColorHint`、Switch のオフ色) のライト / ダークと、ライブラリ既定色の light / dark セットの選択は、どちらも端末の夜間モードとアプリの uiMode 制御 (Activity の Configuration 上書き・`AppCompatDelegate.setDefaultNightMode` 等) で決まる。ホストが XML テーマで Dark 系を明示するだけの指定は反映されない。Cell title の既定は同梱テーマの `textColorPrimary` から動的に解決せず、ライブラリ既定の値 (ライト #000000 / ダーク #FFFFFF) を使う。
 
-利用者所有コンテンツ (CustomCell の content・`KsAnyView` 経由の利用者 View) は隔離の対象外で、従来どおりホストの Context (ホストテーマ) で解決される。
+利用者所有コンテンツ (CustomCell の content・`KsAnyView` 経由の利用者 View) は隔離の対象外で、従来どおりホストの Context (ホストテーマ) で解決される。利用者へ渡る Context はホストが `KsSettingsView` に渡した Context そのもの (同じインスタンス) で、設定 list 自身を同梱テーマ付きの Context から生成していてもこの保証は変わらない — ホストがテーマを被せた Context を渡せば、利用者所有コンテンツはそのテーマの属性を解決できる。
 
 ### 既定色と外観の追随
 
 Theme を渡さない、または一部だけ上書きしたときの既定色は、3 platform ともアプリ外観 (iOS のライト / ダーク、Android の夜間モード) に追随する。ライブラリが light / dark の 2 セットの既定色を所有し、未指定の色だけを描画時に現在の外観のセットへ解決する。明示指定された色は外観で変えない ([core/ADR-0030](../../../decisions/core/0030-theme-dark-appearance-library-owned-light-dark-defaults.md))。
 
-light セットは外観追随を入れる前からの固定値、dark セットは iOS の dark システムパレットを不透明に近似した値で、3 platform で同じ生値を置く。生値の正はコード (iOS `Theme.swift` の既定色定数と dark 定数、Android `KsThemePalette`) で、3 面同値であることはテストが定数比較で固定する。
+light セットは外観追随を入れる前からの固定値、dark セットは iOS の dark システムパレットを不透明に近似した値で、3 platform で同じ生値を置く。Header / Footer 背景だけは例外で、両セットとも透明である ([core/ADR-0032](../../../decisions/core/0032-header-footer-background-default-transparent.md))。生値の正はコード (iOS `Theme.swift` の既定色定数と dark 定数、Android `KsThemePalette`) で、3 面同値であることはテストが定数比較で固定する。
 
 | 色ロール (Theme のフィールド) | light | dark |
 |---|---|---|
@@ -84,7 +84,7 @@ light セットは外観追随を入れる前からの固定値、dark セット
 | 選択中背景 `selectedColor` | #D9D9D9 | #2C2C2E |
 | accent `cellAccentColor` | #007AFF | #0A84FF |
 | 無効時文字 `disabledTextColor` | #999999 | #636366 |
-| Header / Footer 背景 `headerBackgroundColor` / `footerBackgroundColor` | #F2F2F7 | #000000 |
+| Header / Footer 背景 `headerBackgroundColor` / `footerBackgroundColor` | 透明 | 透明 |
 | Header / Footer 文字 `headerTextColor` / `footerTextColor` | #6D6D72 | #8E8E93 |
 | Cell title `cellTitleColor` | #000000 (iOS は `.label`) | #FFFFFF (iOS は `.label`) |
 | Cell description `cellDescriptionColor` | #6D6D72 (iOS は `.secondaryLabel`) | #8E8E93 (iOS は `.secondaryLabel`) |

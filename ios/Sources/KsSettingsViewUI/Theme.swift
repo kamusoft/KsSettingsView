@@ -348,7 +348,7 @@ extension Theme {
     public static let defaultHeaderFooterFont: UIFont = UIFont.preferredFont(forTextStyle: .footnote)
 }
 
-// MARK: - 既定色の生値（core/ADR-0030。ダーク外観の値と、両外観で透明な Header / Footer 背景。Android の KsThemePalette と同じ値を置く）
+// MARK: - 既定色の生値（core/ADR-0030。ダーク外観の値と、両外観で透明な Header / Footer 背景 (core/ADR-0032)。Android の KsThemePalette と同じ値を置く）
 
 extension Theme {
     /// `0xRRGGBB` 形式の値から不透明な `UIColor` を作る。

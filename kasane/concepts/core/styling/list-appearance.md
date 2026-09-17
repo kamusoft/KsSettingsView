@@ -3,7 +3,7 @@ type: concept
 title: 設定 list の外観と補助領域
 description: Classic・Modern style と Section 装飾4属性・Section・Root Header / Footer の配置原則
 tags: [styling, list, section, accessory, modern]
-timestamp: 2026-09-06
+timestamp: 2026-09-17
 ---
 
 # 設定 list の外観と補助領域
@@ -45,7 +45,9 @@ text の Section Header は領域の下側、Section Footer は上側へ寄せ�
 
 Header 高さは accessory 種別 (text / view) に依らず、正の `Section.headerHeight`、正の `Theme.headerHeight`、内容に応じた自動高さの順で解決する (core/ADR-0021)。公開契約で意味が定まる値はどちらも `-1` (自動) と正値だけで、0 やその他の負値の挙動は契約しない。高さ解決は存在判定 (上記 AND) の後に適用し、高さ指定は Header の存在を作らない (core/ADR-0023)。固定高さのとき内容がはみ出す分は clip し、view accessory の hosted view は Header 領域いっぱいに配置する (両 platform 対称)。`headerHeight` は Header 専用で Footer には適用しない。
 
-Header / Footer の色は Android では Theme の `headerTextColor` / `headerBackgroundColor` と `footerTextColor` / `footerBackgroundColor` から解決する。iOS は text 色を Theme から解決する一方、Header / Footer 領域の背景に `headerBackgroundColor` / `footerBackgroundColor` を適用しない — 既知の platform 非対称として、背景色の共通反映は保証しない。
+Header / Footer の色は両 platform とも Theme の `headerTextColor` / `headerBackgroundColor` と `footerTextColor` / `footerBackgroundColor` から解決する。背景色を塗る範囲は text 形式の Section / Root Header・Footer の領域で、View 形式の Header / Footer にはライブラリの背景色を適用しない (hosted view の見た目は利用者の所有物)。text 形式から View 形式へ差し替えた領域に以前の背景色を残さず、Theme の差し替えと外観切替には identity を維持したまま追従する。
+
+背景色の既定は両 platform・両外観とも透明で、何も指定しない Header / Footer の領域には list 下地がそのまま見える ([core/ADR-0032](../../../decisions/core/0032-header-footer-background-default-transparent.md))。移植元ライブラリ (AiForms.SettingsView) の既定と同じである。
 
 Header / Footer の既定文字色は両 platform とも同じ light / dark の対 (#6D6D72 / #8E8E93) で外観に追随し、Cell の description の既定 (iOS はシステム色 `.secondaryLabel`、Android は同じ生値の対) とは別のロールとして扱う。light 側の値は移植元ライブラリ (AiForms.SettingsView) 互換の gray をそのまま残したものである。いずれも `Theme.headerTextColor` / `footerTextColor` の既定値であり、利用者が明示した値で上書きできる ([スタイルの所有と実効値解決](style-resolution.md) の「既定色と外観の追随」)。
 
@@ -77,6 +79,14 @@ Classic では `sectionMargin` の**上下成分のみ**を適用し、leading /
 Classic の separator: Section 最初の Cell 上端と最後の Cell 下端は全幅、Section 内の中間 separator は左から16pt / 16dp inset する。icon の有無で inset を変えない。Android は `Theme.separatorColor` で1物理 pixel の細線を描き、Root Header / Footer と Section Accessory 行を対象に含めない。iOS も main list (設定 list 本体) の separator 色を `Theme.separatorColor` から解決する (モーダルのピッカー選択画面も同色)。両 platform とも separator は `Theme.separatorColor` の解決値で描く。既定はライブラリの light / dark セット (#C8C7CC / #38383A) で外観に追随し、明示指定した固定色は外観で変わらない ([スタイルの所有と実効値解決](style-resolution.md) の「既定色と外観の追随」)。
 
 Modern の separator: Section 先頭 Cell の上端と末尾 Cell の下端には描かない (Container の縁が区切りを兼ねる)。中間 separator は leading 側を Classic と同じ inset 規則 (Container の内側 leading 端基準)、trailing 側にも同量の inset を Container の内側 trailing 端から取る**左右対称** — Container の両端まで引くと Container が分断されて見えるためで、Classic の「trailing は端まで」とは意図的に異なる。色は `Theme.separatorColor`、icon の有無で inset を変えない。Cell が自身の背景を塗っても separator は視認できる (描画順で保証)。
+
+## スクロールバー
+
+設定 list の縦スクロールバーの表示有無は `Theme.scrollIndicatorVisible` (既定 `true`) に両 platform とも従う。反映は最初の表示時と表示中の Theme 差し替え時 (Host への直接適用・Store 経由・宣言 UI の再評価のどの経路でも) の両方で行い、表示だけが変わる差し替えでは行を作り直さず、スクロール位置も変えない。設定 list は縦にしかスクロールしないため、横スクロールバーは対象にしない。
+
+PickerCell の選択面の候補リストも、選択面を開いた時点の同じ値に従う ([PickerCell の選択面](../cells/picker-selection-surface.md))。回転ホイールの選択面 (数値・日付・時刻) と、利用者所有コンテンツ (CustomCell の内容・View 形式の Header / Footer) の中のリストは対象外で、スクロールバーの有無を変えない。
+
+Android のスクロールバーのつまみの外観は同梱テーマ由来で、Activity を再生成しない夜間モード変更にも追従する。list 端の overscroll 効果の色は、生成済みの list を維持したまま差し替える手段が platform に無いため追従を保証しない (構築時の外観のまま残り得る)。
 
 ## 保証すること
 
@@ -110,3 +120,4 @@ Modern の separator: Section 先頭 Cell の上端と末尾 Cell の下端に�
 - [ios/ADR-0003 — Modern は insetGrouped を廃し自前の Section 装飾で実現する](../../../decisions/ios/0003-modern-self-drawn-section-decoration.md)
 - [core/ADR-0021 — Header の固定高さは accessory 種別に依らず適用する](../../../decisions/core/0021-header-height-applies-regardless-of-accessory-kind.md)
 - [core/ADR-0023 — Header / Footer の表示は可視トグルと内容有無の AND で判定する](../../../decisions/core/0023-accessory-visibility-and-composition.md)
+- [core/ADR-0032 — Header / Footer 背景色の既定は両外観とも透明にする](../../../decisions/core/0032-header-footer-background-default-transparent.md)

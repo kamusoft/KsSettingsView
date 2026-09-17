@@ -3,7 +3,7 @@ type: reference
 title: Android Native Host の利用と更新境界
 description: SettingsRootStore と KsSettingsView を使って Android View の設定画面を構築・更新・拡張する方法
 tags: [android, views, host, public-api]
-timestamp: 2026-09-15
+timestamp: 2026-09-17
 ---
 
 この文書は、Android View から KsSettingsView を使うための公開 API 利用契約と責務境界を整理した reference である。読むと、`SettingsRootStore` と `KsSettingsView` の役割、表示後の更新方法、独自 Cell の登録方法、ライブラリ既定色 (`KsSettingsViewDefaults`) と夜間モードへの追随、ホスト側に前提が無いこと (テーマ・Activity 型) が分かる。Jetpack Compose から使う場合は [Android Compose Bridge と宣言 DSL](android-compose.md) を参照する。設定ツリーと差分の型自体は [SettingsRoot・Section・Cell の設定ツリー](../../core/core-model/settings-tree.md) と [SettingsRootDiff による構造変更](../../core/core-model/structural-changes.md) を先に読む。
@@ -111,7 +111,7 @@ Theme・CellStyle の色フィールドと Cell 固有の色引数 (`ButtonCell.
 | 外観に合わせた既定 Theme を明示的に得る | `KsSettingsViewDefaults.theme(darkTheme: Boolean)`。Compose では `@Composable theme()` (`isSystemInDarkTheme()` で選ぶ。DSL 入口の `theme` の既定値式) |
 | 両外観の色を自分で決める | 構築時に light / dark の Theme・CellStyle・Cell 固有色を選んで渡す (View は Configuration の uiMode、Compose は `isSystemInDarkTheme()`)。明示した色は表示中の外観変更で変わらない — Activity を再生成しないホストでは `onConfigurationChanged` で `replaceCell` / `replaceCells` により差し替える (下記) |
 
-factory が返す `Theme` は list 下地・Cell 背景・separator・選択色・accent・disabled 文字・Header / Footer の文字と背景の 10 色を持ち、Cell title / description・valueText / hintText・placeholder・`sectionBorderColor` は `Unspecified` のまま描画時に決まる (title / description は現在の外観の既定、valueText → title・hintText → accent のフォールバック、placeholder は同梱テーマの hint 色、Border は透明)。factory は端末の外観と同じ側を選んで渡す前提で、端末がライトのまま `darkTheme()` を渡すと title / description だけ端末側の外観の既定になる (固定したい場合は返された `Theme` を `copy` して明示する)。
+factory が返す `Theme` は list 下地・Cell 背景・separator・選択色・accent・disabled 文字・Header / Footer の文字と背景の 10 色を持ち (Header / Footer の背景は両セットとも透明で、`Unspecified` ではない — [core/ADR-0032](../../../decisions/core/0032-header-footer-background-default-transparent.md))、Cell title / description・valueText / hintText・placeholder・`sectionBorderColor` は `Unspecified` のまま描画時に決まる (title / description は現在の外観の既定、valueText → title・hintText → accent のフォールバック、placeholder は同梱テーマの hint 色、Border は透明)。factory は端末の外観と同じ側を選んで渡す前提で、端末がライトのまま `darkTheme()` を渡すと title / description だけ端末側の外観の既定になる (固定したい場合は返された `Theme` を `copy` して明示する)。
 
 `Classic` は Cell へ1物理 pixelの hairline を描き、Section 内の中間線だけ左16dp inset とする。`Modern` は Theme の Section 装飾4属性 (`sectionMargin` 等。未指定はライブラリ既定) に従い、Section の Cell のみを角丸背景・Border の Container でまとめ、Section H/F 行は Container の外に置く ([設定 list の外観と補助領域](../../core/styling/list-appearance.md))。Style の切替は model、stable ID、Registry を変えない。Theme の変更時は現在の Style の装飾も再構築される。
 

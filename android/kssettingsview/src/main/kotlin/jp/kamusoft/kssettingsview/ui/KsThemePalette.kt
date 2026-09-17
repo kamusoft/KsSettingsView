@@ -10,8 +10,9 @@ import androidx.compose.ui.graphics.Color
  * iOS 側の既定と同じ生値を置く（core/ADR-0030）。
  *
  * ただし Header / Footer の背景だけは両外観とも透明であり、何も指定しない Header / Footer の
- * 領域には list 下地がそのまま見える。未指定の印（`Color.Unspecified`）とは別の値であることに
- * 注意する — 透明は「解決済みの既定値」であり、未指定色の解決の仕組みを通らない。
+ * 領域には list 下地がそのまま見える（core/ADR-0032）。未指定の印（`Color.Unspecified`）とは
+ * 別の値であることに注意する — 透明は「解決済みの既定値」であり、未指定色の解決の仕組みを
+ * 通らない。
  *
  * valueText / hintText / placeholder / Section の枠線色は本パレットに持たない。これらは他の
  * フィールドへのフォールバックか platform 既定に委ねる契約であり、外観で決まる既定値を持たない。

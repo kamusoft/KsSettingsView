@@ -3,7 +3,7 @@ type: concept
 title: PickerCell の選択面
 description: PickerCell の行タップで開く選択面のプラットフォーム共通契約 (確定・破棄・上限・スタイル継承・初期スクロール) と意図的なプラットフォーム差
 tags: [cells, picker, selection-surface, styling]
-timestamp: 2026-08-28
+timestamp: 2026-09-17
 ---
 
 # PickerCell の選択面
@@ -27,7 +27,7 @@ timestamp: 2026-08-28
 
 - 提示: `isEnabled` な PickerCell の行タップで開く。`isEnabled = false` はタップ無効。`items` が空でも候補0件の選択面を提示する (行タップを無反応にしない)
 - タイトル: `pageTitle ?: title` で解決する
-- 候補: `items` (`PickerItem` 列 — [入力 Cell](input-cells.md)) の全項目を順序どおり列挙し、主表示は `text`。`subText` を持つ行は主表示の下に副表示を持つ**2行構成**で描画する (全項目が subText なしの選択面は1行構成のまま)。空文字列の subText は縁で「なし」へ正規化済みのため、選択面は非 nil / null 判定だけで行構成を決める。行高・Android の折り畳み高さ計算・初期スクロールは2行行高 (subText 混在は行ごとの可変行高) に追随する
+- 候補: `items` (`PickerItem` 列 — [入力 Cell](input-cells.md)) の全項目を順序どおり列挙し、主表示は `text`。`subText` を持つ行の構成は下記「候補行の2行構成」
 - 単一選択: `selectedIndex` の項目に選択印。候補タップで `onSelectionChanged(index)` を1回発火して閉じる (作業状態は持たない)
 - 複数選択: 開いた時点の `selectedIndices` をコピーして**作業状態** (確定まで選択面内に閉じた一時的な選択集合) を作る。候補タップは作業状態のトグルのみで callback を発火せず、確定操作で `onMultiSelectionChanged(作業状態の集合)` を1回発火して閉じる
 - 非確定 dismiss: 上表「非確定の閉じ方」のどの経路でも callback を発火せず作業状態を破棄する。次に開いたときはその時点のモデル値から作り直す
@@ -35,6 +35,10 @@ timestamp: 2026-08-28
 - モデル値を正規化しない: 範囲外の `selectedIndex` には選択印を表示せず、`selectedIndices` の範囲外 index は作業状態・確定 callback・上限判定の件数に保持される。帰結として「画面上のチェック数より上限判定の件数が多い」状態が起こり得る (見えないチェックで上限に達する) — これはバグではなく契約である
 - 初期スクロール: 選択中の項目 (複数選択は選択中の最小の有効 index) が見える状態で開く。位置の精度はプラットフォーム差 — iOS は可視領域の中央付近 (端部はクランプ許容)、Android は見える位置 (位置までは規定しない)。選択なし・範囲外のみの場合は先頭から表示する
 - アクセシビリティ: 各候補行は表示名 (副表示があればそれも含む) と選択状態をアクセシビリティ機構 (TalkBack / VoiceOver 等) へ公開し、トグル後は公開状態も更新する
+
+### 候補行の2行構成
+
+`subText` を持つ行は主表示の下に副表示を持つ**2行構成**で描画する (全項目が subText なしの選択面は1行構成のまま)。空文字列の subText は縁で「なし」へ正規化済みのため、選択面は非 nil / null 判定だけで行構成を決める。行高・Android の折り畳み高さ計算・初期スクロールは2行行高 (subText 混在は行ごとの可変行高) に追随する。
 
 ## スタイル継承
 
@@ -47,6 +51,7 @@ timestamp: 2026-08-28
 | 選択面・候補行の背景 | 実効セル背景色 (CellStyle → Theme) |
 | 候補行の区切り線 | `Theme.separatorColor` |
 | タップ時のハイライト | `Theme.selectedColor` |
+| 候補リストの縦スクロールバー | 選択面を開いた時点の `Theme.scrollIndicatorVisible` (既定 `true`)。表示中の選択面はその後の Theme 差し替えに追従せず、次に開いたときから新しい値に従う |
 | 選択印 (チェックマーク) | `PickerCell.accentColor` → `CellStyle.accentColor` → `Theme.cellAccentColor` の3段解決 |
 
 選択印は Checkbox / Radio の形をどちらのプラットフォームでも使わず、「accent 色の単純なチェックマーク」という見え方の意図を揃える。実現手段はプラットフォームごとに異なる (Android は既存の `KsSimpleCheckView` を再利用した Canvas 描画、iOS は UIKit 標準の `.checkmark` accessory に tint を適用)。
