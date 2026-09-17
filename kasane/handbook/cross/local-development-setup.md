@@ -5,7 +5,7 @@ applies-when:
   tasks: [環境構築, Sample の起動, MAUI Sample への native 変更の配備確認, Sample の外観 (ダーク) 確認, 本体のビルド・lint, 消費者検証の実行, 本体 source へのステップイン]
 title: ローカル開発環境と Sample の実行
 description: iOS・Android・MAUI のローカル環境設定、Sample の起動と外観 (ライト / ダーク) の切り替え、本体モジュールのビルド / lint コマンド、消費者検証 (verification/) の手元実行、本体 source へのステップイン手順
-timestamp: 2026-09-06
+timestamp: 2026-09-18
 ---
 
 # ローカル開発環境と Sample の実行
@@ -160,6 +160,8 @@ dotnet build samples/maui/KsSettingsView.Sample.Maui/KsSettingsView.Sample.Maui.
 接続先が 1 台だけなら `AdbTarget` は省略できる。`adb devices` で対象を確認する。
 
 Debug 構成は Fast Deployment でアセンブリを apk に埋め込まないため、`adb install` した apk 単体では古い内容が走る (または `No assemblies found` で異常終了する)。配備は常に上の `-t:Run` (または `-t:Install`) で行い、`adb install` を代替にしない。
+
+native (Kotlin) を変更した回の配備では、C# のアセンブリ (Fast Deployment で別配備される) と apk 内の Kotlin (aar) の世代がずれたまま「成功」することがある。ずれると、C# 側だけが新しい契約で動き、Native 側が古い挙動のまま残る (例: Host の取り付け前に渡した Root の header / footer だけが表示されない)。native の変更を実機・Emulator で確認するとき、および確認後の端末を人に渡すときは、Sample・facade (`maui/KsSettingsView.Maui`)・Android binding (`maui/android/KsSettingsView.Binding.Android`) の `bin` / `obj` を捨ててフルビルドしてから `-t:Run` で配備し、配備後に対象の画面を 1 度開いて確かめる。世代のずれた端末で見た「再現しない」「直った」「壊れた」は判断材料にならない。
 
 ## 本体をビルドする
 

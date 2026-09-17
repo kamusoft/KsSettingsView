@@ -463,7 +463,8 @@ public final class KsSettingsViewController: UIViewController {
     /// 取り込む対象は Store が現在状態として保持するもの、すなわち設定ツリーの構造・
     /// Cell 内容・Section の accessory・Theme に限る。Root Header / Footer は UI 層
     /// プロパティであり Store の現在状態に含まれない（core/ADR-0005）ため対象外で、
-    /// その反映は所有者（呼び出し側）が view load 後に適用する責務とする。
+    /// view load 前に届いた分は `applyBeforeViewLoad` が受け取った時点でプロパティへ
+    /// 控えている。
     ///
     /// Store 接続中は Store の Theme を正とする。Store 未接続（root 直接指定）の場合は
     /// 何もせず、初期化時に受け取った root / theme をそのまま使う。
@@ -1336,8 +1337,8 @@ public final class KsSettingsViewController: UIViewController {
     /// - Parameter diff: 適用する Diff
     public func applyDiff(_ diff: SettingsRootDiff) {
         guard let dataSource = self.dataSource else {
-            // viewDidLoad 前の呼び出しは内部 root のみ更新し、UI 反映は viewDidLoad 内で行う。
-            updateInternalRoot(for: diff)
+            // viewDidLoad 前の呼び出しは内部状態のみ更新し、UI 反映は viewDidLoad 内で行う。
+            applyBeforeViewLoad(diff)
             return
         }
 
@@ -1378,11 +1379,37 @@ public final class KsSettingsViewController: UIViewController {
         refreshSectionUnitPresentation()
     }
 
-    /// `viewDidLoad` 前に Diff を受け取った場合の内部 root 補正。
-    /// `Full` のみ root 自体を差し替える（他ケースは初期 root 構築前なので無視）。
-    private func updateInternalRoot(for diff: SettingsRootDiff) {
-        if case .full(let newRoot) = diff {
+    /// `viewDidLoad` 前に Diff を受け取った場合の内部状態の更新。
+    ///
+    /// 構造・Cell 内容・Section の accessory・Theme は Store が現在状態として保持するため、
+    /// ここで個々の Diff を取り込まなくても view load 時の `resyncFromStore` で収束する
+    /// （`Full` のみ、Store 未接続でも root を追随させるために差し替える）。
+    ///
+    /// Root Header / Footer は Store の現在状態に含まれず（core/ADR-0005）、通知も再生されない
+    /// ため、受け取った時点で Host のプロパティへ控えることでしか view load 時の構築に間に合わ
+    /// ない。控えた値は `loadView` の `makeLayout` と `viewDidLoad` の
+    /// `applyListEdgeMargin` が読み、最初の表示に含まれる。
+    ///
+    /// プロパティの didSet が呼ぶレイアウト再構築・可視 supplementary の再描画は
+    /// `collectionView` が未生成の間は何もしないため、値を控えること自体が view load を
+    /// 誘発しない。
+    private func applyBeforeViewLoad(_ diff: SettingsRootDiff) {
+        switch diff {
+        case .full(let newRoot):
             self.root = newRoot
+
+        case let .updateAccessory(target: target, accessory: accessory):
+            switch target {
+            case .rootHeader:
+                self.rootHeader = extractRootAccessory(accessory)
+            case .rootFooter:
+                self.rootFooter = extractRootAccessory(accessory)
+            case .sectionHeader, .sectionFooter:
+                break
+            }
+
+        default:
+            break
         }
     }
 

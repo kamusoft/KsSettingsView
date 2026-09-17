@@ -433,7 +433,6 @@ public class ThemeAndCellStyleTests
         Section section = new() { Cells = { cell } };
         SettingsView view = new() { Root = { section } };
         GatewayScope scope = GatewayScope.Connect(view);
-        scope.Attach();
         scope.Reset();
 
         cell.TitleColor = Colors.Red;

@@ -55,8 +55,8 @@ public partial class AccessoryViewsDemoPage : ContentPage
     private View CreateSwapHeaderView()
     {
         string text = _swapCount == 0
-            ? "④ 差し替え前の Header View"
-            : $"④ 差し替え {_swapCount} 回目の Header View";
+            ? "⑤ 差し替え前の Header View"
+            : $"⑤ 差し替え {_swapCount} 回目の Header View";
         Color background = SwapAccessoryBackgrounds[_swapCount % SwapAccessoryBackgrounds.Length];
         return CreateAccessoryView(text, background, SwapAccessoryTextColor);
     }

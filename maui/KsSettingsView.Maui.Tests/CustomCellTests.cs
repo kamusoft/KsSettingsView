@@ -225,7 +225,6 @@ public class CustomCellTests
         Section section = new() { Cells = { label, custom } };
         SettingsView view = new() { Root = { section } };
         GatewayScope scope = GatewayScope.Connect(view);
-        scope.Attach();
 
         foreach (CellBase cell in new CellBase[] { label, custom })
         {
@@ -284,7 +283,6 @@ public class CustomCellTests
         Section section = new() { Cells = { custom, command } };
         SettingsView view = new() { Root = { section } };
         GatewayScope scope = GatewayScope.Connect(view);
-        scope.Attach();
         IKsInteractionSink sink = scope.Gateway.Sink!;
 
         sink.CommandCellTapped(view.Controller.FindCellId(custom)!);
@@ -466,7 +464,7 @@ public class CustomCellTests
         public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    /// <summary>CustomCell 1 件だけを配置し、Native Host まで取り付けた足場。</summary>
+    /// <summary>CustomCell 1 件だけを配置し、Native Host まで作った足場。</summary>
     private sealed class Fixture
     {
         private Fixture(CustomCell cell, GatewayScope scope, string cellId)
@@ -488,14 +486,13 @@ public class CustomCellTests
         /// <summary>ユーザー操作の受け口。</summary>
         public IKsInteractionSink Sink => Scope.Gateway.Sink!;
 
-        /// <summary>指定した Cell だけを持つ設定ツリーを組み立てて接続し、Host を取り付ける。</summary>
+        /// <summary>指定した Cell だけを持つ設定ツリーを組み立てて接続し、Host を作る。</summary>
         /// <param name="cell">配置する Cell</param>
         public static Fixture For(CustomCell cell)
         {
             Section section = new() { Cells = { cell } };
             SettingsView view = new() { Root = { section } };
             GatewayScope scope = GatewayScope.Connect(view);
-            scope.Attach();
             return new Fixture(cell, scope, view.Controller.FindCellId(cell)!);
         }
 

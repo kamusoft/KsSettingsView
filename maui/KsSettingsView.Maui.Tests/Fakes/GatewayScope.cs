@@ -40,11 +40,43 @@ internal sealed class GatewayScope
         return scope;
     }
 
-    /// <summary>Native Host の再接続として、通知・画像解決・実体化の口を差し込み直す。</summary>
+    /// <summary>
+    /// 指定の SettingsView へ fake gateway を接続し、Native Host を作る手前で止める。
+    /// </summary>
+    /// <remarks>Host の生成そのものを Handler に行わせるテストで使う。</remarks>
+    /// <param name="view">接続対象</param>
+    public static GatewayScope ConnectWithoutHost(SettingsView view)
+    {
+        GatewayScope scope = new(view);
+        scope.ConnectFacade();
+        return scope;
+    }
+
+    /// <summary>
+    /// Native Host を作る手順として、口を差し込み直してから root の accessory を適用する。
+    /// </summary>
+    /// <remarks>
+    /// Handler が platform view を作る一連の流れ (facade の接続 → Native Host の生成 → root の
+    /// accessory の適用) をまとめて再現する。ここまでで、置かれている View は表示へ届いている。
+    /// </remarks>
     /// <param name="renewImages">
     /// 画像解決の口を作り直すかどうか。Host 世代ごとに解決口が作り直される実装を再現する
     /// </param>
     public void Reconnect(bool renewImages = false)
+    {
+        ConnectFacade(renewImages);
+        CreateHost();
+    }
+
+    /// <summary>
+    /// Native Host を作る直前までを再現する。
+    /// </summary>
+    /// <remarks>
+    /// この呼び出しから戻った時点が「Native Host の生成時点」であり、Host はここまでに届いた
+    /// 設定ツリーの現在状態から表示を復元する。
+    /// </remarks>
+    /// <param name="renewImages">画像解決の口を作り直すかどうか</param>
+    public void ConnectFacade(bool renewImages = false)
     {
         if (renewImages)
         {
@@ -54,8 +86,8 @@ internal sealed class GatewayScope
         View.ConnectGateway(() => Gateway, Dispatcher, Images, Views);
     }
 
-    /// <summary>Native Host の取り付けとして、Host と同じ寿命を持つ表示内容を適用する。</summary>
-    public void Attach() => View.ApplyHostViews();
+    /// <summary>Native Host が出来た直後の手順として、root の accessory を適用する。</summary>
+    public void CreateHost() => View.ApplyRootAccessories();
 
     /// <summary>ここまでの記録を捨て、以後の呼び出しだけを見る。</summary>
     public GatewayScope Reset()

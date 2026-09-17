@@ -97,7 +97,8 @@ class KsSettingsBridge {
      * Host は接続時点の Store の現在状態から表示を復元するため、[setRoot] は Host 生成の前後
      * どちらで呼んでもよく、解放中に適用した更新も再生成した Host の表示に反映される。
      * ただし root の header / footer は Store ではなく Host が持つプロパティのため復元されない —
-     * 再生成後も引き継ぐ場合は、呼び出し側が値を保持して [updateAccessory] で再適用する。
+     * 再生成後も引き継ぐ場合は、呼び出し側が値を保持して [updateAccessory] で再適用する。再適用は
+     * Host を view 階層へ取り付ける前に行ってよく、渡した値は最初の表示に含まれる。
      * 解放後は解放前と別の `Context` を渡してもよい。
      *
      * @param context Host の生成に使う `Context`（Bridge のフィールドとしては保持しないが、
@@ -312,7 +313,8 @@ class KsSettingsBridge {
      *
      * Section 対象の text は Store の状態に保存され Host 再生成後も復元されるが、root 対象の
      * text は Store ではなく Host が持つため、[releaseHost] 後の再生成には引き継がれない —
-     * 引き継ぐ場合は呼び出し側が値を保持して再適用する。
+     * 引き継ぐ場合は呼び出し側が値を保持して再適用する。生成済みの Host に対しては、view 階層への
+     * 取り付け前に渡した root 対象の値も失われず、最初の表示に含まれる。
      *
      * @param target 更新対象
      * @param sectionID Section を対象にするときの sectionID（root 対象では参照しない）
@@ -358,7 +360,8 @@ class KsSettingsBridge {
      *
      * 対象の指定と未知 sectionID の扱いは [updateAccessory] と同一で、Section 対象の View は
      * Store の状態に保存され Host 再生成後も復元されるが、root 対象の View は Host が持つため
-     * 引き継がれない。
+     * 引き継がれない — 引き継ぐ場合は呼び出し側が値を保持して再適用する。生成済みの Host に
+     * 対しては、view 階層への取り付け前に渡した root 対象の View も失われず、最初の表示に含まれる。
      *
      * @param target 更新対象
      * @param sectionID Section を対象にするときの sectionID（root 対象では参照しない）

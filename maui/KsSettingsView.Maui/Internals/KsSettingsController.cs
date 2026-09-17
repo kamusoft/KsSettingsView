@@ -204,10 +204,28 @@ internal sealed class KsSettingsController(SettingsView owner)
             gateway.SetStyle(_style);
             RebuildRoot();
         }
-        catch
+        catch (Exception failure)
+        {
+            DisconnectAfterFailure(failure);
+            throw;
+        }
+    }
+
+    /// <summary>接続の途中の失敗を受けて、接続を解く。</summary>
+    /// <remarks>
+    /// 後片付けが失敗した場合だけ、元の失敗を先頭に置いてまとめて投げる — 後片付けの失敗で、
+    /// そもそも接続が失敗した原因を見失わせないため。
+    /// </remarks>
+    /// <param name="failure">接続の途中で起きた失敗</param>
+    private void DisconnectAfterFailure(Exception failure)
+    {
+        try
         {
             Disconnect();
-            throw;
+        }
+        catch (Exception cleanupFailure)
+        {
+            throw new AggregateException(failure, cleanupFailure).Flatten();
         }
     }
 
@@ -215,16 +233,104 @@ internal sealed class KsSettingsController(SettingsView owner)
     /// <remarks>
     /// 登録と購読をすべて解いたうえで gateway への参照を手放す。手放した gateway は
     /// 以後どこからも参照されないため、Bridge ごと GC の対象になる。
+    ///
+    /// View の実体化の口も画像の解決口と同じくここで手放す。口は接続より前に差し込まれるため、
+    /// 残したままだと gateway が無いのに実体だけが作れる状態になり、その実体は次の接続でも
+    /// 作り直されないまま新しい Host へ渡ってしまう。
+    ///
+    /// 実体の後片付けは置き場所の対応表を直接走査して行う。設定ツリーの実体化は Section・Cell を
+    /// 対応表へ載せるより前に進むため、登録をたどる後片付けだけでは、途中で失敗した接続が作った実体を
+    /// 取りこぼす。
+    ///
+    /// 置き場所の実体と後片付け待ちは、どちらかの破棄が失敗しても両方を試みてから失敗をまとめて
+    /// 投げる。片方の失敗でもう片方を飛ばすと、手放したはずの実体がどこからも破棄されなくなる。
     /// </remarks>
     private void Disconnect()
     {
         ClearRegistrations();
+        _imageGeneration++;
+        _images = null;
+        _views = null;
         _gateway = null;
         _dispatcher = null;
         _flushScheduled = false;
 
         // 表示先ごと手放すため、控えていた画像と実体はこの時点で後片付けしてよい。
-        DisposeRetired();
+        List<Exception>? failures = null;
+
+        TryCleanUp(DisposePlacedViews, ref failures);
+        TryCleanUp(DisposeRetired, ref failures);
+
+        if (failures is not null)
+        {
+            throw new AggregateException(failures).Flatten();
+        }
+    }
+
+    /// <summary>
+    /// 後片付けの 1 単位を試み、失敗しても投げずに集める。
+    /// </summary>
+    /// <remarks>
+    /// 後片付けの単位どうしは独立しており、1 つの失敗で残りを飛ばすと、手放したはずの実体や
+    /// Native Host がどこからも解放されないまま残る。呼び出し側は全単位を試みたうえで、
+    /// 集まった失敗をまとめて投げる。
+    /// </remarks>
+    /// <param name="cleanUp">試みる後片付け</param>
+    /// <param name="failures">失敗を集める入れ物。最初の失敗で作られる</param>
+    private static void TryCleanUp(Action cleanUp, ref List<Exception>? failures)
+    {
+        try
+        {
+            cleanUp();
+        }
+        catch (Exception exception)
+        {
+            failures ??= [];
+            failures.Add(exception);
+        }
+    }
+
+    /// <summary>
+    /// 置き場所に残っている実体をすべて破棄する。
+    /// </summary>
+    /// <remarks>
+    /// 表示先ごと手放す場面で使うため、退役を native へ知らせる書き戻しは行わない。どの Section・Cell
+    /// からもたどれない置き場所を取りこぼさないよう、対応表そのものを走査する。
+    /// 置き場所から外した時点で取り出したリースが唯一の持ち主になるため、1 件の破棄が失敗しても
+    /// 残りを取りこぼさないよう、全件の破棄を試みてから失敗をまとめて投げる。
+    /// </remarks>
+    private void DisposePlacedViews()
+    {
+        List<IKsViewLease> retired = [];
+        foreach (ViewPlacement placement in _accessories.Values)
+        {
+            if (TakeLease(placement) is { } lease)
+            {
+                retired.Add(lease);
+            }
+        }
+
+        foreach (ViewPlacement placement in _cellContents.Values)
+        {
+            if (TakeLease(placement) is { } lease)
+            {
+                retired.Add(lease);
+            }
+        }
+
+        _measureDirtySlots.Clear();
+
+        List<Exception>? failures = null;
+
+        foreach (IKsViewLease lease in retired)
+        {
+            TryCleanUp(lease.Dispose, ref failures);
+        }
+
+        if (failures is not null)
+        {
+            throw new AggregateException(failures).Flatten();
+        }
     }
 
     /// <summary>
@@ -262,10 +368,10 @@ internal sealed class KsSettingsController(SettingsView owner)
     /// </summary>
     /// <remarks>
     /// 実体化の口は Native Host と同じ寿命を持つため、Host を作り直すたびに新しい口へ差し替わる。
-    /// 口が差し込まれるのは Host を作った後であり、それ以前 (設定ツリーの初回構築時) に置かれていた
-    /// View はまだ実体化されていない。その分は Host が view 階層へ取り付けられた後の
-    /// <see cref="ApplyHostViews"/> でまとめて実体化して配信する。口が差し込まれた後に置かれた
-    /// View は、その場で実体化して配信する。
+    /// 口は Native Host を作る前に差し込む。設定ツリーの初回構築ではこの口を使って、配信データを
+    /// 組む前に置かれている View をすべて実体化する。接続済みのまま Host を作り直す場合は
+    /// <see cref="ApplyStoreViews"/> が同じ役目を担う。口が差し込まれた後に置かれた View は、
+    /// その場で実体化して配信する (maui/ADR-0027)。
     /// </remarks>
     /// <param name="views">View を platform view へ実体化する口</param>
     public void AttachViews(IKsViewMaterializer views)
@@ -280,16 +386,40 @@ internal sealed class KsSettingsController(SettingsView owner)
     /// Host のない間は操作も起きないため、あわせて通知の受け取りも止める。画像の解決口も
     /// View の実体化の口も Host と同じ寿命であり、進行中の解決は世代を進めて結果を捨てる
     /// (解決済みの画像はそのまま残る)。accessory と Cell の内容の実体は Host と一緒に退役させる。
+    ///
+    /// 4 つの後片付け (accessory の実体・Cell の内容の実体・通知の受け取り・Native Host) は互いに
+    /// 独立しており、1 つが失敗しても残りを飛ばさずすべて試みてから、失敗をまとめて投げる。
+    /// 途中で抜けると Native Host が解放されないまま残り、その世代が次の生成へ持ち越される。
+    ///
+    /// 退役を native へ知らせる更新 (accessory の書き戻し・Cell の内容なし世代の配信) が失敗した実体
+    /// だけは、その場では破棄せずここへ預かり、Native Host の解放を試みた後に破棄する。知らせが
+    /// 届いていない以上 native はまだその実体を子として抱えている可能性があり、先に壊すと
+    /// 表示先ごと解放するより前に参照先を失わせることになる (maui/ADR-0016)。
     /// </remarks>
     public void ReleaseHost()
     {
         _imageGeneration++;
         _images = null;
         _views = null;
-        ReleaseAccessoryViews();
-        ReleaseCellContentViews();
-        _gateway?.DetachInteractions();
-        _gateway?.ReleaseHost();
+
+        List<Exception>? failures = null;
+        List<IKsViewLease> deferred = [];
+
+        TryCleanUp(() => ReleaseAccessoryViews(deferred), ref failures);
+        TryCleanUp(() => ReleaseCellContentViews(deferred), ref failures);
+        TryCleanUp(() => _gateway?.DetachInteractions(), ref failures);
+        TryCleanUp(() => _gateway?.ReleaseHost(), ref failures);
+
+        // Native Host の解放をまたいだので、知らせの届かなかった実体もここで手放してよい。
+        foreach (IKsViewLease lease in deferred)
+        {
+            TryCleanUp(lease.Dispose, ref failures);
+        }
+
+        if (failures is not null)
+        {
+            throw new AggregateException(failures).Flatten();
+        }
     }
 
     /// <summary>画面全体の既定スタイルを差し替える。</summary>
@@ -319,14 +449,14 @@ internal sealed class KsSettingsController(SettingsView owner)
         => _icons.TryGetValue(cell, out KsImageLease? lease) ? lease.Image : null;
 
     /// <summary>
-    /// Native Host と同じ寿命を持つ表示内容を、現在の所有値で適用し直す。
+    /// root の header / footer を、現在の所有値で適用する。
     /// </summary>
     /// <remarks>
-    /// root の accessory は Native Host 単位のプロパティであり、Host を作り直すと失われる。
-    /// accessory と Cell の内容の View の実体も Host と同じ寿命であり、Host を作り直すと退役して
-    /// いる。Host が view 階層へ取り付けられた後にここを通すことで、両 OS で同じ経路で復元する。
+    /// root の accessory は Native Host 単位のプロパティであり、設定ツリーの状態には含まれない
+    /// ため、Host を作り直すと失われる。Host を作った直後・view 階層へ取り付けるより前にここを
+    /// 通すことで、最初の表示に含まれる (maui/ADR-0027)。
     /// </remarks>
-    public void ApplyHostViews()
+    public void ApplyRootAccessories()
     {
         if (_gateway is null)
         {
@@ -335,6 +465,23 @@ internal sealed class KsSettingsController(SettingsView owner)
 
         ApplyRootSlot(KsAccessoryTarget.RootHeader);
         ApplyRootSlot(KsAccessoryTarget.RootFooter);
+    }
+
+    /// <summary>
+    /// 設定ツリーの状態になる View を実体化し直し、現在の所有値で配信する。
+    /// </summary>
+    /// <remarks>
+    /// Section の accessory と Cell の内容の View の実体は Native Host と同じ寿命であり、Host を
+    /// 作り直すと退役している。Host を作る前にここを通すことで、Host が設定ツリーの現在状態から
+    /// 復元する時点で View が含まれる。設定ツリーの初回構築では構築そのものが実体化を伴うため、
+    /// ここを通すのは接続済みのまま Host を作り直す場合になる (maui/ADR-0027)。
+    /// </remarks>
+    public void ApplyStoreViews()
+    {
+        if (_gateway is null)
+        {
+            return;
+        }
 
         foreach (Section section in Sections())
         {
@@ -479,7 +626,8 @@ internal sealed class KsSettingsController(SettingsView owner)
     /// 定まった View に対して作られるようにするため。旧実体の破棄を配信より後にするのは、native が
     /// まだ旧実体を子として抱えている間に壊す窓を作らないため。
     /// 実体化の口が無い間 (Native Host 未生成) は置き場所と所有だけを確定させ、実体化と配信は
-    /// <see cref="ApplyHostViews"/> まで待つ。
+    /// 次に Host を作る時点 (<see cref="ApplyStoreViews"/> / <see cref="ApplyRootAccessories"/>)
+    /// まで待つ。
     /// </remarks>
     /// <param name="slot">置き場所</param>
     /// <param name="view">置く View。null で解除</param>
@@ -584,7 +732,7 @@ internal sealed class KsSettingsController(SettingsView owner)
     /// </summary>
     /// <remarks>
     /// View が実体化済みならその実体を、View が置かれていなければ控えているテキストを送る。
-    /// View は置かれているが実体化できていない間は、取り付け後の適用まで配信を待つ。
+    /// View は置かれているが実体化できていない間は、次に Host を作る時点の適用まで配信を待つ。
     /// </remarks>
     /// <param name="slot">配信する位置</param>
     private void DeliverAccessory(KsAccessorySlot slot)
@@ -614,32 +762,71 @@ internal sealed class KsSettingsController(SettingsView owner)
     /// Section の accessory は状態として保たれるため、退役した実体を指したままにならないよう
     /// テキスト (無ければ解除) を書き戻してから破棄する。root の accessory は Host が持つので
     /// 書き戻しは要らない。
+    ///
+    /// 置き場所からリースを外し切った時点で、取り出したリースが唯一の持ち主になる。以後は
+    /// 書き戻しも破棄も 1 件の失敗で残りを飛ばさず、全件を試みてから失敗をまとめて投げる。
+    ///
+    /// 書き戻しが失敗した位置の実体だけは、ここでは破棄せず <paramref name="deferred"/> へ預ける。
+    /// 退役が native へ届いていない以上まだ子として抱えられている可能性があり、Native Host の解放より
+    /// 前に壊してはならない (maui/ADR-0016)。
     /// </remarks>
-    private void ReleaseAccessoryViews()
+    /// <param name="deferred">Native Host の解放より後に破棄する実体を預ける先</param>
+    private void ReleaseAccessoryViews(List<IKsViewLease> deferred)
     {
-        List<IKsViewLease> retired = [];
+        List<(KsAccessorySlot Slot, IKsViewLease Lease)> retired = [];
         foreach ((KsAccessorySlot slot, ViewPlacement placement) in _accessories)
         {
-            if (TakeLease(placement) is not { } lease)
+            if (TakeLease(placement) is { } lease)
             {
-                continue;
-            }
-
-            retired.Add(lease);
-
-            if (slot.Section is not null
-                && _gateway is not null
-                && TryResolveSectionId(slot, out string? sectionId))
-            {
-                _gateway.UpdateAccessory(slot.Target, sectionId, AccessoryTextOf(slot));
+                retired.Add((slot, lease));
             }
         }
 
         _measureDirtySlots.Clear();
 
-        foreach (IKsViewLease lease in retired)
+        List<Exception>? failures = null;
+        List<IKsViewLease> disposable = [];
+
+        foreach ((KsAccessorySlot slot, IKsViewLease lease) in retired)
         {
-            lease.Dispose();
+            // root の accessory は Native Host が持つため、退役を知らせる書き戻しが要らない。
+            if (slot.Section is null)
+            {
+                disposable.Add(lease);
+                continue;
+            }
+
+            try
+            {
+                WriteBackAccessoryText(slot);
+                disposable.Add(lease);
+            }
+            catch (Exception exception)
+            {
+                failures ??= [];
+                failures.Add(exception);
+                deferred.Add(lease);
+            }
+        }
+
+        foreach (IKsViewLease lease in disposable)
+        {
+            TryCleanUp(lease.Dispose, ref failures);
+        }
+
+        if (failures is not null)
+        {
+            throw new AggregateException(failures).Flatten();
+        }
+    }
+
+    /// <summary>この位置に控えているテキスト (無ければ解除) を native へ書き戻す。</summary>
+    /// <param name="slot">対象の位置</param>
+    private void WriteBackAccessoryText(KsAccessorySlot slot)
+    {
+        if (_gateway is not null && TryResolveSectionId(slot, out string? sectionId))
+        {
+            _gateway.UpdateAccessory(slot.Target, sectionId, AccessoryTextOf(slot));
         }
     }
 
@@ -671,19 +858,40 @@ internal sealed class KsSettingsController(SettingsView owner)
     /// <param name="section">対象の Section</param>
     private void PlaceSectionAccessoryViews(Section section)
     {
-        if (section.HeaderView is not null)
+        PlaceAccessoryView(
+            new KsAccessorySlot(KsAccessoryTarget.SectionHeader, section),
+            section.HeaderView);
+        PlaceAccessoryView(
+            new KsAccessorySlot(KsAccessoryTarget.SectionFooter, section),
+            section.FooterView);
+    }
+
+    /// <summary>
+    /// この位置に指定済みの View を置き場所へ載せ、実体化して配信する。
+    /// </summary>
+    /// <remarks>
+    /// 同じ View が既にこの位置へ置かれている場合は、実体を確かめるだけで置き直さない。置き直すと
+    /// 作ったばかりの実体を包み直すことになり、実体と 1 対 1 の Handler を切ってしまう。配信も
+    /// 要らない — 置き場所が先に定まっているのは配信データを組む前に実体化した場合であり、その
+    /// 実体は配信データに載っている。
+    /// </remarks>
+    /// <param name="slot">置き場所</param>
+    /// <param name="view">置く View。null なら何もしない</param>
+    private void PlaceAccessoryView(KsAccessorySlot slot, View? view)
+    {
+        if (view is null)
         {
-            SetAccessoryView(
-                new KsAccessorySlot(KsAccessoryTarget.SectionHeader, section),
-                section.HeaderView);
+            return;
         }
 
-        if (section.FooterView is not null)
+        if (_accessories.TryGetValue(slot, out ViewPlacement? placement)
+            && ReferenceEquals(placement.View, view))
         {
-            SetAccessoryView(
-                new KsAccessorySlot(KsAccessoryTarget.SectionFooter, section),
-                section.FooterView);
+            Materialize(slot, placement);
+            return;
         }
+
+        SetAccessoryView(slot, view);
     }
 
     /// <summary>必要サイズが変わった accessory を、次の配信で測り直す対象に加える。</summary>
@@ -838,14 +1046,29 @@ internal sealed class KsSettingsController(SettingsView owner)
         retired?.Dispose();
     }
 
-    /// <summary>この Cell に指定済みの内容の View を置き場所へ載せ、実体化して配信する。</summary>
+    /// <summary>
+    /// この Cell に指定済みの内容の View を置き場所へ載せ、実体化して配信する。
+    /// </summary>
+    /// <remarks>
+    /// 同じ View が既にこの Cell の内容へ置かれている場合に置き直さない理由は、accessory の
+    /// 置き場所と同じ。
+    /// </remarks>
     /// <param name="cell">対象の Cell</param>
     private void PlaceCellContent(CustomCell cell)
     {
-        if (cell.Content is not null)
+        if (cell.Content is not { } content)
         {
-            SetCellContent(cell, cell.Content);
+            return;
         }
+
+        if (_cellContents.TryGetValue(cell, out ViewPlacement? placement)
+            && ReferenceEquals(placement.View, content))
+        {
+            MaterializeContent(placement);
+            return;
+        }
+
+        SetCellContent(cell, content);
     }
 
     /// <summary>
@@ -901,8 +1124,8 @@ internal sealed class KsSettingsController(SettingsView owner)
     /// この Cell の内容を今の時点で配信してよいかどうか。
     /// </summary>
     /// <remarks>
-    /// View が置かれているのに実体が無いのは Native Host を持たない間だけであり、その分は Host が
-    /// 取り付けられた後の適用でまとめて送る。
+    /// View が置かれているのに実体が無いのは Native Host を持たない間だけであり、その分は次に
+    /// Host を作る時点の適用でまとめて送る。
     /// </remarks>
     /// <param name="cell">対象の Cell</param>
     private bool CanDeliverCellContent(CustomCell cell)
@@ -957,8 +1180,16 @@ internal sealed class KsSettingsController(SettingsView owner)
     /// <remarks>
     /// Cell は表示の状態として保たれるため、退役した実体を指したままにならないよう、内容なしの
     /// 世代を振って送り直してから破棄する。置き場所と論理上の所有は Host の有無に依らず保たれる。
+    ///
+    /// 置き場所からリースを外し切った時点で、取り出したリースが唯一の持ち主になる。以後は配信も
+    /// 破棄も 1 件の失敗で残りを飛ばさず、全件を試みてから失敗をまとめて投げる。
+    ///
+    /// 配信は 1 回の内容更新としてまとめて送るため、失敗したときにどの Cell まで届いたかは分からない。
+    /// その場合は退役させた実体をすべて <paramref name="deferred"/> へ預け、Native Host の解放より後に
+    /// 破棄する。届いていない実体はまだ native が抱えている可能性がある (maui/ADR-0016)。
     /// </remarks>
-    private void ReleaseCellContentViews()
+    /// <param name="deferred">Native Host の解放より後に破棄する実体を預ける先</param>
+    private void ReleaseCellContentViews(List<IKsViewLease> deferred)
     {
         List<IKsViewLease> retired = [];
         List<CustomCell> delivered = [];
@@ -974,11 +1205,34 @@ internal sealed class KsSettingsController(SettingsView owner)
             delivered.Add(cell);
         }
 
-        DeliverCellContents(delivered);
+        List<Exception>? failures = null;
+        bool deliveryFailed = false;
+
+        try
+        {
+            DeliverCellContents(delivered);
+        }
+        catch (Exception exception)
+        {
+            failures = [exception];
+            deliveryFailed = true;
+        }
 
         foreach (IKsViewLease lease in retired)
         {
-            lease.Dispose();
+            if (deliveryFailed)
+            {
+                deferred.Add(lease);
+            }
+            else
+            {
+                TryCleanUp(lease.Dispose, ref failures);
+            }
+        }
+
+        if (failures is not null)
+        {
+            throw new AggregateException(failures).Flatten();
         }
     }
 
@@ -1023,6 +1277,7 @@ internal sealed class KsSettingsController(SettingsView owner)
         EnsureTreeHasNoDuplicates(sections);
 
         ClearRegistrations();
+        MaterializeTreeViews(sections);
 
         IReadOnlyList<KsSectionIdentity> identities = _gateway.SetRoot(sections);
         for (int i = 0; i < sections.Count && i < identities.Count; i++)
@@ -1034,6 +1289,78 @@ internal sealed class KsSettingsController(SettingsView owner)
 
         // 作り直しが native へ届いた後なら、前の表示が使っていた画像と実体を後片付けしてよい。
         DisposeRetired();
+    }
+
+    /// <summary>
+    /// 設定ツリー全体の配信データを組む前に、置かれている View をすべて実体化する。
+    /// </summary>
+    /// <remarks>
+    /// 配信データは置かれている View の実体を引き当てるだけで自分では実体化しないため、先に実体を
+    /// 用意しておくことで、Native Host が最初に復元する現在状態へ View が含まれる
+    /// (maui/ADR-0027)。この時点では Section も Cell も対応表に載っていないので、置き場所と論理上の
+    /// 所有の確定・実体化だけが進み、単発の配信は起きない。
+    ///
+    /// 後片付け待ちの実体を持つ View だけは、ここでは実体化しない。Handler は View と 1 対 1 のため
+    /// 包み直しには先に古い実体の破棄が要るが、その実体はまだ native が参照している。破棄は表示中の
+    /// 参照を外す配信が済んでからでなければならない (maui/ADR-0016)。この分は配信の後、対応表へ載せる
+    /// 時点で実体化して送る。
+    /// </remarks>
+    /// <param name="sections">これから配信する Section 群</param>
+    private void MaterializeTreeViews(IReadOnlyList<Section> sections)
+    {
+        if (_views is null)
+        {
+            return;
+        }
+
+        foreach (Section section in sections)
+        {
+            MaterializeBeforeDelivery(
+                new KsAccessorySlot(KsAccessoryTarget.SectionHeader, section),
+                section.HeaderView);
+            MaterializeBeforeDelivery(
+                new KsAccessorySlot(KsAccessoryTarget.SectionFooter, section),
+                section.FooterView);
+
+            foreach (CellBase cell in Snapshot(section.Cells))
+            {
+                if (cell is CustomCell custom
+                    && custom.Content is { } content
+                    && !HasRetiredLeaseOf(content))
+                {
+                    PlaceCellContent(custom);
+                }
+            }
+        }
+    }
+
+    /// <summary>配信データを組む前に、この位置の View を実体化する。</summary>
+    /// <param name="slot">置き場所</param>
+    /// <param name="view">置かれている View。null または後片付け待ちの実体を持つ場合は何もしない</param>
+    private void MaterializeBeforeDelivery(KsAccessorySlot slot, View? view)
+    {
+        if (view is null || HasRetiredLeaseOf(view))
+        {
+            return;
+        }
+
+        PlaceAccessoryView(slot, view);
+    }
+
+    /// <summary>この View を包んでいた実体が後片付けを待っているかどうかを返す。</summary>
+    /// <param name="view">対象の View</param>
+    /// <returns>後片付け待ちの実体があれば true</returns>
+    private bool HasRetiredLeaseOf(View view)
+    {
+        foreach (RetiredView entry in _retiredViews)
+        {
+            if (ReferenceEquals(entry.View, view))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void SubscribeSections()
@@ -2034,7 +2361,8 @@ internal sealed class KsSettingsController(SettingsView owner)
             entry.Cells.Add(cells[i]);
         }
 
-        // 輸送 DTO は実体化前に組み立てられるため、accessory の View はここで実体化して送り直す。
+        // 実行時に差し込まれた Section の accessory の View は、輸送 DTO を組んだ後のここで実体化して
+        // 送る。配信データを組む前に実体化してある分は、実体を確かめるだけで送り直さない。
         section.AccessoryGuard = this;
         PlaceSectionAccessoryViews(section);
     }
@@ -2070,7 +2398,8 @@ internal sealed class KsSettingsController(SettingsView owner)
 
         ResolveIcon(cell);
 
-        // 輸送 DTO は実体化前に組み立てられるため、内容の View はここで実体化して送り直す。
+        // 実行時に差し込まれた Cell の内容の View は、輸送 DTO を組んだ後のここで実体化して送る。
+        // 配信データを組む前に実体化してある分は、実体を確かめるだけで送り直さない。
         if (cell is CustomCell custom)
         {
             custom.ContentGuard = this;
