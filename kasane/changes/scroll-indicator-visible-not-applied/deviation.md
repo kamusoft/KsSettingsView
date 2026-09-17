@@ -1,0 +1,5 @@
+# Deviation: scroll-indicator-visible-not-applied
+
+- samples (iOS / Android / MAUI) の入力 Cell デモ: spec・tasks には Sample への画面・デモデータの追加は無い (tasks 4.4 は既定の帯への依存の確認のみ) → 指示により、候補が画面に収まらない数の PickerCell の行を 3 platform の Sample へ恒久的に追加する。理由: 実機目視 (tasks 5.2) で、PickerCell の候補リストのスクロールバーを確認できる画面が Sample に無いと判明したため。オーナー指示は「大量 Picker は恒常的にすべき (iOS / Android)」で、MAUI への同時追加は `kasane/handbook/cross/sample-parity.md` (デモデータは全 platform で一致・片側だけの選択肢の増減をしない) に従う (2026-09-17)
+- samples の Header / Footer 背景色のデモ: 追加しない。理由: オーナーが実機で確認用の一時ビルド (背景色を下地と異なる色にしたもの) を見たうえで「実際の使い道がなさそうなので Sample は要らない」と判断。Sample は引き続き Header / Footer 背景色に下地と同じ色を指定する。確認用の一時変更は復元済み (2026-09-17)
+- tasks 5.2b (iOS のスクロールインジケータの実機目視): オーナーが実機 (iPhone 11) で確認 — 設定リストのスクロールバーが出る / PickerCell の候補リストにも出る (確認用の一時ビルドで候補を増やして確認) / 回転ホイールには出ない / 背景色未指定の Header・Footer に list 下地が見え、指定した色では text 形式の領域が塗られる。`scrollIndicatorVisible = false` で iOS のスクロールバーが消えることは、tasks 5.2b では実機確認の対象だが、Sample に切替 UI が無くシミュレータの静止画にも写らないため、実機目視を省略し実 window に載せたユニットテスト (設定リスト・PickerCell の候補リスト・Store / DSL の各経路) での担保とする。オーナー確定 (2026-09-17)
