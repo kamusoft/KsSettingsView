@@ -464,7 +464,7 @@ public final class KsSettingsViewController: UIViewController {
     /// Cell 内容・Section の accessory・Theme に限る。Root Header / Footer は UI 層
     /// プロパティであり Store の現在状態に含まれない（core/ADR-0005）ため対象外で、
     /// view load 前に届いた分は `applyBeforeViewLoad` が受け取った時点でプロパティへ
-    /// 控えている。
+    /// 控えている（core/ADR-0033）。
     ///
     /// Store 接続中は Store の Theme を正とする。Store 未接続（root 直接指定）の場合は
     /// 何もせず、初期化時に受け取った root / theme をそのまま使う。
@@ -1387,7 +1387,8 @@ public final class KsSettingsViewController: UIViewController {
     ///
     /// Root Header / Footer は Store の現在状態に含まれず（core/ADR-0005）、通知も再生されない
     /// ため、受け取った時点で Host のプロパティへ控えることでしか view load 時の構築に間に合わ
-    /// ない。控えた値は `loadView` の `makeLayout` と `viewDidLoad` の
+    /// ない（view load 前に渡された Root の header / footer を失わない Host 保証 — core/ADR-0033）。
+    /// 控えた値は `loadView` の `makeLayout` と `viewDidLoad` の
     /// `applyListEdgeMargin` が読み、最初の表示に含まれる。
     ///
     /// プロパティの didSet が呼ぶレイアウト再構築・可視 supplementary の再描画は

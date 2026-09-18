@@ -3,7 +3,7 @@ type: concept
 title: MauiView の native 実体化機構 (materializer seam と platform lease)
 description: VisualElement を platform view へ実体化する facade 内の共有基盤 — seam 契約・自己計測 wrapper・論理所有と lease の寿命分離・退役順序・native への埋め込みの継ぎ目
 tags: [maui, materialization, handler, lifecycle]
-timestamp: 2026-09-16
+timestamp: 2026-09-18
 ---
 
 # MauiView の native 実体化機構 (materializer seam と platform lease)
@@ -39,7 +39,7 @@ iOS の wrapper は `IntrinsicContentSize` を override し、`MeasureInvalidate
 | | 論理所有 | platform lease |
 |---|---|---|
 | 実体 | logical tree 接続 + 継承 BindingContext (View の共通処理は `KsAccessoryViewOwnership`) | wrapper + Handler |
-| 寿命 | **View を置くプロパティの寿命** — 配置時に確定し、解除・差し替え・所有者の削除で解放する | **Host 世代の寿命** — Handler 切断 (= Host 解放) で破棄し、再接続時に新しい MauiContext で再実体化して明示経路で再発行する |
+| 寿命 | **View を置くプロパティの寿命** — 配置時に確定し、解除・差し替え・所有者の削除で解放する | **Host 世代の寿命** — Handler 切断 (= Host 解放) で破棄し、再接続時に新しい MauiContext で Host 生成前に再実体化して明示経路で再発行する (「実体化のタイミング」) |
 | Handler との関係 | Handler の有無に依らず維持されるため、XAML 構築時や Host 解放中も BindingContext の継承と変更伝播が働く | 復元の正は facade が所有する VisualElement であり、platform 実体は世代ごとの派生物 |
 
 論理所有そのものは View に限らない — `Section` / `CellBase` も所属先の論理子であり (所有の器は `KsLogicalChildOwnership`、寿命はコレクションへの所属)、platform lease は持たない。何をもって「他所に所有されている」とするかの判定と多重配置の例外文言は、View と Section / Cell で 1 箇所 (`KsPlacementDiagnostics`) を共有する — `Parent` が**期待する所有者以外の facade 所有者** (SettingsView / Section / CustomCell) を指していることを条件とし、設定ツリーから外れた Section / CustomCell が所有したままの場合も含める。利用者が組んだレイアウトの中に置かれた View は所有者が facade ではないため、多重配置に当たらない。
@@ -59,6 +59,22 @@ native の CustomCell は「content 値 + その値から行の中身を組み�
 トークンは**参照が入れ替わるたびに必ず変わる**。設定・差し替え・null 化・null のままの Host 再接続・Host 世代の作り直しのいずれでも振り直す。振り直しを飛ばすと native から見て「内容は変わっていない」ことになり、退役済みの platform view を指したまま表示が固まる。
 
 逆に**同一トークンの間は埋め込み platform view のインスタンスが安定する**。保証しているのはインスタンスの安定であって再バインドの抑止ではない — native 側の再バインドは style / showArrow / isEnabled / isVisible の変更や再配信でも起きるが、そのたびに定数返しの builder が同じ実体を返すため、破棄も再実体化も Handler 切断も起きない。
+
+## 実体化のタイミング (Host 生成との前後)
+
+配置された View の実体化と配信は Host の生成より前に済ませ、Host が Store の現在状態から復元する最初の表示に含める (maui/ADR-0027)。かつて取り付け (`Loaded`) を待っていたのは、Root の header / footer が Store に無く Android の Host が取り付け前の更新を失っていたためで、その制約は Host 側の保証 (core/ADR-0033) で解消している。`Loaded` で行うのは親子関係の成立確定 (iOS の ViewController containment) だけになった。
+
+| 場面 | 手順 |
+|---|---|
+| 初回接続 | 実体化の口を差し込む → 設定ツリー全体の配信データを組む前に全配置を実体化する → Host を作る → Root の header / footer を実体化して更新口で届ける |
+| 再接続 (接続済み) | 口を差し込む → 全 Section の slot を実体化して更新口で届ける → 全 CustomCell の内容を実体化して 1 バッチで届ける → Host を作る → Root を届ける |
+| 接続後の配置・差し替え | その場で実体化して配信する |
+
+- 実体化は controller が行い、gateway が配信データを組む途中では行わない (三層の責務を保つ)
+- 設定ツリー全体の事前実体化は、後片付け待ちの実体を持つ View (表示中の Root の作り直しで同じ View が残る位置) を対象から外し、その分は配信の後に実体化して送る — 先に包み直すと退役順序に反する
+- 再接続時の Section の配信は Host が無い間に行われ Store の状態更新だけが起きるため、slot を 1 件ずつ届けても反映通知の追い越し (「複数 Cell の配信は 1 バッチ」の背景) は起きない
+
+Host の生成・Root の header / footer の適用・親子関係の登録は 1 つの失敗単位で、途中で失敗したら親子関係を解き、Host を世代ごと解放してから失敗を伝える。実体化の口は接続より前に差し込むため、切断時に画像の解決口とともに手放す — 残すと gateway の無いまま作られた実体が次の接続へ持ち越される。接続と Host 解放の後片付けは、置き場所に残る実体と後片付け待ちの実体を全件試みてから失敗をまとめる。退役の知らせ (Section の text 書き戻し・Cell の内容なし世代の配信) が届かなかった実体だけは Native Host の解放後に破棄する — native がまだ子として抱えている可能性があるため。通常切断の逐次実行やより深い多重障害の扱いは `kasane/changes/maui-teardown-failure-safety` で扱う。
 
 ## 退役順序
 
@@ -141,4 +157,5 @@ deactivate 経路 (`AndroidViewHolder.onDeactivate` = `removeAllViewsInLayout`) 
 - [MAUI Native Bridge の interop 境界](../api/native-bridge.md) — 実体の輸送と gateway の位置づけ
 - [Store の状態と更新通知](../../core/architecture/store-and-update-streams.md) — 一過性通知 (`invalidateAccessoryMeasurement`) の位置づけ
 - [CustomCell](../../core/cells/custom-cell.md) — content と builder による行の共通契約 (native 側の再バインド規則)
-- 決定の経緯: maui/ADR-0016 (三層構造と wrapper・寿命)、maui/ADR-0017 (インスタンス輸送と detach)、maui/ADR-0018 (accessory の更新セマンティクスと再計算口)、maui/ADR-0020 (cell content の live view と世代トークン)
+- 決定の経緯 (機構と寿命): maui/ADR-0016 (三層構造と wrapper・寿命)、maui/ADR-0017 (インスタンス輸送と detach)、maui/ADR-0018 (accessory の更新セマンティクスと再計算口)、maui/ADR-0020 (cell content の live view と世代トークン)
+- 決定の経緯 (実体化のタイミング): maui/ADR-0027 (Host 生成前の実体化と配信)、core/ADR-0033 (前提となる Host 保証)

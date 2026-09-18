@@ -3,7 +3,7 @@ type: reference
 title: Android Native Host の利用と更新境界
 description: SettingsRootStore と KsSettingsView を使って Android View の設定画面を構築・更新・拡張する方法
 tags: [android, views, host, public-api]
-timestamp: 2026-09-17
+timestamp: 2026-09-18
 ---
 
 この文書は、Android View から KsSettingsView を使うための公開 API 利用契約と責務境界を整理した reference である。読むと、`SettingsRootStore` と `KsSettingsView` の役割、表示後の更新方法、独自 Cell の登録方法、ライブラリ既定色 (`KsSettingsViewDefaults`) と夜間モードへの追随、ホスト側に前提が無いこと (テーマ・Activity 型) が分かる。Jetpack Compose から使う場合は [Android Compose Bridge と宣言 DSL](android-compose.md) を参照する。設定ツリーと差分の型自体は [SettingsRoot・Section・Cell の設定ツリー](../../core/core-model/settings-tree.md) と [SettingsRootDiff による構造変更](../../core/core-model/structural-changes.md) を先に読む。
@@ -53,9 +53,9 @@ XML またはコードで `KsSettingsView` を生成し、`bind(store)` で Stor
 
 公開 `view.theme` は、外部バインディングや Preview が Store を使わず `view.applyDiff(SettingsRootDiff.Full(root))` から Host を直接駆動する場合の入口である。この高度な方式と `bind(store)` を同じ View で併用しない。
 
-空の `SettingsRoot` も有効で、空の `RecyclerView` として表示できる。detach 時は Store 購読を停止し、内部 RecyclerView から Adapter 参照を切る (メモリリーク防止)。再 attach 時は Adapter を戻し、Store の現在状態を取り込み直してから購読を再確立する。ViewPager2 のオフスクリーンページや Compose `AndroidView` の付け外しのように View を作り直さず detach / attach するホストでも、detach 中の Store 更新を含む最新内容で復帰する。detach 中の更新が Diff として再送されるわけではない — Store の更新通知は replay を持たないため、購読停止中に発行された Diff は消え、復帰は `store.state` / `store.theme` の現在値から行われる。スクロール位置は detach 直前のアンカー (先頭可視行と行内オフセット) を控え、再 attach 時に同じ View 内で復元する。View 自体が作り直される経路 (Host の再生成・Activity 再生成) では復元しない。
+空の `SettingsRoot` も有効で、空の `RecyclerView` として表示できる。detach 時は Store 購読を停止し、内部 RecyclerView から Adapter 参照を切る (メモリリーク防止)。再 attach 時は Adapter を戻し、Store の現在状態を取り込み直してから購読を再確立する。ViewPager2 のオフスクリーンページや Compose `AndroidView` の付け外しのように View を作り直さず detach / attach するホストでも、detach 中の Store 更新を含む最新内容で復帰する。detach 中の更新が Diff として再送されるわけではない — Store の更新通知は replay を持たないため、購読停止中に発行された Diff は消え、復帰は `store.state` / `store.theme` の現在値から行われる (Store に値を持たない Root Header / Footer だけは、通知とは別の同期の受け口で detach 中も届く — 次段落)。スクロール位置は detach 直前のアンカー (先頭可視行と行内オフセット) を控え、再 attach 時に同じ View 内で復元する。View 自体が作り直される経路 (Host の再生成・Activity 再生成) では復元しない。
 
-初回の attach でも同じ復元が働く — `bind(store)` 後・attach 前に Store へ適用した更新 (構造・Cell 内容・Section accessory・theme) は、attach 後に表示へ反映される。Host 生成・Store 操作・view 階層への取り付けの順序を利用側が意識する必要はない ([core/ADR-0019](../../../decisions/core/0019-host-restores-from-store-on-attach.md))。収束の観測境界は「attach 後、メインスレッドのキューが空になった時点」である (theme の collect 開始と `submitList` が非同期のため、`onAttachedToWindow` 完了時点の同期一致は保証しない)。`rootHeader` / `rootFooter` は Store の現在状態に含まれないため復元対象外で、所有者 (呼び出し側) が attach 後に適用する。
+初回の attach でも同じ復元が働く — `bind(store)` 後・attach 前に Store へ適用した更新 (構造・Cell 内容・Section accessory・theme) は、attach 後に表示へ反映される。Host 生成・Store 操作・view 階層への取り付けの順序を利用側が意識する必要はない ([core/ADR-0019](../../../decisions/core/0019-host-restores-from-store-on-attach.md))。収束の観測境界は「attach 後、メインスレッドのキューが空になった時点」である (theme の collect 開始と `submitList` が非同期のため、`onAttachedToWindow` 完了時点の同期一致は保証しない)。`rootHeader` / `rootFooter` は Store の現在状態に含まれないため復元の対象ではないが、`bind` から `unbind` までの間に `store.updateAccessory` の Root 対象で渡した値は、attach 前・detach 中でも失われず次の表示に反映される ([core/ADR-0033](../../../decisions/core/0033-root-accessory-survives-pre-attach-delivery.md))。Store は Root 対象の更新を結び付いている Host へ同期に直接知らせ、Host はその場で値を控える (通知の購読とは別の経路で、Root 対象の反映はこの経路だけが行う)。更新口はどのスレッドから呼んでもよく、表示への反映はメインスレッドで行う。別の Store へ `bind` し直した後は以前の Store からの Root 対象は反映されない。Host を作り直したときの再適用は所有者 (呼び出し側) の責務のままである。
 
 ## model と表示の同期
 
@@ -153,6 +153,8 @@ override fun onConfigurationChanged(newConfig: Configuration) {
 
 ## 保証すること
 
+### 更新経路と描画
+
 - 初期状態と後続更新は同じ `SettingsRootStore → KsSettingsView` 経路へ流れる。
 - Root / Section Accessory が空なら意味のない行を生成しない。
 - Theme 更新を SettingsRoot の構造変更として扱わない。Theme を渡さない・一部だけ上書きした画面は現在の夜間モードのライブラリ既定色で描かれ、Activity が再生成されない構成でも夜間モードの変更に追随する (明示指定色と、利用者が読む解決前の `theme` は変わらない)。
@@ -161,8 +163,12 @@ override fun onConfigurationChanged(newConfig: Configuration) {
 - 同じ ID の内容更新は ViewHolder を再生成せず同一 ViewHolder への再 bind として届く。フォーカスや IME の未確定文字列 (composing) を破壊しない ([android/ADR-0001](../../../decisions/android/0001-content-update-preserves-viewholder.md))。
 - **フォーカス中の EntryCell 入力欄は値の SSoT** で、内容更新はフォーカス中の text とキャレットを差し替えない ([android/ADR-0014](../../../decisions/android/0014-entrycell-focused-editor-owns-text.md)、下記「EntryCell 入力欄の SSoT」)。
 - カレンダー選択面は Activity 再生成後、復元条件を満たせば選択状態を保って再提示され、満たさなければ再表示せず他の Cell へ値を書き込まない (上記「カレンダー選択面の回転復元」、[android/ADR-0021](../../../decisions/android/0021-calendar-dialog-restore-via-view-instance-state.md))。
+### 取り付け・付け外しをまたぐ復元
+
 - detach → 再 attach をまたいでも表示は Store の現在値と一致して復帰する。detach 中に発行された Store 更新も、再 attach 時の Store 現在状態の取り込み直しにより失われない。スクロール位置も同じ View 内の付け外しでは保たれる (View の作り直しをまたぐ保持は対象外)。
 - `bind` から attach までの間の Store 更新も、attach 後にメインスレッドのキューが空になった時点までに表示へ収束する (取り付け順序に依存しない。[core/ADR-0019](../../../decisions/core/0019-host-restores-from-store-on-attach.md))。
+- `bind` 中に `store.updateAccessory` の Root 対象で渡した値は、attach 前・detach 中でも失われず次の表示に反映される ([core/ADR-0033](../../../decisions/core/0033-root-accessory-survives-pre-attach-delivery.md))。
+- 同じ Store に bind した複数の Host は Root 対象の更新をすべて受け取り、一方の `unbind` は他方を妨げない。
 
 ### EntryCell 入力欄の SSoT
 

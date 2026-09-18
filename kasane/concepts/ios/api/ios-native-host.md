@@ -3,7 +3,7 @@ type: reference
 title: iOS Native Host の利用と更新境界
 description: SettingsRootStore と KsSettingsViewController を使って UIKit の設定画面を構築・更新・拡張する方法
 tags: [ios, uikit, host, public-api]
-timestamp: 2026-09-17
+timestamp: 2026-09-18
 ---
 
 この文書は、iOS の Native API で設定画面を組み込むための公開 API 利用契約と責務境界を整理した reference である。読むと、`SettingsRootStore` と `KsSettingsViewController` の役割、表示後の更新方法、独自 Cell の登録方法、既定色が外観 (ライト / ダーク) に追随する仕組みが分かる。SwiftUI から使う場合は [iOS SwiftUI Bridge と宣言 DSL](ios-swiftui.md) を参照する。設定ツリーと差分の型自体は [SettingsRoot・Section・Cell の設定ツリー](../../core/core-model/settings-tree.md) と [SettingsRootDiff による構造変更](../../core/core-model/structural-changes.md) を先に読む。
@@ -68,7 +68,9 @@ Controller は Store の初期 root / theme を取り込み、その後の構造
 Store 接続済みの Controller は、view load (viewDidLoad) の完了時点で接続中 Store の現在状態から表示を構築する。Host 生成から view load までの間に Store へ適用した変更は種類によらず view load 時の表示へ反映されるため、Host 生成・Store 操作・view 階層への取り付けの順序を利用側が意識する必要はない ([core/ADR-0019](../../../decisions/core/0019-host-restores-from-store-on-attach.md))。
 
 - 復元の対象は Store が現在状態として保持するもの — 設定ツリーの構造・Cell 内容・Section accessory・theme。
-- `rootHeader` / `rootFooter` は Store の現在状態に含まれないため復元対象外。所有者 (呼び出し側) が view load 後に適用する。
+- `rootHeader` / `rootFooter` は Store の現在状態に含まれないため復元の対象ではない。Host を作り直したときの再適用は所有者 (呼び出し側) の責務である。
+- ただし view load 前に `updateAccessory` の Root 対象で渡した値 (`nil` の解除を含む) は捨てず Host のプロパティへ控え、view load 時の構築に使う ([core/ADR-0033](../../../decisions/core/0033-root-accessory-survives-pre-attach-delivery.md))。
+- Root 対象の値を控える操作は view load を誘発しない。
 - Store 接続中は Store が正である。view load 前に公開 API `applyTheme` / `applyDiff(.full)` で直接適用した値は、view load 時に Store 現在状態で置き換わる (Store 接続と直接適用の併用は非保証)。
 - 保証するのは viewDidLoad 完了時点での Store 現在状態への収束のみで、view load 前に届いた個々の Diff のイベントとしての適用は保証しない。view load は `loadViewIfNeeded()` や `.view` 参照でも発生し、window への attach とは独立のイベントである。
 - 公開 init は Store 経由のみである。root 直接指定の init は internal (Preview / Test 用) で、利用者は公開 API だけでは Store を接続しない Controller を作れない — 直接適用 API (`applyTheme` / `applyDiff`) は実質的に Store 接続中の Controller に対する操作になる。
@@ -164,6 +166,7 @@ let versionCell = LabelCell(title: "バージョン", valueText: "1.0.0", style:
 
 - Store 方式では、初期状態と後続更新が同じ `SettingsRootStore → KsSettingsViewController` 経路へ流れる。
 - Store 接続済みなら、view load 完了時点の表示は Store の現在状態と一致する (取り付け順序に依存しない。[core/ADR-0019](../../../decisions/core/0019-host-restores-from-store-on-attach.md))。
+- view load 前に `updateAccessory` の Root 対象で渡した Root Header / Footer も、view load 後の表示に含まれる ([core/ADR-0033](../../../decisions/core/0033-root-accessory-survives-pre-attach-delivery.md))。
 - Root / Section Accessory が空または `nil` なら、意味のない supplementary 領域を生成しない。
 - Theme を渡さない list はダーク外観で dark セットの既定色で描かれ、表示中の外観切替でも既定色と利用者の dynamic 色 (Theme・CellStyle・Cell 固有値のいずれも) が描き直される。固定色で明示した値は変わらない。
 - Store が Controller より長命でも、Store 購読と UIKit の DataSource / Delegate が Controller を延命しない。

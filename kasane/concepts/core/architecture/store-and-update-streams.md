@@ -3,7 +3,7 @@ type: concept
 title: Store の状態と更新通知
 description: 復元可能な現在状態と一過性の更新通知を分離する SettingsRootStore の共通契約
 tags: [architecture, store, state, updates]
-timestamp: 2026-08-12
+timestamp: 2026-09-18
 ---
 
 この文書は、iOS / Android の `SettingsRootStore` が現在状態と変更通知をどう分けるかを説明する。読むと、購読開始前後の復元、構造 Diff、内容更新、Theme 更新の責務が分かる。
@@ -25,6 +25,8 @@ Store は、hidden 要素を含む現在の `SettingsRoot` と現在の `Theme` 
 Section / Cell の公開操作は Store の現在状態を先に更新し、対応する構造 Diff または内容更新を通知する。insert / move の index は visible projection ではなく、hidden 要素を含む model 配列上の位置である。
 
 state 更新が成立しなかった構造操作は Diff を発行しない (core/ADR-0020)。未知の sectionID を渡した `updateAccessory` の section 系 target (header / footer) もこの契約に含まれ、状態・Diff の両ストリームとも無発行の no-op になる。Root 系 target は Store に state を持たないため判定の対象外で、常に Diff を発行する。この保証がないと「state に存在しない対象の Diff」が Host の missing ID 検出 (内部整合性チェック) に到達してしまう。
+
+Root 系 target の更新は通知に乗せるだけでは Host に届く保証がない — 通知は再生されず、容量に上限があり、Root は Store に値が無いため現在状態からの復元でも戻らない。そのため Android の Store は、Root 対象の更新を結び付いている Host へ同期に直接知らせる受け口 (モジュール内部、弱参照) を通知とは別に持ち、Host 側では Root 対象の反映をこの受け口だけが行う。Store が持つのは受け口の登録だけで、Root の header / footer の値は持たない (core/ADR-0005 の責務分離は変わらない)。iOS は生成時から購読しているため受け口を持たず、view load 前に届いた Root 対象を Host が控える ([core/ADR-0033](../../../decisions/core/0033-root-accessory-survives-pre-attach-delivery.md))。
 
 `replaceCells` は複数 Cell の内容更新を、1回の状態更新と適用 ID 群の1バッチ配信で適用する。更新は入力順に適用され、空リストは no-op、未知 ID はスキップされ、適用が0件なら配信しない。この観察可能挙動は iOS / Android で対称である (maui/ADR-0002 で iOS 側を対称化)。
 
@@ -48,6 +50,7 @@ SwiftUI / Compose の DSL 方式も内部に同じ Store を持つ。DSL の差�
 - 同じ ID の内容更新で ID を変更しない。
 - Theme 更新を構造 Diff として通知しない。
 - Store は hidden 要素を完全な model に保持する。
+- Root 系 target の更新は、Host が購読できていない間に渡されても結び付いている Host に届く ([core/ADR-0033](../../../decisions/core/0033-root-accessory-survives-pre-attach-delivery.md))。
 
 ## してはいけないこと
 
@@ -55,6 +58,7 @@ SwiftUI / Compose の DSL 方式も内部に同じ Store を持つ。DSL の差�
 - 部分操作の index を visible projection 上の位置として渡さない。
 - Store から Native list、Renderer、ViewHolder を直接操作しない。
 - Theme を `SettingsRoot` または `SettingsRootDiff` へ戻さない。
+- Root の header / footer の値を Store に持たせない。
 
 ## 関連
 

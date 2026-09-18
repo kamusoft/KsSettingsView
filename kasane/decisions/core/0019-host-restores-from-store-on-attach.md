@@ -3,6 +3,7 @@ id: 0019
 title: Host は view load / attach 時に Store 現在状態から表示を復元する
 status: accepted
 date: 2026-08-06
+amended-by: 0033
 ---
 
 ## Context

@@ -3,7 +3,7 @@ type: concept
 title: MAUI Native Bridge の interop 境界
 description: C# から Native SettingsView を操作する Bridge 層の公開契約 — 内部所有 Store・更新 API と DTO の輸送規約・ID 採番・lifecycle・操作通知
 tags: [maui, bridge, interop, binding]
-timestamp: 2026-09-06
+timestamp: 2026-09-18
 ---
 
 # MAUI Native Bridge の interop 境界
@@ -95,7 +95,7 @@ Bridge は同時に 1 つの Host をサポートする。生きている Host �
 
 解放後の `makeHost*` は Store 現在状態から表示を復元した**新しい** handle を返す。Host 不在中の更新は Store にだけ適用され、次の Host 生成時の表示復元で反映される — MAUI Handler の切断 (`releaseHost()`) / 再接続 (`makeHost*`) をまたいで Store 内容が保持されるのはこの機構による。
 
-ただし root の header / footer は Store 現在状態に含まれない Host 単位のプロパティで、解放 → 再生成には引き継がれない (core/ADR-0019 で復元対象外と確定)。所有者が値を保持し、Host 生成のたびに `updateAccessory` で再適用する。Android では再適用を Host の view 階層への取り付け**後**に行う — attach 前は Store 購読が張られておらず root 対象の更新通知は黙って失われる (iOS は Host 生成時に購読を張るため順序に依存しない)。
+ただし root の header / footer は Store 現在状態に含まれない Host 単位のプロパティで、解放 → 再生成には引き継がれない (core/ADR-0005 / core/ADR-0019)。所有者が値を保持し、Host 生成のたびに `updateAccessory` で再適用する。再適用は Host の view 階層への取り付けを待たなくてよい — 生成済みの Host に対して取り付け前に渡した root 対象の値は両 OS とも失われず、Host の最初の表示に含まれる (core/ADR-0033)。MAUI facade はこれを前提に、Host を作った直後・取り付け前に root を適用する (maui/ADR-0027)。
 
 ### 破棄
 
@@ -141,4 +141,4 @@ binding (iOS xcframework / Android aar の生成と取り込み、SDK 標準ア�
 - [MAUI binding の Native artifact 統合](../architecture/binding-build-integration.md) — binding の生成経路・既知の制約・SDK 更新時の再検証箇所
 - [MAUI 検証ホストの実行規約](../../../handbook/maui/integration-host-verification.md) — binding / facade の end-to-end 疎通手順
 
-決定の経緯: [maui ドメインの ADR 一覧](../../../decisions/maui/index.md) (基盤は maui/ADR-0001〜0007、輸送と操作通知は maui/ADR-0011〜0012・0015、view の輸送は maui/ADR-0017・0020、style と Section 装飾の輸送は maui/ADR-0023・0024)。Host の view load / attach 時の復元契約は core/ADR-0019
+決定の経緯: [maui ドメインの ADR 一覧](../../../decisions/maui/index.md) (基盤は maui/ADR-0001〜0007、輸送と操作通知は maui/ADR-0011〜0012・0015、view の輸送は maui/ADR-0017・0020、style と Section 装飾の輸送は maui/ADR-0023・0024)。Host の view load / attach 時の復元契約は core/ADR-0019、取り付け前に渡した root の header / footer の保持は core/ADR-0033
