@@ -50,10 +50,6 @@ internal final class CustomCellView: UICollectionViewListCell, @MainActor KsCell
         // CustomCell が適用するのは行レベル項目（背景色 / cellHeight）のみ。
         // テキスト色・フォント等のコンテンツ内装項目は builder 出力に適用先が存在しないため
         // 参照しない（結果として no-op）。
-        var background = defaultBackgroundConfiguration()
-        background.backgroundColor = effective.cellBackgroundColor
-        self.backgroundConfiguration = background
-
         KsCellViewSupport.state(self).theme = theme
         KsCellViewSupport.setRenderState(
             self,
@@ -61,6 +57,8 @@ internal final class CustomCellView: UICollectionViewListCell, @MainActor KsCell
             isEnabled: custom.isEnabled,
             effectiveBackgroundColor: effective.cellBackgroundColor
         )
+        // 背景色（押下色を出している最中は塗り替えない）
+        KsCellViewSupport.applyRenderedBackgroundColor(self)
         KsCellViewSupport.applyEffectiveHeight(self, effective: effective)
 
         // --- content の描画 ---
@@ -117,6 +115,8 @@ internal final class CustomCellView: UICollectionViewListCell, @MainActor KsCell
     /// 相当する「中身のリサイクル」は iOS では行わない）。
     override func prepareForReuse() {
         super.prepareForReuse()
+        // 押下色の予約・進行中フェードを次の内容へ持ち越さない
+        KsCellViewSupport.resetSelectedColor(self)
         self.tapHandler = nil
         self.contentConfiguration = nil
     }

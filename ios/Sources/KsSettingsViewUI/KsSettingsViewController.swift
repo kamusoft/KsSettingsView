@@ -416,7 +416,10 @@ public final class KsSettingsViewController: UIViewController {
         container.backgroundColor = .systemBackground
 
         let layout = makeLayout(for: style)
-        let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
+        // 押下色（Theme.selectedColor）を指を置いた瞬間に出すための collection view。
+        // タッチ遅延を持たないことと、Cell 内の UIControl 上から始めたドラッグでもスクロール
+        // できることは、この型が自分で担保する。
+        let cv = ImmediateTouchCollectionView(frame: .zero, collectionViewLayout: layout)
         // Theme.backgroundColor を初期化時から反映してチラつきを回避する
         // （viewDidLoad での applyBackgroundColor までの間、`.systemBackground` で
         // 一瞬表示されるのを防ぐ）。
@@ -451,6 +454,67 @@ public final class KsSettingsViewController: UIViewController {
         applyScrollIndicatorVisibility(theme: currentTheme)
         // Section 単位の余白のうち list 端に接する分を反映
         applyListEdgeMargin()
+    }
+
+    public override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        isDisappearing = false
+        // 遷移で残していた押下色は、戻りのアニメーションの途中で解除する
+        // （消え方は Cell 側のフェードアウトが担う）。戻り始めと同時に消え始めないよう、
+        // 解除の開始だけ少し遅らせる。
+        if let coordinator = transitionCoordinator {
+            pendingDeselectTask?.cancel()
+            pendingDeselectTask = Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(Self.returnDeselectDelay))
+                guard !Task.isCancelled, let self else { return }
+                self.pendingDeselectTask = nil
+                guard coordinator.isInteractive else {
+                    // 通常の戻る操作。遷移の途中でフェードアウトを始める。
+                    self.deselectAllItems(animated: true)
+                    return
+                }
+                // エッジスワイプ中は行き先が決まらないため、完了を待って判定する。
+                // 取り消して元の画面に留まった場合は押下色を残す。
+                coordinator.animate(alongsideTransition: nil, completion: { [weak self] context in
+                    guard !context.isCancelled else { return }
+                    self?.deselectAllItems(animated: true)
+                })
+            }
+        } else {
+            deselectAllItems(animated: animated)
+        }
+    }
+
+    public override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        isDisappearing = true
+    }
+
+    /// タップ後に押下色を残す猶予時間（秒）。この時間内に画面が隠れ始めなければ解除する。
+    private static let selectionHoldDuration: TimeInterval = 0.1
+
+    /// 遷移から戻ったあと、押下色を消し始めるまでの待ち時間（秒）。
+    private static let returnDeselectDelay: TimeInterval = 0.08
+
+    /// 画面が隠れ始めたか。タップで遷移が起きたかの判定に使う。
+    private var isDisappearing = false
+
+    /// 解除待ちを担う Task。タップ後の猶予と戻り際の待ちで共有し、張り直しのたびに
+    /// 前の待ちを取り消すため 1 本だけ保持する。
+    private var pendingDeselectTask: Task<Void, Never>?
+
+    /// 現在選択されている Cell をすべて解除する。
+    ///
+    /// 解除の時期はライブラリが決める (ios/ADR-0005) — その場で完結するタップは猶予の後、
+    /// 遷移を起こしたタップは戻りのアニメーションの途中で解除する。
+    ///
+    /// 解除の対象を tap 時の indexPath に固定すると、選択が残っているあいだの別 Cell のタップや
+    /// snapshot の適用で対象がずれるため、その時点の選択から取り直す。
+    private func deselectAllItems(animated: Bool) {
+        guard isViewLoaded, let selected = collectionView.indexPathsForSelectedItems else { return }
+        for indexPath in selected {
+            collectionView.deselectItem(at: indexPath, animated: animated)
+        }
     }
 
     /// 接続中 Store の現在状態（root / theme）を内部状態へ取り込む。
@@ -2477,13 +2541,25 @@ extension KsSettingsViewController: UICollectionViewDelegate {
     /// 行タップ通知に対応する CellView が `tapHandler` プロパティに `onTap` / `onValueChanged`
     /// クロージャを保持しているため、共通の Protocol 経由で呼び出す。
     public func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        defer {
-            // 選択ハイライトは残さない（チェックマーク状態は accessory で表現される）
-            collectionView.deselectItem(at: indexPath, animated: true)
-        }
-        guard let cell = collectionView.cellForItem(at: indexPath) else { return }
-        if let handler = (cell as? TapNotifyingRenderer)?.tapHandler {
+        // タップで画面が遷移する場合は、押下色を遷移のあいだ残して戻り際に解除する
+        // （選択状態そのものはチェックマーク等の accessory で表現する方針を変えない）。
+        // 遷移が始まったかは同期的には分からない（SwiftUI の NavigationStack は path の変更を
+        // 次の更新で反映する）ため、猶予時間のあいだに画面が隠れ始めたかで判定する。
+        // 合図の初期化は tapHandler より前に行う。UIKit から直接使う場合、handler の中で
+        // 同期的に push されて viewWillDisappear が届くため、後で初期化すると合図を消してしまう。
+        isDisappearing = false
+        if let cell = collectionView.cellForItem(at: indexPath),
+           let handler = (cell as? TapNotifyingRenderer)?.tapHandler {
             handler()
+        }
+        // 猶予は「最後のタップから」数える。前のタップの待ちが残っていると、続けてタップした
+        // Cell の押下色を早く切ってしまうため、張り直す。
+        pendingDeselectTask?.cancel()
+        pendingDeselectTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(Self.selectionHoldDuration))
+            guard !Task.isCancelled, let self, !self.isDisappearing else { return }
+            self.pendingDeselectTask = nil
+            self.deselectAllItems(animated: true)
         }
     }
 }

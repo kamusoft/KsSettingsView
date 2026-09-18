@@ -114,11 +114,6 @@ internal func applyCellBaseLayout(
         listCell.hideIcon()
     }
 
-    // 背景色
-    var bg = listCell.defaultBackgroundConfiguration()
-    bg.backgroundColor = effective.cellBackgroundColor
-    listCell.backgroundConfiguration = bg
-
     // 共通状態反映（タッチフィードバック / 高さ）
     KsCellViewSupport.state(listCell).theme = theme
     KsCellViewSupport.setRenderState(
@@ -127,6 +122,9 @@ internal func applyCellBaseLayout(
         isEnabled: isEnabled,
         effectiveBackgroundColor: effective.cellBackgroundColor
     )
+
+    // 背景色（押下色を出している最中は塗り替えない）
+    KsCellViewSupport.applyRenderedBackgroundColor(listCell)
     KsCellViewSupport.applyEffectiveHeight(listCell, effective: effective)
 
     // contentStack の trailingViews を一旦クリアして再構築する

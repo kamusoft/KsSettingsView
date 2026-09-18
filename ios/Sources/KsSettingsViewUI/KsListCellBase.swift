@@ -351,6 +351,8 @@ internal class KsListCellBase: UICollectionViewListCell {
     /// titleLabel 以外の行内 trailing を、`accessoryHolder` から Cell 級アクセサリを除去する。
     override func prepareForReuse() {
         super.prepareForReuse()
+        // 押下色の予約・進行中フェードを次の内容へ持ち越さない
+        KsCellViewSupport.resetSelectedColor(self)
         // 共通 subview のリセット
         titleLabel.text = nil
         descriptionLabel.text = nil
