@@ -3,7 +3,7 @@ type: concept
 title: Cell の視覚状態
 description: 通常・押下または選択・無効状態を実効 style へ重ねる描画契約
 tags: [styling, cell, interaction, disabled]
-timestamp: 2026-08-04
+timestamp: 2026-09-18
 ---
 
 この文書は、Cell の通常、押下または選択、無効状態を iOS / Android でどう表すかを説明する。読むと、背景 feedback、disabled text、Native control、Cell 固有の意味色の優先関係が分かる。
@@ -19,6 +19,20 @@ Theme と CellStyle から解決した通常 style の上へ、現在の操作�
 | Native control | `isEnabled` を control へ反映 | `isEnabled` を Material / Android control へ反映 |
 
 Android の現行共通行は、handler を持たない LabelCell なども enabled なら ripple 表示のために clickable flag を持つ。これは視覚 feedback の実装上の状態であり、callback や利用者向け action が存在することを意味しない。iOS は操作可能な Cell だけが選択 feedback を持つ。この違いを共通化のために隠さない。
+
+## 押下 feedback の出方 (iOS)
+
+iOS の押下色は UIKit のタッチ遅延に任せず、ライブラリが出すタイミングと消すタイミングを決める ([ios/ADR-0005](../../../decisions/ios/0005-cell-press-feedback-library-controlled-timing.md))。利用者から見える挙動は次のとおり。
+
+| 操作 | 見え方 |
+|---|---|
+| Cell を速くタップする | 指を置いた直後に押下色が立ち上がる (長押しを要しない) |
+| スクロールを始める | 押下色は出ない |
+| タップで画面が push 遷移する | 遷移中は押下色が残り、戻りの遷移中にフェードアウトする。エッジスワイプを取り消して留まった場合は残る |
+| その場で完結するタップ (Radio / Checkbox / Picker 系のシート提示を含む) | 短い猶予の後にフェードアウトする。値の変更で Cell が再構成されても押下色は途中で消えない |
+| Switch / Slider の上から始めたタッチ | コントロールが優先され、縦にドラッグしてもリストはスクロールしない |
+
+遅延・フェード・猶予の秒数はライブラリ内の定数であり公開 API ではない。Android のリップルは `RippleDrawable` の標準の出方に従い、この節の対象外。
 
 ## 無効状態
 

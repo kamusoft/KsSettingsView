@@ -1,7 +1,7 @@
 ---
 id: 0005
 title: Cell の押下色は UIKit のタッチ遅延に頼らず、ライブラリ側の遅延・フェード・遷移連動の解除で制御する
-status: proposed
+status: accepted
 date: 2026-09-18
 ---
 
@@ -55,4 +55,5 @@ iOS の押下色のタイミングは UIKit のタッチ遅延に任せず、ラ
 - 押下色の描画経路が `configurationUpdateHandler` 集約でなくなったとき
 
 ---
-出典: kasane/changes/ios-cell-highlight-delayed-on-touchdown/exploration.md (探索で分かった仕組み・決定事項) / kasane/changes/ios-cell-highlight-delayed-on-touchdown/summary.md (最終状態・採用値と根拠) / kasane/changes/ios-cell-highlight-delayed-on-touchdown/evidence.md
+出典: kasane/changes/archive/2026-09-18-ios-cell-highlight-delayed-on-touchdown/exploration.md (探索で分かった仕組み・決定事項) / kasane/changes/archive/2026-09-18-ios-cell-highlight-delayed-on-touchdown/summary.md (最終状態・採用値と根拠) / kasane/changes/archive/2026-09-18-ios-cell-highlight-delayed-on-touchdown/evidence.md
+現行照合: 2026-09-18 確認。`ios/Sources/KsSettingsViewUI/ImmediateTouchCollectionView.swift` (タッチ遅延なし・UISwitch / UISlider 上はキャンセルしない)、`KsCellViewSupport.swift` (遅延予約→フェードイン、選択経由の解除はフェードアウト、`applyRenderedBackgroundColor`)、`KsSettingsViewController.swift` (猶予付きの解除・戻り際の遷移連動)。判定: 維持

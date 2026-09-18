@@ -120,7 +120,7 @@ let controller = KsSettingsViewController(
 
 Cell 個別高さは Theme の行高さより優先され、iOS の最終行高は 48pt を下回らない。`Theme.hasUnevenRows == true` では内容に応じて伸び、`false` では解決済み高さへ固定する。
 
-操作可能な Cell の highlighted / selected 中は `Theme.selectedColor` を使い、無効な Cell は選択背景を使わず、テキスト色を `Theme.disabledTextColor` へ置き換える。無効化は Cell initializer の `isEnabled` で指定する。
+操作可能な Cell の highlighted / selected 中は `Theme.selectedColor` を使い、無効な Cell は選択背景を使わず、テキスト色を `Theme.disabledTextColor` へ置き換える。無効化は Cell initializer の `isEnabled` で指定する。押下色を出す・消すタイミングはライブラリが決める (速いタップで即時に出る、push 遷移中は残る、Switch 上のタッチはコントロール優先。詳細は [Cell の視覚状態](../../core/styling/cell-visual-states.md) の「押下 feedback の出方 (iOS)」)。`KsSettingsViewController` を `UINavigationController` に直接載せて `pushViewController` を同期的に呼ぶ利用でも成立する。
 
 Theme 属性の未指定時に使われるライブラリ既定値は、`Theme` の public static 定数として公開される。利用者は「既定へ戻す」「既定値を基準に派生値を作る」用途でこれらを参照できる。
 
