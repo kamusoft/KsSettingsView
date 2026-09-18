@@ -1,7 +1,7 @@
 ---
 id: 0028
 title: 配置された View の行・領域の高さは初回から幅付きで wrapper に問い、intrinsic の無効化は内容変化の追従にだけ使う
-status: proposed
+status: accepted
 date: 2026-09-18
 amends: 0020
 ---
@@ -22,8 +22,9 @@ iOS で CustomCell の行の高さと Section の Footer の領域の高さは�
 前提:
 
 - UIKit の self-sizing 経路 (`UICollectionViewListCell` + `UIHostingConfiguration`) で、表示中の行の高さ変化がアニメーションされる既定が続いている
-- SwiftUI が CustomCell の内容の初回計測で有限幅を提案する (未確認。実装時の probe で確かめる)
+- SwiftUI は CustomCell の内容の初回計測から有限幅を提案する (実機・Simulator の probe で確認: 幅付きの問い合わせが intrinsic より先に来る)
 - MauiView の計測キャッシュが制約ペア単位である
+- view accessory の wrapper は取り付け直後から superview (`contentView`) が領域の幅を持ち、水平の inset は無い
 
 ## Decision
 
@@ -31,11 +32,12 @@ maui/ADR-0020 の決定のうち「行の高さは wrapper の intrinsic の答�
 
 配置された View の行・領域の高さは、**幅が分かっている側が幅付きで wrapper に問う**。
 
-- CustomCell では Bridge の representable が提案された幅で `sizeThatFits(幅, ∞)` を呼び、wrapper の `SizeThatFits` (MAUI 本体の `CrossPlatformMeasure` 経路) で初回から折り返し後の高さを得る
-- Section / Root の view accessory は Auto Layout 経路で幅付きの問い合わせができないため、wrapper に幅のヒントを与えてから intrinsic を問う。与え方 (wrapper が superview の幅を使うか、Native が取り付け時に frame 幅を先に与えるか) は実装時に決める
-- wrapper の `IntrinsicContentSize` と `MeasureInvalidated` → `InvalidateIntrinsicContentSize()` の中継 (maui/ADR-0016) は残し、**内容の変化の追従にだけ使う**
-- wrapper は `MeasureInvalidated` を受けたら intrinsic の無効化と併せて MauiView の計測キャッシュも捨てる (`InvalidateMeasure` 相当)。幅付きの問い合わせが同じ制約ペアで古い高さを返さないため
-- 補正のアニメーションを止める手当 (`UIView.performWithoutAnimation`) は本決定には含めない。幅付きの初回計測を実機で確かめた後、後からの幅変化 (回転など) の補正に対して要否を判断する
+- CustomCell では Bridge の representable が提案された幅で `sizeThatFits(幅, 上限なし)` を呼び、wrapper の `SizeThatFits` (MAUI 本体の `CrossPlatformMeasure` 経路) で初回から折り返し後の高さを得る
+- 上限なしは有限の最大値で渡し、wrapper 側が高さ制約を無限に正規化して幅だけを制約にする (有限の巨大高と無限は MAUI の計測で同じではない)
+- Section / Root の view accessory は Auto Layout 経路で幅付きの問い合わせができないため、wrapper が自分の幅が 0 のとき superview の幅で測る。Native (Swift) 側には幅を渡す口を足さない
+- wrapper の `IntrinsicContentSize` と `MeasureInvalidated` → `InvalidateIntrinsicContentSize()` の中継 (maui/ADR-0016) は残し、**内容の変化の追従にだけ使う**。幅付きの経路と intrinsic の経路は同じ幅に対して同じ高さを答える
+- wrapper は `MeasureInvalidated` を受けたら intrinsic の無効化と併せて MauiView の計測キャッシュを捨てる (`InvalidateConstraintsCache`。祖先へ伝播する `InvalidateMeasure` は外向きの通知を `measureInvalidated` コールバックが担うため採らない)
+- 補正のアニメーションを止める手当 (`UIView.performWithoutAnimation`) は本決定には含めない。初回表示では幅付きの計測で補正自体が起きなくなるため要らず、後からの幅変化 (回転など) への保険としての採否は未決のまま残す
 
 ## Alternatives Considered
 
@@ -51,15 +53,17 @@ maui/ADR-0020 の決定のうち「行の高さは wrapper の intrinsic の答�
 - 正: native への再計測通知 (maui/ADR-0018 の `invalidateAccessoryMeasurement` 相当) を行に増やさない。maui/ADR-0020 の「通知不要」は保たれる
 - 負: wrapper の高さの答えが intrinsic と `SizeThatFits` の 2 経路になる。両者が同じ幅で同じ高さを返す一貫性と、`MeasureInvalidated` でキャッシュを捨てる責務を wrapper が負う。怠ると幅付き経路が古い高さを返す
 - 負: Bridge の representable が wrapper の `SizeThatFits` の意味論 (MAUI 本体の制約ペア計測) に依存する。iOS Bridge と MAUI facade の境界をまたぐ約束事になり、MAUI 本体の計測契約の変更に追随する必要がある
-- 負: CustomCell (幅付きの問い合わせ) と view accessory (幅のヒント) で初回計測の経路が非対称になる
+- 負: CustomCell (幅付きの問い合わせ) と view accessory (superview の幅) で初回計測の経路が非対称になる。superview も無い最初の 1 回 (取り付け前) は無限幅で答えるしかなく、行の高さを決めるのはその後の幅付きの問い合わせである
+- 負: 幅付きの問い合わせ (幅, 無限) と配置の計測 (幅, 実高さ) で計測キャッシュの鍵が入れ替わるため、レイアウトパスごとに内容の計測が 1 回増える
 - 負: 後からの幅変化 (回転など) の補正は従来どおり無効化経由で、UIKit の既定アニメーションが残る
 
 ## Revisit When
 
 - MAUI 本体の `MauiView` が `IntrinsicContentSize` を持つようになるか、計測キャッシュの単位が変わったとき
 - UIKit が self-sizing の高さ変化を既定でアニメーションしなくなったとき (幅付き計測の必要性は残るが、症状の重さが変わる)
-- SwiftUI が CustomCell の内容の初回計測で有限幅を提案しないことが probe で分かったとき (本決定の CustomCell 側の手段が成り立たない)
+- SwiftUI が CustomCell の内容の初回計測で有限幅を提案しなくなったとき (本決定の CustomCell 側の手段が成り立たない)
+- accessory の取り付けに水平 inset が入り、superview の幅と内容の幅が一致しなくなったとき
 
 ---
-出典: kasane/changes/ios-customcell-initial-height-grow-animation/exploration.md (見立て・案の比較・決定事項、2026-09-18) / kasane/changes/android-accessory-view-late-insert-animation/evidence/README.md (1.3 と 6.3-e の iOS 実機観測) / kasane/roadmaps/maui-support/phases/phase-5-custom-cell/artifacts/probe/2026-08-12-cell-content-size-follow.md (MauiView 計測キャッシュのリスク指摘)
+出典: kasane/changes/archive/2026-09-18-ios-customcell-initial-height-grow-animation/exploration.md (見立て・案の比較・決定事項) / 同 evidence/README.md (probe 1a・1b と修正後の実機 A/B) / 同 review-001.md (キャッシュ破棄の選択と高さ正規化の裏取り) / kasane/changes/archive/2026-09-18-android-accessory-view-late-insert-animation/evidence/README.md (1.3 と 6.3-e の iOS 実機観測) / kasane/roadmaps/maui-support/phases/phase-5-custom-cell/artifacts/probe/2026-08-12-cell-content-size-follow.md (MauiView 計測キャッシュのリスク指摘)
 関連: maui/ADR-0016 (wrapper の IntrinsicContentSize override と MeasureInvalidated 中継。本決定は残す) / maui/ADR-0018 (accessory の一過性再計測通知。行には足さない)

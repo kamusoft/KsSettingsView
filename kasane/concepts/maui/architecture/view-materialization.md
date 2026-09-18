@@ -34,6 +34,8 @@ fake seam と fake gateway を注入すれば net10.0 単体でこの機構の�
 
 iOS の wrapper は `IntrinsicContentSize` を override し、`MeasureInvalidated` で `InvalidateIntrinsicContentSize()` を呼ばなければならない — iOS の accessory 自動高さは Auto Layout 経由でしか決まらず、`SizeThatFits` の override だけでは領域が潰れる (実測。maui/ADR-0016)。
 
+iOS の高さの答えは**最初から折り返し後の値**でなければならない。幅が決まる前に無限幅で答えると、行・領域はいったん 1 行ぶんで作られ、幅が付いた後の補正が UIKit の self-sizing で既定どおりアニメーションされて「遷移後に行が伸びて後続がずれる」見え方になる (実機でのみ目に見え、Simulator では補正が最初の描画前に収まる)。そのため幅は分かっている側が渡す: cell content は Bridge の representable が提案幅で `sizeThatFits` を問い (wrapper は高さ制約を上限なしに正規化する)、accessory は wrapper が自分の幅が 0 のとき superview の幅で測る。intrinsic の無効化は内容の変化の追従にだけ使い、`MeasureInvalidated` では MauiView の制約ペア単位の計測キャッシュ (`InvalidateConstraintsCache`) も捨てる (maui/ADR-0028)。cell content の入れ物 (`KsBridgeCellContentHostView`) は内容に「幅付きの問い合わせと intrinsic の両方で同じ高さを答える」ことを求める — 行の高さは前者で決め、変化の検知は後者で行うため。
+
 ## 論理所有と platform lease の寿命分離
 
 | | 論理所有 | platform lease |
@@ -135,7 +137,7 @@ deactivate 経路 (`AndroidViewHolder.onDeactivate` = `removeAllViewsInLayout`) 
 
 ## サイズ変化の伝播
 
-用途によって届け先が違う。**accessory** は領域の高さを native Host が抱えるため、wrapper の `MeasureInvalidated` を facade で集約し、`invalidateAccessoryMeasurement` で native の高さ再計算へ届ける (maui/ADR-0018)。**cell content** は wrapper 自身の計測無効化だけで両 OS の行高さが追従する — 行高さは native CustomCell の self-sizing で決まるため、native 側に cell 版の再計測 API を足す必要がなかった (追従しない場合の対照を取ったうえで実測確認済み。maui/ADR-0020)。cell content の materialize に渡す `measureInvalidated` が何もしないのはこのためである。
+用途によって届け先が違う。**accessory** は領域の高さを native Host が抱えるため、wrapper の `MeasureInvalidated` を facade で集約し、`invalidateAccessoryMeasurement` で native の高さ再計算へ届ける (maui/ADR-0018)。**cell content** は wrapper 自身の計測無効化だけで両 OS の行高さが追従する — 行高さは native CustomCell の self-sizing で決まるため、native 側に cell 版の再計測 API を足す必要がなかった (追従しない場合の対照を取ったうえで実測確認済み。maui/ADR-0020)。cell content の materialize に渡す `measureInvalidated` が何もしないのはこのためである。行の高さの**初回**の決定は無効化ではなく幅付きの問い合わせが担う (上の「産物は自己計測 wrapper」。maui/ADR-0028)。
 
 ## 用途をまたぐ再利用の規律
 
@@ -158,4 +160,5 @@ deactivate 経路 (`AndroidViewHolder.onDeactivate` = `removeAllViewsInLayout`) 
 - [Store の状態と更新通知](../../core/architecture/store-and-update-streams.md) — 一過性通知 (`invalidateAccessoryMeasurement`) の位置づけ
 - [CustomCell](../../core/cells/custom-cell.md) — content と builder による行の共通契約 (native 側の再バインド規則)
 - 決定の経緯 (機構と寿命): maui/ADR-0016 (三層構造と wrapper・寿命)、maui/ADR-0017 (インスタンス輸送と detach)、maui/ADR-0018 (accessory の更新セマンティクスと再計算口)、maui/ADR-0020 (cell content の live view と世代トークン)
+- 決定の経緯 (計測): maui/ADR-0028 (初回から幅付きで高さを問う)
 - 決定の経緯 (実体化のタイミング): maui/ADR-0027 (Host 生成前の実体化と配信)、core/ADR-0033 (前提となる Host 保証)

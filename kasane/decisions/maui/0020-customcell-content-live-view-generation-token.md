@@ -3,6 +3,7 @@ id: 0020
 title: MAUI CustomCell の content は live view + 世代トークンで輸送し、埋め込み view の差し替えはトークン変更でのみ起きる
 status: accepted
 date: 2026-08-12
+amended-by: 0028
 ---
 
 ## Context
