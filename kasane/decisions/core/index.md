@@ -33,4 +33,6 @@
 | [0032](0032-header-footer-background-default-transparent.md) | Header / Footer 背景色の既定は両外観とも透明にする | accepted | core/ADR-0030 の既定値のうち Header / Footer 背景だけを置き換える (amends 0030)。iOS にも背景色を反映するにあたり、既定では帯を出さず list 下地を見せる (AiForms 互換)。iOS の公開定数は両外観の値を持つ形のまま値だけ透明。 |
 | [0033](0033-root-accessory-survives-pre-attach-delivery.md) | Root の header / footer は Host が購読できていない間に渡されても失わない | accepted (amends 0019) | core/ADR-0019 の「所有者が view load / attach 後に適用する責務」だけを置き換える (amends 0019)。保証は Host 側で実現し Store には持たせない (Android は Store から Host への同期の受け口で bind 中ずっと受け取り、iOS は view load 前の分を控える)。MAUI は View の header / footer を Section・Root の区別なく初回配信に間に合わせる。内容なしの行を作らない判定 (ADR-0023) は不変。 |
 
+| [0034](0034-picker-selection-completed-after-dismiss.md) | モーダル提示する選択面 (PickerCell / DatePickerCell) は「確定して閉じ切った後」を値付きの callback で知らせ、MAUI の SelectedCommand はその時点で実行する | proposed | 対象は iOS でモーダル提示する PickerCell / DatePickerCell (Number / Time は対象外)。Native に確定して閉じ切った後の callback を足す (Picker は単一 / 複数の対、Date は 1 本) (値の callback は確定直後のまま、非確定 dismiss は発火しない)。MAUI の `SelectedCommand` はこれを受けて実行し、値の書き戻しは即時のまま。別通知の新設・確定 callback ごと遅らせる案・毎回通知 + フラグは却下。 |
+
 番号は旧フラット時代の採番を温存 (採番規則は [../index.md](../index.md) を参照)。

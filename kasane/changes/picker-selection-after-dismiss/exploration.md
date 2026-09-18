@@ -38,20 +38,45 @@
 
 ## 決定事項
 
-## ADR 候補 (作成済み: なし / 未起票: なし)
+- (2026-09-18, 論点 1) **MAUI の `SelectedCommand` は選択面が閉じ切った後に実行する。値の書き戻し (`SelectedIndex` / `SelectedIndices`) は今までどおり確定直後**。根拠: AiForms の `SelectedCommand` は選択ページの `OnDisappearing` で発火しており「閉じた後」の意味論だった (`../AiForms.Maui.SettingsView/SettingsView/Pages/PickerPage.xaml.cs:117-140`)。移行利用者の書き方がそのまま動き、公開 API が増えず、「値はバインディング・次の行動はコマンド」と役割ごとにタイミングが 1 つになる。既存利用者への挙動変化 (コマンドが約 0.4 秒遅れる) は beta 配信中の破壊的変更として受容する (core/ADR-0031 と同じ性格)
+  - 却下 B「別の閉じ切り通知を新設し `SelectedCommand` は現状維持」: API と使い分けの説明が増える。「閉じ切りを知りたいがコマンドは確定直後に欲しい」利用者は見つかっていない
+  - 却下 C「Native の確定 callback ごと閉じ切り後へ」: 閉じるアニメーション中に行の表示 (ValueText) が古い値のまま残る
+
+- (2026-09-18, 論点 2) **Native の Cell モデルに「確定して閉じ切った後」に 1 回だけ発火する callback を足す**。単一 / 複数で既存の対と揃え、値を運ぶ 2 本 (仮名 `onSelectionCompleted(Int)` / `onMultiSelectionCompleted(Set<Int>)`)。値の callback (`onSelectionChanged` 系) の後に届き同じ値を運ぶ。非確定 dismiss ではどの callback も発火しない (既存の保証文はそのまま)。iOS は確定時 dismiss の completion、Android はボトムシートの `OnDismissListener` + 確定済みフラグが起点。bridge はこれを MAUI へ通し、`SelectedCommand` を実行する (論点 1)
+  - 却下 (a)「閉じたら毎回知らせる + 確定フラグ」: 保証文「非確定 dismiss は callback を発火しない」の書き換えが要り、iOS の対話的 dismiss (下スワイプ) の完了検出を Picker に新設する必要がある。キャンセル通知は後から callback 追加で足せる (追加的)
+  - 却下 (c)「既存の確定 callback を閉じ切り後へ移す」: Native 利用者の Store 更新が遅れ、閉じるアニメーション中に行の表示が古いまま残る
+  - 却下「値を運ばない 1 本」: 公開面は最小だが、閉じ切り時に値を使う利用者が自分で値を保持する必要がある
+
+- (2026-09-18, 論点 3) **対象は PickerCell と DatePickerCell の 2 種** (iOS でモーダル提示し提示競合を踏む選択面)。DatePickerCell は uiStyle に関係なく発火させる (カレンダーは既存の dismiss 完了通知、ホイールは inputView の非表示完了が起点。詳細は propose で設計)。Android も同じ意味で発火する (競合はしないが契約は対称)。MAUI で消費するのは PickerCell の `SelectedCommand` のみで、DatePicker の MAUI 面にコマンドは無いため bridge へ通す必要はない
+  - 却下「PickerCell だけ」: DatePicker カレンダーの同じ競合を別 change に逃がす形になる
+  - 却下「選択面 4 種すべて」: Number / Time は iOS で inputView 提示のため競合せず、配線の増分が対称性のためだけになる
+
+- (2026-09-18, 論点 4) **「dismiss が UIKit 既定より遅い」観測の切り分けをこの change に同梱する**。新しい閉じ切り callback と確定 callback の時刻差で dismiss の実時間を実機計測する (追加の仕掛けは不要)。原因がライブラリ側なら修正も同梱、ライブラリの外 (ホストアプリのメインスレッド・利用側実装) と判明したら計測結果を記録して修正は追わない
+  - 仮説 (静的読解、未検証): 確定直後の値の書き戻しが MAUI → bridge → iOS Store `replaceCell` と流れ、iOS 側は該当行ではなくセクション単位の reload (`KsSettingsViewController.swift` の `reloadSections`) で反映する。dismiss アニメーション開始と同じフレームでメインスレッドに乗るため、セクションが大きいと閉じる動きが重くなる可能性がある
+  - 却下「計測だけ同梱」「別 change に切り離す」: 同じ計測器を別に組み直すことになり、隣接する同じ領域の課題を逃がす形になる
+
+- (2026-09-18, 論点 4 の顛末) 提案段階で一時パッチにより計測 (`evidence/dismiss-timing/README.md`)。Simulator で Native 直接 546ms / MAUI 経由 533ms、確定 callback の処理は最大 7ms。ライブラリ側の遅延要因は無く、UIKit のページシート dismiss がもともと約 545ms かかることで「500ms で足りず 625ms で通る」観測が説明できる。セクション reload 仮説は棄却。修正の分岐は提案から外し、実装フェーズは実機 1 系列の確認のみ
+
+## ADR 候補 (作成済み: core/ADR-0034 (proposed) / 未起票: なし)
+
+- core/ADR-0034 `kasane/decisions/core/0034-picker-selection-completed-after-dismiss.md` — 論点 1・2 の決定を 1 本にまとめたドラフト
 
 ## 未決の論点
 
-- 未探索 (簡易起票)
-- **公開する形**: 既存の `SelectedCommand` の発火タイミングを「閉じた後」に変えるか、別イベント / 別コマンドとして足すか。前者は既存利用者の挙動を変えるため互換性の判断が要る (`SelectedCommand` に依存して「閉じる前」に動いている利用者がいる可能性)
-- **Android との対称性**: Android 側は競合しないが、API としては両プラットフォームで同じ意味で発火すべきか。iOS だけ意味のあるイベントにするのは筋が悪い可能性がある
-- **他の Cell への波及**: `concepts/core/cells/` に `picker-selection-surface.md` / `number-picker-selection-surface.md` / `time-picker-selection-surface.md` / `date-picker-selection-surface.md` の 4 つが既にあり、いずれも「行タップで開く**モーダルな**選択 UI」と定義されている (`number-picker-selection-surface.md:72`)。**同じ提示競合は 4 種すべてで起こり得る**ため、通知は `PickerCell` 限定ではなく選択面を持つ Cell に共通の契約として設計する必要がある
-  - 4 種とも「確定 callback は確定操作の 1 回だけ発火し、非確定 dismiss はどの経路でも発火しない」という契約を持つ。**この契約は「閉じる前に発火する」とは別の軸**なので、閉じ切り通知を足しても既存契約とは両立し得る
-  - 非確定 dismiss (キャンセル・外側タップ・Back・下スワイプ) でも選択面は閉じる。**閉じ切り通知をどう扱うかは確定/非確定の両方で定義が要る** — 利用側が「閉じ切ってから何かを出す」目的で使うなら、非確定で閉じたときも知りたいはず
-- **bridge の経路**: `dismissModal()` の completion から MAUI 側へ上げる経路をどう通すか (既存の accessory / snapshot の配線に乗るか、新設か)
+- 閉じ切り callback の**名前** (仮: `onSelectionCompleted` / `onMultiSelectionCompleted` / DatePicker は `onDateCompleted` 相当)。propose で確定する
+- DatePicker **ホイール側**の起点 (inputView の非表示完了をどう拾うか: キーボード非表示の完了通知か、`resignFirstResponder` 後の次フレームか)。propose の design で決める
+- Android の**確定済みフラグ**の持ち方 (シートの dismiss リスナーは確定 / 非確定を区別しないため、確定経路で立てるフラグと dismiss 完了の合流)。実装詳細
+- iOS で `SelectedCommand` が閉じ切り後に動くようになったとき、**Android では確定直後との差がほぼ無い**が同じ経路 (閉じ切り後) に揃えること自体は決定済み。テストで両プラットフォームの順序 (値の callback → 閉じ切り callback) を固定する
+- DatePicker の MAUI 面: コマンドが無いため bridge へは通さない。将来 `DateChangedCommand` のようなものを足すなら閉じ切り後に揃える (この change では扱わない)
 
 ## UI 素材 (ui/references/ の一覧と注釈)
 
 なし
 
-## 変更級の推奨: 未判定 (公開 API を足すため S 級には収まらない見込み)
+## 変更級の推奨: L (2026-09-18 オーナー確定)
+
+- 触る能力: core 契約 (concepts 2 本: picker / date-picker selection-surface)、iOS UI (Picker の dismiss completion・DatePicker カレンダー / ホイールの 2 経路)、Android UI (Picker シート・Date シート・カレンダーダイアログ)、bridge (iOS delegate + Android listener + binding ApiDefinition)、MAUI (`SelectedCommand` の実行時点の移動・controller・テスト)。4 ドメインを横断し、プラットフォーム間で同じ意味に揃える設計判断を含む
+- 公開 API の変更: Native に callback を足す (追加)。MAUI は公開面不変だが `SelectedCommand` の実行タイミングが変わる (beta の破壊的変更として受容)
+- 可逆性: 利用者が閉じ切り後の意味論に依存し始めると戻せない。ADR-0034 で固定
+- UI の有無: 見た目の変更なし (mock 不要)。実機での実時間計測が検証に入る
+- 実体は各層とも小さいが、能力横断 + 公開契約 + 遅延調査の同梱で M に収めるには重い。迷ったら 1 段上で L
