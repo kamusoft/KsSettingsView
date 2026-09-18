@@ -25,6 +25,10 @@ import UIKit
 /// 引き取りの機会は配置 (`layoutSubviews`) 任せにしない。内容を奪われた側には必ず
 /// `willRemoveSubview` が届くので、それを合図に配置をやり直させ、表示中の行が内容を失ったまま
 /// 固定されないようにする。
+///
+/// 内容には、幅付きの問い合わせ (`sizeThatFits`) と自分で幅を決める問い合わせ (`intrinsicContentSize`)
+/// の両方で同じ高さを答えることを求める。行の高さは前者で決め、内容の高さの変化は後者で検知するため
+/// (maui/ADR-0028)。
 internal final class KsBridgeCellContentHostView: UIView {
 
     /// 抱えている内容の view。

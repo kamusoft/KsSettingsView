@@ -28,9 +28,40 @@
 
 ## 検討した選択肢 (却下案と理由を含む)
 
+(2026-09-18 探索。裏取り: MAUI 本体 `MauiView.cs` (main / release/10.0.1xx) と WWDC22 Session 10068 の `selfSizingInvalidation`)
+
+### 見立て (因果の仮説。実機ログでの確認は未了)
+
+iOS では CustomCell の行の高さも Section Footer の高さも、自己計測 wrapper (`maui/KsSettingsView.Maui/Platforms/iOS/KsAccessoryHostView.cs`) が答える `IntrinsicContentSize` で決まる。
+
+1. 最初の問い合わせ時点で wrapper は幅を持たない (`Bounds.Width` = 0) ため無限幅で Label を測り、1 行ぶんの高さを答える。行はその高さで作られる
+2. 最初の配置で wrapper に実幅が渡り、MAUI は Label を実幅で配置する。Content が最初のフレームから 4 行ぶんに描かれ、行の枠からはみ出す (実機証跡と一致)。`LayoutSubviews` が幅の変化を検知して必要サイズを無効化する
+3. 無効化が `ios/Sources/KsSettingsViewBridge/KsBridgeCellContentHostView.swift` の高さ変化検知を経て UICollectionView の self-sizing 再計算に届く。iOS 16 以降、表示中の行の高さ変化は既定でアニメーションされる (`selfSizingInvalidation`)。約 300ms かけて伸びるのはこれ
+
+「content の後着」ではなく「初回の答えが幅なしで出ている」ことが芯。Footer も同じ wrapper なので同型 (ただし Footer は Auto Layout 経路で、Native 側 `applyAccessoryToListCell` の uiKit backing が四辺を制約で留める)。
+
+### 案の比較
+
+| 軸 | A: 初回の計測を幅付きにする | B: 補正のアニメーションを止める | C: A + B |
+|---|---|---|---|
+| 何が直るか | 最初のフレームから正しい高さ。ずれ自体が消える | 伸びる動きが消えるが、ずれは一瞬で起きる | A で芯を消し、後からの幅変化の補正も静かにする |
+| 触る場所 | CustomCell は Bridge の幅付き問い合わせ (`KsBridgeCellContentView.sizeThatFits` が `intrinsicContentSize` ではなく `sizeThatFits(幅, ∞)` を使う → `MauiView.SizeThatFits` → `CrossPlatformMeasure`)。Footer は wrapper か Native 側で幅のヒントを与える | 無効化の呼び出しを `UIView.performWithoutAnimation` で包む (Swift 側・C# 側) | 両方 |
+| 確からしさ | `MauiView.SizeThatFits(width, ∞)` は設計上想定の経路。SwiftUI が初回に有限幅で問い合わせるかは probe が要る | Apple 公式の正攻法だが、発生源が collection view のバッチ更新側だと効かない報告あり。実機でしか判定できない | 同左 |
+| 落とし穴 | `MauiView` は制約ペアで計測結果をキャッシュする (`IsMeasureValid` / `_lastMeasuredSize`)。内容変化時に `InvalidateMeasure` を呼ばないと古い高さを返す (2026-08-12 probe が残したリスク)。`InvalidateIntrinsicContentSize()` / `SetNeedsLayout()` ではキャッシュは消えない | 正当な後続の高さ変化 (展開操作など) のアニメーションまで消えると退行。範囲の絞り込みが要る | 両方 |
+
+- B 単独は却下: 症状の芯 (初回の高さが違う) を残したまま見え方だけ変える。後続 Section のずれは一瞬で起きる形で残る
+- C は A の結果を実機で見てから判断する (B が効くかは実機でしか分からない)
+
+いずれの案も maui/ADR-0016 (wrapper の `IntrinsicContentSize` override と `MeasureInvalidated` 中継) と maui/ADR-0020 (行高さは wrapper の計測無効化で追従、native 通知不要) とは衝突しない。A は intrinsic 経路を残したまま幅付き経路を足し、native への再計測通知も増やさない。
+
 ## 決定事項
 
+- (2026-09-18) 直し方の主軸は **A (初回の計測を幅付きにして症状の芯を消す)**。B は保険として A の実機確認の後に要否を見る
+- 合否はシミュレータでは判定できない (再現しない) ため、iPhone 11 実機の目視で行う。実装の前に「wrapper が初回にどの幅で測ったか」を実機ログで 1 回確かめる工程を挟む (未解明の 3 点もまとめて片付ける)
+
 ## ADR 候補 (作成済み: ADR-NNNN / 未起票: ...)
+
+- 作成済み: maui/ADR-0028 (proposed、amends maui/ADR-0020) — 行・領域の高さは初回から幅付きで wrapper に問い、intrinsic の無効化は内容変化の追従にだけ使う。アニメーション抑止のみの案は却下、保険としての要否は実機確認後
 
 ## 未決の論点
 
@@ -40,13 +71,35 @@
 - iOS シミュレータ (iPhone 17 Pro) の自動確認では気づかれなかった (取得粒度の問題か、機種・幅の問題かは不明)
 - accessory (Header / Footer の View) も同じ wrapper を通るので、同種の初回高さのブレが起きるかは未検証 (利用側の観察では、iOS の解析設定ページのフッターに遅延・アニメーションは出ていない)
 - 競合する原因仮説 (2026-09-17、`kasane/changes/android-accessory-view-late-insert-animation` の探索より): CustomCell の content も初回配信には載らず `Loaded` 後に遅れて届く (`maui/KsSettingsView.Maui/Internals/KsSettingsController.cs:346-354`)。iOS は内容差し替えを `animatingDifferences: true` で適用するので、「無限幅での初回計測」ではなく「content の後着」でも同じ見え方になり得る。あちらの change が content も初回配信に間に合わせる形になった場合は、その後に再現確認をすると切り分けになる
-- 直し方は未検討
+- 直し方は A に決定 (決定事項)。実装の詳細で残る点:
+  - SwiftUI (`UIHostingConfiguration` → `CustomCellRowPlacement` → representable) が**初回に有限幅の proposal で `sizeThatFits` を呼ぶか**。呼ばない (幅 nil) 経路では intrinsic に落ちるので、A が効かない可能性がある。probe で確かめる
+  - Footer (Auto Layout 経路) への幅ヒントの与え方: wrapper が `Bounds.Width` = 0 のとき superview (`contentView`) の幅で測る案 / Native の uiKit backing が取り付け時に inner の frame 幅を `contentView` 幅で先に与える案。どちらが素直かは実装時に決める
+  - `MauiView` の計測キャッシュ: `OnMeasureInvalidated` で `InvalidateMeasure` 相当を呼んでキャッシュを捨てる必要がある
+- 実機ログで確かめる 3 点 (見立ての裏取り): ① シミュレータで出ない理由 (初回の問い合わせ時点で幅が既に渡っているか、補正が最初の描画前に収まっているか) ② Footer が 1→3 行ではなく 2→3 行だった理由 (初回が無限幅ではなく「実際より広い有限幅」だった可能性) ③ 解析設定ページの同型の行で出ない理由
 
 ## UI 素材 (ui/references/ の一覧と注釈)
 
 ## 変更級の推奨: S / M / L (理由)
 
-未判定
+**S で確定** (2026-09-18、ユーザー確定。ハンドオフ先: ksn-orchestrator での直接実装)。判定材料:
+
+| 材料 | 評価 |
+|---|---|
+| 性格 | バグ修正 (iOS 実機でだけ出る初回高さのブレ)。機能追加なし |
+| 公開 API | 変更なし。MAUI facade・Native Core / UI / Bridge のいずれも公開面に触れない |
+| 触る能力 | 1 つ (配置された View の実体化と行・領域への埋め込み: `kasane/concepts/maui/architecture/view-materialization.md` の範囲)。ビルドルートは ios (Bridge の representable、accessory の幅ヒント次第で UI) と maui (wrapper) の 2 つにまたがるが、能力間で揃える設計判断は無い |
+| 可逆性 | 局所的で可逆。wrapper の `SizeThatFits` 経路の追加とキャッシュ破棄、representable の問い合わせ方の変更 |
+| UI | 見た目の仕様変更なし (ui/ は不要。合否は実機の目視) |
+| 重要判断 | maui/ADR-0028 (proposed) に捕捉済み。実装者を縛るのはこの ADR と本メモの「実装で残る点」 |
+
+M に上げない理由: デルタスペックに起こす振る舞いは「折り返す内容を持つ行・領域が最初のフレームから定常状態の高さで作られる」の 1 シナリオで、ADR とこのメモに既に書かれている。proposal を挟む利得が薄い。
+
+S の注意点 (実装フェーズへの申し送り):
+
+- 実装前に **probe を 1 回** 挟む: SwiftUI が初回に有限幅で `sizeThatFits` を呼ぶか (ADR-0028 の未確認前提) と、wrapper が初回にどの幅で測っているか (実機ログ)。崩れていれば ADR-0028 の Revisit When に該当し、探索へ戻す
+- 合否は iPhone 11 実機の目視 (Sample `CustomCellDemoPage` の動的高さ Section と `AccessoryViewsDemoPage` の Footer ③)。Simulator では再現しないため、Simulator の自動確認は退行検知にしか使えない
+- A の実機確認後に、保険 B (`performWithoutAnimation`) の要否を判断する
+- 独立レビューは S でも必須 (ksn-orchestrator)
 
 ### 追記 (2026-09-18): Section の FooterView でも同系の高さのブレを実機で観測
 

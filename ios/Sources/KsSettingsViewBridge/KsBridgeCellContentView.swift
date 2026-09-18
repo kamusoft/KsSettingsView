@@ -32,20 +32,29 @@ internal struct KsBridgeCellContentView: UIViewRepresentable {
         uiView.refresh(view)
     }
 
-    /// 包んだ view が自分で答える必要な高さを、提示された幅のまま SwiftUI の配置系へ中継する。
+    /// 提示された幅で包んだ view に高さを問い、その高さを SwiftUI の配置系へ中継する。
     ///
-    /// 上位層が渡してくるのは自分で計測して `intrinsicContentSize` に答える view であり、その高さが
-    /// 行の高さになる。高さを答えない view や幅が提示されない問い合わせでは `nil` を返し、SwiftUI の
-    /// 既定の測り方に任せる。
+    /// 上位層が渡してくるのは自分で計測する view であり、その高さが行の高さになる。行の幅は最初の
+    /// 問い合わせから提示されるので、view が自分の幅を知る前に答えを出してしまわないよう、提示された
+    /// 幅を渡して測らせる (maui/ADR-0028)。これで折り返す内容も最初の答えが折り返し後の高さになる。
+    ///
+    /// 高さを答えない view や幅が提示されない問い合わせでは `nil` を返し、SwiftUI の既定の測り方に
+    /// 任せる。
     internal func sizeThatFits(
         _ proposal: ProposedViewSize,
         uiView: KsBridgeCellContentHostView,
         context: Context
     ) -> CGSize? {
-        let height = view.intrinsicContentSize.height
-        guard height != UIView.noIntrinsicMetric,
-              let width = proposal.width,
-              width.isFinite else {
+        guard let width = proposal.width, width.isFinite else {
+            return nil
+        }
+
+        // 高さは上限なしとして渡し、幅に対する折り返し後の高さを答えさせる。上限なしは有限の最大値で
+        // 表し、包む側 (自己計測 wrapper) がそれを上限なしとして解釈する (maui/ADR-0028)。
+        let height = view.sizeThatFits(
+            CGSize(width: width, height: .greatestFiniteMagnitude)
+        ).height
+        guard height > 0 else {
             return nil
         }
 
