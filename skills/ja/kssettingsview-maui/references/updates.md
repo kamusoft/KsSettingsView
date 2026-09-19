@@ -1,6 +1,6 @@
 # 表示中の画面の更新
 
-表示中の設定画面を変える、ユーザーの操作を ViewModel へ戻す、データから Cell を生成する、ためのレシピ。XAML の断片は [SKILL.md](../SKILL.md) の最小動作コードにある `ks` 名前空間宣言を前提とし、C# の断片は `using KsSettingsView;` と、ページ内に `Settings` という名前の `SettingsView` があることを前提とする。
+表示中の設定画面を変える、ユーザーの操作を ViewModel へ戻す、データから Cell を生成する、ためのレシピ。XAML の断片は [SKILL.md](../SKILL.md) の最小動作コードにある `ks` 名前空間宣言を前提とし、C# の断片は `using KsSettingsView;` と、ページ内に `Settings` という名前の `SettingsView` があることを前提とする。操作は UI スレッドから行い、Native Host が再接続すると現在のツリーから表示が復元される。
 
 ## ユーザーが変えた値を受け取る
 
@@ -19,7 +19,7 @@
 | `DatePickerCell` | `Date` |
 | `PickerCell` (導出) | `SelectedItem`, `SelectedItems` |
 
-これ以外のプロパティは既定が OneWay。書き戻しがユーザーの確定操作によるものだと知りたいときは、`PickerCell` に限り `SelectedCommand` がある ([cells.md](cells.md))。
+これ以外のプロパティは既定が OneWay。書き戻しがユーザーの確定操作によるものだと知りたいときは、`PickerCell` に限り `SelectedCommand` がある。選択面が閉じ切った後に実行される ([cells.md](cells.md))。
 
 ```xml
 <ks:SwitchCell Title="Push notifications" On="{Binding NotificationsEnabled}" />
@@ -159,10 +159,11 @@ public class CellTemplateSelector : DataTemplateSelector
 
 ## ページを離れて戻っても画面を保つ
 
-ページを離れても、`SettingsView` に渡した設定ツリー — Section と Cell、その値、Header / Footer の View — はそのまま保持される。ページに戻ると、保持された内容がそのまま表示される。離れている間に加えた変更も反映されるので、自前で保存・復元する処理は要らない。したがって、再訪のたびにツリーを作り直してはいけない。作り直すと、生きている Section と Cell を捨てることになり、ユーザーがそこで変更した値も一緒に失われる。
+ページを離れても、`SettingsView` に渡した設定ツリー — Section と Cell、その値、Header / Footer の View — はそのまま保持される。ページに戻ると、保持された内容がそのまま表示され、accessory View と `CustomCell.Content` も最初の表示から含まれる。離れている間に加えた変更も反映されるので、自前で保存・復元する処理は要らない。したがって、再訪のたびにツリーを作り直してはいけない。作り直すと、生きている Section と Cell を捨てることになり、ユーザーがそこで変更した値も一緒に失われる。
 
 ## 更新にかかる決まり
 
 - ツリーの操作は UI スレッドから行う。ライブラリ側でスレッドの marshal は行わない。
 - `Section` / `CellBase` / Header・Footer・`CustomCell.Content` に置く View は、同時に 1 箇所にしか置けない。同じインスタンスを 2 箇所へ置くと `InvalidOperationException` になる — 他の Section / `SettingsView` が所有したままのインスタンスは追加した時点で、同じコレクションへの二重の追加は表示へ反映する時点で送出される。検査は反映前に行われるので、先に置かれていた方は動かず、画面が中途半端に更新されることもない。復旧は `Root` の組み直しで行う。
 - observable でないコレクション (素の `List<T>`) は接続時点の内容が描かれるだけで、以後の編集は表示に出ない。所属の始まりと終わりもその時点で数えられるので、そこから取り除いた要素を別の場所へ置き直せるのは、`Root` / `Cells` へ新しいコレクションを代入した後になる。
+- Host が再接続すると、Section の Header / Footer と `CustomCell.Content` に置いた View は最初の表示前に実体化されて届く。View インスタンスを差し替えると内容も差し替わり、既存 View のバインド値を変えると同じインスタンスのまま追従する。

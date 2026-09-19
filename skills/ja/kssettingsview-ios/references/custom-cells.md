@@ -4,7 +4,7 @@
 
 ## 任意の SwiftUI View を Cell として表示する
 
-`CustomCell` は任意の SwiftUI View を Cell として描く。Renderer を書く必要も登録も要らない。Cell が表示する値は `content` として渡し、View は builder の引数から組み立てる。
+`CustomCell` は任意の SwiftUI View を、共通の title・description・icon slot を持たない full-bleed の Cell として描く。Renderer を書く必要も登録も要らない。Cell が表示する値は `content` として渡し、View は builder の引数から組み立てる。
 
 ```swift
 @State private var volume: Double = 50
@@ -51,7 +51,7 @@ CustomCell(content: planName, showArrow: true, onTap: { openPlans() }) { name in
 }
 ```
 
-`isEnabled: false` は Cell のタップと content 内部の操作の両方を抑止し、content 全体を淡色化する。
+`isEnabled: false` は Cell のタップと content 内部の操作の両方を抑止し、content 全体を淡色化する。iOS では VoiceOver が content を読み上げることがある。Android で無効な CustomCell content を読み上げ対象から外すのとは意図的な platform 差である。
 
 ## カスタム Cell の高さを指定する
 

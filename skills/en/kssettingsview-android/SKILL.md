@@ -1,6 +1,6 @@
 ---
 name: kssettingsview-android
-description: Build Android settings screens with KsSettingsView - a Jetpack Compose declarative DSL or an XML View host (the KsSettingsView view), with built-in cells (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker) plus CustomCell holding any Composable, live updates through SettingsRootStore, and Theme / CellStyle styling. Use when adding, changing, or reviewing a settings screen in a Kotlin app that depends on jp.kamusoft:kssettingsview or imports jp.kamusoft.kssettingsview.core, .ui, or .compose.
+description: Build Android settings screens with KsSettingsView - a Jetpack Compose declarative DSL or an XML View host (the KsSettingsView view), with built-in cells (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker) plus CustomCell holding any Composable, post-dismiss selection callbacks, live updates through SettingsRootStore, and Theme / CellStyle styling. Use when adding, changing, or reviewing a settings screen in a Kotlin app that depends on jp.kamusoft:kssettingsview or imports jp.kamusoft.kssettingsview.core, .ui, or .compose.
 license: MIT
 metadata:
   language: en
@@ -17,6 +17,7 @@ KsSettingsView is a UI library for building settings screens - the list-style sc
 |---|---|
 | Place a cell: label, action, button, switch, checkbox, radio, text field, list picker, number, time, date | [references/cells.md](references/cells.md) |
 | Group cells into sections, add icons, descriptions, hints; disable or hide a cell | [references/cells.md](references/cells.md) |
+| React after a PickerCell or DatePickerCell selection surface has fully closed | [references/cells.md](references/cells.md) |
 | Change the screen after it is on display: insert, remove, move, replace cells, batch updates, direct driving with `SettingsRootDiff` | [references/updates.md](references/updates.md) |
 | Keep cells identified across re-evaluations, drive visibility from state, host the screen from XML | [references/updates.md](references/updates.md) |
 | Colors, fonts, cell height, Classic / Modern list appearance, section boxes, the light / dark default colors of `KsSettingsViewDefaults`, giving an explicit color a value per appearance | [references/styling.md](references/styling.md) |

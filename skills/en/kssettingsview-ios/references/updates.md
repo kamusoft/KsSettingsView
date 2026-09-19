@@ -50,6 +50,8 @@ These are the main public operations of `SettingsRootStore`. The recipes below w
 
 The store recipes below are written as members of that `SettingsModel`, so `store` and `generalSectionID` refer to its two properties.
 
+The store keeps hidden sections and cells in its model; an update while hidden is visible when the element returns. A section `updateAccessory` whose `sectionID` is unknown is a no-op and emits no notification. Root header and footer targets are different: they are emitted without a Store-side current value, and the controller owns the displayed `rootHeader` / `rootFooter`.
+
 ## Add or remove a cell after display
 
 `insertCell` places a cell inside a section, `removeCell` takes the cell identifier. That identifier is a `KsCellID`, a wrapper built from the cell's `id` (`UUID`) and nothing else: cells with the same `id` are the same cell no matter how their contents changed. Indices count hidden cells too, because they are positions in the full model rather than on screen.
@@ -78,6 +80,8 @@ store.replaceCell(cellID: KsCellID(cell: cell), new: updated)
 ```
 
 The new cell may even be of a different type - a `LabelCell` replaced by a `SwitchCell`, say: the cell keeps its identity and position, and the native cell behind it is swapped. To change the identifier itself, remove the cell and insert a new one instead.
+
+`replaceSection` replaces the whole section and may change its header, footer, fixed header height, visibility or cells. Treat it as a full update rather than a lightweight cell edit; use the narrower Cell or accessory operation when you already know the local change.
 
 ## Update several cells in one batch
 
@@ -132,6 +136,8 @@ store.updateAccessory(
 )
 ```
 
+Root accessories are not part of `SettingsRoot`. Set `rootHeader` / `rootFooter` on the UIKit controller, or target them through the Store update path shown in [styling.md](styling.md); a value delivered before the controller's view loads is retained for that initial display, but it is not restored from a later Store snapshot.
+
 ## Switch the theme at runtime
 
 The theme is not part of the settings tree. `applyTheme` changes colors and fonts without touching identifiers or structure, and an identical theme is not re-applied.
@@ -143,6 +149,8 @@ store.applyTheme(darkTheme)
 In the declarative form, the `.theme(_:)` modifier goes through the same path.
 
 The new theme reaches the cells on display and the text headers and footers, which are recolored in place. Headers and footers holding a view are deliberately left alone - re-binding them would run the view factory again and lose whatever state the hosted view held - so a view accessory that should follow the theme has to be updated by you, with `store.updateAccessory(target:accessory:)`.
+
+`scrollIndicatorVisible` is applied to the main settings list at initial display and on a theme change without rebuilding rows or moving the scroll position. A Picker list captures that value when it opens; wheel-based picker surfaces and lists owned by `CustomCell` content are outside this setting.
 
 `applyTheme` moves the screen-wide defaults only. Colors set explicitly on a cell - through `CellStyle`, or through a color field the cell type owns - are not part of the theme and are left untouched, in this path and when the light / dark appearance changes. To have those follow the appearance, pass a dynamic `UIColor` instead of pushing a new cell (see [styling.md](styling.md)). If you do compute a color yourself, a re-evaluation that changes only that color, on a cell keeping its identifier, is delivered as an in-place content update rather than as a removal plus an insertion - as is `replaceCell` with the same identifier.
 
@@ -232,6 +240,8 @@ final class SettingsContainerViewController: UIViewController {
 ```
 
 The controller has no public setter for the settings tree: every change goes through the store it was built with.
+
+The controller converges on the Store's current root, accessories and theme when its view loads, including changes made after the controller was created but before `viewDidLoad` completes. `rootHeader` and `rootFooter` are host-owned properties rather than Store state, so reapplying them when a controller is recreated remains the caller's responsibility.
 
 For tests or hosting of your own, `KsSettingsView` (the SwiftUI view) in its store form offers `makeController()`, which builds the backing `KsSettingsViewController` outside a SwiftUI hierarchy. It is for the store form only - calling it on a DSL-built view is a `fatalError` - and a normal SwiftUI screen never needs it.
 

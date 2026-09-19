@@ -149,7 +149,7 @@ Switch the mode to `Multiple` and bind `SelectedIndices` instead. `MaxSelectedNu
 
 ## Work in items instead of indices
 
-`SelectedItem` (single selection) and `SelectedItems` (multiple selection) are two-way and kept in step with `SelectedIndex` / `SelectedIndices` and `ItemsSource`; the index side stays the source of truth. Setting an item that is not among the candidates leaves the cell unselected (in a multiple selection, elements that are not found are simply dropped) - the lookup uses value equality and takes the first match. An item bound before `ItemsSource` arrives is held and resolved once the candidates are set, so the order of XAML attributes and bindings does not matter.
+`SelectedItem` (single selection) and `SelectedItems` (multiple selection) are two-way and kept in step with `SelectedIndex` / `SelectedIndices` and `ItemsSource`; the index side stays the source of truth. Setting an item that is not among the candidates leaves the cell unselected (in a multiple selection, elements that are not found are simply dropped) - the lookup uses value equality and takes the first match. An item bound before `ItemsSource` arrives is held and resolved once the candidates are set, so the order of XAML attributes and bindings does not matter. A null or empty `SelectedItems` means no selection. While `ItemsSource` is null or empty, a bound item is held instead of being coerced to no selection and is resolved when candidates arrive.
 
 ```xml
 <ks:PickerCell Title="Theme"
@@ -157,11 +157,11 @@ Switch the mode to `Multiple` and bind `SelectedIndices` instead. `MaxSelectedNu
                SelectedItem="{Binding Theme}" />
 ```
 
-## Receive the moment a selection is confirmed
+## Run a command after the selection surface closes
 
-`SelectedCommand` notifies you of the moment the user confirms a selection on the selection surface. Reach for it when the two-way value binding alone cannot tell a user confirmation apart from initialization or a programmatic update. It executes only when the user confirms a selection: setting the public properties (`SelectedIndex` and the rest) directly does not run it, and neither does cancelling or dismissing without confirming. Reconfirming the same selection does run it - it reports the confirmation, not a change of value.
+`SelectedCommand` runs after the selection surface has finished closing for a user selection. Reach for it when the two-way value binding alone cannot tell a user confirmation apart from initialization or a programmatic update. It executes only after a confirmed selection: setting the public properties (`SelectedIndex` and the rest) directly does not run it, and neither does cancelling or dismissing without confirming. Reconfirming the same selection does run it - it reports the user action, not a change of value.
 
-Execution comes after the selection is written back, so the command sees the new, confirmed selection. The argument follows the kind of confirmation: `SelectedItem` for a single-selection confirmation, `SelectedItems` for a multiple-selection one. `CanExecute` is never consulted, and there is no `CommandParameter` property.
+The two-way selection write-back and item derivation happen when the surface confirms, before it closes. The command runs after the close notification, so it can open another dialog or navigate without a timing delay. Its argument follows the kind of confirmation: `SelectedItem` for a single-selection confirmation, `SelectedItems` for a multiple-selection one. The argument is the cell's current value when the close notification arrives, so changes made between confirmation and the end of dismissal are visible. `CanExecute` is never consulted, and there is no `CommandParameter` property.
 
 ```xml
 <ks:PickerCell Title="Notification recipients"
@@ -231,11 +231,11 @@ On Android the picker is a bottom sheet with hour and minute wheels on every hos
                    PickerTitle="Birthday" />
 ```
 
-`Calendar` on Android opens a Material 3 calendar dialog that also offers a text input mode the user can switch to; it works on any host activity and theme. `AndroidButtonColor` colors the OK and CANCEL actions of the `Wheels` surface on Android and falls back to the `AccentColor` resolution when unset - it is an Android-only setting and does not affect the display on other platforms.
+`Calendar` on Android opens a Material 3 calendar dialog that also offers a text input mode the user can switch to; it works on any host activity and theme. `Wheels` uses the Android wheel-style surface. `TodayText` adds a jump-to-today action on every date surface; it only changes the pending selection, and the bound `Date` changes when the user confirms. If today is outside `MinimumDate` and `MaximumDate`, the action leaves the pending selection unchanged. `AndroidButtonColor` colors the OK and CANCEL actions of the `Wheels` surface on Android and falls back to the `AccentColor` resolution when unset - it is an Android-only setting and does not affect the display on other platforms.
 
 ## Rules the picker cells share
 
-`PickerCell`, `NumberPickerCell`, `TimePickerCell`, and `DatePickerCell` write back only when the user confirms: the Done button on iOS, the OK button on Android, or the tap on a candidate row in a single-selection `PickerCell`. Cancelling, tapping outside, going Back, and swiping a sheet away throw the work in progress away and leave the bound property as it was - a multiple-selection `PickerCell` holds its working set the same way and does not touch `SelectedIndices` until the confirmation. Only `PickerCell` carries a path that reports the confirmation itself - `SelectedCommand`, above.
+`PickerCell`, `NumberPickerCell`, `TimePickerCell`, and `DatePickerCell` write back only when the user confirms: the Done button on iOS, the OK button on Android, or the tap on a candidate row in a single-selection `PickerCell`. Cancelling, tapping outside, going Back, and swiping a sheet away throw the work in progress away and leave the bound property as it was - a multiple-selection `PickerCell` holds its working set the same way and does not touch `SelectedIndices` until the confirmation. Only `PickerCell` exposes a completion command, and it runs after the selection surface has finished closing - `SelectedCommand`, above. `NumberPickerCell`, `TimePickerCell`, and `DatePickerCell` have no corresponding MAUI completion command.
 
 All four also carry `ValueText`. Leave it unset and the cell shows the current selection on its own; set it and your string is shown instead.
 

@@ -44,7 +44,7 @@ Leave the cell without a command and the content owns every gesture. The value c
 </ks:CustomCell>
 ```
 
-`IsEnabled="False"` suppresses both the cell tap and the controls inside the content, and dims the whole content.
+`IsEnabled="False"` suppresses both the cell tap and the controls inside the content, and dims the whole content. On Android, disabled content is also excluded from TalkBack's reading targets.
 
 ## Package a CustomCell as a reusable cell type
 
@@ -107,7 +107,7 @@ A `CustomCell` works inside a `DataTemplate` like any other cell. Each generated
 
 ## Let the cell height follow the content
 
-The cell is sized by the content, including while the screen is on display, so an expander or a wrapping label changes the cell height on its own. Nothing has to be remeasured by hand.
+With `HasUnevenRows="True"`, the cell uses the content's self-measured height as a minimum, and an expander or wrapping label can grow the row while it is displayed. With fixed rows, choose a `Height` that fits: a fixed row is not promised to expand around its content. The initial measurement receives the available width, so wrapping content starts at its measured height instead of growing after the first frame. Nothing has to be remeasured by hand.
 
 ## Update what the cell shows
 

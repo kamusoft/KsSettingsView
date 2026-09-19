@@ -133,6 +133,16 @@ ksSection("Account") {
 
 表示中に外観が変わっても行は作り直されない。identity は維持され、明示した色はそのまま描かれ、その行で未指定のままにした色だけが新しい外観に対して解決し直される。チェックボックスの accent の塗りと枠は `CGColor` として layer に載るが、Section の Border と同じく外観の変化を受けてライブラリが再解決する。
 
+## 縦スクロールインジケータを制御する
+
+`Theme.scrollIndicatorVisible` は設定 list の縦スクロールインジケータを制御し、既定は `true`。実行中に変更しても行を作り直さず、スクロール位置も変えずにインジケータだけを更新する。Picker の候補 list は開いた時点の値を使う。`CustomCell` の content 内の list と、ホイール型の選択面はそれぞれの content が所有するため、この設定では変えない。
+
+```swift
+let quietScrollingTheme = Theme(scrollIndicatorVisible: false)
+```
+
+同じ値は SwiftUI の `.theme(_:)` modifier、`SettingsRootStore.applyTheme(_:)`、`KsSettingsViewController.applyTheme(_:)` のいずれからも list へ届く。
+
 ## Cell 1 つだけ見た目を上書きする
 
 `CellStyle` は Cell 1 つ分だけ Theme を上書きする。指定しないフィールドは `nil` のままで、Theme から継承する。
@@ -227,6 +237,12 @@ let boxedTheme = Theme(
 
 Container が覆うのは Section の Cell だけで、Section Header / Footer は Container の外側、画面全体の Header / Footer は装飾対象外である。`.classic` では Section が全幅になるため、`sectionMargin` の上下成分だけが効く。
 
+## 押下 feedback と無効 Cell を理解する
+
+操作可能な enabled Cell は、タッチが始まった直後から選択背景を表示する。スクロールジェスチャーでは押下状態を残さない。push 遷移では遷移中も feedback を残し、その場で完結する操作や Picker の提示では短い猶予の後にフェードアウトする。`Switch` や `Slider` 上から始めたタッチはその control が優先するため、list のスクロールを開始しない。
+
+Cell を無効にするには `isEnabled: false` を渡す。組み込み Cell は text 色を `Theme.disabledTextColor` に置き換え、Native control の無効表示を使う。行全体を薄くはしない。例外は `CustomCell` で、任意の text 要素を特定できないため content 全体を淡色化する。宣言 DSL の `.disabled(_:)` Cell modifier は現在 no-op。
+
 ## Cell の高さを決める
 
 高さは `CellStyle.cellHeight` → `Theme.rowHeight` → platform の最低 Cell 高 48pt の順で解決する。`hasUnevenRows` が既定の `true` のときは解決値が最低高になり内容に応じて伸びる。`false` にすると全 Cell が固定される。
@@ -246,6 +262,8 @@ ksSection("Notifications", footer: "Also check the system settings.") {
     LabelCell(title: "Sound")
 }
 ```
+
+Text 形式の Header / Footer の背景は `Theme.headerBackgroundColor` / `Theme.footerBackgroundColor` を使う。ライブラリ既定は透明なので list の下地が見える。View 形式の Header / Footer の見た目は利用者が所有し、ライブラリの text 用背景色は適用しない。Header / Footer の文字色とフォントは対応する Theme フィールドと dynamic color に従い、外観の切替へ追随する。
 
 ## Section Header に任意の SwiftUI View を置く
 

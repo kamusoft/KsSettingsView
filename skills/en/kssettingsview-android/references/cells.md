@@ -191,6 +191,17 @@ PickerCell(
 
 `pageTitle` sets the title of the sheet; left unspecified, the `title` of the cell is used.
 
+If the next action must wait until the sheet is gone, pass `onSelectionCompleted`. It receives the confirmed index after the bottom sheet has finished dismissing. The value state (and `onItemSelected`, when supplied) is updated first; cancellation, Back, outside taps and other non-confirming dismissals do not call it.
+
+```kotlin
+PickerCell(
+    title = "Theme",
+    items = listOf("Light", "Dark", "System"),
+    selectedIndex = themeIndex,
+    onSelectionCompleted = { index -> openThemeDetails(index) },
+)
+```
+
 ## Choose one object from a list
 
 The candidates do not have to be strings. A generic overload takes any element list plus a `displayText` projection, and `subText` adds a second line under each candidate in the sheet - candidates without one stay single-line. `onItemSelected` hands back the chosen element itself. The element list is copied when the cell is built, so later changes to the original collection are picked up by supplying a new list, not by mutating in place.
@@ -246,7 +257,19 @@ Dismissing the sheet without confirming - cancel, back, outside tap, swipe down 
 
 The object overload exists here too: pass any element list with `displayText` (and `subText` if wanted), and `onItemsSelected` receives the confirmed elements in ascending index order. The written-back state stays a `Set<Int>` - there is no element-typed state for multiple selection.
 
-When you build a tree for a store with the `PickerCell` class of `jp.kamusoft.kssettingsview.ui` (see [updates.md](updates.md)), the candidates are a list of `PickerItem` (primary `text` plus an optional `subText`), and single versus multiple is switched with `selectionMode` (`PickerSelectionMode.Single` / `Multiple`). The callbacks are `onSelectionChanged` for single and `onMultiSelectionChanged` for multiple selection. Each DSL overload sets these from its argument combination, so the declarative side never specifies them directly.
+Use `onMultiSelectionCompleted` when a follow-up needs the sheet to have finished dismissing. It receives the same confirmed index set as `onMultiSelectionChanged`, after the value has been written back; non-confirming dismissals do not call it.
+
+```kotlin
+PickerCell(
+    title = "Topics",
+    items = listOf("News", "Sports", "Music", "Travel"),
+    selectedIndices = topics,
+    maxSelectedNumber = 2,
+    onMultiSelectionCompleted = { indices -> showTopicSummary(indices) },
+)
+```
+
+When you build a tree for a store with the `PickerCell` class of `jp.kamusoft.kssettingsview.ui` (see [updates.md](updates.md)), the candidates are a list of `PickerItem` (primary `text` plus an optional `subText`), and single versus multiple is switched with `selectionMode` (`PickerSelectionMode.Single` / `Multiple`). The value callbacks are `onSelectionChanged` for single and `onMultiSelectionChanged` for multiple selection; the post-dismiss callbacks are `onSelectionCompleted` and `onMultiSelectionCompleted`. Each DSL overload sets these from its argument combination, so the declarative side never specifies them directly.
 
 ## Choose a number with a unit
 
@@ -305,10 +328,11 @@ DatePickerCell(
     format = "yyyy/MM/dd",
     uiStyle = DatePickerUIStyle.Material,
     todayText = "Today",
+    onValueCompleted = { confirmedDate -> openDateSummary(confirmedDate) },
 )
 ```
 
-Here too the value is written back only on confirmation; every other way of closing discards the change. The calendar dialog survives a rotation with its selection intact as long as the cell keeps a stable id across the activity being recreated - see [updates.md](updates.md); the Spinner sheet, like the other bottom sheets, closes on rotation without reporting anything. `androidButtonColor` recolors only the header controls (confirm and cancel) of the `Spinner` sheet and has no effect on the `Material` dialog.
+Here too the value is written back only on confirmation; every other way of closing discards the change. `onValueCompleted` receives that same date after the selected surface has finished dismissing, once per confirmation; it is not called for a cancel or other non-confirming close. The calendar dialog survives a rotation with its selection intact as long as the cell keeps a stable id across the activity being recreated - see [updates.md](updates.md); the Spinner sheet, like the other bottom sheets, closes on rotation without reporting anything. `androidButtonColor` recolors only the header controls (confirm and cancel) of the `Spinner` sheet and has no effect on the `Material` dialog.
 
 `minDate` and `maxDate` restrict what can be chosen; either may be given on its own. A current value outside the range is presented clamped to the nearest bound.
 

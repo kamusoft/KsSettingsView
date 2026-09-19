@@ -28,7 +28,9 @@ The screen-wide values live on `SettingsView` as individual properties.
 </ks:SettingsView>
 ```
 
-`BackgroundColor` is the backdrop of the list, `CellBackgroundColor` is the default background of a cell - one is never derived from the other. `HeaderBackgroundColor` and `FooterBackgroundColor` fill the section header and footer areas, and they are the one pair that does not reach both platforms: on iOS those areas keep the platform background and only `HeaderTextColor` and `FooterTextColor` take effect. `CellPlaceholderColor` is the default placeholder text color of every `EntryCell`; a cell overrides it with `PlaceholderColor`, and leaving both unset keeps the OS default placeholder color, which adapts to dark mode on its own.
+`BackgroundColor` is the backdrop of the list, `CellBackgroundColor` is the default background of a cell - one is never derived from the other. `HeaderBackgroundColor` and `FooterBackgroundColor` fill the text-form section and root header and footer areas on both platforms. They default to transparent, so an unset value lets the list backdrop show through; a header or footer view is styled by that view and is not painted by these properties. `CellPlaceholderColor` is the default placeholder text color of every `EntryCell`; a cell overrides it with `PlaceholderColor`, and leaving both unset keeps the OS default placeholder color, which adapts to dark mode on its own.
+
+`ScrollIndicatorVisible` controls the vertical scrollbar of the settings list and the candidate list opened by `PickerCell`. It defaults to visible when left unset, and a theme change applies while the screen is shown without rebuilding rows or moving the scroll position. Wheel surfaces and lists inside `CustomCell` or a header/footer view are separate content and are not affected.
 
 ## Override the look of one cell
 
@@ -89,7 +91,11 @@ The other colors that sit on a cell are written the same way - the text colors a
 <ks:LabelCell Title="Storage" TitleColor="{DynamicResource CellTitleColor}" />
 ```
 
-Where this stops: a section or a cell you take out of its collection no longer follows the resources of its former owner, so change its values while it is still placed. And a `Style` cannot be set on a `Section` or a cell, because neither is a view - values shared across cells go through resources, while a `Style` still applies to the `SettingsView` itself.
+Where this stops: a section or a cell you take out of its collection no longer follows the resources of its former owner, so change its values while it is still placed. A `Style` cannot be set on a `Section` or a cell, because neither is a view - values shared across cells go through resources, while a `Style` still applies to the `SettingsView` itself.
+
+## Apply a MAUI style
+
+`SettingsView` is a `View`, so implicit and keyed XAML `Style` values can target it. `Section` and `CellBase` are logical `Element` children rather than views, so use their listed bindable properties or resources for shared cell values. `ListStyle` controls the native list appearance and is separate from MAUI's `Style` mechanism.
 
 ## Style property list
 
@@ -118,6 +124,7 @@ The screen-wide defaults live on `SettingsView` and the per-cell overrides on `C
 | Description | `DescriptionColor`, `DescriptionFontFamily`, `DescriptionFontSize`, `DescriptionFontAttributes` |
 | Hint | `HintTextColor`, `HintFontFamily`, `HintFontSize`, `HintFontAttributes` |
 | Cell and icon | `BackgroundColor`, `IconSize`, `IconRadius`, `Height` |
+| Cell-specific control color (interactive cells) | `AccentColor` |
 
 ## Change fonts
 
@@ -174,7 +181,7 @@ Four properties describe the box and the spacing around each section. They apply
 </ks:SettingsView>
 ```
 
-Leaving one unset falls back to the platform default: the default margin and corner radius are shared by both platforms, and no border is drawn.
+Leaving one unset falls back to the platform default: the default margin and corner radius are shared by both platforms, and no border is drawn. In `Classic`, the horizontal components of `SectionMargin` are ignored so cells remain full width; in `Modern`, the container covers the cells only, with section headers and footers outside it.
 
 ## Add headers and footers
 
@@ -215,7 +222,7 @@ Any MAUI view can take the place of the text. There are four slots - `RootHeader
 </ks:SettingsView>
 ```
 
-These views join the page's logical tree and inherit the `BindingContext` of their owner, so bindings inside them work without extra wiring. Changing what a view shows updates it in place, and the area grows with it unless `HeaderHeight` fixes the height.
+These views join the page's logical tree and inherit the `BindingContext` of their owner, so bindings inside them work without extra wiring. They are materialized before the host's first rendered frame, including after a reconnect. Changing what a view shows updates it in place, and the area grows with it unless `HeaderHeight` fixes the height.
 
 The header and footer style properties above shape the text form only. A view you place is styled by the view itself, and a change to those properties does not rebuild it - which is also what keeps the state inside it (an entry being edited, a scroll position) while the rest of the screen is redrawn.
 
@@ -247,3 +254,5 @@ Give `SettingsView` a placement whose size the layout decides: directly in a pag
 ```
 
 Avoid placements that ask the control for its content size - inside a `VerticalStackLayout`, as the content of a vertical `ScrollView`, or in an `Auto` grid row. The screen still renders, but on Android a field being edited can lose focus while the list is measured.
+
+One MAUI appearance caveat: `Section` and `CellBase` are `Element` objects, so their `AppThemeBinding` resolves from the application appearance rather than a per-window appearance. In a multi-window app whose windows use different appearances, those bindings can therefore differ from the window containing the list. `SettingsView` is a `View` and does not have that limitation.

@@ -74,7 +74,7 @@ KsSettingsView {
 
 Anything that affects what the cell shows must live in `content`, which needs a real `equals` and `hashCode` and must not be null. The builder and `onTap` lambdas are excluded from the comparison, so changing only a captured value leaves the cell as it was.
 
-The builder renders with the theme of your app, not with the bundled theme the library draws its own cells from. That is what keeps `MaterialTheme` working inside it as usual - and it also means a custom cell does not pick up the library `Theme` colors on its own.
+The builder renders with the host app's theme, not with the bundled theme the library draws its own cells from. `CustomCell` content receives the same host context that was supplied to `KsSettingsView`, so `MaterialTheme` and host view attributes keep working inside it as usual. It also means a custom cell does not pick up the library `Theme` colors on its own.
 
 ## Show a fixed cell with no data
 

@@ -50,6 +50,8 @@ struct SettingsScreen: View {
 
 以降の Store のレシピはこの `SettingsModel` のメンバとして書いてあり、`store` と `generalSectionID` はその 2 つのプロパティを指す。
 
+Store は非表示の Section / Cell も model に保持するため、非表示中の更新は再表示時に現れる。Section 系 `updateAccessory` で未知の `sectionID` を指定した場合は no-op となり、通知も発行しない。Root Header / Footer target は異なり、Store 側の現在値を持たずに発行され、表示中の `rootHeader` / `rootFooter` は Controller が所有する。
+
 ## 表示後に Cell を追加・削除する
 
 `insertCell` は Section の中へ Cell を置き、`removeCell` は Cell の識別子を受ける。この識別子は `KsCellID` で、Cell の `id` (`UUID`) だけをラップした値である — 内容がどう変わっても `id` が同じなら同じ Cell として扱われる。index は画面上の位置ではなく非表示要素を含む model 配列上の位置である。
@@ -78,6 +80,8 @@ store.replaceCell(cellID: KsCellID(cell: cell), new: updated)
 ```
 
 新しい Cell は別の型でもよい — `LabelCell` を `SwitchCell` に差し替えるなど。Cell は同一性と位置を保ったまま、背後の Native cell だけが交換される。識別子そのものを変える場合は、削除と挿入で表す。
+
+`replaceSection` は Section 全体を差し替えるため、Header、Footer、Header の固定高さ、可視性、Cell のいずれも変えられる。軽量な Cell 編集としてではなく full 更新として扱い、局所的な変更が分かっているときは Cell または accessory の狭い操作を使う。
 
 ## 複数の Cell を 1 バッチで更新する
 
@@ -132,6 +136,8 @@ store.updateAccessory(
 )
 ```
 
+Root accessory は `SettingsRoot` の一部ではない。UIKit Controller の `rootHeader` / `rootFooter` に設定するか、[styling.md](styling.md) の Store 更新経路で target に指定する。Controller の view load 前に届いた値は初回表示のために保持されるが、後から Store snapshot だけで復元される値ではない。
+
 ## 実行中に Theme を切り替える
 
 Theme は設定ツリーの一部ではない。`applyTheme` は識別子と構造を変えずに色とフォントを変え、同値の Theme は再適用しない。
@@ -143,6 +149,8 @@ store.applyTheme(darkTheme)
 宣言的な書き方では `.theme(_:)` modifier が同じ経路を通る。
 
 新しい Theme は表示中の Cell と、text 形式の Header / Footer へ届き、その場で色が塗り直される。View 形式の Header / Footer は意図的に対象外である — 再 bind すると View の factory が再実行され、hosted view が持っていた状態が失われるため。Theme に追随させたい View 形式の accessory は、`store.updateAccessory(target:accessory:)` で自分で差し替える。
+
+`scrollIndicatorVisible` は初期表示時と Theme 変更時の両方で設定 list へ適用される。行を作り直さず、スクロール位置も変えない。Picker の候補 list は開いた時点の値を使い、ホイール型の選択面と `CustomCell` content が所有する list はこの設定の対象外である。
 
 `applyTheme` が動かすのは画面全体の既定値だけである。Cell に明示した色 — `CellStyle` に渡した色と、その Cell 型が持つ色フィールドに渡した色 — は Theme の一部ではないため、この経路でも、ライト / ダーク外観が変わったときも、渡した値のまま残る。これらを外観に追随させたいときは、Cell を差し替えるのではなく dynamic な `UIColor` を渡す ([styling.md](styling.md) を参照)。自分で色を決める場合、識別子が同じ Cell でその色だけが変わった再評価は、削除と挿入ではなくその場の内容更新として届く (同じ識別子での `replaceCell` も同様)。
 
@@ -232,6 +240,8 @@ final class SettingsContainerViewController: UIViewController {
 ```
 
 Controller は設定ツリーの公開 setter を持たない。変更はすべて、生成時に渡した Store を経由する。
+
+Controller は view load 時に Store の現在の root、accessory、Theme へ収束するため、Controller 作成後から `viewDidLoad` 完了前までに加えた変更も初期表示へ反映される。`rootHeader` / `rootFooter` は Store の状態ではなく Host 所有のプロパティなので、Controller を作り直したときの再適用は呼び出し側の責務である。
 
 テストや独自ホスティング向けには、Store 方式の `KsSettingsView` (SwiftUI View) が `makeController()` を持ち、SwiftUI 階層の外で背後の `KsSettingsViewController` を生成できる。Store 方式専用で、DSL で組んだ View に対して呼ぶと `fatalError` になる。通常の SwiftUI 画面で必要になることはない。
 

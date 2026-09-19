@@ -149,7 +149,7 @@ private void OnOpenLogTapped(object? sender, EventArgs e)
 
 ## index ではなく項目そのもので扱う
 
-`SelectedItem` (単一選択) と `SelectedItems` (複数選択) は既定 TwoWay で、`SelectedIndex` / `SelectedIndices` と `ItemsSource` に対して相互に同期される — 正はあくまで index 側。候補に無い項目を設定すると未選択になる (複数選択では見つからない要素だけが落とされる)。逆引きは値等価で、最初に一致した位置に解決される。`ItemsSource` が届く前にバインドされた項目は捨てられずに保持され、候補が届いた時点で解決されるので、XAML の属性順・バインドの適用順は問わない。
+`SelectedItem` (単一選択) と `SelectedItems` (複数選択) は既定 TwoWay で、`SelectedIndex` / `SelectedIndices` と `ItemsSource` に対して相互に同期される — 正はあくまで index 側。候補に無い項目を設定すると未選択になる (複数選択では見つからない要素だけが落とされる)。逆引きは値等価で、最初に一致した位置に解決される。`SelectedItems` の null と空リストはどちらも未選択を表す。`ItemsSource` が null / 空の間にバインドされた項目は未選択へ揃えず保持され、候補が届いた時点で解決されるので、XAML の属性順・バインドの適用順は問わない。
 
 ```xml
 <ks:PickerCell Title="Theme"
@@ -157,11 +157,11 @@ private void OnOpenLogTapped(object? sender, EventArgs e)
                SelectedItem="{Binding Theme}" />
 ```
 
-## 選択の確定を Command で受け取る
+## 選択面が閉じ切った後に Command を実行する
 
-`SelectedCommand` は、ユーザーが選択面で選択を確定した瞬間を通知する。値の TwoWay バインドだけではユーザーの確定操作を初期化・プログラムからの更新と区別できないときに使う。実行されるのはユーザーが選択を確定したときだけで、公開プロパティ (`SelectedIndex` など) を直接設定しても、キャンセル・確定なしの dismiss でも実行されない。同じ選択をそのまま確定し直しても実行される — 値の変化ではなく確定操作の通知だから。
+`SelectedCommand` は、ユーザーの選択面が閉じ切った後に選択操作の完了を通知する。値の TwoWay バインドだけではユーザーの確定操作を初期化・プログラムからの更新と区別できないときに使う。実行されるのは選択を確定して選択面が閉じ切ったときだけで、公開プロパティ (`SelectedIndex` など) を直接設定しても、キャンセル・確定なしの dismiss でも実行されない。同じ選択をそのまま確定し直しても実行される — 値の変化ではなくユーザー操作の通知だから。
 
-実行は選択値の書き戻しの後なので、Command の中からは確定後の新しい選択値が見える。引数は確定の種類で決まり、単一選択の確定では `SelectedItem`、複数選択の確定では `SelectedItems` が渡される。`CanExecute` は確認されず、`CommandParameter` プロパティは無い。
+選択値の書き戻しと相互導出は選択面の確定時 (閉じる前) に済み、Command は閉じ切り通知の後に実行される。そのため Command の中から別のダイアログや画面遷移を固定待ちなしで開始できる。引数は確定の種類で決まり、単一選択の確定では `SelectedItem`、複数選択の確定では `SelectedItems` が渡される。引数は閉じ切り通知時点の Cell の現在値なので、確定から閉じ切りまでに `ItemsSource` や選択を変えた場合は変更後の値になる。`CanExecute` は確認されず、`CommandParameter` プロパティは無い。
 
 ```xml
 <ks:PickerCell Title="Notification recipients"
@@ -231,11 +231,11 @@ Android の選択面はホストによらず時・分ホイールのボトムシ
                    PickerTitle="Birthday" />
 ```
 
-Android の `Calendar` は Material 3 のカレンダーダイアログを開く。ユーザーが切り替えられるテキスト入力モードも付いていて、ホストの Activity 型・テーマを問わず動く。`AndroidButtonColor` は Android の `Wheels` 選択面の OK / CANCEL 操作の色で、未指定なら `AccentColor` 系の解決に従う — Android 専用の指定で、他の platform では表示に影響しない。
+Android の `Calendar` は Material 3 のカレンダーダイアログを開く。ユーザーが切り替えられるテキスト入力モードも付いていて、ホストの Activity 型・テーマを問わず動く。`Wheels` は Android のホイール形式の選択面を使う。`TodayText` を指定すると全形式に「今日」へ飛ぶ操作が出るが、変更されるのは確定前の選択だけで、`Date` のバインド先が変わるのは確定時。今日が `MinimumDate` / `MaximumDate` の範囲外なら選択は変わらない。`AndroidButtonColor` は Android の `Wheels` 選択面の OK / CANCEL 操作の色で、未指定なら `AccentColor` 系の解決に従う — Android 専用の指定で、他の platform では表示に影響しない。
 
 ## 選択系の Cell に共通する決まり
 
-`PickerCell` / `NumberPickerCell` / `TimePickerCell` / `DatePickerCell` が値を書き戻すのは、ユーザーが確定したときだけ — iOS の Done、Android の OK、単一選択の `PickerCell` なら候補行のタップ。キャンセル・外側タップ・Back・シートの下スワイプは作業中の状態を破棄し、バインド先は元のまま変わらない。複数選択の `PickerCell` も同じで、確定するまで `SelectedIndices` には触れない。確定の瞬間そのものを受け取る経路は `PickerCell` だけが持つ — 上の `SelectedCommand`。
+`PickerCell` / `NumberPickerCell` / `TimePickerCell` / `DatePickerCell` が値を書き戻すのは、ユーザーが確定したときだけ — iOS の Done、Android の OK、単一選択の `PickerCell` なら候補行のタップ。キャンセル・外側タップ・Back・シートの下スワイプは作業中の状態を破棄し、バインド先は元のまま変わらない。複数選択の `PickerCell` も同じで、確定するまで `SelectedIndices` には触れない。選択面が閉じ切った後の完了通知を公開する経路は `PickerCell.SelectedCommand` だけで、`NumberPickerCell` / `TimePickerCell` / `DatePickerCell` には用意されていない。
 
 4 つとも `ValueText` を持つ。未指定なら Cell は現在の選択を自動で表示し、指定するとその文字列が代わりに表示される。
 

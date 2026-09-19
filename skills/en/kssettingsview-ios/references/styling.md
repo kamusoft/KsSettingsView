@@ -133,6 +133,16 @@ ksSection("Account") {
 
 When the appearance changes while the list is on screen, the row is not rebuilt: it keeps its identity, the colors you set explicitly are drawn unchanged, and only the colors left unspecified on that row are resolved again against the new appearance. The accent fill and border of the checkbox indicator reach the layer as a `CGColor`, and the library re-resolves them on the appearance change just as it does the section border.
 
+## Control the vertical scroll indicator
+
+`Theme.scrollIndicatorVisible` controls the settings list's vertical scroll indicator and defaults to `true`. Changing it at runtime updates the indicator without rebuilding rows or moving the scroll position. A picker list uses the value captured when it opens; lists inside `CustomCell` content and wheel-based picker surfaces are owned by their content and are not changed by this setting.
+
+```swift
+let quietScrollingTheme = Theme(scrollIndicatorVisible: false)
+```
+
+The same value reaches the list through a SwiftUI `.theme(_:)` modifier, `SettingsRootStore.applyTheme(_:)`, or `KsSettingsViewController.applyTheme(_:)`.
+
 ## Override the look of one cell
 
 `CellStyle` overrides the theme for a single cell. Fields you leave out are `nil` and are inherited from the theme.
@@ -227,6 +237,12 @@ let boxedTheme = Theme(
 
 The box covers only the cells of a section: section headers and footers sit outside it, and the screen header and footer are never boxed. In `.classic` only the vertical parts of `sectionMargin` apply, because a classic section spans the full width.
 
+## Understand press feedback and disabled cells
+
+An enabled cell that can be acted on shows the selected background as soon as a touch begins. A scroll gesture does not leave a pressed state; a push navigation keeps the feedback through the transition, while a local action or picker presentation fades it after a short grace period. A touch that starts on a `Switch` or `Slider` belongs to that control, so it does not start list scrolling.
+
+Pass `isEnabled: false` to disable a cell. Built-in cells replace text colors with `Theme.disabledTextColor` and use the native control's disabled appearance; they do not fade the whole row. `CustomCell` is the exception: its content is dimmed as a whole because the library cannot identify arbitrary text elements. The declarative `.disabled(_:)` cell modifier is currently a no-op.
+
 ## Control cell height
 
 Height resolves from `CellStyle.cellHeight`, then `Theme.rowHeight`, then the platform minimum of 48pt. With `hasUnevenRows` left at `true` the resolved height is a minimum and cells grow with their content; set it to `false` to pin every cell.
@@ -246,6 +262,8 @@ ksSection("Notifications", footer: "Also check the system settings.") {
     LabelCell(title: "Sound")
 }
 ```
+
+Text Header / Footer backgrounds use `Theme.headerBackgroundColor` and `Theme.footerBackgroundColor`; their built-in defaults are transparent, so the list canvas shows through. A View-form Header / Footer owns its own appearance and does not receive the library's text background. Header and Footer text colors and fonts still follow their corresponding Theme fields and dynamic colors on an appearance change.
 
 ## Put arbitrary SwiftUI in a section header
 

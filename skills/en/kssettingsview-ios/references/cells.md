@@ -4,7 +4,7 @@ Recipes for placing cells in a settings screen. Every example assumes the import
 
 ## Group cells into a section
 
-Cells always live inside a section. `ksSection` takes an optional string header and footer.
+Cells always live inside a section. `ksSection` takes an optional string header and footer. It is the unambiguous factory for the `KsSettingsViewBuilder` root closure; use the public `KsSection` typealias when you need to name a section value and `import SwiftUI` makes `Section` ambiguous.
 
 ```swift
 KsSettingsView {
@@ -143,11 +143,12 @@ For a password field, set `isPassword: true`; for a numeric field, pass `keyboar
 PickerCell(
     title: "Theme",
     items: ["Light", "Dark", "System"],
-    selectedIndex: $themeIndex
+    selectedIndex: $themeIndex,
+    onSelectionCompleted: { _ in showThemeHelp() }
 )
 ```
 
-`items` is a list of `PickerItem` - a main `text` plus an optional `subText` second line - and a string array like the one above is a shorthand for it. `pageTitle` overrides the title of the selection page, which otherwise reuses `title`. Instead of the binding there is also a callback form, which takes `selectedIndex` as a plain value plus `onSelectionChanged`. Which shape a cell is in is exposed as `selectionMode` (`PickerSelectionMode`, `.single` or `.multiple`), fixed by the initializer you used.
+`items` is a list of `PickerItem` - a main `text` plus an optional `subText` second line - and a string array like the one above is a shorthand for it. `pageTitle` overrides the title of the selection page, which otherwise reuses `title`. Instead of the binding there is also a callback form, which takes `selectedIndex` as a plain value plus `onSelectionChanged`. `onSelectionCompleted` is optional and receives the confirmed index once the selection page has finished dismissing; it runs after the value callback. Cancel and every other non-confirming dismissal call neither callback. Which shape a cell is in is exposed as `selectionMode` (`PickerSelectionMode`, `.single` or `.multiple`), fixed by the initializer you used.
 
 ## Choose several items with an upper limit
 
@@ -160,9 +161,12 @@ PickerCell(
     title: "Topics",
     items: ["News", "Sports", "Music", "Travel"],
     selectedIndices: $topics,
-    maxSelectedNumber: 2
+    maxSelectedNumber: 2,
+    onMultiSelectionCompleted: { indices in recordTopics(indices) }
 )
 ```
+
+`onMultiSelectionCompleted` receives the confirmed set once the selection page has finished dismissing, after `onMultiSelectionChanged`. It is optional; Cancel and every other non-confirming dismissal leave both callbacks silent.
 
 ## Use your own objects as picker candidates
 
@@ -249,11 +253,12 @@ DatePickerCell(
     date: $birthday,
     format: "yyyy/MM/dd",
     uiStyle: .calendar,
-    todayText: "Today"
+    todayText: "Today",
+    onValueCompleted: { date in showNextStep(for: date) }
 )
 ```
 
-`minDate` / `maxDate` limit the selectable range, and `pickerTitle` overrides the title of the date picker; left out, `title` is used.
+`minDate` / `maxDate` limit the selectable range, and `pickerTitle` overrides the title of the date picker; left out, `title` is used. `onValueCompleted` is optional and receives the confirmed date after the selection surface has finished dismissing, after `onValueChanged`. Cancel and every other non-confirming dismissal call neither callback.
 
 ## Add an icon to a cell
 
