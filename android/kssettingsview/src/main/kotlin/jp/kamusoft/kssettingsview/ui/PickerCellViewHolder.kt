@@ -57,8 +57,8 @@ internal class PickerCellViewHolder(
      * タイトルは `pageTitle ?: title`、候補は `items` の全項目を順序どおり列挙する。
      * 確定 callback は選択面側の確定操作でのみ発火し、モデル値の正規化は行わない。
      *
-     * 閉じ切り callback は選択面が閉じたことを知る dismiss 経路で発火する。確定で閉じたかどうかは
-     * 選択面が控えた確定値の有無で判別する。
+     * 閉じ切り callback は選択面が閉じたことを知る dismiss 経路で発火する（core/ADR-0034）。確定で
+     * 閉じたかどうかは選択面が控えた確定値の有無で判別する。
      */
     private fun showPickerSheet(cell: PickerCell, theme: Theme, effective: EffectiveStyle) {
         val sheet = PickerSelectionSheet(

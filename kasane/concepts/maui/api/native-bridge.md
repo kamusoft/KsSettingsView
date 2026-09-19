@@ -3,7 +3,7 @@ type: concept
 title: MAUI Native Bridge の interop 境界
 description: C# から Native SettingsView を操作する Bridge 層の公開契約 — 内部所有 Store・更新 API と DTO の輸送規約・ID 採番・lifecycle・操作通知
 tags: [maui, bridge, interop, binding]
-timestamp: 2026-09-18
+timestamp: 2026-09-19
 ---
 
 # MAUI Native Bridge の interop 境界
@@ -120,6 +120,14 @@ Native → C# のユーザー操作通知は、**設定画面 1 つ (= Bridge �
 メソッドは Cell 種別ごとに分かれ (`switchCellChanged(cellID, isOn)` / `entryCellTextChanged(cellID, text)` / `datePickerCellChanged(cellID, date)` 等。全メソッドの一覧は実装と maui/ADR-0012 の書き戻し正規一覧が正)、値は maui/ADR-0012 の輸送規約 (index / ISO-8601 文字列) に従う。タップだけを伝えるメソッド (`commandCellTapped(cellID)` / `buttonCellTapped(cellID)` / `customCellTapped(cellID)`) は値を運ばず、書き戻しの対象にもならない。`customCellTapped` は DTO の `hasTapHandler` が true のときだけ native Cell に `onTap` を持たせて通知する — false の行はタップ動作そのものを持たず、内容の中の操作を妨げない。
 
 Bridge が DTO → native Cell 変換時に各 Cell のコールバック (`onTap` / `onValueChanged` 等) を注入し、delegate / listener へ転送する。通知は **native UI スレッド上で同期に**呼ばれる (marshal 不要)。
+
+### PickerCell の閉じ切り通知
+
+PickerCell だけは、値の通知に加えて**選択面が閉じ切ったこと**を `pickerCellSelectionCompleted(cellID, index)` / `pickerCellMultiSelectionCompleted(cellID, indices)` の 2 メソッドで中継する ([core/ADR-0034](../../../decisions/core/0034-picker-selection-completed-after-dismiss.md))。両 OS で同名・同意味であり、複数選択の indices は既存の確定通知と同じ正規化 (昇順・重複なし) を通す。
+
+対応する確定通知 (`pickerCellSelectionChanged` / `pickerCellMultiSelectionChanged`) の**後**に、同じ cellID と同じ選択で 1 回届く。C# 側はこれを受けた時点で facade の `SelectedCommand` を実行する ([Cell の MAUI 表現](maui-cells.md))。値の書き戻しは確定通知の側が済ませており、閉じ切り通知では書き戻さない。
+
+DatePickerCell の閉じ切り通知 (native の `onValueCompleted`) はこの経路へ乗せない — MAUI 側に消費者がなく、消費者の無い通知を interop 境界に増やさないため。DatePickerCell の interaction 通知は従来どおり `datePickerCellChanged` だけである。
 
 寿命: iOS の delegate 参照は **weak**、Android の listener は Bridge が保持し null 設定で解除する。C# 側は gateway (前掲の表) が delegate / listener 実装を強参照で保持し、C# 側実装オブジェクトが GC されて native から呼べなくなることを防ぐ。登録は Handler 接続時・解除は切断時 (操作は Host 表示中にしか発生しないため connect / disconnect で必要十分)。native Cell 内のコールバックは通知転送用オブジェクトと cellId しか参照せず、facade インスタンスを GC から到達可能にしない (SettingsView の回収を妨げない)。
 

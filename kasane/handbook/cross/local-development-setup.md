@@ -2,10 +2,10 @@
 kind: guide
 applies-when:
   always: false
-  tasks: [環境構築, Sample の起動, MAUI Sample への native 変更の配備確認, Sample の外観 (ダーク) 確認, 本体のビルド・lint, 消費者検証の実行, 本体 source へのステップイン]
+  tasks: [環境構築, Sample の起動, iOS 実機への Sample の配備と計測, MAUI Sample への native 変更の配備確認, Sample の外観 (ダーク) 確認, 本体のビルド・lint, 消費者検証の実行, 本体 source へのステップイン]
 title: ローカル開発環境と Sample の実行
-description: iOS・Android・MAUI のローカル環境設定、Sample の起動と外観 (ライト / ダーク) の切り替え、本体モジュールのビルド / lint コマンド、消費者検証 (verification/) の手元実行、本体 source へのステップイン手順
-timestamp: 2026-09-18
+description: iOS・Android・MAUI のローカル環境設定、Sample の起動 (iOS 実機への配備と計測を含む) と外観 (ライト / ダーク) の切り替え、本体モジュールのビルド / lint コマンド、消費者検証 (verification/) の手元実行、本体 source へのステップイン手順
+timestamp: 2026-09-19
 ---
 
 # ローカル開発環境と Sample の実行
@@ -108,6 +108,40 @@ xcodebuild \
   -destination 'generic/platform=iOS Simulator' \
   build
 ```
+
+#### iOS 実機で実行・計測する
+
+実行時挙動 (アニメーションの実時間・提示の競合・入力面の開閉) を実機で確かめるときの手順。接続中の機体は `xcrun devicectl list devices` に出る。機体は必ず UDID で指名する。
+
+```bash
+xcodebuild \
+  -project samples/ios/KsSettingsViewSample.xcodeproj \
+  -scheme KsSettingsViewSample \
+  -destination 'platform=iOS,id=<UDID>' \
+  DEVELOPMENT_TEAM=<チーム ID> CODE_SIGN_STYLE=Automatic -allowProvisioningUpdates \
+  build
+```
+
+署名の設定は**コマンドラインの引数で渡し、Xcode の画面では設定しない**。画面で設定するとチーム ID が `samples/ios/KsSettingsViewSample.xcodeproj` のプロジェクトファイルへ書き戻され、commit 前の識別子の検査で止まる。チーム ID は、以前に実機へ入れたビルドの `embedded.mobileprovision` を `security cms -D -i <ファイル>` で開いた `TeamIdentifier` で確かめられる。
+
+**`No profiles ...` で失敗したときは、チーム ID の誤りと Xcode のアカウントのログイン切れを区別する。** どちらも同じエラーになるため、先にチーム ID を上記の方法で確かめ、合っていればアカウントのログイン状態を疑う。
+
+ビルドした `.app` の導入と起動は `devicectl` で行う。
+
+```bash
+xcrun devicectl device install app --device <UDID> <.app のパス>
+xcrun devicectl device launch app --device <UDID> <bundle id>
+```
+
+計測結果を端末の Documents へ書き出した場合は、次で手元へ回収する。
+
+```bash
+xcrun devicectl device copy from --device <UDID> \
+  --domain-type appDataContainer --domain-identifier <bundle id> \
+  --source Documents/<ファイル名> --destination <手元の保存先>
+```
+
+**実機が一覧に出るのに使えないときは、端末側ではなく Mac 側のペアリングが確立していないことがある。** `xcrun devicectl list devices -v` で該当機体の `developerModeStatus` が `nil`、`ddiServicesAvailable` が `false` になっているのがその状態で、端末の解錠・信頼・デベロッパモードがすべて済んでいても起こる。端末を疑う前に `xcrun devicectl manage pair --device <UDID>` で張り直す。
 
 ### Android Native
 

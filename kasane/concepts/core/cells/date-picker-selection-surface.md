@@ -1,14 +1,14 @@
 ---
 type: concept
 title: DatePickerCell の選択面
-description: DatePickerCell の行タップで開く日付選択 UI のプラットフォーム共通契約 (確定と破棄・min/max・todayText) と、uiStyle ごとの器の違い・Android 固有の配色/ホイール/回転復元契約
+description: DatePickerCell の行タップで開く日付選択 UI のプラットフォーム共通契約 (確定と破棄・閉じ切り通知・min/max・todayText) と、uiStyle ごとの器の違い・Android 固有の配色/ホイール/回転復元契約
 tags: [cells, date-picker, selection-surface, styling]
-timestamp: 2026-08-28
+timestamp: 2026-09-19
 ---
 
 # DatePickerCell の選択面
 
-この文書は、`DatePickerCell` の行タップで開く日付選択 UI (以下「選択面」) が iOS / Android で共通に守る挙動契約と、`uiStyle` ごとに異なる器 (提示コンテナ) の構成を説明する。想定読者はライブラリの実装者と、挙動契約を知りたい利用者の両方である。読むと、確定と破棄の意味論、`minDate` / `maxDate` の効き方、「今日」ジャンプ (`todayText`) の適用面、Android のカレンダーダイアログ配色・Spinner 3連ホイール・回転をまたぐ表示継続の契約が分かる。`DatePickerCell` のモデル — `date` / `minDate` / `maxDate` / `format`、選択面のタイトル `pickerTitle`、確定通知の `onValueChanged`、強調色 `accentColor`、Android の `Spinner` 選択面ヘッダー固有の `androidButtonColor` — は [入力 Cell](input-cells.md)、スタイル解決の一般規則は [スタイルの所有と実効値解決](../styling/style-resolution.md) を先に読むと分かりやすい。数値選択の選択面は別契約 — [NumberPickerCell の選択面](number-picker-selection-surface.md) を参照。
+この文書は、`DatePickerCell` の行タップで開く日付選択 UI (以下「選択面」) が iOS / Android で共通に守る挙動契約と、`uiStyle` ごとに異なる器 (提示コンテナ) の構成を説明する。想定読者はライブラリの実装者と、挙動契約を知りたい利用者の両方である。読むと、確定と破棄の意味論、閉じ切り通知の契約、`minDate` / `maxDate` の効き方、「今日」ジャンプ (`todayText`) の適用面、Android のカレンダーダイアログ配色・Spinner 3連ホイール・回転をまたぐ表示継続の契約が分かる。`DatePickerCell` のモデル — `date` / `minDate` / `maxDate` / `format`、選択面のタイトル `pickerTitle`、確定通知の `onValueChanged`、強調色 `accentColor`、Android の `Spinner` 選択面ヘッダー固有の `androidButtonColor` — は [入力 Cell](input-cells.md)、スタイル解決の一般規則は [スタイルの所有と実効値解決](../styling/style-resolution.md) を先に読むと分かりやすい。数値選択の選択面は別契約 — [NumberPickerCell の選択面](number-picker-selection-surface.md) を参照。
 
 ## 目的
 
@@ -35,6 +35,21 @@ Android のホイール `KsWheelView` は internal の内部部品であり、�
 - 範囲外の初期値 (Android): 開いた時点の `date` が範囲外なら、最も近い範囲端へ丸めて提示する (`Material` / `Spinner` 共通)。`minDate > maxDate` のような提示できない範囲指定では選択面を提示せず警告ログを残す (両形式共通。`Spinner` はさらに空範囲・過大範囲も防御する — 後述)
 - 確定のみ反映: 確定操作 (Android の OK / iOS の Done) で、その時点の選択日から作った値を引数に `onValueChanged` を1回発火して閉じる。非確定の閉じ方 (キャンセル・外側タップ・Back・下スワイプ等、器が提供するすべての経路) では発火せず、変更は破棄される
 - iOS の確定値は選んだ年月日に**元の `cell.date` の時刻成分を保持**して合成する (`Date` 型のため)。Android は `LocalDate` をそのまま渡す
+
+### 閉じ切り通知
+
+確定操作で選択面が閉じ切ったことは、値の callback とは別の callback `onValueCompleted` (引数は確定した日付) で知らせる ([core/ADR-0034](../../../decisions/core/0034-picker-selection-completed-after-dismiss.md))。iOS では確定直後にモーダル (ダイアログ等) を提示しても UIKit が提示を無視するため、利用側が固定待ちなしに次の提示へ進むための通知である。
+
+`onValueChanged` の**後**に同じ日付で 1 回だけ届き、非確定 dismiss ではどの callback も発火しない。uiStyle に関係なく同じ契約で、callback は省略可能である。**閉じ切り**の起点は器ごとに異なる:
+
+| プラットフォーム × uiStyle | 閉じ切りの報告時点 |
+|---|---|
+| iOS `.calendar` | 確定時 dismiss の completion |
+| iOS `.wheels` | `inputView` の非表示完了 |
+| Android `Spinner` | ボトムシートの hide アニメーション完了後 (dismiss リスナー) |
+| Android `Material` | ダイアログの dismiss 時点 |
+
+Android `Material` (通常の Dialog) だけは window のフェードアウトの完了前に報告される。これは意図的なプラットフォーム差である — 通常の Dialog の退場完了を知る公式手段が無く、待てば固定待ちをライブラリに持ち込むことになる。Android には iOS のような提示競合が無いため、差があっても利用側の導線は成立する。
 
 ## 今日へのジャンプ (todayText)
 
@@ -67,14 +82,24 @@ iOS の `accentColor` は埋め込み picker の `tintColor` と入力ツール�
 
 ## Android カレンダーダイアログの回転復元
 
-カレンダーダイアログは、構成変更 (回転等) をまたいで次を保証する ([android/ADR-0021](../../../decisions/android/0021-calendar-dialog-restore-via-view-instance-state.md)):
+カレンダーダイアログは、構成変更 (回転等) をまたいで表示と選択状態を保つ ([android/ADR-0021](../../../decisions/android/0021-calendar-dialog-restore-via-view-instance-state.md))。保ち方はホストの構成で分かれる:
 
-- **構成変更を in-place で処理するホスト** (Activity 再生成が起きない構成。例: 本ライブラリの .NET MAUI facade が載るテンプレート既定のホスト): ダイアログは開いたまま生存し、選択状態を維持する
-- **Activity 再生成が起きるホスト**: `KsSettingsView` (設定画面を表示する Android の Host View — [Android Native Host](../../android/api/android-native-host.md)) の View インスタンス状態に保存した状態 (対象 `cell.id`・選択日・表示月・表示モード) から再提示する。再提示は、保存時と同一 `cell.id` の DatePickerCell (uiStyle `Material`) が復元後の root に存在する場合に限る。不成立なら再提示せず、いかなる Cell へも値を書き込まない
-- **成立条件**: View 階層の状態保存は ID を持つ View にしか働かないため、`KsSettingsView` は ID 未設定のときライブラリ既定 ID を自前付与する (ホストの明示 ID は尊重)。ライブラリ既定 ID のインスタンスが同一階層に複数ある構成では保存先が衝突するため復元しない — ホストが個別 ID を与えれば成立する。再生成の前後で `cell.id` が一致すること (Cell への明示 id 指定、または Compose 宣言 DSL が識別のために導出する安定 ID — [Android Compose Bridge](../../android/api/android-compose.md)) も対応付けの前提である
+| ホストの構成 | 挙動 |
+|---|---|
+| 構成変更を in-place で処理する (Activity 再生成が起きない。例: 本ライブラリの .NET MAUI facade が載るテンプレート既定のホスト) | ダイアログは開いたまま生存し、選択状態を維持する |
+| Activity 再生成が起きる | `KsSettingsView` の View インスタンス状態に保存した状態 (対象 `cell.id`・選択日・表示月・表示モード) から再提示する |
+
+再提示は、保存時と同一 `cell.id` の DatePickerCell (uiStyle `Material`) が復元後の root に存在する場合に限る。不成立なら再提示せず、いかなる Cell へも値を書き込まない。ここでいう `KsSettingsView` は設定画面を表示する Android の Host View である ([Android Native Host](../../android/api/android-native-host.md))。
+
 - 復元後の選択面でも配色・今日ジャンプ・確定/破棄の契約はすべて有効である
 - バックグラウンド遷移 (Home キー・他アプリ起動) では閉じない。閉じるのはホスト破棄への追随と detach の経路である
 - Android のシート系選択面 (`Spinner` の3連ホイールや [TimePickerCell の選択面](time-picker-selection-surface.md) 等のボトムシート) は復元対象外で、回転で閉じる (無発火)
+
+### 再生成をまたぐ復元の成立条件
+
+View 階層の状態保存は ID を持つ View にしか働かないため、`KsSettingsView` は ID 未設定のときライブラリ既定 ID を自前付与する (ホストの明示 ID は尊重)。ライブラリ既定 ID のインスタンスが同一階層に複数ある構成では保存先が衝突するため復元しない — ホストが個別 ID を与えれば成立する。
+
+再生成の前後で `cell.id` が一致することも対応付けの前提である。一致は Cell への明示 id 指定、または Compose 宣言 DSL が識別のために導出する安定 ID ([Android Compose Bridge](../../android/api/android-compose.md)) で成り立つ。
 
 ## Android Spinner の選択面 (3連ホイール)
 
@@ -87,24 +112,29 @@ iOS の `accentColor` は埋め込み picker の `tintColor` と入力ツール�
 - 候補表示: 端末 Locale の日付表記慣行から導出する (自前の翻訳文字列は同梱しない。日本語なら「2026年 / 8月 / 2日」)。系列の並びは Locale によらず年→月→日で固定
 - 操作ラベル: OS の公開文字列リソース (`android.R.string.ok` / `android.R.string.cancel`) — [NumberPickerCell の選択面](number-picker-selection-surface.md) と同じ方針
 - スナップ静止 (ホイールが候補位置で止まって初めてその候補が選択中になること) の意味論・候補領域の下スワイプが dismiss にならないこと・アクセシビリティ (系列ごとの選択中公開と前後候補アクション) も NumberPicker の選択面と同じ契約
-- ヘッダーの確定・キャンセル操作の色は `DatePickerCell.androidButtonColor` が指定されていればそれを最優先し、未指定なら選択中候補の強調と同じ accent の3段解決 (`DatePickerCell.accentColor` → `CellStyle.accentColor` → `Theme.cellAccentColor`) に従う。`androidButtonColor` はこの `Spinner` ヘッダー専用で、`Material` のカレンダーダイアログには適用されない (操作行は常に accent の3段解決)
+
+ヘッダーの確定・キャンセル操作の色は `DatePickerCell.androidButtonColor` が指定されていればそれを最優先し、未指定なら選択中候補の強調と同じ accent の3段解決 (`DatePickerCell.accentColor` → `CellStyle.accentColor` → `Theme.cellAccentColor`) に従う。`androidButtonColor` はこの `Spinner` ヘッダー専用で、`Material` のカレンダーダイアログには適用されない (操作行は常に accent の3段解決)。
 
 ## 保証すること
 
 - 確定 callback は確定操作の1回だけ発火し、非確定 dismiss はどの経路でも発火しない — これが崩れると、利用者アプリの状態が「開いて閉じただけ」で書き換わる
+- 閉じ切り callback は確定 callback より後に、同じ日付で1回だけ発火する — 順序が逆転すると、利用側が閉じ切り時に読むモデル値が確定前のものになる
 - 選択面が提示する日付は常に `minDate`..`maxDate` の範囲内にある (初期表示・年月変更後・今日ジャンプ後のいずれでも) — 範囲外の値が確定されると利用者側のバリデーションを素通りする
 - `todayText` の提示条件 (非 null かつ非空文字) と範囲外セーフガードは iOS / Android で同一である
 
 ## してはいけないこと
 
-- `DatePickerUIStyle` の case (iOS `.wheels` / `.calendar`、Android `Material` / `Spinner`) を同一と仮定してはならない — case の名前は platform 間で一対一に対応しない (ホイール型は iOS `.wheels` ⇄ Android `Spinner` と名前がずれ、`Material` は器の見た目を表す名前ですらない)
+- `DatePickerUIStyle` の case (iOS `.wheels` / `.calendar`、Android `Material` / `Spinner`) を同一と仮定してはならない — case の名前は platform 間で一対一に対応しない
 - `KsWheelView` や `DateSelectionSheet`・`DateCalendarDialog` を公開 API として利用者に案内しない — internal の内部部品である
-- Compose のバージョンを上げたまま Material 形式のカレンダーを無検証で信頼しない — Compose Material3 `DatePicker` は experimental API であり (android/ADR-0019 の負の帰結)、版更新時はシグネチャと描画の追随確認が必要である (版整合の規律は [Android のビルドツールチェーン](../../android/architecture/build-toolchain.md))
+- Compose のバージョンを上げたまま Material 形式のカレンダーを無検証で信頼しない — 版更新時はシグネチャと描画の追随確認が必要である
+
+case の名前がずれる例: ホイール型は iOS `.wheels` ⇄ Android `Spinner` で名前が食い違い、`Material` は器の見た目を表す名前ですらない。Compose Material3 `DatePicker` が experimental API であることは android/ADR-0019 の負の帰結として記録されており、版整合の規律は [Android のビルドツールチェーン](../../android/architecture/build-toolchain.md) が正である。
 
 ## 用語
 
 - **選択面**: 入力 Cell の行タップで開くモーダルな選択 UI ([PickerCell の選択面](picker-selection-surface.md) と共通の語)
 - **器**: 選択面を提示するコンテナ。挙動契約と切り離してプラットフォーム差・形式差を管理する単位
+- **閉じ切り**: プラットフォームが選択面の dismiss 完了として報告する時点 ([PickerCell の選択面](picker-selection-surface.md) と共通の語)
 - **系列**: Android Spinner の3連ホイールを構成する年・月・日の各ホイール
 - **色ロール**: ダイアログ内の部位を役割 (背景・強調・通常文字・アクセント上文字) で束ね、テーマ色を割り当てる単位
 
@@ -118,3 +148,4 @@ iOS の `accentColor` は埋め込み picker の `tintColor` と入力ツール�
 - [android/ADR-0009](../../../decisions/android/0009-datepicker-spinner-bottom-sheet-triple-wheel.md) — Spinner の器をボトムシート + 3連ホイールにした決定
 - [android/ADR-0019](../../../decisions/android/0019-datepickercell-calendar-compose-datepicker.md) — カレンダー型を Compose Material3 DatePicker のダイアログ表示に統一した決定
 - [android/ADR-0021](../../../decisions/android/0021-calendar-dialog-restore-via-view-instance-state.md) — 回転復元を View インスタンス状態で自前化した決定
+- [core/ADR-0034](../../../decisions/core/0034-picker-selection-completed-after-dismiss.md) — 確定して閉じ切った後を値付きの callback で知らせる決定

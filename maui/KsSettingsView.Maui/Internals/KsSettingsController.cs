@@ -2234,6 +2234,7 @@ internal sealed class KsSettingsController(SettingsView owner)
         }
     }
 
+    // 選択面が閉じ切った通知でだけ SelectedCommand を実行する。値の書き戻しは確定通知側が済ませている (core/ADR-0034)。
     /// <inheritdoc/>
     public void PickerCellSelectionCompleted(string cellId, int index)
     {

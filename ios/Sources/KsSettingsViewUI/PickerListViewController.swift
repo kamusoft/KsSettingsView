@@ -337,7 +337,7 @@ internal final class PickerListViewController: UITableViewController {
     }
 
     /// 選択面を閉じる。確定経路だけが `completion` を渡し、閉じ切った後の通知に使う。
-    /// キャンセル経路は `completion` を渡さないため、非確定 dismiss で閉じ切り通知は発火しない。
+    /// キャンセル経路は `completion` を渡さないため、非確定 dismiss で閉じ切り通知は発火しない（core/ADR-0034）。
     private func dismissModal(completion: (() -> Void)? = nil) {
         guard presentingViewController != nil else {
             // モーダルとして提示されていない（閉じる対象が無い）ため、すでに閉じ切った状態として扱う。
