@@ -38,6 +38,11 @@ public struct KsSettingsView: View {
     internal var _style: KsSettingsViewStyle
     /// `.theme(_:)` modifier 由来の Theme（`nil` なら DSL/Store 側の Theme を維持）
     internal var _theme: Theme?
+    /// `.respectsSafeArea(_:)` modifier 由来の、セーフエリアを尊重するかどうか。
+    /// 既定は `false`（container のセーフエリアを全辺で無視して親の全面に広がる）。
+    /// bar に覆われる領域の inset は `KsSettingsViewController` が載せる UIScrollView の
+    /// automatic な contentInset 調整に委ね、ラッパ側では加算しない（ios/ADR-0006）。
+    internal var _respectsSafeArea: Bool
 
     /// バック実装の種別を内部で保持する。
     /// - `.store(store)`：Store 方式（外部 Store を参照）
@@ -60,6 +65,7 @@ public struct KsSettingsView: View {
         self._rootHeader = nil
         self._rootFooter = nil
         self._theme = nil
+        self._respectsSafeArea = false
     }
 
     /// DSL 方式 init（一般用途向け）。
@@ -75,9 +81,25 @@ public struct KsSettingsView: View {
         self._rootHeader = nil
         self._rootFooter = nil
         self._theme = nil
+        self._respectsSafeArea = false
     }
 
     public var body: some View {
+        // SwiftUI は `UIViewControllerRepresentable` を既定でセーフエリアの内側に置くため、
+        // 全画面で使うと一覧が bar の後ろまで伸びず、下端に別色の帯が出る。
+        // Store 方式・DSL 方式のどちらでも同じ配置にするため、ここで一括して無視の指定を掛ける。
+        // 無視する領域は `.container` に限り keyboard 領域は残す
+        // ——`KsSettingsViewController` はキーボード出現時の inset 調整を持たず、
+        // EntryCell の入力時の回避は Representable が keyboard 領域の外側へ縮むことで成立するため（ios/ADR-0006）。
+        // 尊重する側では無視する辺を空集合にする。分岐で modifier 自体を外すと
+        // View の identity が変わり Controller が作り直されるため、辺の指定だけで切り替える。
+        backingContent
+            .ignoresSafeArea(.container, edges: _respectsSafeArea ? [] : .all)
+    }
+
+    /// バック実装に応じた Representable を返す。
+    @ViewBuilder
+    private var backingContent: some View {
         switch backing {
         case .store(let store):
             // Store 方式は外部 Store をそのまま使う Representable。
@@ -143,6 +165,21 @@ public struct KsSettingsView: View {
     public func theme(_ theme: Theme) -> KsSettingsView {
         var copy = self
         copy._theme = theme
+        return copy
+    }
+
+    /// 置かれた親のセーフエリアを尊重するかどうかを切り替える。
+    ///
+    /// 既定の `KsSettingsView` はセーフエリアを無視して親の全面に広がり、
+    /// ナビゲーションバーやタブバーに覆われる領域まで一覧の背景を伸ばす
+    /// （バーに隠れないための余白は一覧が自動で確保する）。
+    /// 部分的に埋め込む場合やシートで使う場合など、セーフエリアの内側に収めたいときに
+    /// この modifier を付ける。
+    ///
+    /// - Parameter respects: `true` でセーフエリアの内側に収め、`false` で既定の全面配置に戻す。
+    public func respectsSafeArea(_ respects: Bool = true) -> KsSettingsView {
+        var copy = self
+        copy._respectsSafeArea = respects
         return copy
     }
 

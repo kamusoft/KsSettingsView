@@ -222,6 +222,23 @@ KsSettingsView {
 .style(.modern)
 ```
 
+## Keep a SwiftUI embedding inside the parent safe area
+
+`KsSettingsView` ignores the parent's container safe area by default, so a screen-level list can extend behind navigation or tab bars while the UIKit host keeps its own content inset. Add `.respectsSafeArea()` when the settings view is embedded in a partial region or sheet and should stay inside the parent's safe area. The modifier applies to both DSL- and Store-backed views; `.respectsSafeArea(false)` restores the default full-bleed placement. It does not select individual edges, and it leaves keyboard avoidance active.
+
+```swift
+struct EmbeddedSettings: View {
+    var body: some View {
+        KsSettingsView {
+            ksSection("General") {
+                LabelCell(title: "Version", valueText: "1.0.0")
+            }
+        }
+        .respectsSafeArea()
+    }
+}
+```
+
 ## Tune the Modern section box
 
 Four theme attributes describe the box. Left unspecified they fall back to the built-in defaults, and by default no border is drawn.

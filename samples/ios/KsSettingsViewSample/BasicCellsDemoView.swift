@@ -172,7 +172,6 @@ struct BasicCellsDemoView: View {
                 }
             }
             .theme(SampleTheme.maui(dark: colorScheme == .dark))
-            .ignoresSafeArea(.container, edges: .bottom)
         }
         .navigationTitle(SampleScreen.basicCells.title)
     }

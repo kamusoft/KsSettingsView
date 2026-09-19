@@ -341,7 +341,6 @@ struct InputCellsDemoView: View {
                 }
             }
             .theme(SampleTheme.maui(dark: colorScheme == .dark))
-            .ignoresSafeArea(.container, edges: .bottom)
         }
         .navigationTitle(SampleScreen.inputCells.title)
     }

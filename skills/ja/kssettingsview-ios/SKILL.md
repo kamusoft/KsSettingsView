@@ -1,6 +1,6 @@
 ---
 name: kssettingsview-ios
-description: KsSettingsView で iOS の設定画面 (settings screen) を作る - SwiftUI の宣言的 DSL (KsSettingsView) または UIKit ホスト (KsSettingsViewController) で、組み込みの Cell (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker)、任意の SwiftUI View を Cell として表示する CustomCell、SettingsRootStore による表示中の更新、Theme / CellStyle のスタイル指定を扱う。KsSettingsViewCore / KsSettingsViewUI / KsSettingsViewSwiftUI に依存する Swift アプリで設定画面を追加・変更・レビューするときに使う。
+description: KsSettingsView で iOS の設定画面 (settings screen) を作る - SwiftUI の宣言的 DSL (KsSettingsView) または UIKit ホスト (KsSettingsViewController) で、組み込みの Cell (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker)、任意の SwiftUI View を Cell として表示する CustomCell、SettingsRootStore による表示中の更新、Theme / CellStyle のスタイル指定、respectsSafeArea(_:) による親のセーフエリア配置切替を扱う。KsSettingsViewCore / KsSettingsViewUI / KsSettingsViewSwiftUI に依存する Swift アプリで設定画面を追加・変更・レビューするときに使う。
 license: MIT
 metadata:
   language: ja
@@ -22,6 +22,7 @@ KsSettingsView は、iOS の設定アプリのようなリスト形式の設定�
 | 変更を `SettingsRootDiff` として表す、Diff や Theme を Controller へ直接適用する | [references/updates.md](references/updates.md) |
 | 色・フォント・Cell の高さ、Classic / Modern の list 外観、Section の Container | [references/styling.md](references/styling.md) |
 | ライブラリ既定色・自分の Theme・Cell 1 つに指定した色をライト / ダーク外観に追随させる | [references/styling.md](references/styling.md) |
+| SwiftUI ラッパを親の全面に広げるか、親の container セーフエリア内へ収める | [references/styling.md](references/styling.md) |
 | Section と画面全体の Header / Footer (任意の SwiftUI View も置ける) | [references/styling.md](references/styling.md) |
 | 任意の SwiftUI View を Cell として表示する、独自の Cell 型と Renderer を定義する | [references/custom-cells.md](references/custom-cells.md) |
 

@@ -222,6 +222,23 @@ KsSettingsView {
 .style(.modern)
 ```
 
+## SwiftUI の埋め込みを親のセーフエリア内に収める
+
+`KsSettingsView` は既定で親の container セーフエリアを無視するため、画面全体の list は navigation / tab bar の背後まで広がり、UIKit Host が bar 用の content inset を調整する。部分領域への埋め込みや sheet で設定画面を親のセーフエリア内に収めたいときは `.respectsSafeArea()` を付ける。この modifier は DSL 方式と Store 方式の両方に適用され、`.respectsSafeArea(false)` で既定の全面配置へ戻せる。辺は個別に選べず、キーボード領域の回避は維持される。
+
+```swift
+struct EmbeddedSettings: View {
+    var body: some View {
+        KsSettingsView {
+            ksSection("General") {
+                LabelCell(title: "Version", valueText: "1.0.0")
+            }
+        }
+        .respectsSafeArea()
+    }
+}
+```
+
 ## Modern の Section Container を調整する
 
 Container は Theme の 4 属性で決まる。未指定なら既定値へ解決し、既定では Border を描かない。
