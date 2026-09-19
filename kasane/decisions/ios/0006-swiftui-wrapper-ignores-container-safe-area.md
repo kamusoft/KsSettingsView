@@ -1,7 +1,7 @@
 ---
 id: 0006
 title: SwiftUI ラッパは既定で container のセーフエリアを無視して全面に広がり、inset は UIKit に任せる
-status: proposed
+status: accepted
 date: 2026-09-19
 ---
 
@@ -21,7 +21,7 @@ Apple の筋は、スクロールコンテナを実際にバーに覆われる�
 
 ## Decision
 
-`KsSettingsView` (SwiftUI ラッパ) は既定で `.container` のセーフエリアを全辺で無視し、全面に広がる。bar 分の inset は UIKit の automatic な contentInset 調整に任せる。無視する領域は `.container` に限定し、keyboard 領域は残す (キーボード回避を壊さないため)。部分埋め込みやシートなど全面化を望まない利用者向けに opt-out の口 (modifier) を設ける。
+`KsSettingsView` (SwiftUI ラッパ) は既定で `.container` のセーフエリアを全辺で無視し、全面に広がる。bar 分の inset は UIKit の automatic な contentInset 調整に任せる。無視する領域は `.container` に限定し、keyboard 領域は残す (キーボード回避を壊さないため)。部分埋め込みやシートなど全面化を望まない利用者向けに、セーフエリアを尊重する側へ戻す Root modifier (`respectsSafeArea(_:)`、on / off の切替のみで辺は選べない) を設ける。
 
 ## Alternatives Considered
 
@@ -35,6 +35,7 @@ Apple の筋は、スクロールコンテナを実際にバーに覆われる�
 - 正: キーボード回避の経路は現状 (SwiftUI 任せ) のまま変わらない
 - 負: 部分埋め込み・シートで使っている既存利用者は見た目が変わり得る (opt-out で戻せるが、更新時の確認は要る)
 - 負: 全面化の判断が UIKit の automatic inset に依存するため、`contentInsetAdjustmentBehavior` を変える将来の変更はこの決定と併せて見直す必要がある
+- 負: keyboard 領域を無視しないことは自動テストで固定できず (Simulator でキーボードを出す必要がある)、実行時証跡に頼る
 
 ## Revisit When
 
@@ -43,4 +44,5 @@ Apple の筋は、スクロールコンテナを実際にバーに覆われる�
 - `contentInsetAdjustmentBehavior` を automatic 以外にする必要が出たとき
 
 ---
-出典: kasane/changes/ios-swiftui-representable-safe-area/exploration.md / ../KsAppKMP/kasane/changes/ios-large-title-collapse-ios26/exploration.md (spike と証跡)
+出典: kasane/changes/archive/2026-09-19-ios-swiftui-representable-safe-area/exploration.md (検討した選択肢・決定事項) / kasane/changes/archive/2026-09-19-ios-swiftui-representable-safe-area/proposal.md / ../KsAppKMP/kasane/changes/ios-large-title-collapse-ios26/exploration.md (spike と証跡)
+現行照合: 2026-09-19 確認。`ios/Sources/KsSettingsViewSwiftUI/KsSettingsView.swift` (body で Store / DSL 両方式に `.ignoresSafeArea(.container, edges:)` を適用、`respectsSafeArea(_:)` で辺を空にして戻す。ADR-0006 参照コメントあり)、`ios/Tests/KsSettingsViewSwiftUITests/RootSafeAreaLayoutTests.swift` (配置の実測)。判定: 維持

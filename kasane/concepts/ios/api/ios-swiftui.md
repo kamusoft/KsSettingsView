@@ -3,7 +3,7 @@ type: reference
 title: iOS SwiftUI Bridge と宣言 DSL
 description: KsSettingsView の Store 方式・DSL 方式、identity、modifier、Theme 伝播の利用契約
 tags: [ios, swiftui, dsl, public-api]
-timestamp: 2026-08-19
+timestamp: 2026-09-19
 ---
 
 この文書は、SwiftUI から KsSettingsView を使うための公開 API 利用契約と責務境界を整理した reference である。読むと、Store 方式と DSL 方式の選び方、動的要素の identity、Root・Section・Cell modifier、Theme の更新経路が分かる。UIKit Host を直接使う場合は [iOS Native Host の利用と更新境界](ios-native-host.md) を参照する。
@@ -98,7 +98,7 @@ KsSettingsView {
 }
 ```
 
-Root modifier は `rootHeader` / `rootFooter` / `style` / `theme`、Section modifier は `sectionHeader` / `sectionFooter` / `sectionID`、Cell modifier は style / icon 系と `cellID` を提供する。Root と Section の Header / Footer は文字列と任意 SwiftUI `View` の両方を受ける。
+Root modifier は `rootHeader` / `rootFooter` / `style` / `theme` / `respectsSafeArea`、Section modifier は `sectionHeader` / `sectionFooter` / `sectionID`、Cell modifier は style / icon 系と `cellID` を提供する。Root と Section の Header / Footer は文字列と任意 SwiftUI `View` の両方を受ける。
 
 ## 宣言ツリーの identity
 
@@ -168,6 +168,12 @@ DSL 方式では、初回に指定 Theme、未指定なら `Theme()` から内�
 
 `.style(_:)` と `.rootHeader(_:)` / `.rootFooter(_:)` は Theme とは別の画面状態として Controller へ渡る。
 
+## 配置とセーフエリア
+
+`KsSettingsView` は Store 方式・DSL 方式のどちらでも、既定で container のセーフエリアを全辺で無視し、置かれた親の全面に広がる。ナビゲーションバー・タブバーに覆われる領域の inset は UIKit ホストの自動調整が付けるため、`NavigationStack` の中身として置けば `List` と同じく一覧が bar の後ろまで回り込み、iOS 26 の大タイトルもスクロールで畳まれる ([ios/ADR-0006](../../../decisions/ios/0006-swiftui-wrapper-ignores-container-safe-area.md))。keyboard 領域は無視しないため、EntryCell の編集中はラッパがキーボードの外側に縮む。
+
+部分埋め込みやシートなど全面化を望まない場合は `.respectsSafeArea()` で親のセーフエリアの内側に収まる配置へ戻す。`false` を渡すと既定に戻る。辺は選べない。
+
 ## 保証すること
 
 - Store 方式と DSL 方式は同じ Native Host と Store / Diff 経路を使う。
@@ -176,6 +182,7 @@ DSL 方式では、初回に指定 Theme、未指定なら `Theme()` から内�
 - 同じ ID の内容変更は identity を保ったまま Cell 内容を更新する。
 - 可視性変更は通常の内容更新へ押し込まず、visible projection を再構築する full 更新へ切り替える。
 - Root / Section / Cell の modifier は元の値を変更せず copy を返す。
+- 既定の配置は親の全面 (container のセーフエリアを無視) で、`respectsSafeArea` の切替は View identity を変えない。
 - Theme 更新は Section / Cell の ID と構造を変えない。
 
 ## してはいけないこと
