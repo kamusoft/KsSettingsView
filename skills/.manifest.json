@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "generatedAt": "2026-09-19T06:09:43Z",
+  "generatedAt": "2026-09-19T09:16:01Z",
   "concepts": {
     "android/api/android-compose.md": "d8b2c16a446a6ad3c40c5db53d107fd98ee82379b84cb66afc521e9e52fa0d9f",
     "android/api/android-native-host.md": "c24c459dbeee1a477a79cbcc460907b15d773029a53ca6d7a49facae0277d579",
@@ -29,7 +29,7 @@
     "cross/architecture/repository-boundaries.md": "4f69dac2af0bfb05f4e654bcc111c2bef2c51aa44197d003fbdd7da32bb7ff5b",
     "cross/reference/aiforms-spec-summary.md": "983a2a177d3084c9027e75f84d08a25d4f4a5ed344b42238d1c03d0516fb9352",
     "ios/api/ios-native-host.md": "7b40607e4a30dd408f2a34a75465e016c0a05aa16825e6bc39dedfd46b6542f2",
-    "ios/api/ios-swiftui.md": "2584f5fd382e584dbe6ef2f57f63fa92039b02a03315c99217f3c2af281547ab",
+    "ios/api/ios-swiftui.md": "447b8c318593b1a99e58f375058f2f241d59513666f5b4835eb1e4479cfa6414",
     "maui/api/maui-cells.md": "0cedb20f4419d3ee07b44144d6957ce25c29e2a6ac9321cf0077ec73c4d0b61a",
     "maui/api/maui-facade.md": "d84fc1a18a0b1b6256dd32b2d514ce17a1a3000161eaf72d7087d48a77f5f0b4",
     "maui/api/maui-rendering-lifecycle.md": "c5eeba71759a33d1eb154942772ec3454acdb9ac69e1d1fc0927d776403a5ca9",
@@ -207,37 +207,9 @@
     "README_ja.md"
   ],
   "lastUpdatedFiles": [
-    "skills/en/kssettingsview-aiforms-migration/references/api-mapping.md",
-    "skills/en/kssettingsview-android/SKILL.md",
-    "skills/en/kssettingsview-android/references/cells.md",
-    "skills/en/kssettingsview-android/references/custom-cells.md",
-    "skills/en/kssettingsview-android/references/styling.md",
-    "skills/en/kssettingsview-android/references/updates.md",
     "skills/en/kssettingsview-ios/SKILL.md",
-    "skills/en/kssettingsview-ios/references/cells.md",
-    "skills/en/kssettingsview-ios/references/custom-cells.md",
     "skills/en/kssettingsview-ios/references/styling.md",
-    "skills/en/kssettingsview-ios/references/updates.md",
-    "skills/en/kssettingsview-maui/SKILL.md",
-    "skills/en/kssettingsview-maui/references/cells.md",
-    "skills/en/kssettingsview-maui/references/custom-cells.md",
-    "skills/en/kssettingsview-maui/references/styling.md",
-    "skills/en/kssettingsview-maui/references/updates.md",
-    "skills/ja/kssettingsview-aiforms-migration/references/api-mapping.md",
-    "skills/ja/kssettingsview-android/SKILL.md",
-    "skills/ja/kssettingsview-android/references/cells.md",
-    "skills/ja/kssettingsview-android/references/custom-cells.md",
-    "skills/ja/kssettingsview-android/references/styling.md",
-    "skills/ja/kssettingsview-android/references/updates.md",
     "skills/ja/kssettingsview-ios/SKILL.md",
-    "skills/ja/kssettingsview-ios/references/cells.md",
-    "skills/ja/kssettingsview-ios/references/custom-cells.md",
-    "skills/ja/kssettingsview-ios/references/styling.md",
-    "skills/ja/kssettingsview-ios/references/updates.md",
-    "skills/ja/kssettingsview-maui/SKILL.md",
-    "skills/ja/kssettingsview-maui/references/cells.md",
-    "skills/ja/kssettingsview-maui/references/custom-cells.md",
-    "skills/ja/kssettingsview-maui/references/styling.md",
-    "skills/ja/kssettingsview-maui/references/updates.md"
+    "skills/ja/kssettingsview-ios/references/styling.md"
   ]
 }

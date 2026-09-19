@@ -1,6 +1,6 @@
 ---
 name: kssettingsview-ios
-description: Build iOS settings screens with KsSettingsView - a SwiftUI declarative DSL (KsSettingsView) or a UIKit host (KsSettingsViewController) over the built-in cells (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker), CustomCell holding any SwiftUI view, live updates through SettingsRootStore, and Theme / CellStyle styling. Use when adding, changing, or reviewing a settings screen in a Swift app that depends on KsSettingsViewCore, KsSettingsViewUI, or KsSettingsViewSwiftUI.
+description: Build iOS settings screens with KsSettingsView - a SwiftUI declarative DSL (KsSettingsView) or a UIKit host (KsSettingsViewController) over the built-in cells (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker), CustomCell holding any SwiftUI view, live updates through SettingsRootStore, Theme / CellStyle styling, and container safe-area placement through respectsSafeArea(_:). Use when adding, changing, or reviewing a settings screen in a Swift app that depends on KsSettingsViewCore, KsSettingsViewUI, or KsSettingsViewSwiftUI.
 license: MIT
 metadata:
   language: en
@@ -22,6 +22,7 @@ KsSettingsView is a UI library for building settings screens - the list-style sc
 | Express a change as a `SettingsRootDiff`, apply a diff or theme to the controller directly | [references/updates.md](references/updates.md) |
 | Colors, fonts, cell height, Classic / Modern list appearance, section boxes | [references/styling.md](references/styling.md) |
 | Follow the light and dark appearance, with the built-in defaults, your own theme, or a color set on one cell | [references/styling.md](references/styling.md) |
+| Place the SwiftUI wrapper full-bleed or inside the parent container's safe area | [references/styling.md](references/styling.md) |
 | Section and screen headers / footers, including arbitrary SwiftUI in them | [references/styling.md](references/styling.md) |
 | Put any SwiftUI view into a cell of the list, or define your own cell type with its own renderer | [references/custom-cells.md](references/custom-cells.md) |
 
