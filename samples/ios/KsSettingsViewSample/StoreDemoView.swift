@@ -47,7 +47,6 @@ struct StoreDemoView: View {
             .padding()
 
             KsSettingsView(store: store, style: .classic)
-                .ignoresSafeArea(.container, edges: .bottom)
         }
         .navigationTitle(SampleScreen.store.title)
     }

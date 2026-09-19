@@ -237,7 +237,6 @@ struct CustomCellDemoView: View {
             }
         }
         .theme(SampleTheme.maui(dark: colorScheme == .dark))
-        .ignoresSafeArea(.container, edges: .bottom)
         .navigationTitle(SampleScreen.customCell.title)
     }
 

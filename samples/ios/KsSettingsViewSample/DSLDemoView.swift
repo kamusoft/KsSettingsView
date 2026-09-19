@@ -65,7 +65,6 @@ struct DSLDemoView: View {
             }
             .rootHeader("DSL 方式のデモ画面")
             .rootFooter { Text("© 2026 KsSettingsView Sample").font(.caption) }
-            .ignoresSafeArea(.container, edges: .bottom)
         }
         .navigationTitle(SampleScreen.dsl.title)
     }
