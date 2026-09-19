@@ -2,6 +2,7 @@ package jp.kamusoft.kssettingsview.ui
 
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
+import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -9,8 +10,11 @@ import android.widget.TextView
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.fragment.app.FragmentActivity
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.R as MaterialR
 import jp.kamusoft.kssettingsview.core.AccessoryTarget
+import jp.kamusoft.kssettingsview.core.KsAnyView
+import jp.kamusoft.kssettingsview.core.RootAccessory
 import jp.kamusoft.kssettingsview.core.Section
 import jp.kamusoft.kssettingsview.core.SectionAccessory
 import jp.kamusoft.kssettingsview.core.SettingsAccessory
@@ -36,8 +40,9 @@ import org.robolectric.annotation.Config
  * `StateFlow` 購読開始と `submitList` の差分コミットが非同期に走るため、判定はメインループを
  * 流し切ってから行う。
  *
- * Root の header / footer は Store の現在状態に含まれない UI 層プロパティのため復元対象ではなく、
- * 本テストの検証対象にも含めない。
+ * Root の header / footer は Store の現在状態に含まれない UI 層プロパティであり、取り付け時の
+ * 再取り込みでは戻らない。こちらは Store が bind 中の Host へ直接知らせる受け口が保持を担うため
+ * （core/ADR-0033）、復元とは別経路の検証として同じクラスに並べる。
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
@@ -225,6 +230,376 @@ class AttachOrderRestoreTest {
             "再取り付け後の表示は Store 現在状態の Cell 内容と一致する",
             restoredRows,
             visibleRowTexts(view),
+        )
+    }
+
+    // MARK: - Root の header / footer の保持
+
+    /** [initialRoot] を bind した Host が表示する、Root accessory を除いた行。 */
+    private val initialRows = listOf("初期見出し", "A", "B", "C")
+
+    /** 中身に [label] を表示する TextView を持つ、任意 View 形式の Root accessory。 */
+    private fun viewAccessory(label: String): SettingsAccessory.Root = SettingsAccessory.Root(
+        RootAccessory.View(
+            KsAnyView.AndroidView { context -> TextView(context).apply { text = label } },
+        ),
+    )
+
+    /** [label] を表示する text 形式の Root accessory。 */
+    private fun textAccessory(label: String): SettingsAccessory.Root =
+        SettingsAccessory.Root(RootAccessory.Text(label))
+
+    /** 取り付けてから、Cell 行のコミットとレイアウトを済ませる。 */
+    private fun HostActivity.attachAndSettle(target: KsSettingsView) {
+        container.addView(target)
+        awaitConvergence(target) { committedTexts(target) == initialRows }
+        layoutSettingsView(target)
+    }
+
+    /** メインスレッド以外から [block] を実行し、完了まで待つ。 */
+    private fun runOffMainThread(block: () -> Unit) {
+        var failure: Throwable? = null
+        val worker = Thread {
+            try {
+                block()
+            } catch (error: Throwable) {
+                failure = error
+            }
+        }
+        worker.start()
+        worker.join()
+        failure?.let { throw it }
+    }
+
+    @Test
+    fun `取り付け前に渡した Root の header が取り付け後に表示される`() {
+        val activity = startActivity()
+
+        val view = KsSettingsView(activity)
+        val store = SettingsRootStore(initialRoot = initialRoot())
+        view.bind(store)
+        idle()
+
+        store.updateAccessory(AccessoryTarget.RootHeader, viewAccessory("ヘッダ"))
+        idle()
+
+        activity.attachAndSettle(view)
+
+        assertEquals(
+            "取り付け前に渡した Root の header が先頭行に表示される",
+            listOf("ヘッダ") + initialRows,
+            visibleRowTexts(view),
+        )
+    }
+
+    @Test
+    fun `取り付け前に渡した Root の footer が取り付け後に表示される`() {
+        val activity = startActivity()
+
+        val view = KsSettingsView(activity)
+        val store = SettingsRootStore(initialRoot = initialRoot())
+        view.bind(store)
+        idle()
+
+        store.updateAccessory(AccessoryTarget.RootFooter, textAccessory("フッタ"))
+        idle()
+
+        activity.attachAndSettle(view)
+
+        assertEquals(
+            "取り付け前に渡した Root の footer が末尾行に表示される",
+            initialRows + "フッタ",
+            visibleRowTexts(view),
+        )
+    }
+
+    @Test
+    fun `取り外し中に渡した Root の header の更新が再取り付け後に反映される`() {
+        val activity = startActivity()
+
+        val view = KsSettingsView(activity)
+        val store = SettingsRootStore(initialRoot = initialRoot())
+        view.bind(store)
+        store.updateAccessory(AccessoryTarget.RootHeader, viewAccessory("旧ヘッダ"))
+        activity.attachAndSettle(view)
+        assertEquals("前提: 取り付け時に旧値が表示されている", "旧ヘッダ", visibleRowTexts(view).first())
+
+        activity.container.removeView(view)
+        idle()
+
+        store.updateAccessory(AccessoryTarget.RootHeader, viewAccessory("新ヘッダ"))
+        idle()
+
+        activity.attachAndSettle(view)
+
+        assertEquals(
+            "取り外し中の更新が再取り付け後の先頭行に反映される",
+            listOf("新ヘッダ") + initialRows,
+            visibleRowTexts(view),
+        )
+    }
+
+    @Test
+    fun `取り付け前に複数回渡した Root accessory は最後の値が反映される`() {
+        val activity = startActivity()
+
+        val view = KsSettingsView(activity)
+        val store = SettingsRootStore(initialRoot = initialRoot())
+        view.bind(store)
+        idle()
+
+        store.updateAccessory(AccessoryTarget.RootHeader, viewAccessory("ヘッダ A"))
+        store.updateAccessory(AccessoryTarget.RootHeader, viewAccessory("ヘッダ B"))
+        store.updateAccessory(AccessoryTarget.RootFooter, textAccessory("フッタ C"))
+        store.updateAccessory(AccessoryTarget.RootFooter, null)
+        idle()
+
+        activity.attachAndSettle(view)
+
+        assertEquals(
+            "header は最後に渡した値を表示し、解除した footer は行を作らない",
+            listOf("ヘッダ B") + initialRows,
+            visibleRowTexts(view),
+        )
+    }
+
+    @Test
+    fun `bind 直後にキューを流さず渡した Root の header が表示される`() {
+        val activity = startActivity()
+
+        val view = KsSettingsView(activity)
+        val store = SettingsRootStore(initialRoot = initialRoot())
+        // bind から戻った時点で保持が成立していることを見るため、キューを流さずに続けて渡す。
+        view.bind(store)
+        store.updateAccessory(AccessoryTarget.RootHeader, viewAccessory("ヘッダ"))
+
+        activity.attachAndSettle(view)
+
+        assertEquals(
+            "bind 直後に渡した値が取り付け後に表示される",
+            listOf("ヘッダ") + initialRows,
+            visibleRowTexts(view),
+        )
+    }
+
+    @Test
+    fun `キューを流さない多数回の連続更新でも最後の Root の header が表示される`() {
+        val activity = startActivity()
+
+        val view = KsSettingsView(activity)
+        val store = SettingsRootStore(initialRoot = initialRoot())
+        view.bind(store)
+        idle()
+
+        // Store の通知の容量（extraBufferCapacity = 64）を超える件数を、キューを流さずに続けて渡す。
+        val updateCount = 200
+        repeat(updateCount) { index ->
+            store.updateAccessory(AccessoryTarget.RootHeader, viewAccessory("ヘッダ $index"))
+        }
+
+        activity.attachAndSettle(view)
+
+        assertEquals(
+            "容量を超える連続更新でも最後の値が表示される",
+            listOf("ヘッダ ${updateCount - 1}") + initialRows,
+            visibleRowTexts(view),
+        )
+    }
+
+    @Test
+    fun `同じ Store に bind した 2 つの Host の両方で Root の header が表示される`() {
+        val activity = startActivity()
+
+        val store = SettingsRootStore(initialRoot = initialRoot())
+        val first = KsSettingsView(activity)
+        val second = KsSettingsView(activity)
+        first.bind(store)
+        second.bind(store)
+        idle()
+
+        store.updateAccessory(AccessoryTarget.RootHeader, viewAccessory("ヘッダ"))
+        idle()
+
+        activity.attachAndSettle(first)
+        activity.attachAndSettle(second)
+
+        assertEquals("先に bind した Host に反映される", "ヘッダ", visibleRowTexts(first).first())
+        assertEquals("後に bind した Host にも反映される", "ヘッダ", visibleRowTexts(second).first())
+    }
+
+    @Test
+    fun `一方の Host の unbind は他方の Root の header の受け取りを妨げない`() {
+        val activity = startActivity()
+
+        val store = SettingsRootStore(initialRoot = initialRoot())
+        val unbound = KsSettingsView(activity)
+        val bound = KsSettingsView(activity)
+        unbound.bind(store)
+        bound.bind(store)
+        idle()
+
+        unbound.unbind()
+        store.updateAccessory(AccessoryTarget.RootHeader, viewAccessory("ヘッダ"))
+        idle()
+
+        activity.attachAndSettle(bound)
+
+        assertEquals(
+            "bind を維持した Host は値を受け取る",
+            listOf("ヘッダ") + initialRows,
+            visibleRowTexts(bound),
+        )
+    }
+
+    @Test
+    fun `メインスレッド以外から渡した Root の header が取り付け後に表示される`() {
+        val activity = startActivity()
+
+        val view = KsSettingsView(activity)
+        val store = SettingsRootStore(initialRoot = initialRoot())
+        view.bind(store)
+        idle()
+
+        runOffMainThread {
+            store.updateAccessory(AccessoryTarget.RootHeader, viewAccessory("ヘッダ"))
+        }
+
+        activity.attachAndSettle(view)
+
+        assertEquals(
+            "メインスレッド以外から渡した値も取り付け後に表示される",
+            listOf("ヘッダ") + initialRows,
+            visibleRowTexts(view),
+        )
+    }
+
+    @Test
+    fun `取り付け中にメインスレッド以外から渡した Root の header はメインスレッドで反映される`() {
+        val activity = startActivity()
+
+        val view = KsSettingsView(activity)
+        val store = SettingsRootStore(initialRoot = initialRoot())
+        view.bind(store)
+        store.updateAccessory(AccessoryTarget.RootHeader, viewAccessory("旧ヘッダ"))
+        activity.attachAndSettle(view)
+
+        // 反映がどのスレッドで起きたかは、Adapter の変更通知を受けたスレッドで観測する。
+        val notifiedThreads = mutableListOf<Thread>()
+        view.internalHeaderAdapter().registerAdapterDataObserver(
+            object : RecyclerView.AdapterDataObserver() {
+                override fun onItemRangeChanged(positionStart: Int, itemCount: Int, payload: Any?) {
+                    notifiedThreads += Thread.currentThread()
+                }
+            },
+        )
+
+        runOffMainThread {
+            store.updateAccessory(AccessoryTarget.RootHeader, viewAccessory("新ヘッダ"))
+        }
+        idle()
+        activity.layoutSettingsView(view)
+
+        assertEquals("新しい値が表示される", "新ヘッダ", visibleRowTexts(view).first())
+        assertEquals(
+            "表示への反映はメインスレッドで行われる",
+            listOf(Looper.getMainLooper().thread),
+            notifiedThreads.distinct(),
+        )
+    }
+
+    @Test
+    fun `別 Store へ bind し直した後は以前の Store へ渡した Root の header が反映されない`() {
+        val activity = startActivity()
+
+        val view = KsSettingsView(activity)
+        val first = SettingsRootStore(initialRoot = initialRoot())
+        val second = SettingsRootStore(initialRoot = initialRoot())
+        view.bind(first)
+        view.bind(second)
+        idle()
+
+        first.updateAccessory(AccessoryTarget.RootHeader, viewAccessory("ヘッダ"))
+        idle()
+
+        activity.attachAndSettle(view)
+
+        assertEquals(
+            "以前の Store へ渡した値は表示されない",
+            initialRows,
+            visibleRowTexts(view),
+        )
+    }
+
+    @Test
+    fun `unbind 後に渡した Root の header は反映されない`() {
+        val activity = startActivity()
+
+        val view = KsSettingsView(activity)
+        val store = SettingsRootStore(initialRoot = initialRoot())
+        view.bind(store)
+        view.unbind()
+        idle()
+
+        store.updateAccessory(AccessoryTarget.RootHeader, viewAccessory("ヘッダ"))
+        idle()
+
+        activity.container.addView(view)
+        awaitConvergence(view) { committedTexts(view) == initialRows }
+        activity.layoutSettingsView(view)
+
+        assertEquals("unbind 後に渡した値は表示されない", initialRows, visibleRowTexts(view))
+    }
+
+    @Test
+    fun `取り付け中の Root の header の更新は変更通知を 1 回だけ発行する`() {
+        val activity = startActivity()
+
+        val view = KsSettingsView(activity)
+        val store = SettingsRootStore(initialRoot = initialRoot())
+        view.bind(store)
+        store.updateAccessory(AccessoryTarget.RootHeader, viewAccessory("旧ヘッダ"))
+        activity.attachAndSettle(view)
+
+        // 行数は常に 0 か 1 で二重適用を映さないため、Adapter が発行した通知の回数で観測する。
+        val observer = ChangeRecordingObserver()
+        view.internalHeaderAdapter().registerAdapterDataObserver(observer)
+
+        store.updateAccessory(AccessoryTarget.RootHeader, viewAccessory("新ヘッダ"))
+        idle()
+        activity.layoutSettingsView(view)
+
+        assertEquals("新しい値が表示される", "新ヘッダ", visibleRowTexts(view).first())
+        assertEquals(
+            "1 回の更新に対する Root の header の行への通知は 1 回",
+            1,
+            observer.notifications.size,
+        )
+    }
+
+    @Test
+    fun `同じ Store へ bind し直した Host でも Root の header の更新は 1 回だけ適用される`() {
+        val activity = startActivity()
+
+        val view = KsSettingsView(activity)
+        val store = SettingsRootStore(initialRoot = initialRoot())
+        view.bind(store)
+        store.updateAccessory(AccessoryTarget.RootHeader, viewAccessory("旧ヘッダ"))
+        activity.attachAndSettle(view)
+        view.bind(store)
+        idle()
+
+        val observer = ChangeRecordingObserver()
+        view.internalHeaderAdapter().registerAdapterDataObserver(observer)
+
+        store.updateAccessory(AccessoryTarget.RootHeader, viewAccessory("新ヘッダ"))
+        idle()
+        activity.layoutSettingsView(view)
+
+        assertEquals("新しい値が表示される", "新ヘッダ", visibleRowTexts(view).first())
+        assertEquals(
+            "bind をやり直しても通知は 1 回",
+            1,
+            observer.notifications.size,
         )
     }
 }

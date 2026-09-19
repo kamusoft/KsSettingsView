@@ -69,6 +69,14 @@ private class RecordingInteractionListener : KsBridgeInteractionListener {
         notifications.add("pickerCellMultiSelectionChanged($cellID,${indices.toList()})")
     }
 
+    override fun pickerCellSelectionCompleted(cellID: String, index: Int) {
+        notifications.add("pickerCellSelectionCompleted($cellID,$index)")
+    }
+
+    override fun pickerCellMultiSelectionCompleted(cellID: String, indices: IntArray) {
+        notifications.add("pickerCellMultiSelectionCompleted($cellID,${indices.toList()})")
+    }
+
     override fun numberPickerCellChanged(cellID: String, value: Int) {
         notifications.add("numberPickerCellChanged($cellID,$value)")
     }
@@ -195,6 +203,100 @@ class KsBridgeInteractionListenerTest {
                 "timePickerCellChanged(${time.cellID},09:05)",
                 "datePickerCellChanged(${date.cellID},2026-08-10)",
             ),
+            recorder.notifications,
+        )
+    }
+
+    // MARK: - 閉じ切り通知
+
+    /** picker の閉じ切りが確定通知の後に、同じ cellID と値で届く。 */
+    @Test
+    fun `picker の閉じ切りが確定通知の後に同じ値で届く`() {
+        val single = KsBridgePickerCell(title = "単一選択").apply {
+            items = listOf("A", "B", "C").map { KsBridgePickerItem(it) }
+        }
+        val multiple = KsBridgePickerCell(title = "複数選択").apply {
+            items = listOf("A", "B", "C").map { KsBridgePickerItem(it) }
+            selectionMode = 1
+        }
+        val bridge = KsBridgeFixture.withCells(listOf(single, multiple))
+        val recorder = RecordingInteractionListener()
+        bridge.interactionListener = recorder
+
+        val cells = KsBridgeFixture.storedCells(bridge)
+        // Native 側は確定通知のあと、選択面が閉じ切った時点で閉じ切り通知を出す。
+        (cells[0] as PickerCell).onSelectionChanged?.invoke(1)
+        (cells[0] as PickerCell).onSelectionCompleted?.invoke(1)
+        (cells[1] as PickerCell).onMultiSelectionChanged?.invoke(setOf(2, 0))
+        (cells[1] as PickerCell).onMultiSelectionCompleted?.invoke(setOf(2, 0))
+
+        assertEquals(
+            listOf(
+                "pickerCellSelectionChanged(${single.cellID},1)",
+                "pickerCellSelectionCompleted(${single.cellID},1)",
+                "pickerCellMultiSelectionChanged(${multiple.cellID},[0, 2])",
+                "pickerCellMultiSelectionCompleted(${multiple.cellID},[0, 2])",
+            ),
+            recorder.notifications,
+        )
+    }
+
+    /** 複数選択の閉じ切りも、確定通知と同じ昇順・重複なしの並びへ正規化される。 */
+    @Test
+    fun `複数選択の閉じ切りは昇順 重複なしへ正規化される`() {
+        val multiple = KsBridgePickerCell(title = "複数選択").apply {
+            items = listOf("A", "B", "C", "D").map { KsBridgePickerItem(it) }
+            selectionMode = 1
+        }
+        val bridge = KsBridgeFixture.withCells(listOf(multiple))
+        val recorder = RecordingInteractionListener()
+        bridge.interactionListener = recorder
+
+        val cell = KsBridgeFixture.storedCells(bridge)[0] as PickerCell
+        cell.onMultiSelectionCompleted?.invoke(setOf(3, 0, 2))
+
+        assertEquals(
+            listOf("pickerCellMultiSelectionCompleted(${multiple.cellID},[0, 2, 3])"),
+            recorder.notifications,
+        )
+    }
+
+    /** 破棄後は閉じ切り通知も届かない。 */
+    @Test
+    fun `dispose 後の閉じ切りは通知されない`() {
+        val single = KsBridgePickerCell(title = "単一選択").apply {
+            items = listOf("A", "B").map { KsBridgePickerItem(it) }
+        }
+        val multiple = KsBridgePickerCell(title = "複数選択").apply {
+            items = listOf("A", "B").map { KsBridgePickerItem(it) }
+            selectionMode = 1
+        }
+        val bridge = KsBridgeFixture.withCells(listOf(single, multiple))
+        val recorder = RecordingInteractionListener()
+        bridge.interactionListener = recorder
+
+        val cells = KsBridgeFixture.storedCells(bridge)
+        bridge.dispose()
+        (cells[0] as PickerCell).onSelectionCompleted?.invoke(1)
+        (cells[1] as PickerCell).onMultiSelectionCompleted?.invoke(setOf(0))
+
+        assertEquals(emptyList<String>(), recorder.notifications)
+    }
+
+    /** DatePicker の閉じ切りは interaction 経路へ乗せない（通知は日付変更の1本だけ）。 */
+    @Test
+    fun `DatePicker は閉じ切りの追加通知を持たない`() {
+        val date = KsBridgeDatePickerCell(title = "日付")
+        val bridge = KsBridgeFixture.withCells(listOf(date))
+        val recorder = RecordingInteractionListener()
+        bridge.interactionListener = recorder
+
+        val cell = KsBridgeFixture.storedCells(bridge)[0] as DatePickerCell
+        assertNull("閉じ切りが bridge の Cell に結線されている", cell.onValueCompleted)
+        cell.onValueChanged?.invoke(LocalDate.of(2026, 8, 10))
+
+        assertEquals(
+            listOf("datePickerCellChanged(${date.cellID},2026-08-10)"),
             recorder.notifications,
         )
     }

@@ -14,7 +14,7 @@ namespace KsSettingsView.Handlers;
 /// <remarks>
 /// Bridge が返す Native Host は View であり、そのまま platform view として返して
 /// view 階層へ取り付けさせる。親子関係を結ぶ ViewController は存在しない。
-/// root の header / footer は取り付け後に適用する必要があり、その順序は共通部が受け持つ。
+/// root の header / footer を Host 生成の直後に適用する順序は共通部が受け持つ。
 /// </remarks>
 public partial class SettingsViewHandler
 {

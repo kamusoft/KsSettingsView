@@ -15,7 +15,7 @@ KsSettingsView は、iOS の設定アプリのようなリスト形式の設定�
 
 | やりたいこと | 参照先 |
 |---|---|
-| Cell を置く: ラベル、操作、ボタン、スイッチ、チェックボックス、ラジオ、テキスト入力、リスト選択、数値、時刻、日付 | [references/cells.md](references/cells.md) |
+| Cell を置く: ラベル、操作、ボタン、スイッチ、チェックボックス、ラジオ、テキスト入力、リスト選択、数値、時刻、日付。選択面の閉じ切りも受け取る | [references/cells.md](references/cells.md) |
 | Cell を Section にまとめる、アイコン・説明・ヒントを付ける、Cell を無効化・非表示にする | [references/cells.md](references/cells.md) |
 | 表示中の画面を変える: Cell の挿入・削除・移動・差し替え、複数 Cell のバッチ更新 | [references/updates.md](references/updates.md) |
 | 再評価をまたいで Cell を追跡する、状態から表示・非表示を切り替える、UIKit から画面を組み込む | [references/updates.md](references/updates.md) |
@@ -54,7 +54,7 @@ let package = Package(
 
 依存宣言は `exact:` で書く。prerelease かどうかに関わらず、書いた version ちょうどに解決されるためである。`from:` も下限が prerelease であれば prerelease を解決するが、上限が次のメジャー version まで開いたままなので、特定の版には固定されない。
 
-リンクするのはこの 1 product だが、`import` はモジュール名で書く。含まれるモジュールは 3 つ: `KsSettingsViewCore` (設定ツリー)、`KsSettingsViewUI` (Cell・`Theme`・`CellStyle`・UIKit ホスト)、`KsSettingsViewSwiftUI` (SwiftUI View と宣言的 DSL)。組み込みの Cell は [references/cells.md](references/cells.md) で 1 種ずつ扱い、`CustomCell` と独自 Cell 型は [references/custom-cells.md](references/custom-cells.md) で扱う。
+リンクするのはこの 1 product だが、`import` はモジュール名で書く。含まれるモジュールは 3 つ: `KsSettingsViewCore` (設定ツリー)、`KsSettingsViewUI` (Cell・`Theme`・`CellStyle`・UIKit ホスト)、`KsSettingsViewSwiftUI` (SwiftUI View と宣言的 DSL)。`KsSettingsView` のクロージャは公開の `KsSettingsViewBuilder` で構築される。`import SwiftUI` で `Section` が曖昧になるときは、公開の `KsSection` typealias または `ksSection(...)` ファクトリを使う。組み込みの Cell は [references/cells.md](references/cells.md) で 1 種ずつ扱い、`CustomCell` と独自 Cell 型は [references/custom-cells.md](references/custom-cells.md) で扱う。
 
 | 要件 | 最低バージョン |
 |---|---|
@@ -87,7 +87,7 @@ struct SettingsScreen: View {
 }
 ```
 
-`Section` ではなく `ksSection` を使うのは、Cell の builder が `SwiftUI.Section` と衝突しないようにするため。
+`Section` ではなく `ksSection` を使うのは、Cell の builder が `SwiftUI.Section` と衝突しないようにするため。Section の値を直接名前付けするときは対応する `KsSection` typealias を使う。
 
 ## リファレンス
 

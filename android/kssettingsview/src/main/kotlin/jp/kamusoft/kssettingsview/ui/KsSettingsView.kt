@@ -2,6 +2,8 @@ package jp.kamusoft.kssettingsview.ui
 
 import android.content.Context
 import android.content.res.Configuration
+import android.os.Handler
+import android.os.Looper
 import android.os.Parcel
 import android.os.Parcelable
 import android.util.AttributeSet
@@ -29,11 +31,16 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
+/** Root の header / footer を指す対象か。 */
+private fun AccessoryTarget.isRootTarget(): Boolean =
+    this == AccessoryTarget.RootHeader || this == AccessoryTarget.RootFooter
+
 /**
  * この View を載せている [KsSettingsView] を親方向へ辿って返す（見つからなければ `null`）。
  *
- * 行の ViewHolder から、表示中の選択面を預ける先を解決するために使う。`KsSettingsView` の外で
- * 単体の行を組み立てた場合は `null` になり、そのときは表示継続の対象にならない。
+ * 行の ViewHolder から、表示中の選択面を預ける先と、利用者所有コンテンツへ渡す Context（ホストが
+ * `KsSettingsView` に渡したもの）を解決するために使う。`KsSettingsView` の外で単体の行を組み立てた
+ * 場合は `null` になり、そのときは表示継続の対象にならず、Context は手元のものから解決される。
  */
 internal fun View.findKsSettingsViewHost(): KsSettingsView? {
     var current: View? = this
@@ -72,8 +79,21 @@ public class KsSettingsView @JvmOverloads constructor(
     attrs: AttributeSet? = null,
 ) : FrameLayout(context, attrs) {
 
-    /** 内部 RecyclerView。 */
-    private val recyclerView: RecyclerView = RecyclerView(context).apply {
+    /**
+     * 内部 RecyclerView。
+     *
+     * ライブラリ所有の chrome なので同梱テーマをかぶせた Context から生成する（android/ADR-0020）。
+     * 生成に使う Context はスクロールバーを持つリスト用のもので、`recyclerViewStyle` 経由で
+     * `android:scrollbars="vertical"` を渡す。これを通さないと [Theme.scrollIndicatorVisible] を
+     * `true` にしてもスクロールバーが描かれない。
+     *
+     * この View は生成時の Context を持ち続け、外観（夜間モード）が切り替わっても作り直さない。
+     * 作り直すと adapter とスクロール位置を失うためである。構築時に Context のテーマから解決される
+     * もののうち、スクロールバーの drawable は [applyScrollbarThumbForAppearance] が外観の切り替えで
+     * 差し替える。overscroll の edge effect の色だけは差し替え口が無いため、Activity が作り直される
+     * までは構築時の外観のまま残る。
+     */
+    private val recyclerView: RecyclerView = RecyclerView(context.ksScrollIndicatorContext()).apply {
         layoutParams = LayoutParams(
             LayoutParams.MATCH_PARENT,
             LayoutParams.MATCH_PARENT,
@@ -126,6 +146,14 @@ public class KsSettingsView @JvmOverloads constructor(
     /** [internalTheme] を解決した時点の外観がダークだったか。再解決の要否判定に使う。 */
     private var resolvedDarkTheme: Boolean = false
 
+    /**
+     * スクロールバーの thumb をどの外観で解決したか（ダークなら `true`）。
+     *
+     * `null` は「このプロパティがまだ値を持たない」ことを表す。`RecyclerView` が自分の Context から
+     * 解決する thumb の外観をここでは前提にせず、最初の反映で必ず引き直して値を確定させる。
+     */
+    private var scrollbarThumbDarkTheme: Boolean? = null
+
     /** Store 購読の Job。`onDetachedFromWindow` で cancel する。 */
     private var storeCollectJob: Job? = null
 
@@ -140,6 +168,54 @@ public class KsSettingsView @JvmOverloads constructor(
 
     /** Window に attach されているか（復元走査の駆動条件のひとつ）。 */
     private var isAttachedToHostWindow: Boolean = false
+
+    /** 表示への反映をメインスレッドへ送るための Handler。 */
+    private val mainHandler: Handler = Handler(Looper.getMainLooper())
+
+    /**
+     * [rootAccessorySource] と [pendingRootHeaderUpdate] / [pendingRootFooterUpdate] を跨スレッドで
+     * 守るロック。
+     *
+     * 結び付いている Store の差し替え・控えた値の破棄・受理の判定を同じ境界で行うことで、ある Store の
+     * 配送の途中で bind / unbind が挟まっても、受理されるのは常に現在の binding と一致する更新だけになる。
+     */
+    private val rootAccessoryLock: Any = Any()
+
+    /**
+     * Root 対象の更新を受理する配送元の Store。
+     *
+     * [bind] で現在の Store に切り替え、[unbind] で手放す。知らせが届いた時点でこれと一致しない Store
+     * からの更新は受理しない（core/ADR-0033）。
+     */
+    private var rootAccessorySource: SettingsRootStore? = null
+
+    /**
+     * Store から知らされた Root Header の更新のうち、まだ表示へ反映していないもの。
+     *
+     * 更新はどのスレッドからでも届き得るため、ここへ控えるところまでを知らされた場で済ませ、表示への
+     * 反映はメインスレッドで行う（core/ADR-0033）。解除（`null`）も値のひとつなので、控えたかどうかは
+     * accessory の有無ではなく更新そのものの有無で表す。
+     */
+    private var pendingRootHeaderUpdate: SettingsRootDiff.UpdateAccessory? = null
+
+    /** Store から知らされた Root Footer の更新のうち、まだ表示へ反映していないもの。 */
+    private var pendingRootFooterUpdate: SettingsRootDiff.UpdateAccessory? = null
+
+    /**
+     * Store へ登録する Root 対象の受け口。
+     *
+     * この View 自身を口にすると、モジュール内部の配送路がそのまま利用者から呼べる入口になってしまう
+     * ため、口は非公開のオブジェクトに持たせてこの View へ委譲する。Store は口を弱参照で覚え、この
+     * View は口を強参照で持つので、View が回収されれば口もまとめて回収される。
+     */
+    private val rootAccessoryReceiver: RootAccessoryReceiver = object : RootAccessoryReceiver {
+        override fun receiveRootAccessoryUpdate(
+            source: SettingsRootStore,
+            update: SettingsRootDiff.UpdateAccessory,
+        ) {
+            onRootAccessoryUpdate(source, update)
+        }
+    }
 
     /**
      * detach 直前に控えた LayoutManager のスクロールアンカー。
@@ -200,6 +276,8 @@ public class KsSettingsView @JvmOverloads constructor(
      *
      * setter で内部 `headerAdapter.view` を更新する（`RootHeaderFooterAdapter` 側で
      * `notifyItemInserted` / `notifyItemRemoved` / `notifyItemChanged` を発行）。
+     *
+     * bind 中の Store の `updateAccessory` で Root の Header へ渡された値も、このプロパティへ入る。
      */
     public var rootHeader: RootAccessory? = null
         set(value) {
@@ -209,6 +287,8 @@ public class KsSettingsView @JvmOverloads constructor(
 
     /**
      * Root Footer。`null` で非表示。
+     *
+     * bind 中の Store の `updateAccessory` で Root の Footer へ渡された値も、このプロパティへ入る。
      */
     public var rootFooter: RootAccessory? = null
         set(value) {
@@ -282,6 +362,50 @@ public class KsSettingsView @JvmOverloads constructor(
         headerAdapter.theme = internalTheme
         footerAdapter.theme = internalTheme
         recyclerView.setBackgroundColor(internalTheme.backgroundColor.toArgb())
+        applyScrollIndicatorVisible(internalTheme)
+    }
+
+    /**
+     * [Theme.scrollIndicatorVisible] を内部 RecyclerView の縦スクロールバーに反映する。
+     *
+     * 設定リストは縦にしかスクロールしないため、横スクロールバーは扱わない。
+     */
+    private fun applyScrollIndicatorVisible(theme: Theme) {
+        recyclerView.isVerticalScrollBarEnabled = theme.scrollIndicatorVisible
+        applyScrollbarThumbForAppearance()
+    }
+
+    /**
+     * スクロールバーの thumb を現在の外観で解決し直す。
+     *
+     * `RecyclerView` は構築時の Context を持ち続けるため、Activity を再生成しないホストで夜間モードが
+     * 切り替わっても、構築時に解決された thumb はそのまま残る。現在の外観で組み直された同梱テーマ付き
+     * Context から引き直して差し替える。
+     *
+     * 解決済みの外観を覚えておき、変化したときだけ引き直す。Theme の差し替えのたびに解決すると、
+     * 外観が変わっていなくても drawable を作り直すことになる。
+     *
+     * すでにスクロールバーの描画状態を持つ `RecyclerView` だけを対象にする。`View` の thumb の setter は
+     * 描画状態ごと作るため、`android:scrollbars` が届いていない View に代入すると、スクロールバーを
+     * 持たないはずの View が描けるようになってしまう。表示できる View にするのは生成時の Context の
+     * 役目であり、ここはその外観を追わせるだけに留める。
+     */
+    private fun applyScrollbarThumbForAppearance() {
+        // 描画状態が無い（= 生成時の Context がスクロールバー用の style を運んでいない）なら何もしない。
+        if (recyclerView.verticalScrollbarThumbDrawable == null) return
+        val darkTheme = context.isKsDarkAppearance()
+        if (scrollbarThumbDarkTheme == darkTheme) return
+        val attrs = intArrayOf(android.R.attr.scrollbarThumbVertical)
+        val typed = context.ksThemedContext().obtainStyledAttributes(attrs)
+        val thumb = try {
+            typed.getDrawable(0)
+        } finally {
+            typed.recycle()
+        }
+        // 解決できなかったときは構築時の thumb を残す。null を入れるとスクロールバーが消える。
+        if (thumb == null) return
+        scrollbarThumbDarkTheme = darkTheme
+        recyclerView.verticalScrollbarThumbDrawable = thumb
     }
 
     override fun onAttachedToWindow() {
@@ -301,6 +425,9 @@ public class KsSettingsView @JvmOverloads constructor(
             // 控えたアンカーをここで戻し、付け外しをまたいでスクロール位置を保つ。
             restorePendingScrollPosition()
         }
+
+        // 控えたまま反映していない Root H/F の更新を、最初の表示に間に合うよう先に反映する。
+        applyPendingRootAccessoryUpdates()
 
         // attach 時点で pending Store があり、かつ購読が張られていなければ、
         // ここで購読確立を試みる。Compose `AndroidView.factory` 内で bind(store) を
@@ -394,10 +521,16 @@ public class KsSettingsView @JvmOverloads constructor(
      * 初期 state / theme の反映のみ行う。別 Store を bind した場合は古い Job を cancel して
      * 新しい Store の購読を開始する。
      *
+     * bind から [unbind] までの間は、Store の `updateAccessory` で Root の Header / Footer に
+     * 渡された値も失われない。Window への取り付け前や取り外し中に渡された値は、次に取り付けられた
+     * ときの表示に反映される（同じ位置へ複数回渡した場合は最後の値）。Store の更新はどのスレッドから
+     * 行ってもよく、表示への反映はメインスレッドで行われる。
+     *
      * @param store バインドする Store
      */
     public fun bind(store: SettingsRootStore) {
         // 同一 Store の再 bind: 購読は維持し、初期 state / theme の再適用のみ行う。
+        // Root 対象の受け口への登録も Host ごとに 1 件のまま維持される。
         if (pendingStore === store && storeCollectJob?.isActive == true) {
             setRootDirect(store.state.value, store.theme.value)
             return
@@ -406,7 +539,14 @@ public class KsSettingsView @JvmOverloads constructor(
         // 別 Store への bind は既存購読を解除し、Store 参照を差し替える。
         storeCollectJob?.cancel()
         storeCollectJob = null
+        pendingStore?.takeIf { it !== store }?.unregisterRootAccessoryReceiver(rootAccessoryReceiver)
         pendingStore = store
+        // 受理する配送元を差し替える。以前の Store から控えたまま反映していない値、および差し替えと
+        // すれ違って届いた以前の Store の更新は、bind し直した後の表示には出さない。
+        switchRootAccessorySource(store)
+        // Root H/F は Store の現在状態に含まれず取り付け時の再取り込みで戻らないため、bind から
+        // unbind までの間は Store から直接知らせてもらう（core/ADR-0033）。
+        store.registerRootAccessoryReceiver(rootAccessoryReceiver)
 
         // 初期 state / theme を即時反映
         setRootDirect(store.state.value, store.theme.value)
@@ -419,7 +559,8 @@ public class KsSettingsView @JvmOverloads constructor(
     /**
      * バインド中の Store から切り離し、購読を解除する。
      *
-     * 解除後は Store への更新（構造 Diff・内容更新バッチ・Theme）が表示へ反映されなくなる。
+     * 解除後は Store への更新（構造 Diff・内容更新バッチ・Root の Header / Footer・Theme）が
+     * 表示へ反映されなくなる。
      * 表示中の内容はそのまま残るため、view 階層からの取り外しと参照の破棄は呼び出し側の責務。
      *
      * `onDetachedFromWindow` による購読の停止と違い、Store 参照そのものを手放すため、
@@ -430,6 +571,8 @@ public class KsSettingsView @JvmOverloads constructor(
     public fun unbind() {
         storeCollectJob?.cancel()
         storeCollectJob = null
+        pendingStore?.unregisterRootAccessoryReceiver(rootAccessoryReceiver)
+        switchRootAccessorySource(null)
         pendingStore = null
     }
 
@@ -471,6 +614,11 @@ public class KsSettingsView @JvmOverloads constructor(
         storeCollectJob = owner.lifecycleScope.launch {
             launch {
                 store.diffs.collect { diff ->
+                    // Root 対象は受け口だけが反映する。ここでも適用すると 1 回の更新が二重に効く
+                    // （core/ADR-0033）。
+                    if (diff is SettingsRootDiff.UpdateAccessory && diff.target.isRootTarget()) {
+                        return@collect
+                    }
                     applyDiff(diff)
                 }
             }
@@ -497,6 +645,73 @@ public class KsSettingsView @JvmOverloads constructor(
                     }
                 }
             }
+        }
+    }
+
+    // MARK: - Root accessory の受け取り
+
+    /**
+     * bind 中の Store から Root H/F の更新を受け取る。
+     *
+     * どのスレッドから呼ばれてもよい。[source] が現在結び付いている Store と一致する更新だけを受理し、
+     * 一致しないものは捨てる。配送の途中で別の Store へ bind し直されたり unbind されたりしても、
+     * 受理の判定と binding の差し替えは同じロックの中で行うため、以前の Store の値は表示に出ない。
+     *
+     * 受理した値はその場で控え、表示への反映はメインスレッドで行う（メインスレッドからの呼び出しは
+     * その場で、それ以外はメインスレッドへ送る）。控えた値は取り付け状態に関わらず反映され、取り付けを
+     * 待つ必要はない。
+     */
+    private fun onRootAccessoryUpdate(
+        source: SettingsRootStore,
+        update: SettingsRootDiff.UpdateAccessory,
+    ) {
+        synchronized(rootAccessoryLock) {
+            if (rootAccessorySource !== source) return
+            when (update.target) {
+                AccessoryTarget.RootHeader -> pendingRootHeaderUpdate = update
+                AccessoryTarget.RootFooter -> pendingRootFooterUpdate = update
+                is AccessoryTarget.SectionHeader, is AccessoryTarget.SectionFooter -> return
+            }
+        }
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            applyPendingRootAccessoryUpdates()
+        } else {
+            mainHandler.post { applyPendingRootAccessoryUpdates() }
+        }
+    }
+
+    /**
+     * 控えたまま反映していない Root H/F の更新を表示へ反映する。
+     *
+     * 控えと取り出しはロックの中で行い、反映はロックの外で行う。反映は Adapter の変更通知を伴うため、
+     * ロックを握ったまま行うと、表示側の処理の中から更新が届いたときに待ち合わせが絡む。
+     */
+    private fun applyPendingRootAccessoryUpdates() {
+        val header: SettingsRootDiff.UpdateAccessory?
+        val footer: SettingsRootDiff.UpdateAccessory?
+        synchronized(rootAccessoryLock) {
+            header = pendingRootHeaderUpdate
+            footer = pendingRootFooterUpdate
+            pendingRootHeaderUpdate = null
+            pendingRootFooterUpdate = null
+        }
+        header?.let { applyUpdateAccessory(it.target, it.accessory) }
+        footer?.let { applyUpdateAccessory(it.target, it.accessory) }
+    }
+
+    /**
+     * Root 対象の更新を受理する配送元を [store] へ差し替え、控えたまま反映していない更新を捨てる。
+     *
+     * 差し替えと破棄を同じロックの中で行うことで、以前の配送元から届いた更新が差し替えとすれ違って
+     * 受理されることも、控えたまま残って後から表示に出ることも無くなる。同じ配送元への切り替えは
+     * 何もしない（同一 Store への bind し直しで、控えた値を落とさないため）。
+     */
+    private fun switchRootAccessorySource(store: SettingsRootStore?) {
+        synchronized(rootAccessoryLock) {
+            if (rootAccessorySource === store) return
+            rootAccessorySource = store
+            pendingRootHeaderUpdate = null
+            pendingRootFooterUpdate = null
         }
     }
 
@@ -629,6 +844,7 @@ public class KsSettingsView @JvmOverloads constructor(
         headerAdapter.theme = theme
         footerAdapter.theme = theme
         recyclerView.setBackgroundColor(theme.backgroundColor.toArgb())
+        applyScrollIndicatorVisible(theme)
         if (themeChanged) {
             // 表示中の行へ再 bind を促す。`themeBacking` をここで直接書き換えるため、この後に
             // Store の `theme` StateFlow が同じ値を流しても `theme` setter の同値スキップに阻まれ、
@@ -855,6 +1071,7 @@ public class KsSettingsView @JvmOverloads constructor(
         footerAdapter.theme = theme
         // Theme.backgroundColor を RecyclerView に反映する
         recyclerView.setBackgroundColor(theme.backgroundColor.toArgb())
+        applyScrollIndicatorVisible(theme)
         notifyThemeChangedToAdapters()
         // ItemDecoration を新 Theme で再構築（separator 色等の反映）
         applyDecoration(style)
@@ -1060,7 +1277,10 @@ public class KsSettingsView @JvmOverloads constructor(
             onConfirmed = { newDate -> cell.onValueChanged?.invoke(newDate) },
         )
         val forgetDialog = trackCalendarDialog(cell.id, dialog)
-        dialog.showAnchoredTo(this, forgetDialog)
+        dialog.showAnchoredTo(this) {
+            forgetDialog()
+            dialog.completedDate?.let { newDate -> cell.onValueCompleted?.invoke(newDate) }
+        }
     }
 
     /** 引き継いだ表示状態に対応する適格な Cell を現 root から探す（一意でなければ `null`）。 */

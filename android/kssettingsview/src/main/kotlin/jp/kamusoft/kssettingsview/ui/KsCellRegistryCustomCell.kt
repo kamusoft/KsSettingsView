@@ -26,7 +26,7 @@ public fun KsCellRegistry.registerCustomCell(context: Context) {
         viewType = VIEW_TYPE_CUSTOM_CELL,
         // content は利用者所有のコンテンツであり、テーマ属性はホストのテーマで解決させる
         // （android/ADR-0020）。
-        factory = { parent -> CustomCellViewHolder(parent.context.ksHostContext()) },
+        factory = { parent -> CustomCellViewHolder(parent.ksUserContentContext()) },
     )
 }
 

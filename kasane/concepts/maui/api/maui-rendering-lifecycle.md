@@ -3,7 +3,7 @@ type: concept
 title: 表示への反映と Host の寿命 (KsSettingsView.Maui)
 description: facade への変更がいつどう表示へ届き (構造は即時・内容はバッチ・IconSource は非同期・View は参照が正で内容は live)、Section / Cell と View の論理所有と多重配置の例外、Host の解放と再生成をまたいで何が保たれるか、Android の measure 契約による配置の制約
 tags: [maui, facade, lifecycle, handler]
-timestamp: 2026-09-16
+timestamp: 2026-09-18
 ---
 
 # 表示への反映と Host の寿命 (KsSettingsView.Maui)
@@ -60,15 +60,15 @@ Section / CellBase そのものを複数箇所へ置くこと、および同一�
 
 ## lifecycle の保証
 
-ページ表示 (Handler 接続) で Native Host が生成され、その時点の状態が表示される。Handler 切断で Host は解放されるが、**facade・Bridge・Store は生き続け、切断中の変更も Store へ流れ続ける** — 再訪問時は Store 現在状態から表示が復元される (maui/ADR-0007)。解放 → 再生成のたびに Host は新しい**世代**になる。
+ページ表示 (Handler 接続) で Native Host が生成され、その時点の状態が表示される。accessory View と `CustomCell.Content` に置いた View も最初のフレームから含まれ、遅れて挿入されることはない (初回表示・再訪問とも。maui/ADR-0027)。Handler 切断で Host は解放されるが、**facade・Bridge・Store は生き続け、切断中の変更も Store へ流れ続ける** — 再訪問時は Store 現在状態から表示が復元される (maui/ADR-0007)。解放 → 再生成のたびに Host は新しい**世代**になる。
 
 Handler が切られるのは、ページがナビゲーションスタックから外れたとき (戻る操作で閉じたページ自身) と、Android の Activity 再生成のような platform 側の作り直しである。新しいページを push して背後に回っただけのページでは、両 OS とも Handler は切られず Host も生き続ける (Android は Fragment を作り直すが、同じ Activity なら Handler と platform view を新しい Fragment へ付け替える)。復元の正はそれぞれ次が所有し、利用者から見ればいずれも再訪問後も保持されている:
 
 | 対象 | 復元の正 | 切断中の変更 | 再接続時 |
 |---|---|---|---|
 | 設定ツリーと Theme | Bridge の内部所有 Store | Store へ流れ続ける | Store 現在状態から表示を復元 |
-| `RootHeaderText` / `RootFooterText` | facade (Store の復元対象外 — core/ADR-0019) | facade が値を保持 | Host の attach 後に再適用 |
-| accessory View と `CustomCell.Content` | facade が所有する VisualElement (platform 実体 (wrapper) は Host 世代ごとに作り直される — maui/ADR-0016・0020) | View 差し替え・内容変化とも保持 | 再接続後の表示に反映 |
+| `RootHeaderText` / `RootFooterText` | facade (Store の復元対象外 — core/ADR-0019) | facade が値を保持 | Host 生成の直後に再適用 (取り付け前でも失われない — core/ADR-0033) |
+| accessory View と `CustomCell.Content` | facade が所有する VisualElement (platform 実体 (wrapper) は Host 世代ごとに作り直される — maui/ADR-0016・0020) | View 差し替え・内容変化とも保持 | Host 生成前に実体化して届け、最初の表示に含まれる (maui/ADR-0027) |
 | ユーザー操作通知の購読 | — | Host が無いため操作は発生し得ない | Handler の接続で開始・切断で解除 (取りこぼしはない) |
 
 iOS の Host は ViewController であり、facade が親 Page への子 VC embed (containment) を管理する。利用者側の作業はない。
@@ -94,4 +94,4 @@ iOS の handler は measure を override しない。大きさが決まる配置
 - [MAUI Native Bridge の interop 境界](native-bridge.md) — `releaseHost()` / `makeHost*` と root accessory の再適用順序
 - [MauiView の native 実体化機構](../architecture/view-materialization.md) — accessory View と `CustomCell.Content` の platform 実体の寿命と退役順序
 
-決定の経緯: maui/ADR-0007 (releaseHost)、core/ADR-0019 (attach 時復元)、maui/ADR-0014 (Android measure 契約)、maui/ADR-0015 (IconSource 実体化)、maui/ADR-0016〜0018 (accessory View)、maui/ADR-0020 (content の live view)、maui/ADR-0022 (View 配置の検査)、maui/ADR-0026 (iOS icon 後片付けの所有権分類)
+決定の経緯: maui/ADR-0007 (releaseHost)、core/ADR-0019 (attach 時復元)、maui/ADR-0014 (Android measure 契約)、maui/ADR-0015 (IconSource 実体化)、maui/ADR-0016〜0018 (accessory View)、maui/ADR-0020 (content の live view)、maui/ADR-0022 (View 配置の検査)、maui/ADR-0026 (iOS icon 後片付けの所有権分類)、maui/ADR-0027 (Host 生成前の実体化と配信)、core/ADR-0033 (取り付け前の Root の header / footer の保持)

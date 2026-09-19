@@ -3,6 +3,7 @@ id: 0016
 title: MauiView の native 実体化は自己計測 wrapper を産物とする三層構造で行う
 status: accepted
 date: 2026-08-12
+amended-by: 0027
 ---
 
 ## Context

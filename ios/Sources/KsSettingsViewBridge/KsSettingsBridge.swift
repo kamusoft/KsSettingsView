@@ -80,6 +80,8 @@ public final class KsSettingsBridge: NSObject {
     /// 前後どちらで呼んでもよく、解放中に適用した更新も再生成した Host の表示に反映される。
     /// ただし root の header / footer は Store ではなく Host が持つプロパティのため復元されない —
     /// 再生成後も引き継ぐ場合は、呼び出し側が値を保持して `updateAccessory` で再適用する。
+    /// 再適用は Host を view 階層へ取り付ける前に行ってよく、渡した値は Host の最初の表示に
+    /// 含まれる。
     /// - Returns: view 階層へ取り付ける Native Host
     @objc public func makeHostViewController() -> UIViewController? {
         if isDisposed { return nil }
@@ -97,6 +99,7 @@ public final class KsSettingsBridge: NSObject {
     ///
     /// root の header / footer は Store ではなく Host が持つプロパティのため、解放とともに失われる。
     /// 再生成した Host へ引き継ぐ場合は、呼び出し側が値を保持して `updateAccessory` で再適用する。
+    /// 再適用は再生成した Host を view 階層へ取り付ける前に行ってよい。
     ///
     /// 冪等であり、Host 不在時 (未生成・解放済み) および破棄済みの Bridge では no-op になる。
     @objc public func releaseHost() {
@@ -254,7 +257,8 @@ public final class KsSettingsBridge: NSObject {
     ///
     /// Section 対象の text は Store の状態に保存され Host 再生成後も復元されるが、root 対象の
     /// text は Store ではなく Host が持つため、`releaseHost()` 後の再生成には引き継がれない —
-    /// 引き継ぐ場合は呼び出し側が値を保持して再適用する。
+    /// 引き継ぐ場合は呼び出し側が値を保持して再適用する。生成済みの Host に対しては、view 階層への
+    /// 取り付け前に渡した root 対象の値も失われず、最初の表示に含まれる。
     /// - Parameters:
     ///   - target: 更新対象
     ///   - sectionID: Section を対象にするときの sectionID (root 対象では参照しない)
@@ -293,7 +297,9 @@ public final class KsSettingsBridge: NSObject {
     ///
     /// 対象の指定と未知 sectionID の扱いは `updateAccessory(target:sectionID:text:)` と同一で、
     /// Section 対象の view は Store の状態に保存され Host 再生成後も復元されるが、root 対象の
-    /// view は Host が持つため引き継がれない。
+    /// view は Host が持つため引き継がれない — 引き継ぐ場合は呼び出し側が値を保持して再適用する。
+    /// 生成済みの Host に対しては、view 階層への取り付け前に渡した root 対象の view も失われず、
+    /// 最初の表示に含まれる。
     /// - Parameters:
     ///   - target: 更新対象
     ///   - sectionID: Section を対象にするときの sectionID (root 対象では参照しない)

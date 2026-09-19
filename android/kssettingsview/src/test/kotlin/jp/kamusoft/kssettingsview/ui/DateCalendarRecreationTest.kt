@@ -1,12 +1,14 @@
 package jp.kamusoft.kssettingsview.ui
 
 import android.os.Bundle
+import android.os.Looper
 import android.view.View
 import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
 import androidx.compose.material3.DisplayMode
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.ui.graphics.Color
+import androidx.recyclerview.widget.RecyclerView
 import androidx.test.core.app.ApplicationProvider
 import jp.kamusoft.kssettingsview.R
 import jp.kamusoft.kssettingsview.core.Cell
@@ -23,6 +25,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.android.controller.ActivityController
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowDialog
@@ -155,6 +158,44 @@ class DateCalendarRecreationTest {
         assertTrue("非確定の閉じ方で通知された: $notified", notified.isEmpty())
         assertFalse(restored.isShowing)
     }
+
+    @Test
+    fun `再生成後の選択面の確定でも閉じ切り callback が値 callback の後に届く`() {
+        val events = mutableListOf<String>()
+        val ctrl = launch(rootOf(dateCell()))
+        moveTo(openDialog(HostActivity.settingsViews.single()), selected = PICKED_DATE)
+
+        recreate(ctrl, rootOf(recordingCell(events)))
+        val restored = requireNotNull(shownDialog())
+        restored.confirmSelection()
+
+        // 閉じ切りの通知は dismiss リスナー経由で届くため、確定操作の直後にはまだ出ていない。
+        assertEquals(listOf("changed:$PICKED_DATE"), events)
+
+        awaitMainLooperCondition(diagnostics = { "受け取った通知: $events" }) { events.size == 2 }
+        assertEquals(listOf("changed:$PICKED_DATE", "completed:$PICKED_DATE"), events)
+    }
+
+    @Test
+    fun `再生成後の選択面でも取消では閉じ切り callback を発火しない`() {
+        val events = mutableListOf<String>()
+        val ctrl = launch(rootOf(dateCell()))
+        moveTo(openDialog(HostActivity.settingsViews.single()), selected = PICKED_DATE)
+
+        recreate(ctrl, rootOf(recordingCell(events)))
+        val restored = requireNotNull(shownDialog())
+        restored.cancel()
+        drainMainLooperForUnchangedCheck()
+
+        assertTrue("非確定の閉じ方で通知された: $events", events.isEmpty())
+        assertFalse(restored.isShowing)
+    }
+
+    /** 値 callback と閉じ切り callback を発生順に記録する Cell を作る。 */
+    private fun recordingCell(events: MutableList<String>): DatePickerCell = dateCell(
+        onValueChanged = { events.add("changed:$it") },
+        onValueCompleted = { events.add("completed:$it") },
+    )
 
     @Test
     fun `再生成後の選択面でも今日ジャンプが成立し通知しない`() {
@@ -369,19 +410,60 @@ class DateCalendarRecreationTest {
         HostActivity.rootsProvider = { roots.toList() }
         val ctrl = Robolectric.buildActivity(HostActivity::class.java).setup()
         controller = ctrl
-        idle()
+        awaitRootsApplied()
         layoutAll(ctrl.get())
-        idle()
+        awaitRowsAndScheduledWork()
         return ctrl
     }
 
     private fun recreate(controller: ActivityController<HostActivity>, vararg roots: SettingsRoot) {
         HostActivity.rootsProvider = { roots.toList() }
         controller.recreate()
-        idle()
+        awaitRootsApplied()
         layoutAll(controller.get())
-        idle()
+        awaitRowsAndScheduledWork()
     }
+
+    /**
+     * 組み立て直後の各 `KsSettingsView` が、与えた root の Cell を Adapter へコミットするまで待つ。
+     *
+     * コミットは差分計算をまたぐため `setRootDirect` の呼び出しでは完了しない。行を生成する
+     * [layoutAll] はコミット済みのリストを前提にするので、その成立をここで待つ。
+     */
+    private fun awaitRootsApplied() {
+        awaitMainLooperCondition(
+            diagnostics = {
+                "コミット済み: ${HostActivity.settingsViews.map { committedCellIds(it) }}" +
+                    " / 内部 root: ${HostActivity.settingsViews.map { rootCellIds(it) }}"
+            },
+        ) {
+            HostActivity.settingsViews.isNotEmpty() &&
+                HostActivity.settingsViews.all { committedCellIds(it) == rootCellIds(it) }
+        }
+    }
+
+    /**
+     * レイアウト後に、行の `ViewHolder` が生成され、View が予約した処理が消化されるまで待つ。
+     *
+     * 行タップの起点になる先頭行は生成されている必要がある。加えて `KsSettingsView` は引き継いだ
+     * 表示状態からの選択面の提示を次のメッセージへ回すため、その予約分まで消化されて初めて
+     * 「再生成の結果」が確定する。どちらも満たした時点で戻る。
+     */
+    private fun awaitRowsAndScheduledWork() {
+        awaitMainLooperCondition(
+            diagnostics = {
+                "先頭行: ${HostActivity.settingsViews.map { firstRowHolder(it) }}" +
+                    " / 未消化の予約: ${!shadowOf(Looper.getMainLooper()).isIdle}"
+            },
+        ) {
+            HostActivity.settingsViews.all { firstRowHolder(it) != null } &&
+                shadowOf(Looper.getMainLooper()).isIdle
+        }
+    }
+
+    /** RecyclerView が生成した先頭行の `ViewHolder`（未生成なら `null`）。 */
+    private fun firstRowHolder(view: KsSettingsView): RecyclerView.ViewHolder? =
+        view.internalRecyclerView().findViewHolderForAdapterPosition(0)
 
     /** レイアウトを走らせ、各 `KsSettingsView` の RecyclerView に行を生成させる。 */
     private fun layoutAll(activity: HostActivity) {
@@ -452,6 +534,7 @@ class DateCalendarRecreationTest {
         todayText: String? = null,
         uiStyle: DatePickerUIStyle = DatePickerUIStyle.Material,
         onValueChanged: ((LocalDate) -> Unit)? = null,
+        onValueCompleted: ((LocalDate) -> Unit)? = null,
     ): DatePickerCell = DatePickerCell(
         id = id,
         title = "予定日",
@@ -461,6 +544,7 @@ class DateCalendarRecreationTest {
         todayText = todayText,
         uiStyle = uiStyle,
         onValueChanged = onValueChanged,
+        onValueCompleted = onValueCompleted,
     )
 
     private companion object {

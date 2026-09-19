@@ -39,6 +39,7 @@ extension PickerCell {
         accentColor: UIColor? = nil,
         onSelectionChanged: (@Sendable (Int) -> Void)? = nil,
         onItemSelected: (@Sendable (T) -> Void)? = nil,
+        onSelectionCompleted: (@Sendable (Int) -> Void)? = nil,
         isEnabled: Bool = true,
         isVisible: Bool = true
     ) {
@@ -60,6 +61,7 @@ extension PickerCell {
                 indexSink: onSelectionChanged,
                 itemSink: onItemSelected
             ),
+            onSelectionCompleted: onSelectionCompleted,
             isEnabled: isEnabled,
             isVisible: isVisible
         )
@@ -81,6 +83,7 @@ extension PickerCell {
         pageTitle: String? = nil,
         accentColor: UIColor? = nil,
         onItemSelected: (@Sendable (T) -> Void)? = nil,
+        onSelectionCompleted: (@Sendable (Int) -> Void)? = nil,
         isEnabled: Bool = true,
         isVisible: Bool = true
     ) {
@@ -100,6 +103,7 @@ extension PickerCell {
             accentColor: accentColor,
             onSelectionChanged: PickerCell.indexSetter(for: selectedIndex),
             onItemSelected: onItemSelected,
+            onSelectionCompleted: onSelectionCompleted,
             isEnabled: isEnabled,
             isVisible: isVisible
         )
@@ -124,6 +128,7 @@ extension PickerCell {
         selectedItem: Binding<T?>,
         pageTitle: String? = nil,
         accentColor: UIColor? = nil,
+        onSelectionCompleted: (@Sendable (Int) -> Void)? = nil,
         isEnabled: Bool = true,
         isVisible: Bool = true
     ) {
@@ -147,6 +152,7 @@ extension PickerCell {
             pageTitle: pageTitle,
             accentColor: accentColor,
             onSelectionChanged: setter,
+            onSelectionCompleted: onSelectionCompleted,
             isEnabled: isEnabled,
             isVisible: isVisible
         )
@@ -178,6 +184,7 @@ extension PickerCell {
         accentColor: UIColor? = nil,
         onMultiSelectionChanged: (@Sendable (Set<Int>) -> Void)? = nil,
         onItemsSelected: (@Sendable ([T]) -> Void)? = nil,
+        onMultiSelectionCompleted: (@Sendable (Set<Int>) -> Void)? = nil,
         isEnabled: Bool = true,
         isVisible: Bool = true
     ) {
@@ -200,6 +207,7 @@ extension PickerCell {
                 indicesSink: onMultiSelectionChanged,
                 itemsSink: onItemsSelected
             ),
+            onMultiSelectionCompleted: onMultiSelectionCompleted,
             isEnabled: isEnabled,
             isVisible: isVisible
         )
@@ -222,6 +230,7 @@ extension PickerCell {
         pageTitle: String? = nil,
         accentColor: UIColor? = nil,
         onItemsSelected: (@Sendable ([T]) -> Void)? = nil,
+        onMultiSelectionCompleted: (@Sendable (Set<Int>) -> Void)? = nil,
         isEnabled: Bool = true,
         isVisible: Bool = true
     ) {
@@ -242,6 +251,7 @@ extension PickerCell {
             accentColor: accentColor,
             onMultiSelectionChanged: PickerCell.indicesSetter(for: selectedIndices),
             onItemsSelected: onItemsSelected,
+            onMultiSelectionCompleted: onMultiSelectionCompleted,
             isEnabled: isEnabled,
             isVisible: isVisible
         )
@@ -268,6 +278,7 @@ extension PickerCell {
         accentColor: UIColor? = nil,
         onSelectionChanged: (@Sendable (Int) -> Void)? = nil,
         onItemSelected: (@Sendable (String) -> Void)? = nil,
+        onSelectionCompleted: (@Sendable (Int) -> Void)? = nil,
         isEnabled: Bool = true,
         isVisible: Bool = true
     ) {
@@ -287,6 +298,7 @@ extension PickerCell {
             accentColor: accentColor,
             onSelectionChanged: onSelectionChanged,
             onItemSelected: onItemSelected,
+            onSelectionCompleted: onSelectionCompleted,
             isEnabled: isEnabled,
             isVisible: isVisible
         )
@@ -307,6 +319,7 @@ extension PickerCell {
         pageTitle: String? = nil,
         accentColor: UIColor? = nil,
         onItemSelected: (@Sendable (String) -> Void)? = nil,
+        onSelectionCompleted: (@Sendable (Int) -> Void)? = nil,
         isEnabled: Bool = true,
         isVisible: Bool = true
     ) {
@@ -325,6 +338,7 @@ extension PickerCell {
             pageTitle: pageTitle,
             accentColor: accentColor,
             onItemSelected: onItemSelected,
+            onSelectionCompleted: onSelectionCompleted,
             isEnabled: isEnabled,
             isVisible: isVisible
         )
@@ -344,6 +358,7 @@ extension PickerCell {
         selectedItem: Binding<String?>,
         pageTitle: String? = nil,
         accentColor: UIColor? = nil,
+        onSelectionCompleted: (@Sendable (Int) -> Void)? = nil,
         isEnabled: Bool = true,
         isVisible: Bool = true
     ) {
@@ -361,6 +376,7 @@ extension PickerCell {
             selectedItem: selectedItem,
             pageTitle: pageTitle,
             accentColor: accentColor,
+            onSelectionCompleted: onSelectionCompleted,
             isEnabled: isEnabled,
             isVisible: isVisible
         )
@@ -383,6 +399,7 @@ extension PickerCell {
         accentColor: UIColor? = nil,
         onMultiSelectionChanged: (@Sendable (Set<Int>) -> Void)? = nil,
         onItemsSelected: (@Sendable ([String]) -> Void)? = nil,
+        onMultiSelectionCompleted: (@Sendable (Set<Int>) -> Void)? = nil,
         isEnabled: Bool = true,
         isVisible: Bool = true
     ) {
@@ -403,6 +420,7 @@ extension PickerCell {
             accentColor: accentColor,
             onMultiSelectionChanged: onMultiSelectionChanged,
             onItemsSelected: onItemsSelected,
+            onMultiSelectionCompleted: onMultiSelectionCompleted,
             isEnabled: isEnabled,
             isVisible: isVisible
         )
@@ -424,6 +442,7 @@ extension PickerCell {
         pageTitle: String? = nil,
         accentColor: UIColor? = nil,
         onItemsSelected: (@Sendable ([String]) -> Void)? = nil,
+        onMultiSelectionCompleted: (@Sendable (Set<Int>) -> Void)? = nil,
         isEnabled: Bool = true,
         isVisible: Bool = true
     ) {
@@ -443,6 +462,7 @@ extension PickerCell {
             pageTitle: pageTitle,
             accentColor: accentColor,
             onItemsSelected: onItemsSelected,
+            onMultiSelectionCompleted: onMultiSelectionCompleted,
             isEnabled: isEnabled,
             isVisible: isVisible
         )

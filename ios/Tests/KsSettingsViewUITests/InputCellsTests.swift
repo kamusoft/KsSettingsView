@@ -1079,5 +1079,365 @@ final class InputCellsTests: XCTestCase {
             "tapHandler 呼び出しで UITextField が first responder になる"
         )
     }
+
+    // MARK: - PickerCell の閉じ切り callback（構築経路ごとの保持）
+
+    /// Renderer の配線と同一経路で選択面を組み立てる（`render` からの配線漏れも検出する）。
+    private func makePickerSurface(for cell: PickerCell) throws -> PickerListViewController {
+        let view = PickerCellView()
+        view.render(cell: cell, theme: Theme())
+        let vc = try XCTUnwrap(view._makeListViewControllerForTesting())
+        vc.loadViewIfNeeded()
+        return vc
+    }
+
+    func test_PickerCell_Binding経路_単一選択で閉じ切りcallbackが届く() throws {
+        let log = CompletionLog()
+        var selected: Int? = nil
+        let cell = PickerCell(
+            title: "サイズ",
+            items: ["A", "B", "C"],
+            selectedIndex: Binding(get: { selected }, set: { selected = $0 }),
+            onSelectionCompleted: { [log] index in
+                MainActor.assumeIsolated { log.record("completed(\(index))") }
+            }
+        )
+
+        try makePickerSurface(for: cell)._simulateSelect(1)
+
+        XCTAssertEqual(selected, 1, "Binding へ値が書き戻される")
+        XCTAssertEqual(log.events, ["completed(1)"], "書き戻しの後に閉じ切り callback が届く")
+    }
+
+    func test_PickerCell_Binding経路_複数選択で閉じ切りcallbackが届く() throws {
+        let log = CompletionLog()
+        var selected: Set<Int> = []
+        let cell = PickerCell(
+            title: "通知種別",
+            items: ["A", "B", "C"],
+            selectedIndices: Binding(get: { selected }, set: { selected = $0 }),
+            onMultiSelectionCompleted: { [log] set in
+                MainActor.assumeIsolated { log.record("completed(\(set.sorted()))") }
+            }
+        )
+
+        let vc = try makePickerSurface(for: cell)
+        vc._simulateSelect(0)
+        vc._simulateSelect(2)
+        vc._simulateDone()
+
+        XCTAssertEqual(selected, Set([0, 2]))
+        XCTAssertEqual(log.events, ["completed([0, 2])"])
+    }
+
+    func test_PickerCell_object射影経路で閉じ切りcallbackが届く() throws {
+        let log = CompletionLog()
+        var pickedName: String?
+        let cell = PickerCell(
+            title: "プラン",
+            items: ["無料", "標準", "上位"].map { PickerOption(name: $0) },
+            displayText: { $0.name },
+            selectedIndex: 0,
+            onItemSelected: { option in
+                MainActor.assumeIsolated { pickedName = option.name }
+            },
+            onSelectionCompleted: { [log] index in
+                MainActor.assumeIsolated { log.record("completed(\(index))") }
+            }
+        )
+
+        try makePickerSurface(for: cell)._simulateSelect(2)
+
+        XCTAssertEqual(pickedName, "上位", "元要素の書き戻しが先に走る")
+        XCTAssertEqual(log.events, ["completed(2)"], "射影経路でも閉じ切り callback が届く")
+    }
+
+    func test_PickerCell_object射影のBinding経路で閉じ切りcallbackが届く() throws {
+        let log = CompletionLog()
+        var selected: PickerOption? = nil
+        let cell = PickerCell(
+            title: "プラン",
+            items: ["無料", "標準", "上位"].map { PickerOption(name: $0) },
+            displayText: { $0.name },
+            selectedItem: Binding(get: { selected }, set: { selected = $0 }),
+            onSelectionCompleted: { [log] index in
+                MainActor.assumeIsolated { log.record("completed(\(index))") }
+            }
+        )
+
+        try makePickerSurface(for: cell)._simulateSelect(1)
+
+        XCTAssertEqual(selected?.name, "標準")
+        XCTAssertEqual(log.events, ["completed(1)"])
+    }
+
+    func test_PickerCell_String特殊化の複数選択経路で閉じ切りcallbackが届く() throws {
+        let log = CompletionLog()
+        let cell = PickerCell(
+            title: "通知種別",
+            items: ["A", "B", "C"],
+            selectedIndices: Set([0]),
+            onMultiSelectionCompleted: { [log] set in
+                MainActor.assumeIsolated { log.record("completed(\(set.sorted()))") }
+            }
+        )
+
+        let vc = try makePickerSurface(for: cell)
+        vc._simulateSelect(1)
+        vc._simulateDone()
+
+        XCTAssertEqual(log.events, ["completed([0, 1])"])
+    }
+
+    // MARK: - DatePickerCell の閉じ切り callback
+
+    /// `DatePickerCellView.render` を経た配線でカレンダーシートの VC を組み立てる。
+    private func makeCalendarSheet(
+        for cell: DatePickerCell
+    ) throws -> (view: DatePickerCellView, sheet: DatePickerCalendarSheetController) {
+        let view = DatePickerCellView()
+        view.render(cell: cell, theme: Theme())
+        let sheet = try XCTUnwrap(view._makeCalendarSheetControllerForTesting())
+        sheet.loadViewIfNeeded()
+        return (view, sheet)
+    }
+
+    /// `y/M/d` の 3 成分を文字列化する（確定日付の同値比較用）。
+    private func ymdText(_ date: Date) -> String {
+        let c = Calendar.current.dateComponents([.year, .month, .day], from: date)
+        return "\(c.year ?? 0)-\(c.month ?? 0)-\(c.day ?? 0)"
+    }
+
+    func test_DatePickerCell_カレンダーのDoneで値callbackの後に同じ日付が届く() throws {
+        let log = CompletionLog()
+        let d = Calendar.current.date(from: DateComponents(year: 2020, month: 1, day: 1))!
+        let cell = DatePickerCell(
+            title: "誕生日",
+            date: d,
+            uiStyle: .calendar,
+            onValueChanged: { [log] date in
+                MainActor.assumeIsolated { log.record("changed(\(self.ymdText(date)))") }
+            },
+            onValueCompleted: { [log] date in
+                MainActor.assumeIsolated { log.record("completed(\(self.ymdText(date)))") }
+            }
+        )
+        let (view, sheet) = try makeCalendarSheet(for: cell)
+
+        sheet._simulateChange(to: Calendar.current.date(from: DateComponents(year: 2025, month: 6, day: 14))!)
+        sheet._simulateDone()
+
+        XCTAssertEqual(log.events, ["changed(2025-6-14)", "completed(2025-6-14)"])
+        XCTAssertNotNil(view._lastCell, "確定の間 Renderer が生存している")
+    }
+
+    func test_DatePickerCell_カレンダーの閉じ切りcallbackはシートが出ている間は届かない() throws {
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 375, height: 667))
+        let root = UIViewController()
+        window.rootViewController = root
+        window.makeKeyAndVisible()
+
+        let log = CompletionLog()
+        let d = Calendar.current.date(from: DateComponents(year: 2020, month: 1, day: 1))!
+        let cell = DatePickerCell(
+            title: "誕生日",
+            date: d,
+            uiStyle: .calendar,
+            onValueChanged: { [log] date in
+                MainActor.assumeIsolated { log.record("changed(\(self.ymdText(date)))") }
+            },
+            onValueCompleted: { [log] date in
+                MainActor.assumeIsolated { log.record("completed(\(self.ymdText(date)))") }
+            }
+        )
+        let (view, sheet) = try makeCalendarSheet(for: cell)
+        root.present(sheet, animated: false)
+
+        sheet._simulateDone()
+        waitForNegativeVerification()
+
+        XCTAssertNotNil(root.presentedViewController, "シートがまだ提示されている状態での検証である")
+        XCTAssertEqual(
+            log.events,
+            ["changed(2020-1-1)"],
+            "閉じ切り callback は Done 押下時ではなくシートの dismiss 完了を待つ"
+        )
+        XCTAssertNotNil(view._lastCell, "確定の間 Renderer が生存している")
+        window.isHidden = true
+    }
+
+    func test_DatePickerCell_カレンダーのCancelではどちらのcallbackも発火しない() throws {
+        let log = CompletionLog()
+        let d = Calendar.current.date(from: DateComponents(year: 2020, month: 1, day: 1))!
+        let cell = DatePickerCell(
+            title: "誕生日",
+            date: d,
+            uiStyle: .calendar,
+            onValueChanged: { [log] _ in MainActor.assumeIsolated { log.record("changed") } },
+            onValueCompleted: { [log] _ in MainActor.assumeIsolated { log.record("completed") } }
+        )
+        let (view, sheet) = try makeCalendarSheet(for: cell)
+
+        sheet._simulateChange(to: Calendar.current.date(from: DateComponents(year: 2025, month: 6, day: 14))!)
+        sheet._simulateCancel()
+        waitForNegativeVerification()
+
+        XCTAssertEqual(log.events, [])
+        XCTAssertNotNil(view._lastCell, "確定の間 Renderer が生存している")
+    }
+
+    func test_DatePickerCell_ホイールのDoneは入力面が無ければ続けて閉じ切りcallbackが届く() throws {
+        let log = CompletionLog()
+        let d = Calendar.current.date(from: DateComponents(year: 2020, month: 1, day: 1))!
+        let view = DatePickerCellView()
+        let cell = DatePickerCell(
+            title: "誕生日",
+            date: d,
+            onValueChanged: { [log] date in
+                MainActor.assumeIsolated { log.record("changed(\(self.ymdText(date)))") }
+            },
+            onValueCompleted: { [log] date in
+                MainActor.assumeIsolated { log.record("completed(\(self.ymdText(date)))") }
+            }
+        )
+        view.render(cell: cell, theme: Theme())
+
+        view._simulateWheelsChange(to: Calendar.current.date(from: DateComponents(year: 2025, month: 6, day: 14))!)
+        view._simulateWheelsDone()
+
+        XCTAssertEqual(log.events, ["changed(2025-6-14)", "completed(2025-6-14)"])
+        XCTAssertFalse(view._isAwaitingWheelsHide, "待ち受けは消費されて残らない")
+    }
+
+    func test_DatePickerCell_ホイールのDoneは入力面の非表示完了を待って閉じ切りcallbackを届ける() throws {
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 320, height: 480))
+        let log = CompletionLog()
+        let d = Calendar.current.date(from: DateComponents(year: 2020, month: 1, day: 1))!
+        let view = DatePickerCellView(frame: CGRect(x: 0, y: 0, width: 320, height: 60))
+        let cell = DatePickerCell(
+            title: "誕生日",
+            date: d,
+            onValueChanged: { [log] date in
+                MainActor.assumeIsolated { log.record("changed(\(self.ymdText(date)))") }
+            },
+            onValueCompleted: { [log] date in
+                MainActor.assumeIsolated { log.record("completed(\(self.ymdText(date)))") }
+            }
+        )
+        view.render(cell: cell, theme: Theme())
+        window.addSubview(view)
+        window.makeKeyAndVisible()
+
+        view._simulateTap()
+        awaitCondition(
+            "入力面が first responder になる",
+            in: view,
+            actual: { "isFirstResponder = \(view._embeddedFieldIsFirstResponder)" },
+            until: { view._embeddedFieldIsFirstResponder }
+        )
+
+        view._simulateWheelsChange(to: Calendar.current.date(from: DateComponents(year: 2025, month: 6, day: 14))!)
+        view._simulateWheelsDone()
+
+        // 非表示完了の報告が `resignFirstResponder()` の中で届くか後から届くかは実行環境で変わる。
+        // 打ち切り (1 秒) より十分手前で届くことを条件にすることで、報告を拾う配線が外れれば落ちる。
+        awaitCondition(
+            "閉じ切り callback が非表示完了の報告で届く",
+            in: view,
+            deadline: 0.5,
+            actual: { "events = \(log.events)" },
+            until: { log.events.count == 2 }
+        )
+
+        XCTAssertEqual(
+            log.events,
+            ["changed(2025-6-14)", "completed(2025-6-14)"],
+            "値 callback が先、閉じ切り callback が後で同じ日付"
+        )
+        XCTAssertFalse(view._isAwaitingWheelsHide, "待ち受けは消費されて残らない")
+
+        // 後続の非表示完了では二重に発火しない (確定 1 回につき閉じ切りも 1 回)。
+        NotificationCenter.default.post(name: UIResponder.keyboardDidHideNotification, object: nil)
+        waitForNegativeVerification(in: view)
+        XCTAssertEqual(log.events.count, 2)
+        window.isHidden = true
+    }
+
+    func test_DatePickerCell_ホイールのCancelではどちらのcallbackも発火しない() throws {
+        let log = CompletionLog()
+        let d = Calendar.current.date(from: DateComponents(year: 2020, month: 1, day: 1))!
+        let view = DatePickerCellView()
+        let cell = DatePickerCell(
+            title: "誕生日",
+            date: d,
+            onValueChanged: { [log] _ in MainActor.assumeIsolated { log.record("changed") } },
+            onValueCompleted: { [log] _ in MainActor.assumeIsolated { log.record("completed") } }
+        )
+        view.render(cell: cell, theme: Theme())
+
+        view._simulateWheelsChange(to: Calendar.current.date(from: DateComponents(year: 2025, month: 6, day: 14))!)
+        view._simulateWheelsCancel()
+        waitForNegativeVerification()
+
+        XCTAssertEqual(log.events, [])
+        XCTAssertFalse(view._isAwaitingWheelsHide, "非確定では閉じ切りの待ち受けも張らない")
+    }
+
+    func test_DatePickerCell_派生後も閉じ切りcallbackが残る() throws {
+        let log = CompletionLog()
+        let d = Calendar.current.date(from: DateComponents(year: 2020, month: 1, day: 1))!
+        let base = DatePickerCell(
+            title: "誕生日",
+            date: d,
+            onValueCompleted: { [log] date in
+                MainActor.assumeIsolated { log.record("completed(\(self.ymdText(date)))") }
+            }
+        )
+        let derived = base.withStyle(CellStyle(titleColor: .blue)).withIcon(nil).withDSLID(UUID())
+
+        let view = DatePickerCellView()
+        view.render(cell: derived, theme: Theme())
+        view._simulateWheelsDone()
+
+        XCTAssertEqual(log.events, ["completed(2020-1-1)"])
+    }
+
+    func test_DatePickerCell_Binding経路で閉じ切りcallbackが届く() throws {
+        let log = CompletionLog()
+        let d = Calendar.current.date(from: DateComponents(year: 2020, month: 1, day: 1))!
+        var bound = d
+        let cell = DatePickerCell(
+            title: "誕生日",
+            date: Binding(get: { bound }, set: { bound = $0 }),
+            onValueCompleted: { [log] date in
+                MainActor.assumeIsolated { log.record("completed(\(self.ymdText(date)))") }
+            }
+        )
+
+        let view = DatePickerCellView()
+        view.render(cell: cell, theme: Theme())
+        view._simulateWheelsChange(to: Calendar.current.date(from: DateComponents(year: 2025, month: 6, day: 14))!)
+        view._simulateWheelsDone()
+
+        XCTAssertEqual(ymdText(bound), "2025-6-14", "Binding へ値が書き戻される")
+        XCTAssertEqual(log.events, ["completed(2025-6-14)"])
+    }
+}
+
+/// 射影経路の検証に使う要素型。
+private struct PickerOption: Equatable, Sendable {
+    let name: String
+}
+
+/// 値 callback と閉じ切り callback の到着順を記録する。
+@MainActor
+private final class CompletionLog {
+
+    /// 到着した通知の並び。
+    private(set) var events: [String] = []
+
+    func record(_ event: String) {
+        events.append(event)
+    }
 }
 #endif

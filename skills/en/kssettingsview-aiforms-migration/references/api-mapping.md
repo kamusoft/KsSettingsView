@@ -44,6 +44,8 @@ The container types keep their names. The section header string is the one renam
 
 A `Section` and a cell are logical children of what they belong to (`SettingsView` and `Section`). `{Binding}` resolves through the inherited `BindingContext`, and `DynamicResource` and `AppThemeBinding` are re-evaluated on any bindable property you set - they follow a swap of an ancestor's resources (page or app) and a change of the app's appearance. A section or cell taken out of its owner (`Parent` is null) no longer follows the old owner's resources. `x:Reference` is a separate mechanism that goes through the namescope: the one-time initial resolution reaches the cell, nothing after it does. Header / footer views and `CustomCell.Content` are logical children in the same way and inherit their owner's `BindingContext`.
 
+`Section` and `CellBase` are `Element`s rather than `View`s, so MAUI's `Style` mechanism cannot target them; use their bindable properties or resources for shared values. `SettingsView` itself is a `View`, so implicit and keyed `Style`s still apply there. In a multi-window app, an `AppThemeBinding` on a section or cell follows `Application.Current` rather than the individual window; put per-window appearance values on `SettingsView`'s screen-wide properties when that distinction matters.
+
 ## Translate the fields every cell shares
 
 The 22 shared `CellBase` properties all survive. The systematic change is the sentinel: AiForms used `-1.0` and `KnownColor.Default` to mean "fall back to the screen default", KsSettingsView uses a nullable type with `null`. A color that is null at every level lands on the library default for the current appearance (see "Decide the colors for light and dark").
@@ -185,7 +187,7 @@ The shape survives: an untyped list of objects, a display property named as a st
 | `PickerCell.MaxSelectedNumber` | `PickerCell.MaxSelectedNumber` | 0 still means no limit |
 | `PickerCell.PageTitle` | `PickerCell.PageTitle` (`string?`) | |
 | `PickerCell.AccentColor` (`Color`) | `PickerCell.AccentColor` (`Color?`) | |
-| `PickerCell.SelectedCommand` | `PickerCell.SelectedCommand` (`ICommand?`, one-way, null) | Restored under the same name. Fires only on the native selection-confirmation notification - not when you set a selection property from code, and not on cancel or a non-confirming dismiss. It runs after the selection values are written back and cross-derived, so the command observes the new selection. The argument is `SelectedItem` when a single selection is confirmed and `SelectedItems` when a multiple selection is confirmed, as in AiForms. Re-confirming the same selection executes it again. `Execute` is called without checking `CanExecute` (AiForms-compatible); there is no `CommandParameter` |
+| `PickerCell.SelectedCommand` | `PickerCell.SelectedCommand` (`ICommand?`, one-way, null) | Restored under the same name. Fires only after the native selection surface has completely closed following a confirmed selection - not when you set a selection property from code, and not on cancel or a non-confirming dismiss. The selection values are written back and cross-derived at confirmation, before the surface closes; the command then runs after closure, so it observes the new selection and can open another dialog or navigate without a timing delay. Its argument is `SelectedItem` for a single-selection notification and `SelectedItems` for a multiple-selection notification, as in AiForms; the value is whatever the Cell holds when the close notification arrives, so a change during dismissal is visible. Re-confirming the same selection executes it again. `Execute` is called without checking `CanExecute` (AiForms-compatible); there is no `CommandParameter` |
 | `PickerCell.SelectedItemsOrderKey` | Not provided | Order `ItemsSource` yourself before binding |
 | `PickerCell.UseNaturalSort` | Not provided | Sort the strings yourself before binding. The public `NaturalComparer` / `NaturalSortOrder` / `NaturalComparerOptions` types that backed it are not carried over either |
 | `PickerCell.UseAutoValueText` | Not provided | While `ValueText` is null the cell shows the current selection; set `ValueText` to take over |
@@ -223,7 +225,7 @@ There is no `TextPickerCell`. A `PickerCell` in `Single` mode does the same job 
 | `SelectedItem` (`object`, two-way) | `PickerCell.SelectedItem` (`object?`, two-way) or `PickerCell.SelectedIndex` (`int?`, two-way) | The index is authoritative; bind whichever your view model holds |
 | `PageTitle` / `PickerTitle` | `PickerCell.PageTitle` | One title property instead of two |
 | `AccentColor` (`Color`) | `PickerCell.AccentColor` (`Color?`) | |
-| `SelectedCommand` | `PickerCell.SelectedCommand` (`ICommand?`, one-way) | Fires when the user confirms a selection; in `Single` mode the argument is `SelectedItem` |
+| `SelectedCommand` | `PickerCell.SelectedCommand` (`ICommand?`, one-way) | Fires after the selection surface has completely closed following a user confirmation; in `Single` mode the argument is the current `SelectedItem` |
 | `IsCircularPicker` | Not provided | The selection surface does not wrap around |
 
 ## Pick a number, a time, or a date
@@ -286,7 +288,7 @@ The `Cell*` defaults keep their names one for one. As on the cells, the sentinel
 | `ShowSectionTopBottomBorder` (`bool`, true, Android only) | `ListStyle` (`SettingsViewStyle`) plus `SectionMargin` / `SectionCornerRadius` / `SectionBorderWidth` / `SectionBorderColor` | Section decoration is now part of the list style and applies on both platforms: `Classic` is the flat grouped list, `Modern` draws sections as inset boxes you can shape with the four properties |
 | `SettingsView.ClearCache()` (public static) | Not provided | It emptied the renderer's icon cache. Icons go through the MAUI image source service, and there is no library-level cache to clear |
 | (new) | `DisabledTextColor` (`Color?`) | Text color for disabled cells |
-| (new) | `ScrollIndicatorVisible` (`bool?`) | |
+| (new) | `ScrollIndicatorVisible` (`bool?`) | Controls the vertical scrollbar of the settings list and the `PickerCell` candidate list; null (or true) leaves it visible and false hides it. Wheel surfaces are not affected |
 
 `SectionMargin` is a `Thickness?` whose `Left` and `Right` are read as leading and trailing, so right-to-left layouts resolve on the native side. In `Classic` only its vertical components apply.
 
@@ -325,12 +327,12 @@ Working code, including the `DynamicResource` form alongside it, is in the ksset
 | AiForms `SettingsView` | KsSettingsView | Notes |
 |---|---|---|
 | `HeaderTextColor` / `HeaderFontSize` / `HeaderFontFamily` / `HeaderFontAttributes` | same names, nullable | `HeaderFontAttributes` was a non-nullable `FontAttributes`; it is `FontAttributes?` now |
-| `HeaderBackgroundColor` (`Color`) | `HeaderBackgroundColor` (`Color?`) | |
+| `HeaderBackgroundColor` (`Color`) | `HeaderBackgroundColor` (`Color?`) | null defaults to transparent, so the list background shows through. It fills text-form Section / Root headers only; a `HeaderView` owns its own background |
 | `HeaderHeight` (`double`, -1) | `HeaderHeight` (`double?`) | `Section.HeaderHeight` overrides it for one section |
 | `HeaderPadding` (`Thickness`) | Not provided | Use a `HeaderView` when you need your own spacing |
 | `HeaderTextVerticalAlign` (`LayoutAlignment`) | Not provided | The platform's own header alignment applies |
 | `FooterTextColor` / `FooterFontSize` / `FooterFontFamily` / `FooterFontAttributes` | same names, nullable | Same nullability change on `FooterFontAttributes` |
-| `FooterBackgroundColor` (`Color`) | `FooterBackgroundColor` (`Color?`) | |
+| `FooterBackgroundColor` (`Color`) | `FooterBackgroundColor` (`Color?`) | null defaults to transparent, so the list background shows through. It fills text-form Section / Root footers only; a `FooterView` owns its own background |
 | `FooterPadding` (`Thickness`) | Not provided | Use a `FooterView` |
 | (new) | `RootHeaderText` / `RootFooterText` | Text above the first section and below the last |
 | (new) | `RootHeaderView` / `RootFooterView` (`View?`) | Arbitrary views in the same two places; a view wins over the text while both are set |

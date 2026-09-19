@@ -25,9 +25,37 @@ public sealed class PickerSelectedCommandTests
         Assert.That(cell.SelectedCommand, Is.Null);
     }
 
-    /// <summary>単一選択は公開値と TwoWay 先を更新してから選択項目を通知する。</summary>
+    /// <summary>確定通知だけが届いた時点では、値は反映されても Command は実行されない。</summary>
+    [TestCase(PickerSelectionMode.Single)]
+    [TestCase(PickerSelectionMode.Multiple)]
+    public void SelectionChangeAloneUpdatesValuesWithoutExecuting(PickerSelectionMode mode)
+    {
+        RecordingCommand command = new();
+        PickerCell cell = new()
+        {
+            SelectionMode = mode,
+            ItemsSource = new List<string> { "ライト", "ダーク" },
+            SelectedCommand = command,
+        };
+        PickerScope scope = PickerScope.For(cell);
+
+        if (mode == PickerSelectionMode.Single)
+        {
+            scope.Sink.PickerCellSelectionChanged(scope.CellId, 1);
+            Assert.That(cell.SelectedIndex, Is.EqualTo(1));
+        }
+        else
+        {
+            scope.Sink.PickerCellMultiSelectionChanged(scope.CellId, [1]);
+            Assert.That(cell.SelectedIndices, Is.EqualTo(new[] { 1 }));
+        }
+
+        Assert.That(command.ExecuteCount, Is.Zero);
+    }
+
+    /// <summary>単一選択は、値と TwoWay 先の更新を終えた状態で閉じ切り通知に応じる。</summary>
     [Test]
-    public void SingleSelectionExecutesAfterValuesAndBindingsAreUpdated()
+    public void SingleSelectionExecutesOnCompletionAfterValuesAndBindingsAreUpdated()
     {
         PickerViewModel viewModel = new();
         PickerCell cell = new()
@@ -49,14 +77,15 @@ public sealed class PickerSelectedCommandTests
         PickerScope scope = PickerScope.For(cell);
 
         scope.Sink.PickerCellSelectionChanged(scope.CellId, 1);
+        scope.Sink.PickerCellSelectionCompleted(scope.CellId, 1);
 
         Assert.That(command.ExecuteCount, Is.EqualTo(1));
         Assert.That(command.LastParameter, Is.EqualTo("ダーク"));
     }
 
-    /// <summary>複数選択は公開値と TwoWay 先を更新してから選択項目列を通知する。</summary>
+    /// <summary>複数選択は、値と TwoWay 先の更新を終えた状態で閉じ切り通知に応じる。</summary>
     [Test]
-    public void MultipleSelectionExecutesAfterValuesAndBindingsAreUpdated()
+    public void MultipleSelectionExecutesOnCompletionAfterValuesAndBindingsAreUpdated()
     {
         PickerViewModel viewModel = new();
         PickerCell cell = new()
@@ -79,12 +108,13 @@ public sealed class PickerSelectedCommandTests
         PickerScope scope = PickerScope.For(cell);
 
         scope.Sink.PickerCellMultiSelectionChanged(scope.CellId, [2, 0, 2]);
+        scope.Sink.PickerCellMultiSelectionCompleted(scope.CellId, [2, 0, 2]);
 
         Assert.That(command.ExecuteCount, Is.EqualTo(1));
         Assert.That(command.LastParameter, Is.SameAs(cell.SelectedItems));
     }
 
-    /// <summary>同じ選択の再確定は値の再送をせず、完了だけをもう一度通知する。</summary>
+    /// <summary>同じ選択の再確定は値の再送をせず、閉じ切り通知で完了だけを通知する。</summary>
     [TestCase(PickerSelectionMode.Single)]
     [TestCase(PickerSelectionMode.Multiple)]
     public void ReconfirmingSameSelectionExecutesWithoutAnotherWriteback(PickerSelectionMode mode)
@@ -103,10 +133,12 @@ public sealed class PickerSelectedCommandTests
         if (mode == PickerSelectionMode.Single)
         {
             scope.Sink.PickerCellSelectionChanged(scope.CellId, 1);
+            scope.Sink.PickerCellSelectionCompleted(scope.CellId, 1);
         }
         else
         {
             scope.Sink.PickerCellMultiSelectionChanged(scope.CellId, [1]);
+            scope.Sink.PickerCellMultiSelectionCompleted(scope.CellId, [1]);
         }
         scope.Scope.Flush();
 
@@ -114,9 +146,9 @@ public sealed class PickerSelectedCommandTests
         Assert.That(scope.Gateway.Calls, Is.Empty);
     }
 
-    /// <summary>完了通知は CanExecute を確認せず Execute を直接呼ぶ。</summary>
+    /// <summary>閉じ切り通知は CanExecute を確認せず Execute を直接呼ぶ。</summary>
     [Test]
-    public void SelectionExecutesWithoutCheckingCanExecute()
+    public void CompletionExecutesWithoutCheckingCanExecute()
     {
         RecordingCommand command = new(canExecute: _ => false);
         PickerCell cell = new()
@@ -127,13 +159,14 @@ public sealed class PickerSelectedCommandTests
         PickerScope scope = PickerScope.For(cell);
 
         scope.Sink.PickerCellSelectionChanged(scope.CellId, 1);
+        scope.Sink.PickerCellSelectionCompleted(scope.CellId, 1);
 
         Assert.That(command.CanExecuteCount, Is.Zero);
         Assert.That(command.ExecuteCount, Is.EqualTo(1));
         Assert.That(command.LastParameter, Is.EqualTo("竹"));
     }
 
-    /// <summary>公開選択値の直接設定や確定通知のない状態では Command を実行しない。</summary>
+    /// <summary>公開選択値の直接設定では Command を実行しない。</summary>
     [Test]
     public void DirectSelectionChangesDoNotExecuteCommand()
     {
@@ -153,6 +186,26 @@ public sealed class PickerSelectedCommandTests
         Assert.That(command.ExecuteCount, Is.Zero);
     }
 
+    /// <summary>Command を設定していない Cell の閉じ切り通知は何も起こさない。</summary>
+    [Test]
+    public void CompletionWithoutCommandDoesNothing()
+    {
+        PickerCell cell = new()
+        {
+            ItemsSource = new List<string> { "松", "竹" },
+            SelectedIndex = 1,
+        };
+        PickerScope scope = PickerScope.For(cell);
+
+        scope.Sink.PickerCellSelectionChanged(scope.CellId, 1);
+        scope.Sink.PickerCellSelectionCompleted(scope.CellId, 1);
+        scope.Scope.Flush();
+
+        Assert.That(cell.SelectedIndex, Is.EqualTo(1));
+        Assert.That(cell.SelectedItem, Is.EqualTo("竹"));
+        Assert.That(scope.Gateway.Calls, Is.Empty);
+    }
+
     /// <summary>未知の Cell ID の単一選択通知は値も Command も変更しない。</summary>
     [Test]
     public void UnknownCellSingleSelectionNotificationDoesNotChangeValuesOrExecuteCommand()
@@ -167,6 +220,7 @@ public sealed class PickerSelectedCommandTests
         PickerScope scope = PickerScope.For(cell);
 
         scope.Sink.PickerCellSelectionChanged("unknown", 1);
+        scope.Sink.PickerCellSelectionCompleted("unknown", 1);
 
         Assert.That(cell.SelectedIndex, Is.Zero);
         Assert.That(cell.SelectedItem, Is.EqualTo("松"));
@@ -188,15 +242,58 @@ public sealed class PickerSelectedCommandTests
         PickerScope scope = PickerScope.For(cell);
 
         scope.Sink.PickerCellMultiSelectionChanged("unknown", [1]);
+        scope.Sink.PickerCellMultiSelectionCompleted("unknown", [1]);
 
         Assert.That(cell.SelectedIndices, Is.EqualTo(new[] { 0, 2 }));
         Assert.That(cell.SelectedItems, Is.EqualTo(new[] { "メール", "SMS" }));
         Assert.That(command.ExecuteCount, Is.Zero);
     }
 
-    /// <summary>現在のモードが複数でも、単一選択の確定通知は選択項目を引数にする。</summary>
+    /// <summary>PickerCell 以外の Cell ID で届いた閉じ切り通知は無視される。</summary>
     [Test]
-    public void SingleSelectionNotificationUsesSelectedItemAfterModeChangesToMultiple()
+    public void CompletionForOtherCellKindIsIgnored()
+    {
+        RecordingCommand command = new();
+        PickerCell picker = new()
+        {
+            ItemsSource = new List<string> { "松", "竹" },
+            SelectedCommand = command,
+        };
+        SwitchCell other = new();
+        Section section = new() { Cells = { picker, other } };
+        SettingsView view = new() { Root = { section } };
+        GatewayScope scope = GatewayScope.Connect(view).Reset();
+        string otherId = view.Controller.FindCellId(other)!;
+
+        scope.Gateway.Sink!.PickerCellSelectionCompleted(otherId, 1);
+        scope.Gateway.Sink!.PickerCellMultiSelectionCompleted(otherId, [1]);
+
+        Assert.That(command.ExecuteCount, Is.Zero);
+    }
+
+    /// <summary>確定から閉じ切りまでに選択が変わっても、引数は閉じ切り時点の現値になる。</summary>
+    [Test]
+    public void CompletionPassesCurrentValueWhenSelectionChangedInBetween()
+    {
+        RecordingCommand command = new();
+        PickerCell cell = new()
+        {
+            ItemsSource = new List<string> { "松", "竹", "梅" },
+            SelectedCommand = command,
+        };
+        PickerScope scope = PickerScope.For(cell);
+
+        scope.Sink.PickerCellSelectionChanged(scope.CellId, 1);
+        cell.SelectedIndex = 2;
+        scope.Sink.PickerCellSelectionCompleted(scope.CellId, 1);
+
+        Assert.That(command.ExecuteCount, Is.EqualTo(1));
+        Assert.That(command.LastParameter, Is.EqualTo("梅"));
+    }
+
+    /// <summary>現在のモードが複数でも、単一選択の閉じ切り通知は選択項目を引数にする。</summary>
+    [Test]
+    public void SingleCompletionUsesSelectedItemAfterModeChangesToMultiple()
     {
         RecordingCommand command = new();
         PickerCell cell = new()
@@ -205,9 +302,10 @@ public sealed class PickerSelectedCommandTests
             SelectedCommand = command,
         };
         PickerScope scope = PickerScope.For(cell);
+        scope.Sink.PickerCellSelectionChanged(scope.CellId, 1);
         cell.SelectionMode = PickerSelectionMode.Multiple;
 
-        scope.Sink.PickerCellSelectionChanged(scope.CellId, 1);
+        scope.Sink.PickerCellSelectionCompleted(scope.CellId, 1);
 
         Assert.That(cell.SelectionMode, Is.EqualTo(PickerSelectionMode.Multiple));
         Assert.That(command.ExecuteCount, Is.EqualTo(1));
@@ -215,9 +313,9 @@ public sealed class PickerSelectedCommandTests
         Assert.That(command.LastParameter, Is.EqualTo("ダーク"));
     }
 
-    /// <summary>現在のモードが単一でも、複数選択の確定通知は選択項目列を引数にする。</summary>
+    /// <summary>現在のモードが単一でも、複数選択の閉じ切り通知は選択項目列を引数にする。</summary>
     [Test]
-    public void MultipleSelectionNotificationUsesSelectedItemsAfterModeChangesToSingle()
+    public void MultipleCompletionUsesSelectedItemsAfterModeChangesToSingle()
     {
         RecordingCommand command = new();
         PickerCell cell = new()
@@ -228,9 +326,10 @@ public sealed class PickerSelectedCommandTests
             SelectedCommand = command,
         };
         PickerScope scope = PickerScope.For(cell);
+        scope.Sink.PickerCellMultiSelectionChanged(scope.CellId, [1, 2]);
         cell.SelectionMode = PickerSelectionMode.Single;
 
-        scope.Sink.PickerCellMultiSelectionChanged(scope.CellId, [1, 2]);
+        scope.Sink.PickerCellMultiSelectionCompleted(scope.CellId, [1, 2]);
 
         Assert.That(cell.SelectionMode, Is.EqualTo(PickerSelectionMode.Single));
         Assert.That(command.ExecuteCount, Is.EqualTo(1));

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using KsSettingsView.Handlers;
 using KsSettingsView.Internals;
 using KsSettingsView.Tests.Fakes;
 using KsSettingsView.Tests.Support;
@@ -21,24 +22,11 @@ namespace KsSettingsView.Tests;
 [TestFixture]
 public class CustomCellContentTests
 {
-    // ---- 実体化と輸送 ----
+    // ---- 最初の表示に含まれること ----
 
-    /// <summary>置いた内容は Host の取り付け後に実体化され、輸送の引き当てに載る。</summary>
+    /// <summary>置いた内容は、最初の配信データに載る。</summary>
     [Test]
-    public void ContentIsMaterializedAndAvailableForTransportAfterAttach()
-    {
-        Label content = new();
-        Fixture fixture = Fixture.Connected(content);
-
-        Assert.That(
-            fixture.Scope.Gateway.CellContentViewOf(fixture.Cell),
-            Is.SameAs(fixture.Scope.Views.LatestFor(content).PlatformView));
-        Assert.That(fixture.Token, Is.Not.Empty);
-    }
-
-    /// <summary>Host の取り付け前は実体化を待ち、内容の配信も起きない。</summary>
-    [Test]
-    public void ContentIsNotDeliveredBeforeTheHostIsAttached()
+    public void ContentIsCarriedByTheInitialDelivery()
     {
         Label content = new();
         CustomCell cell = new() { Content = content };
@@ -47,14 +35,79 @@ public class CustomCellContentTests
 
         GatewayScope scope = GatewayScope.Connect(view);
 
+        Assert.That(
+            scope.Single<GatewayCall.SetRoot>().Transported[0].CellContentViews[0],
+            Is.SameAs(scope.Views.LatestFor(content).PlatformView));
         Assert.That(scope.All<GatewayCall.ReplaceCell>(), Is.Empty);
-        Assert.That(scope.Gateway.CellContentViewOf(cell), Is.Null);
+        Assert.That(scope.All<GatewayCall.ReplaceCells>(), Is.Empty);
+    }
 
-        scope.Attach();
+    /// <summary>再接続では、すべての内容が Host の生成前に 1 回のバッチで届く。</summary>
+    /// <remarks>
+    /// 1 件ずつ送ると Android では先行する更新の反映通知が後続に追い越されて破棄され、内容の
+    /// View を持たない世代のまま行が残る。
+    /// </remarks>
+    [Test]
+    public void ReconnectDeliversEveryContentInASingleBatchBeforeTheHostIsCreated()
+    {
+        CustomCell first = new() { Content = new Label() };
+        CustomCell second = new() { Content = new Label() };
+        Section section = new() { Cells = { first, second } };
+        SettingsView view = new() { Root = { section } };
+        GatewayScope scope = GatewayScope.Connect(view);
+        view.ReleaseHost();
+        scope.Reset();
+
+        scope.ConnectFacade();
+
+        GatewayCall.ReplaceCells batch = scope.Single<GatewayCall.ReplaceCells>();
+        Assert.That(batch.Updates.Count, Is.EqualTo(2));
+        Assert.That(scope.All<GatewayCall.ReplaceCell>(), Is.Empty);
+
+        // バッチの各件が、呼び出しの時点でその行の世代と実体を載せていたことまで見る。
+        foreach (CustomCell cell in new[] { first, second })
+        {
+            GatewayCall.CellUpdate update = UpdateFor(batch, scope, cell);
+            Assert.That(
+                ((KsCustomCellSnapshot)update.Snapshot).ContentToken,
+                Is.EqualTo(Token(cell)));
+            Assert.That(
+                update.ContentView,
+                Is.SameAs(scope.Views.LatestFor(cell.Content!).PlatformView));
+        }
+    }
+
+    /// <summary>取り付けの通知では、内容の配信は新たに起きない。</summary>
+    /// <remarks>取り付けの通知は Handler が受け取るため、Handler の経路で確かめる。</remarks>
+    [Test]
+    public void TheAttachNotificationDoesNotRedeliverContent()
+    {
+        CustomCell cell = new() { Content = new Label() };
+        Section section = new() { Cells = { cell } };
+        SettingsView view = new() { Root = { section } };
+        GatewayScope scope = GatewayScope.Connect(view);
+        SettingsViewHandler handler = new();
+        view.Handler = handler;
+        scope.Reset();
+
+        handler.OnHostAttached();
+
+        Assert.That(scope.Calls, Is.Empty);
+    }
+
+    // ---- 実体化と輸送 ----
+
+    /// <summary>置いた内容は Host を作る時点までに実体化され、輸送の引き当てに載る。</summary>
+    [Test]
+    public void ContentIsMaterializedAndAvailableForTransportOnceTheHostExists()
+    {
+        Label content = new();
+        Fixture fixture = Fixture.Connected(content);
 
         Assert.That(
-            scope.Single<GatewayCall.ReplaceCell>().ContentView,
-            Is.SameAs(scope.Views.LatestFor(content).PlatformView));
+            fixture.Scope.Gateway.CellContentViewOf(fixture.Cell),
+            Is.SameAs(fixture.Scope.Views.LatestFor(content).PlatformView));
+        Assert.That(fixture.Token, Is.Not.Empty);
     }
 
     /// <summary>配信された内容更新には、その時点の世代と実体が載る。</summary>
@@ -74,42 +127,6 @@ public class CustomCellContentTests
         Assert.That(call.ContentView, Is.SameAs(fixture.Scope.Views.LatestFor(replacement).PlatformView));
     }
 
-    /// <summary>
-    /// Host の取り付けで複数 Cell の内容を配信するときは、1 回の一括更新にまとめて送る。
-    /// </summary>
-    /// <remarks>
-    /// 1 件ずつ送ると Android では先行する更新の反映通知が後続に追い越されて破棄され、内容の
-    /// View を持たない世代のまま行が残る。
-    /// </remarks>
-    [Test]
-    public void AttachDeliversEveryContentInASingleBatch()
-    {
-        CustomCell first = new() { Content = new Label() };
-        CustomCell second = new() { Content = new Label() };
-        CustomCell third = new() { Content = new Label() };
-        Section section = new() { Cells = { first, second, third } };
-        SettingsView view = new() { Root = { section } };
-        GatewayScope scope = GatewayScope.Connect(view);
-
-        scope.Attach();
-
-        GatewayCall.ReplaceCells batch = scope.Single<GatewayCall.ReplaceCells>();
-        Assert.That(batch.Updates.Count, Is.EqualTo(3));
-        Assert.That(scope.All<GatewayCall.ReplaceCell>(), Is.Empty);
-
-        // バッチの各件が、呼び出しの時点でその行の世代と実体を載せていたことまで見る。
-        foreach (CustomCell cell in new[] { first, second, third })
-        {
-            GatewayCall.CellUpdate update = UpdateFor(batch, scope, cell);
-            Assert.That(
-                ((KsCustomCellSnapshot)update.Snapshot).ContentToken,
-                Is.EqualTo(Token(cell)));
-            Assert.That(
-                update.ContentView,
-                Is.SameAs(scope.Views.LatestFor(cell.Content!).PlatformView));
-        }
-    }
-
     /// <summary>Native Host の解放で送り直す内容なしの世代も、1 回の一括更新にまとめて送る。</summary>
     [Test]
     public void HostReleaseDeliversEveryContentInASingleBatch()
@@ -119,7 +136,6 @@ public class CustomCellContentTests
         Section section = new() { Cells = { first, second } };
         SettingsView view = new() { Root = { section } };
         GatewayScope scope = GatewayScope.Connect(view);
-        scope.Attach();
         string firstToken = Token(first);
         string secondToken = Token(second);
         scope.Reset();
@@ -349,7 +365,6 @@ public class CustomCellContentTests
         };
         SettingsView view = new() { Root = { section } };
         GatewayScope scope = GatewayScope.Connect(view);
-        scope.Attach();
 
         CustomCell removed = (CustomCell)section.Cells[0];
         CustomCell kept = (CustomCell)section.Cells[1];
@@ -383,6 +398,31 @@ public class CustomCellContentTests
         Assert.That(content.Parent, Is.SameAs(fixture.Cell));
     }
 
+    /// <summary>
+    /// 設定ツリーを作り直すときも、旧実体の破棄は新しい設定ツリーを配信した後に行われる。
+    /// </summary>
+    /// <remarks>
+    /// 破棄が配信より前に起きると、native がまだ参照している wrapper を先に壊すことになる。
+    /// </remarks>
+    [Test]
+    public void PreviousContentIsDisposedAfterTheRebuiltRootIsDelivered()
+    {
+        Label content = new();
+        Fixture fixture = Fixture.Connected(content);
+        fixture.Scope.Reset();
+
+        int rootsAtDispose = -1;
+        fixture.Scope.Views.LatestFor(content).OnDispose =
+            () => rootsAtDispose = fixture.Scope.All<GatewayCall.SetRoot>().Count;
+
+        fixture.View.Root = new ObservableCollection<Section> { fixture.Section };
+
+        Assert.That(rootsAtDispose, Is.EqualTo(1));
+        Assert.That(
+            fixture.Scope.Gateway.CellContentViewOf(fixture.Cell),
+            Is.SameAs(fixture.Scope.Views.LatestFor(content).PlatformView));
+    }
+
     /// <summary>1 件の内容の後片付けが失敗しても、退役した残りは破棄され取りこぼされない。</summary>
     /// <remarks>
     /// 待ち行列は破棄の前に空にされるため、途中で例外が抜けると残りの実体は誰からも破棄されなくなる。
@@ -405,7 +445,6 @@ public class CustomCellContentTests
         };
         SettingsView view = new() { Root = { section } };
         GatewayScope scope = GatewayScope.Connect(view);
-        scope.Attach();
 
         FakeViewLease firstLease = scope.Views.LatestFor(first);
         FakeViewLease secondLease = scope.Views.LatestFor(second);
@@ -423,6 +462,55 @@ public class CustomCellContentTests
             Assert.That(firstLease.DisposeCount, Is.EqualTo(1));
             Assert.That(secondLease.DisposeCount, Is.EqualTo(1));
             Assert.That(thirdLease.DisposeCount, Is.EqualTo(1));
+        });
+    }
+
+    /// <summary>
+    /// 内容なし世代の配信に失敗した実体は、Native Host を解放した後に破棄される。
+    /// </summary>
+    /// <remarks>
+    /// 配信は 1 回の内容更新としてまとめて送るため、失敗するとどの Cell まで届いたか分からない。
+    /// 届いていない実体は native がまだ抱えている可能性があり、表示先ごと解放するより前に壊せない。
+    /// 退役させた実体は全件が破棄され、通知の解除と Native Host の解放にも到達する。
+    /// </remarks>
+    [Test]
+    public void ContentWhoseReleaseDeliveryFailedIsDisposedAfterTheNativeHostIsReleased()
+    {
+        Label firstContent = new();
+        Label secondContent = new();
+        Section section = new()
+        {
+            Cells =
+            {
+                new CustomCell { Content = firstContent },
+                new CustomCell { Content = secondContent },
+            },
+        };
+        SettingsView view = new() { Root = { section } };
+        GatewayScope scope = GatewayScope.Connect(view);
+
+        FakeViewLease firstLease = scope.Views.LatestFor(firstContent);
+        FakeViewLease secondLease = scope.Views.LatestFor(secondContent);
+
+        int releasesWhenFirstDisposed = -1;
+        int releasesWhenSecondDisposed = -1;
+        firstLease.OnDispose = () => releasesWhenFirstDisposed = scope.All<GatewayCall.ReleaseHost>().Count;
+        secondLease.OnDispose =
+            () => releasesWhenSecondDisposed = scope.All<GatewayCall.ReleaseHost>().Count;
+
+        scope.Gateway.ReplaceCellFails = true;
+
+        AggregateException? thrown = Assert.Throws<AggregateException>(() => view.ReleaseHost());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(thrown!.InnerExceptions, Has.Count.EqualTo(1));
+            Assert.That(releasesWhenFirstDisposed, Is.EqualTo(1));
+            Assert.That(releasesWhenSecondDisposed, Is.EqualTo(1));
+            Assert.That(firstLease.DisposeCount, Is.EqualTo(1));
+            Assert.That(secondLease.DisposeCount, Is.EqualTo(1));
+            Assert.That(scope.Gateway.DetachInteractionsCount, Is.EqualTo(1));
+            Assert.That(scope.Gateway.ReleaseHostCount, Is.EqualTo(1));
         });
     }
 
@@ -486,7 +574,6 @@ public class CustomCellContentTests
         };
         SettingsView view = new() { Root = { section } };
         GatewayScope scope = GatewayScope.Connect(view);
-        scope.Attach();
 
         CustomCell first = (CustomCell)section.Cells[0];
         CustomCell second = (CustomCell)section.Cells[1];
@@ -510,7 +597,6 @@ public class CustomCellContentTests
         };
         SettingsView view = new() { Root = { section } };
         GatewayScope scope = GatewayScope.Connect(view);
-        scope.Attach();
 
         CustomCell first = (CustomCell)section.Cells[0];
         CustomCell second = (CustomCell)section.Cells[1];
@@ -631,7 +717,6 @@ public class CustomCellContentTests
         Section section = new() { Cells = cells };
         SettingsView view = new() { Root = { section } };
         GatewayScope scope = GatewayScope.Connect(view);
-        scope.Attach();
 
         string sectionId = scope.Gateway.SectionIds[0];
         IReadOnlyList<string> cellIds = scope.Gateway.CellIdsOf(sectionId);
@@ -807,7 +892,6 @@ public class CustomCellContentTests
 
         fixture.Scope.Reset();
         fixture.Scope.Reconnect();
-        fixture.Scope.Attach();
 
         FakeViewLease second = fixture.Scope.Views.LatestFor(content);
         Assert.That(second, Is.Not.SameAs(first));
@@ -847,7 +931,6 @@ public class CustomCellContentTests
         Assert.That(fixture.Scope.Views.CountFor(replacement), Is.Zero);
 
         fixture.Scope.Reconnect();
-        fixture.Scope.Attach();
 
         Assert.That(
             fixture.Scope.Gateway.CellContentViewOf(fixture.Cell),
@@ -874,7 +957,7 @@ public class CustomCellContentTests
         return update;
     }
 
-    /// <summary>CustomCell 1 件を配置し、Native Host まで取り付けた足場。</summary>
+    /// <summary>CustomCell 1 件を配置し、Native Host まで作った足場。</summary>
     private sealed class Fixture
     {
         private Fixture(SettingsView view, Section section, CustomCell cell, GatewayScope scope)
@@ -900,7 +983,7 @@ public class CustomCellContentTests
         /// <summary>今この時点で輸送するときの内容の世代。</summary>
         public string Token => ((KsCustomCellSnapshot)Cell.CreateSnapshot()).ContentToken;
 
-        /// <summary>指定した View を内容に持つ CustomCell を 1 件配置して接続し、Host を取り付ける。</summary>
+        /// <summary>指定した View を内容に持つ CustomCell を 1 件配置して接続し、Host を作る。</summary>
         /// <param name="content">内容に置く View</param>
         public static Fixture Connected(View content)
         {
@@ -908,7 +991,6 @@ public class CustomCellContentTests
             Section section = new() { Cells = { cell } };
             SettingsView view = new() { Root = { section } };
             GatewayScope scope = GatewayScope.Connect(view);
-            scope.Attach();
             return new Fixture(view, section, cell, scope);
         }
     }

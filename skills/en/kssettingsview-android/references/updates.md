@@ -204,6 +204,8 @@ store.updateAccessory(
 
 Passing `null` as the accessory removes what is at that position, and an unknown section id is a no-op.
 
+Root targets are different from section targets: the store does not keep the current root header or footer in `state`. While a view is bound, `updateAccessory` with `RootHeader` or `RootFooter` delivers the value directly to that host, so an update made before first attach or while the view is detached is kept for the next display. Pass `SettingsAccessory.Root(RootAccessory.Text(...))` or the corresponding `View` case. Updates from the old store are ignored after the view is bound to a different store, and one host's `unbind()` does not stop other hosts from receiving the same root update.
+
 ## Remeasure a header whose Composable changed size
 
 A `View` accessory is compared by identity, not by what it draws, so redrawing a Composable header with taller contents does not tell the list its height changed - see [styling.md](styling.md) for the same caveat on the declarative side. `invalidateAccessoryMeasurement` asks for that one position to be measured again.
@@ -376,7 +378,7 @@ class SettingsActivity : AppCompatActivity() {
 }
 ```
 
-`bind` applies the current root and theme immediately, and every later change goes through the store. The view keeps up with the store across detach and reattach - a pager page scrolling off screen, for instance - by re-reading the current state, so store changes made while it was detached are not lost. The scroll position comes back too: the view takes an anchor just before it detaches and restores it on the next attach. A view that is itself rebuilt - a recreated host, a recreated activity - starts at the top instead. Assigning `view.theme` directly after `bind` only changes the view until the next store notification overwrites it, so once a store is bound the theme belongs to `applyTheme`; `view.theme` is for a view you drive without one.
+`bind` applies the current root and theme immediately, and every later change goes through the store. The view keeps up with the store across detach and reattach - a pager page scrolling off screen, for instance - by re-reading the current state, so store changes made while it was detached are not lost. Root header and footer updates are the exception to state replay: the direct root-target delivery described above keeps values sent before attach or during detach. The scroll position comes back too: the view takes an anchor just before it detaches and restores it on the next attach. A view that is itself rebuilt - a recreated host, a recreated activity - starts at the top instead. Assigning `view.theme` directly after `bind` only changes the view until the next store notification overwrites it, so once a store is bound the theme belongs to `applyTheme`; `view.theme` is for a view you drive without one.
 
 `unbind()` releases the store: later store changes no longer reach the view, what is displayed stays as it is, and re-attaching the view does not resume the subscription - call `bind` again to follow a store. It is idempotent, so calling it on a view that has no store does nothing.
 

@@ -44,6 +44,8 @@ XAML と C# から参照するものはすべて 1 つの namespace に移り、
 
 `Section` と Cell は所属先 (`SettingsView` / `Section`) の論理子である。`{Binding}` は継承した `BindingContext` で解決され、設定したどの BindableProperty でも `DynamicResource` と `AppThemeBinding` が再評価される — 祖先 (ページ / アプリ) の Resources を差し替えたとき、およびアプリの外観が変わったときに追随する。所属を解かれた Section / Cell (`Parent` が null) は旧所属先の Resources に追随しない。`x:Reference` は namescope 経由の別機構で、一度きりの初期解決は届くが、その後の追随はない。Header / Footer の View と `CustomCell.Content` も同じく論理子で、所有者の `BindingContext` を継承する。
 
+`Section` と `CellBase` は `View` ではなく `Element` なので、MAUI の `Style` 機構を直接適用できない。Cell 間で共有する値は bindable property または Resources で指定する。`SettingsView` 自体は `View` なので暗黙 Style / key 付き Style が引き続き適用できる。マルチウィンドウ構成では Section / Cell の `AppThemeBinding` が個々の window ではなく `Application.Current` の外観を見るため、window ごとの外観を分ける必要がある値は `SettingsView` の画面全体プロパティへ置く。
+
 ## 全 Cell 共通のフィールドを読み替える
 
 `CellBase` の共通 22 プロパティはすべて残っている。系統的に変わったのは既定値の表し方で、AiForms が「画面既定にフォールバックする」意味に `-1.0` や `KnownColor.Default` を使っていたところが、nullable 型の `null` になった。どの段でも設定されなかった色は、現在の外観に応じたライブラリ既定へ落ちる (下の「ライト / ダーク両外観の色を決める」)。
@@ -185,7 +187,7 @@ AiForms は `ButtonCell` で `Description` とそのフォント系プロパテ�
 | `PickerCell.MaxSelectedNumber` | `PickerCell.MaxSelectedNumber` | 0 が制限なしなのも同じ |
 | `PickerCell.PageTitle` | `PickerCell.PageTitle` (`string?`) | |
 | `PickerCell.AccentColor` (`Color`) | `PickerCell.AccentColor` (`Color?`) | |
-| `PickerCell.SelectedCommand` | `PickerCell.SelectedCommand` (`ICommand?`・単方向・null) | 同名で復元された。発火するのは Native の選択確定通知のみ: コードから選択値のプロパティを設定しても、cancel や非確定の dismiss でも実行されない。実行は選択値の書き戻しと相互導出の完了後なので、Command 内から新しい選択値を観測できる。引数は AiForms と同じく、単一選択の確定で `SelectedItem`、複数選択の確定で `SelectedItems`。同じ選択を確定し直しても実行される。`CanExecute` は確認せず `Execute` を直接呼ぶ (AiForms 互換)。`CommandParameter` は無い |
+| `PickerCell.SelectedCommand` | `PickerCell.SelectedCommand` (`ICommand?`・単方向・null) | 同名で復元された。確定した選択面が完全に閉じ切った後だけ発火する: コードから選択値のプロパティを設定しても、cancel や非確定の dismiss でも実行されない。選択値の書き戻しと相互導出は閉じる前の確定時に済み、Command は閉じ切り後に実行されるので、新しい選択値を観測でき、固定待ちなしで別のダイアログや画面遷移を開始できる。引数は AiForms と同じく、単一選択の通知で `SelectedItem`、複数選択の通知で `SelectedItems`。引数は閉じ切り通知時点の Cell の現在値なので、閉じ切りまでに候補や選択を変えれば変更後の値になる。同じ選択を確定し直しても実行される。`CanExecute` は確認せず `Execute` を直接呼ぶ (AiForms 互換)。`CommandParameter` は無い |
 | `PickerCell.SelectedItemsOrderKey` | 提供しない | バインド前に `ItemsSource` を並べ替える |
 | `PickerCell.UseNaturalSort` | 提供しない | 同じく呼び出し側で並べ替える。これを支えていた public な `NaturalComparer` / `NaturalSortOrder` / `NaturalComparerOptions` も引き継いでいない |
 | `PickerCell.UseAutoValueText` | 提供しない | `ValueText` が null の間は現在の選択が表示される。明示設定すればそちらが優先される |
@@ -223,7 +225,7 @@ AiForms は `ButtonCell` で `Description` とそのフォント系プロパテ�
 | `SelectedItem` (`object`、双方向) | `PickerCell.SelectedItem` (`object?`、双方向) または `PickerCell.SelectedIndex` (`int?`、双方向) | 正は index。ViewModel が持っている方をバインドする |
 | `PageTitle` / `PickerTitle` | `PickerCell.PageTitle` | タイトルのプロパティは 1 つになった |
 | `AccentColor` (`Color`) | `PickerCell.AccentColor` (`Color?`) | |
-| `SelectedCommand` | `PickerCell.SelectedCommand` (`ICommand?`・単方向) | 利用者が選択を確定したときに発火する。`Single` モードでの引数は `SelectedItem` |
+| `SelectedCommand` | `PickerCell.SelectedCommand` (`ICommand?`・単方向) | 利用者が選択を確定し、選択面が完全に閉じ切った後に発火する。`Single` モードでの引数はその時点の `SelectedItem` |
 | `IsCircularPicker` | 提供しない | 選択面は循環しない |
 
 ## 数値・時刻・日付を選ぶ
@@ -286,7 +288,7 @@ AiForms は `ButtonCell` で `Description` とそのフォント系プロパテ�
 | `ShowSectionTopBottomBorder` (`bool`、true、Android のみ) | `ListStyle` (`SettingsViewStyle`) と `SectionMargin` / `SectionCornerRadius` / `SectionBorderWidth` / `SectionBorderColor` | Section の装飾は list の style の一部になり、両 platform で効く。`Classic` は平坦なグループ list、`Modern` は Section の Cell を内側に寄せた角丸の Container として描き、4 プロパティで形を整える |
 | `SettingsView.ClearCache()` (public static) | 提供しない | 描画側のアイコンキャッシュを空にするメソッドだった。アイコンは MAUI の image source service 経由で解決され、ライブラリ側に消すべきキャッシュは無い |
 | (新規) | `DisabledTextColor` (`Color?`) | 無効な Cell のテキスト色 |
-| (新規) | `ScrollIndicatorVisible` (`bool?`) | |
+| (新規) | `ScrollIndicatorVisible` (`bool?`) | 設定 list と `PickerCell` の候補 list の縦スクロールバーを制御する。null (または true) は表示、false は非表示。回転ホイールの選択面には影響しない |
 
 `SectionMargin` は `Thickness?` だが、`Left` / `Right` は leading / trailing として読まれ、RTL の左右解決は Native 側に委ねられる。`Classic` では上下成分だけが効く。
 
@@ -325,12 +327,12 @@ Cell 側の色プロパティ (`TitleColor` などの `CellBase` の色と、`Ac
 | AiForms `SettingsView` | KsSettingsView | 備考 |
 |---|---|---|
 | `HeaderTextColor` / `HeaderFontSize` / `HeaderFontFamily` / `HeaderFontAttributes` | 同名・nullable | `HeaderFontAttributes` は non-nullable な `FontAttributes` だったが `FontAttributes?` になった |
-| `HeaderBackgroundColor` (`Color`) | `HeaderBackgroundColor` (`Color?`) | |
+| `HeaderBackgroundColor` (`Color`) | `HeaderBackgroundColor` (`Color?`) | null の既定は透明なので list の下地が見える。text 形式の Section / Root Header の領域だけを塗り、`HeaderView` の背景は View 側が持つ |
 | `HeaderHeight` (`double`, -1) | `HeaderHeight` (`double?`) | Section 単位の上書きは `Section.HeaderHeight` |
 | `HeaderPadding` (`Thickness`) | 提供しない | 余白を自分で決めたい場合は `HeaderView` を使う |
 | `HeaderTextVerticalAlign` (`LayoutAlignment`) | 提供しない | platform 自身の見出し配置に従う |
 | `FooterTextColor` / `FooterFontSize` / `FooterFontFamily` / `FooterFontAttributes` | 同名・nullable | `FooterFontAttributes` も同じ nullability の変化 |
-| `FooterBackgroundColor` (`Color`) | `FooterBackgroundColor` (`Color?`) | |
+| `FooterBackgroundColor` (`Color`) | `FooterBackgroundColor` (`Color?`) | null の既定は透明なので list の下地が見える。text 形式の Section / Root Footer の領域だけを塗り、`FooterView` の背景は View 側が持つ |
 | `FooterPadding` (`Thickness`) | 提供しない | `FooterView` を使う |
 | (新規) | `RootHeaderText` / `RootFooterText` | 最初の Section の上、最後の Section の下に置くテキスト |
 | (新規) | `RootHeaderView` / `RootFooterView` (`View?`) | 同じ 2 箇所に任意の View を置く。テキストと併設された間は View が優先される |

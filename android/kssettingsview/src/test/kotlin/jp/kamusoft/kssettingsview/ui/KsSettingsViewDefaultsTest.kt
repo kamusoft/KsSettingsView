@@ -56,9 +56,9 @@ class KsSettingsViewDefaultsTest {
         assertEquals(Color(0xFFD9D9D9), theme.selectedColor)
         assertEquals(Color(0xFF007AFF), theme.cellAccentColor)
         assertEquals(Color(0xFF999999), theme.disabledTextColor)
-        assertEquals(Color(0xFFF2F2F7), theme.headerBackgroundColor)
+        assertEquals(Color.Transparent, theme.headerBackgroundColor)
         assertEquals(Color(0xFF6D6D72), theme.headerTextColor)
-        assertEquals(Color(0xFFF2F2F7), theme.footerBackgroundColor)
+        assertEquals(Color.Transparent, theme.footerBackgroundColor)
         assertEquals(Color(0xFF6D6D72), theme.footerTextColor)
     }
 
@@ -73,10 +73,25 @@ class KsSettingsViewDefaultsTest {
         assertEquals(Color(0xFF2C2C2E), theme.selectedColor)
         assertEquals(Color(0xFF0A84FF), theme.cellAccentColor)
         assertEquals(Color(0xFF636366), theme.disabledTextColor)
-        assertEquals(Color(0xFF000000), theme.headerBackgroundColor)
+        assertEquals(Color.Transparent, theme.headerBackgroundColor)
         assertEquals(Color(0xFF8E8E93), theme.headerTextColor)
-        assertEquals(Color(0xFF000000), theme.footerBackgroundColor)
+        assertEquals(Color.Transparent, theme.footerBackgroundColor)
         assertEquals(Color(0xFF8E8E93), theme.footerTextColor)
+    }
+
+    /**
+     * Header / Footer の背景は両セットとも透明であり、未指定の印 (`Unspecified`) とは別の値である
+     * 未指定のまま残すと描画時に既定へ解決される側へ回ってしまい、「既定セットが
+     * 透明を持つ」という契約にならない。
+     */
+    @Test
+    fun `どちらのセットも Header と Footer の背景に透明を持ち Unspecified ではない`() {
+        for (theme in listOf(KsSettingsViewDefaults.lightTheme(), KsSettingsViewDefaults.darkTheme())) {
+            assertEquals(Color.Transparent, theme.headerBackgroundColor)
+            assertEquals(Color.Transparent, theme.footerBackgroundColor)
+            assertNotEquals(Color.Unspecified, theme.headerBackgroundColor)
+            assertNotEquals(Color.Unspecified, theme.footerBackgroundColor)
+        }
     }
 
     @Test

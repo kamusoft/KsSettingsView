@@ -3,7 +3,7 @@ type: concept
 title: Native Host の責務境界
 description: Core の設定状態を各 platform の Native list へ接続し、宣言 UI から再利用する共通境界
 tags: [architecture, native-ui, host, lifecycle]
-timestamp: 2026-08-08
+timestamp: 2026-09-18
 ---
 
 この文書は、iOS の `KsSettingsViewController` と Android の `KsSettingsView` に共通する Native Host の責務を説明する。読むと、Store、完全な model、visible projection、Native 表示構造、Renderer Registry の境界が分かる。
@@ -51,7 +51,7 @@ Host の Store 購読は画面のライフサイクルへ結び付け、長命�
 
 宣言 UI の View identity が続く間は同じ Host と Store を再利用し、再評価ごとに Native list を作り直さない。
 
-Host は view load (iOS: `viewDidLoad`) / window attach (Android: `onAttachedToWindow`) の時点で、接続中 Store の現在状態を pull して表示を復元する ([core/ADR-0019](../../../decisions/core/0019-host-restores-from-store-on-attach.md))。Host 生成・Store 操作・view 階層への取り付けの順序によらず、表示は Store の現在状態 (構造・Cell 内容・Section accessory・Theme) へ収束する。load / attach 前に届いた個々の Diff のイベントとしての適用は保証しない — 保証は最終状態への収束のみである。Root Header / Footer は Store の現在状態に含まれないため復元対象外で、所有者 (呼び出し側) が view load / attach 後に適用する。収束の観測境界は platform で異なる — iOS は viewDidLoad 完了時点 (同期)、Android は attach 後にメインスレッドのキューが空になった時点 (eventual)。
+Host は view load (iOS: `viewDidLoad`) / window attach (Android: `onAttachedToWindow`) の時点で、接続中 Store の現在状態を pull して表示を復元する ([core/ADR-0019](../../../decisions/core/0019-host-restores-from-store-on-attach.md))。Host 生成・Store 操作・view 階層への取り付けの順序によらず、表示は Store の現在状態 (構造・Cell 内容・Section accessory・Theme) へ収束する。load / attach 前に届いた個々の Diff のイベントとしての適用は保証しない — 保証は最終状態への収束のみである。Root Header / Footer は Store の現在状態に含まれないため復元の対象ではないが、接続中の Store の `updateAccessory` で渡した Root 対象の値は、view load / attach の前に渡しても失われず Host の次の表示に反映される (両 OS 共通の Host 保証 — [core/ADR-0033](../../../decisions/core/0033-root-accessory-survives-pre-attach-delivery.md)。iOS は view load 前の分を Host のプロパティへ控え、Android は Store から Host への同期の受け口で bind 中ずっと受け取る)。Host を作り直したときの再適用は所有者 (呼び出し側) の責務のままである。収束の観測境界は platform で異なる — iOS は viewDidLoad 完了時点 (同期)、Android は attach 後にメインスレッドのキューが空になった時点 (eventual)。
 
 ## 保証すること
 
@@ -61,6 +61,7 @@ Host は view load (iOS: `viewDidLoad`) / window attach (Android: `onAttachedToW
 - Cell 種別を追加しても Host 本体へ型分岐を増やさず、Registry へ登録する。
 - Theme 更新は設定ツリーの構造を変えず、各 platform が対応する現在の表示属性だけを再評価する。
 - Store 接続済みの Host の表示は、view load / attach の時点で Store の現在状態へ収束する (取り付け順序に依存しない。[core/ADR-0019](../../../decisions/core/0019-host-restores-from-store-on-attach.md))。
+- 接続中の Store の更新口で渡した Root Header / Footer は、view load / attach の前に渡しても失われない ([core/ADR-0033](../../../decisions/core/0033-root-accessory-survives-pre-attach-delivery.md))。
 
 ## してはいけないこと
 

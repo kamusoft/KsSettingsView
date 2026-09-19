@@ -29,6 +29,9 @@ final class ThemeDefaultColorAppearanceTests: XCTestCase {
         return (r, g, b, a)
     }
 
+    /// 透明の RGBA 成分。Header / Footer の背景の既定は両外観ともこれになる。
+    private let transparent: (r: CGFloat, g: CGFloat, b: CGFloat, a: CGFloat) = (0, 0, 0, 0)
+
     /// `0xRRGGBB` を不透明色の RGBA 成分に展開する。
     private func components(hex: UInt32) -> (r: CGFloat, g: CGFloat, b: CGFloat, a: CGFloat) {
         return (
@@ -75,11 +78,11 @@ final class ThemeDefaultColorAppearanceTests: XCTestCase {
         )
         assertResolved(
             Theme.defaultHeaderBackgroundColor, style: .light,
-            equals: (0.95, 0.95, 0.97, 1.0), "Header 背景"
+            equals: transparent, "Header 背景"
         )
         assertResolved(
             Theme.defaultFooterBackgroundColor, style: .light,
-            equals: (0.95, 0.95, 0.97, 1.0), "Footer 背景"
+            equals: transparent, "Footer 背景"
         )
         assertResolved(
             Theme.defaultHeaderTextColor, style: .light,
@@ -132,11 +135,11 @@ final class ThemeDefaultColorAppearanceTests: XCTestCase {
         )
         assertResolved(
             Theme.defaultHeaderBackgroundColor, style: .dark,
-            equals: components(hex: 0x000000), "Header 背景"
+            equals: transparent, "Header 背景"
         )
         assertResolved(
             Theme.defaultFooterBackgroundColor, style: .dark,
-            equals: components(hex: 0x000000), "Footer 背景"
+            equals: transparent, "Footer 背景"
         )
         assertResolved(
             Theme.defaultHeaderTextColor, style: .dark,
@@ -183,9 +186,9 @@ final class ThemeDefaultColorAppearanceTests: XCTestCase {
         assertResolved(Theme.darkDisabledTextColorValue, style: .dark,
                        equals: components(hex: 0x636366), "disabled 文字")
         assertResolved(Theme.darkHeaderBackgroundColorValue, style: .dark,
-                       equals: components(hex: 0x000000), "Header 背景")
+                       equals: transparent, "Header 背景")
         assertResolved(Theme.darkFooterBackgroundColorValue, style: .dark,
-                       equals: components(hex: 0x000000), "Footer 背景")
+                       equals: transparent, "Footer 背景")
         assertResolved(Theme.darkHeaderTextColorValue, style: .dark,
                        equals: components(hex: 0x8E8E93), "Header 文字")
         assertResolved(Theme.darkFooterTextColorValue, style: .dark,

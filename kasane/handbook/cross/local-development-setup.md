@@ -2,10 +2,10 @@
 kind: guide
 applies-when:
   always: false
-  tasks: [環境構築, Sample の起動, MAUI Sample への native 変更の配備確認, Sample の外観 (ダーク) 確認, 本体のビルド・lint, 消費者検証の実行, 本体 source へのステップイン]
+  tasks: [環境構築, Sample の起動, iOS 実機への Sample の配備と計測, MAUI Sample への native 変更の配備確認, Sample の外観 (ダーク) 確認, 本体のビルド・lint, 消費者検証の実行, 本体 source へのステップイン]
 title: ローカル開発環境と Sample の実行
-description: iOS・Android・MAUI のローカル環境設定、Sample の起動と外観 (ライト / ダーク) の切り替え、本体モジュールのビルド / lint コマンド、消費者検証 (verification/) の手元実行、本体 source へのステップイン手順
-timestamp: 2026-09-06
+description: iOS・Android・MAUI のローカル環境設定、Sample の起動 (iOS 実機への配備と計測を含む) と外観 (ライト / ダーク) の切り替え、本体モジュールのビルド / lint コマンド、消費者検証 (verification/) の手元実行、本体 source へのステップイン手順
+timestamp: 2026-09-19
 ---
 
 # ローカル開発環境と Sample の実行
@@ -109,6 +109,40 @@ xcodebuild \
   build
 ```
 
+#### iOS 実機で実行・計測する
+
+実行時挙動 (アニメーションの実時間・提示の競合・入力面の開閉) を実機で確かめるときの手順。接続中の機体は `xcrun devicectl list devices` に出る。機体は必ず UDID で指名する。
+
+```bash
+xcodebuild \
+  -project samples/ios/KsSettingsViewSample.xcodeproj \
+  -scheme KsSettingsViewSample \
+  -destination 'platform=iOS,id=<UDID>' \
+  DEVELOPMENT_TEAM=<チーム ID> CODE_SIGN_STYLE=Automatic -allowProvisioningUpdates \
+  build
+```
+
+署名の設定は**コマンドラインの引数で渡し、Xcode の画面では設定しない**。画面で設定するとチーム ID が `samples/ios/KsSettingsViewSample.xcodeproj` のプロジェクトファイルへ書き戻され、commit 前の識別子の検査で止まる。チーム ID は、以前に実機へ入れたビルドの `embedded.mobileprovision` を `security cms -D -i <ファイル>` で開いた `TeamIdentifier` で確かめられる。
+
+**`No profiles ...` で失敗したときは、チーム ID の誤りと Xcode のアカウントのログイン切れを区別する。** どちらも同じエラーになるため、先にチーム ID を上記の方法で確かめ、合っていればアカウントのログイン状態を疑う。
+
+ビルドした `.app` の導入と起動は `devicectl` で行う。
+
+```bash
+xcrun devicectl device install app --device <UDID> <.app のパス>
+xcrun devicectl device launch app --device <UDID> <bundle id>
+```
+
+計測結果を端末の Documents へ書き出した場合は、次で手元へ回収する。
+
+```bash
+xcrun devicectl device copy from --device <UDID> \
+  --domain-type appDataContainer --domain-identifier <bundle id> \
+  --source Documents/<ファイル名> --destination <手元の保存先>
+```
+
+**実機が一覧に出るのに使えないときは、端末側ではなく Mac 側のペアリングが確立していないことがある。** `xcrun devicectl list devices -v` で該当機体の `developerModeStatus` が `nil`、`ddiServicesAvailable` が `false` になっているのがその状態で、端末の解錠・信頼・デベロッパモードがすべて済んでいても起こる。端末を疑う前に `xcrun devicectl manage pair --device <UDID>` で張り直す。
+
 ### Android Native
 
 Android Studio で `app` module と API 29 以上の Emulator / 実機を選び、Run する。CLI では次の手順で build、install、起動を行う。
@@ -160,6 +194,8 @@ dotnet build samples/maui/KsSettingsView.Sample.Maui/KsSettingsView.Sample.Maui.
 接続先が 1 台だけなら `AdbTarget` は省略できる。`adb devices` で対象を確認する。
 
 Debug 構成は Fast Deployment でアセンブリを apk に埋め込まないため、`adb install` した apk 単体では古い内容が走る (または `No assemblies found` で異常終了する)。配備は常に上の `-t:Run` (または `-t:Install`) で行い、`adb install` を代替にしない。
+
+native (Kotlin) を変更した回の配備では、C# のアセンブリ (Fast Deployment で別配備される) と apk 内の Kotlin (aar) の世代がずれたまま「成功」することがある。ずれると、C# 側だけが新しい契約で動き、Native 側が古い挙動のまま残る (例: Host の取り付け前に渡した Root の header / footer だけが表示されない)。native の変更を実機・Emulator で確認するとき、および確認後の端末を人に渡すときは、Sample・facade (`maui/KsSettingsView.Maui`)・Android binding (`maui/android/KsSettingsView.Binding.Android`) の `bin` / `obj` を捨ててフルビルドしてから `-t:Run` で配備し、配備後に対象の画面を 1 度開いて確かめる。世代のずれた端末で見た「再現しない」「直った」「壊れた」は判断材料にならない。
 
 ## 本体をビルドする
 

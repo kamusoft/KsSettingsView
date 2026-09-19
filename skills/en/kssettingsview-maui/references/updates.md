@@ -1,6 +1,6 @@
 # Updating the screen while it is shown
 
-Recipes for changing a settings screen that is already on display, for getting user edits back into a view model, and for generating cells from data. XAML fragments assume the `ks` namespace declaration from the minimal example in [SKILL.md](../SKILL.md); C# snippets assume `using KsSettingsView;` and a `SettingsView` named `Settings` in the page.
+Recipes for changing a settings screen that is already on display, for getting user edits back into a view model, and for generating cells from data. XAML fragments assume the `ks` namespace declaration from the minimal example in [SKILL.md](../SKILL.md); C# snippets assume `using KsSettingsView;` and a `SettingsView` named `Settings` in the page. Changes are made on the UI thread; the native host restores the current tree when it reconnects.
 
 ## Receive what the user changed
 
@@ -19,7 +19,7 @@ The table below lists the properties written back from the native cell when the 
 | `DatePickerCell` | `Date` |
 | `PickerCell` (derived) | `SelectedItem`, `SelectedItems` |
 
-Every other property binds one-way by default. When you need to know that a write-back came from the user confirming a selection, `PickerCell` alone offers `SelectedCommand` ([cells.md](cells.md)).
+Every other property binds one-way by default. When you need to know that a write-back came from a user confirmation, `PickerCell` alone offers `SelectedCommand`; it runs after the selection surface has finished closing ([cells.md](cells.md)).
 
 ```xml
 <ks:SwitchCell Title="Push notifications" On="{Binding NotificationsEnabled}" />
@@ -159,10 +159,11 @@ public class CellTemplateSelector : DataTemplateSelector
 
 ## Keep the screen across page visits
 
-Leaving the page keeps the settings tree you handed to the `SettingsView` - the sections and cells, their values, and the header and footer views - exactly as it was. Coming back to the page shows that kept content as it is. Changes applied while the page was away are shown too, so there is nothing to save and restore by hand. So do not rebuild the tree on every visit: rebuilding throws away the live sections and cells, and the values the user changed in them go with them.
+Leaving the page keeps the settings tree you handed to the `SettingsView` - the sections and cells, their values, and the header and footer views - exactly as it was. Coming back to the page shows that kept content as it is, with accessory views and `CustomCell.Content` included in the first rendered screen rather than inserted later. Changes applied while the page was away are shown too, so there is nothing to save and restore by hand. So do not rebuild the tree on every visit: rebuilding throws away the live sections and cells, and the values the user changed in them go with them.
 
 ## Rules the updates follow
 
 - Change the tree from the UI thread. The library does not marshal calls for you.
 - A `Section`, a `CellBase`, or a view used as a header, footer, or `CustomCell.Content` belongs to one place at a time. Placing the same instance twice throws `InvalidOperationException`: an instance another section or `SettingsView` still owns throws as you add it, and a duplicate inside one collection throws when the placement is drawn. The check runs before anything is applied, so the placement that was already there is untouched and the visible screen never ends up half updated. Recovery is to rebuild `Root`.
 - A collection that is not observable (a plain `List<T>`) is drawn once at the moment it is connected; later edits to it are not shown. Joining and leaving such a collection also counts at that moment, so an element you removed from it can be placed elsewhere only after a new collection is assigned to `Root` or `Cells`.
+- When a host reconnects, the views used by section headers, footers, and `CustomCell.Content` are materialized and delivered before the first screen is shown. Replacing a view instance creates a new content instance; changing the existing view through bindings keeps that instance live.

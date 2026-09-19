@@ -59,6 +59,24 @@ internal sealed class FakeSettingsGateway : IKsSettingsGateway
     public IReadOnlyList<string> CellIdsOf(string sectionId)
         => Find(sectionId)?.CellIds.ToList() ?? (IReadOnlyList<string>)[];
 
+    /// <summary>
+    /// <see cref="SetRoot"/> を失敗させるかどうか。
+    /// </summary>
+    /// <remarks>設定ツリーの配信そのものが失敗する接続を作るために使う。</remarks>
+    public bool SetRootFails { get; set; }
+
+    /// <summary>
+    /// <see cref="UpdateAccessory"/> を失敗させるかどうか。
+    /// </summary>
+    /// <remarks>accessory の退役をテキストへ書き戻す更新が失敗する切断を作るために使う。</remarks>
+    public bool UpdateAccessoryFails { get; set; }
+
+    /// <summary>
+    /// <see cref="ReplaceCell"/> / <see cref="ReplaceCells"/> を失敗させるかどうか。
+    /// </summary>
+    /// <remarks>Cell の内容なし世代の配信が失敗する切断を作るために使う。</remarks>
+    public bool ReplaceCellFails { get; set; }
+
     /// <summary>記録済みの呼び出しを捨てる。</summary>
     public void ClearCalls() => _calls.Clear();
 
@@ -66,7 +84,17 @@ internal sealed class FakeSettingsGateway : IKsSettingsGateway
     public IReadOnlyList<KsSectionIdentity> SetRoot(IReadOnlyList<Section> sections)
     {
         ArgumentNullException.ThrowIfNull(sections);
-        _calls.Add(new GatewayCall.SetRoot(sections.ToList()));
+
+        if (SetRootFails)
+        {
+            throw new InvalidOperationException("SetRoot failed");
+        }
+
+        // 実装の gateway は呼び出しの時点で輸送 DTO を組み立てるため、そのときの引き当て結果も
+        // あわせて記録する。Native Host はこの内容を現在状態として復元する。
+        _calls.Add(new GatewayCall.SetRoot(
+            sections.ToList(),
+            [.. sections.Select(TransportOf)]));
 
         _sections.Clear();
         List<KsSectionIdentity> identities = new(sections.Count);
@@ -190,6 +218,11 @@ internal sealed class FakeSettingsGateway : IKsSettingsGateway
     {
         ArgumentNullException.ThrowIfNull(newCell);
 
+        if (ReplaceCellFails)
+        {
+            throw new InvalidOperationException("ReplaceCell failed");
+        }
+
         // 実装の gateway は呼び出しの時点で輸送 DTO を組み立てるため、そのときの写しと
         // 引き当て結果もあわせて記録する。
         _calls.Add(new GatewayCall.ReplaceCell(
@@ -206,6 +239,11 @@ internal sealed class FakeSettingsGateway : IKsSettingsGateway
     {
         ArgumentNullException.ThrowIfNull(updates);
 
+        if (ReplaceCellFails)
+        {
+            throw new InvalidOperationException("ReplaceCells failed");
+        }
+
         // 単発の置き換えと同じく、呼び出しの時点の写しと引き当て結果を各件について記録する。
         _calls.Add(new GatewayCall.ReplaceCells(
         [
@@ -219,7 +257,14 @@ internal sealed class FakeSettingsGateway : IKsSettingsGateway
 
     /// <inheritdoc/>
     public void UpdateAccessory(KsAccessoryTarget target, string? sectionId, string? text)
-        => _calls.Add(new GatewayCall.UpdateAccessory(target, sectionId, text));
+    {
+        if (UpdateAccessoryFails)
+        {
+            throw new InvalidOperationException("UpdateAccessory failed");
+        }
+
+        _calls.Add(new GatewayCall.UpdateAccessory(target, sectionId, text));
+    }
 
     /// <inheritdoc/>
     public void UpdateAccessoryView(KsAccessoryTarget target, string? sectionId, object? view)
@@ -274,6 +319,15 @@ internal sealed class FakeSettingsGateway : IKsSettingsGateway
     /// <remarks>実装の gateway が輸送 DTO を組み立てるときと同じ引き当てを行う。</remarks>
     /// <param name="cell">対象の Cell</param>
     public object? CellContentViewOf(CellBase cell) => PlatformViews?.FindCellContentView(cell);
+
+    /// <summary>指定 Section を今この時点で輸送するときに載る platform view 一式。</summary>
+    /// <param name="section">対象の Section</param>
+    private GatewayCall.SectionTransport TransportOf(Section section)
+        => new(
+            section,
+            AccessoryViewOf(section, KsAccessoryTarget.SectionHeader),
+            AccessoryViewOf(section, KsAccessoryTarget.SectionFooter),
+            [.. section.Cells.Select(CellContentViewOf)]);
 
     /// <inheritdoc/>
     public void ReleaseHost()

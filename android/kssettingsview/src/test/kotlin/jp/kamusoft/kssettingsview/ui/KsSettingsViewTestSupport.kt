@@ -24,6 +24,54 @@ internal fun idle() {
 }
 
 /**
+ * [condition] が成立するまで、メインスレッドのキューを1件ずつ進めながら待つ。
+ *
+ * 選択面が閉じ切ったことの通知（`Dialog` の dismiss リスナー）はメインスレッドのメッセージとして
+ * 届くため、閉じる操作の直後には観測できない。キューを流し切る [idle] ではなく1件ずつ進めるのは、
+ * Compose の選択面が自分を再投稿し続けるキューを持ち、流し切ろうとすると戻らなくなるため。
+ *
+ * [timeoutMillis] を超えても成立しなければ、その時点の観測値（[diagnostics]）を載せて失敗させる。
+ * 黙って戻ると「配送前の状態」を検証したことにされ、実装の不達と待ち足りなさを区別できなくなる。
+ */
+internal fun awaitMainLooperCondition(
+    timeoutMillis: Long = 5_000,
+    diagnostics: () -> String,
+    condition: () -> Boolean,
+) {
+    val looper = shadowOf(Looper.getMainLooper())
+    val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMillis)
+    while (true) {
+        if (condition()) return
+        if (looper.isIdle) {
+            // 他スレッドが投稿するまで待つ。yield は OS へのヒントに留まるため sleep を使う。
+            Thread.sleep(1)
+        } else {
+            looper.runOneTask()
+        }
+        if (System.nanoTime() >= deadline) {
+            if (condition()) return
+            fail("メインスレッドの待機条件が $timeoutMillis ms 以内に成立しなかった (${diagnostics()})")
+        }
+    }
+}
+
+/**
+ * 「通知が届かないこと」を確かめるために、メインスレッドのキューを上限つきで進める
+ * （不変性の確認に使う固定量の待機。cross/ADR-0027）。
+ *
+ * 待つべき遷移が存在しない検証のための待機であり、収束待ちには使わない。上限を置くのは、
+ * Compose の選択面が自分を再投稿し続けるキューを持ち、流し切ろうとすると戻らなくなるため。
+ */
+internal fun drainMainLooperForUnchangedCheck(maxTasks: Int = 1_000) {
+    val looper = shadowOf(Looper.getMainLooper())
+    var processed = 0
+    while (processed < maxTasks && !looper.isIdle) {
+        looper.runOneTask()
+        processed++
+    }
+}
+
+/**
  * [condition] が成立するまで、メインスレッドのキューを流しながら待つ（収束の観測境界）。
  *
  * `submitList` の差分計算は更新前後のリストがどちらも非空のときバックグラウンドスレッドへ回り、

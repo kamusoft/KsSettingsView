@@ -74,7 +74,7 @@ KsSettingsView {
 
 Cell の見た目に効く値は必ず `content` に入れる。`content` は `equals` / `hashCode` を正しく持つ非 null の型であること。builder と `onTap` の関数値は等価比較から除外されるため、キャプチャした値だけを変えても Cell は据え置かれる。
 
-builder が描画されるのはアプリのテーマ上であり、ライブラリが自身の Cell を描く同梱テーマ上ではない。だから builder の中では `MaterialTheme` がいつもどおり効く — 裏返せば、カスタム Cell がライブラリの `Theme` の色を勝手に拾うことはない。
+builder が描画されるのはホストアプリのテーマ上であり、ライブラリが自身の Cell を描く同梱テーマ上ではない。`CustomCell` の content が受け取るのは `KsSettingsView` に渡したものと同じ Host Context なので、builder の中では `MaterialTheme` とホストの View 属性がいつもどおり効く — 裏返せば、カスタム Cell がライブラリの `Theme` の色を勝手に拾うことはない。
 
 ## データを持たない固定表示の Cell
 

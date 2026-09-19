@@ -70,6 +70,19 @@ internal class KsBridgeInteractionRelay {
         )
     }
 
+    /** PickerCell（単一選択）の閉じ切りを転送する。 */
+    fun pickerCellSelectionCompleted(cellID: String, index: Int) {
+        listener?.pickerCellSelectionCompleted(cellID, index)
+    }
+
+    /** PickerCell（複数選択）の閉じ切りを、昇順・重複なしへ正規化して転送する。 */
+    fun pickerCellMultiSelectionCompleted(cellID: String, indices: Set<Int>) {
+        listener?.pickerCellMultiSelectionCompleted(
+            cellID,
+            KsBridgeValueTransport.indexList(indices),
+        )
+    }
+
     /** NumberPickerCell の値変更を転送する。 */
     fun numberPickerCellChanged(cellID: String, value: Int) {
         listener?.numberPickerCellChanged(cellID, value)

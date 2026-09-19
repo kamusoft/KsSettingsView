@@ -28,7 +28,9 @@
 </ks:SettingsView>
 ```
 
-`BackgroundColor` は list 全体の下地、`CellBackgroundColor` は Cell の既定背景で、一方から他方を推論しない。`HeaderBackgroundColor` / `FooterBackgroundColor` は Section の Header / Footer 領域を塗る指定だが、両 platform に届かない唯一の組でもある — iOS ではこれらは領域へ適用されず、効くのは `HeaderTextColor` / `FooterTextColor` だけになる。`CellPlaceholderColor` は全 `EntryCell` のプレースホルダ文字色の既定で、Cell ごとには `PlaceholderColor` で上書きする。どちらも未指定なら OS 既定のプレースホルダ色のままで、ダークモードにも自動で追従する。
+`BackgroundColor` は list 全体の下地、`CellBackgroundColor` は Cell の既定背景で、一方から他方を推論しない。`HeaderBackgroundColor` / `FooterBackgroundColor` は両 platform の text 形式の Section / Root Header / Footer 領域を塗る。既定は透明なので、未指定なら list の下地が見える。Header / Footer に View を置いた場合、その見た目は View 自身が持ち、これらのプロパティから背景を塗らない。`CellPlaceholderColor` は全 `EntryCell` のプレースホルダ文字色の既定で、Cell ごとには `PlaceholderColor` で上書きする。どちらも未指定なら OS 既定のプレースホルダ色のままで、ダークモードにも自動で追従する。
+
+`ScrollIndicatorVisible` は設定 list と `PickerCell` の候補 list の縦スクロールバーを制御する。未指定時は表示され、表示中の Theme 変更でも行を作り直さず、スクロール位置を動かさずに反映される。回転ホイールの選択面、`CustomCell` の内容、Header / Footer の View 内の list は別の内容なので対象外。
 
 ## Cell 1 つの見た目を上書きする
 
@@ -91,6 +93,10 @@ Cell に載る他の色も書き方は同じ — `CellBase` のテキスト系�
 
 追従が止まるところ: コレクションから外した Section / Cell は元の所属先の Resources に追従しなくなるので、値の変更は置かれている間に行う。また `Style` は `Section` にも Cell にも設定できない — どちらも View ではないため。Cell 間で値を共有する手段は Resources 側になる (`SettingsView` 自体には `Style` が効く)。
 
+## MAUI の Style を適用する
+
+`SettingsView` は `View` なので、暗黙 Style と key 付きの XAML `Style` を適用できる。`Section` と `CellBase` は View ではなく論理 `Element` なので、Cell 間で共有する値は一覧にある bindable property または Resources で指定する。Native list の外観を切り替える `ListStyle` は MAUI の `Style` 機構とは別の指定である。
+
 ## スタイルプロパティの一覧
 
 画面全体の既定値は `SettingsView` に、Cell ごとの上書きは `CellBase` (全 Cell 共通の基底) に、次のプロパティとして並んでいる。個々の使い方はこのファイルの各レシピが扱う。いずれも bindable property で、対応する `FooProperty` という名前の `BindableProperty` フィールド (例: `CellTitleColorProperty`) を持つ。
@@ -118,6 +124,7 @@ Cell に載る他の色も書き方は同じ — `CellBase` のテキスト系�
 | 説明文 | `DescriptionColor`、`DescriptionFontFamily`、`DescriptionFontSize`、`DescriptionFontAttributes` |
 | ヒント | `HintTextColor`、`HintFontFamily`、`HintFontSize`、`HintFontAttributes` |
 | Cell・アイコン | `BackgroundColor`、`IconSize`、`IconRadius`、`Height` |
+| Cell 固有の操作色 (操作系 Cell) | `AccentColor` |
 
 ## フォントを変える
 
@@ -174,7 +181,7 @@ Container と Section 周りの余白は 4 つのプロパティで表す。指�
 </ks:SettingsView>
 ```
 
-未指定のものは platform 既定へ落ちる — 既定の余白と角丸は両 platform で同じ値、Border は描かれない。
+未指定のものは platform 既定へ落ちる — 既定の余白と角丸は両 platform で同じ値、Border は描かれない。`Classic` では Cell を全幅に保つため `SectionMargin` の左右成分を無視し、`Modern` では Cell だけを Container に含めて Section の Header / Footer は外側に置く。
 
 ## Header と Footer を付ける
 
@@ -215,7 +222,7 @@ Section は `HeaderText` / `FooterText`、画面全体は `RootHeaderText` / `Ro
 </ks:SettingsView>
 ```
 
-これらの View はページの logical tree に載り、所有者の `BindingContext` を継承するので、中のバインドは追加の配線なしに解決される。View の中身が変わればその場で表示が更新され、`HeaderHeight` で高さを固定していない限り領域も追従する。
+これらの View はページの logical tree に載り、所有者の `BindingContext` を継承するので、中のバインドは追加の配線なしに解決される。Host の再接続を含め、最初の表示フレームより前に実体化されて届く。View の中身が変わればその場で表示が更新され、`HeaderHeight` で高さを固定していない限り領域も追従する。
 
 上の Header / Footer の書式プロパティが効くのはテキスト形式のときだけ。置いた View の見た目は View 自身が持ち、それらのプロパティを変えても View は作り直されない — 画面の他の部分が描き直される間も、View の中の状態 (入力途中の値・スクロール位置など) が保たれるのはこのため。
 
@@ -247,3 +254,5 @@ Section は `HeaderText` / `FooterText`、画面全体は `RootHeaderText` / `Ro
 ```
 
 内容サイズを問われる配置 — `VerticalStackLayout` の直下、縦 `ScrollView` の content、Grid の `Auto` 行 — は避ける。表示自体は成立するが、Android では list の measure の途中で編集中の入力欄がフォーカスを失うことがある。
+
+MAUI の外観に関する注意: `Section` と `CellBase` は `Element` なので、そこへ書いた `AppThemeBinding` は window ごとの外観ではなくアプリの外観を参照する。window ごとに異なる外観を使うマルチウィンドウ構成では、Cell / Section の色がその window と食い違うことがある。`SettingsView` は `View` なのでこの制約を受けない。

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <!--
   Root / Section の Header・Footer へ任意の View を置くデモ画面。
-  ① 〜 ⑦ の番号は画面上で確認する項目の並びに対応する。
+  ① 〜 ⑧ の番号は画面上で確認する項目の並びに対応する。
   Header / Footer への View 配置は MAUI facade 固有の機能で、iOS / Android の Sample に対応画面はない。
   タイトルは SampleScreen の一元定義から与えられるため、ここでは設定しない。
 -->
@@ -50,11 +50,27 @@
       <ks:ButtonCell Title="バインド元の値を変える" Tapped="OnChangeBoundTextTapped" />
     </ks:Section>
 
-    <!-- ③ text と View の両方があるときは View が優先され、View を外すと text が現れる。 -->
-    <ks:Section x:Name="CoexistSection" HeaderText="③ Header Text（View を外すと現れる）">
+    <!--
+      ③ 折り返して複数行になる Label を置いた Footer View。
+      領域の高さは幅に合わせて折り返した結果の行数で決まる。
+    -->
+    <ks:Section>
+      <ks:Section.FooterView>
+        <Border BackgroundColor="#E3E6F5" StrokeThickness="0" Padding="16,12">
+          <Label TextColor="#3B4A8F" FontSize="12"
+                 Text="③ Footer View（折り返す Label）。この文は 1 行には収まらない長さがあり、画面の幅に合わせて数行へ折り返される。折り返した結果の行数で決まる高さが、そのまま Footer 領域の高さになる" />
+        </Border>
+      </ks:Section.FooterView>
+
+      <ks:LabelCell Title="折り返しによる高さの決定"
+                    Description="Footer の Label が複数行へ折り返され、その行数に応じた高さで領域が確保される" />
+    </ks:Section>
+
+    <!-- ④ text と View の両方があるときは View が優先され、View を外すと text が現れる。 -->
+    <ks:Section x:Name="CoexistSection" HeaderText="④ Header Text（View を外すと現れる）">
       <ks:Section.HeaderView>
         <Border x:Name="CoexistHeaderView" BackgroundColor="#EDE3F7" StrokeThickness="0" Padding="16,12">
-          <Label TextColor="#5B3A8C" FontAttributes="Bold" Text="③ Header View（Header Text より優先）" />
+          <Label TextColor="#5B3A8C" FontAttributes="Bold" Text="④ Header View（Header Text より優先）" />
         </Border>
       </ks:Section.HeaderView>
 
@@ -65,19 +81,19 @@
                      Tapped="OnToggleCoexistViewTapped" />
     </ks:Section>
 
-    <!-- ④ 別インスタンスへの差し替え。Header View はページ側で作り直して設定する。 -->
+    <!-- ⑤ 別インスタンスへの差し替え。Header View はページ側で作り直して設定する。 -->
     <ks:Section x:Name="SwapSection">
       <ks:LabelCell Title="別インスタンスへの差し替え"
                     Description="押すたびに新しい View を作って設定する。色と回数が変われば差し替わっている" />
       <ks:ButtonCell Title="Header View を差し替える" Tapped="OnSwapHeaderViewTapped" />
     </ks:Section>
 
-    <!-- ⑤ 同じ View のまま内容だけが変わるときの、自動高さの追従。 -->
+    <!-- ⑥ 同じ View のまま内容だけが変わるときの、自動高さの追従。 -->
     <ks:Section>
       <ks:Section.HeaderView>
         <Border BackgroundColor="#FFF1CC" StrokeThickness="0" Padding="16,12">
           <VerticalStackLayout Spacing="2">
-            <Label TextColor="#8A6100" FontAttributes="Bold" Text="⑤ 高さが追従する Header View" />
+            <Label TextColor="#8A6100" FontAttributes="Bold" Text="⑥ 高さが追従する Header View" />
             <Label TextColor="#8A6100" FontSize="12" Text="{Binding GrowingText}" />
           </VerticalStackLayout>
         </Border>
@@ -88,12 +104,12 @@
       <ks:ButtonCell Title="Header の行数を切り替える" Tapped="OnToggleGrowingTextTapped" />
     </ks:Section>
 
-    <!-- ⑥ HeaderHeight を指定すると固定高さになり、はみ出した内容は表示されない。 -->
+    <!-- ⑦ HeaderHeight を指定すると固定高さになり、はみ出した内容は表示されない。 -->
     <ks:Section HeaderHeight="44">
       <ks:Section.HeaderView>
         <Border BackgroundColor="#FBDDDD" StrokeThickness="0" Padding="16,12">
           <VerticalStackLayout Spacing="2">
-            <Label TextColor="#9C2A2A" FontAttributes="Bold" Text="⑥ HeaderHeight = 44 の Header View" />
+            <Label TextColor="#9C2A2A" FontAttributes="Bold" Text="⑦ HeaderHeight = 44 の Header View" />
             <Label TextColor="#9C2A2A" FontSize="12" Text="この 2 行目と 3 行目は" />
             <Label TextColor="#9C2A2A" FontSize="12" Text="固定高さからはみ出すため表示されない" />
           </VerticalStackLayout>
@@ -104,12 +120,12 @@
                     Description="HeaderHeight を指定した領域は内容に関わらず 44 の高さになる" />
     </ks:Section>
 
-    <!-- ⑦ 同じページインスタンスのまま Handler の切断と再接続を起こし、復元を確認する。 -->
+    <!-- ⑧ 同じページインスタンスのまま Handler の切断と再接続を起こし、復元を確認する。 -->
     <ks:Section>
       <ks:Section.HeaderView>
         <Border BackgroundColor="#DCE7EA" StrokeThickness="0" Padding="16,12">
           <VerticalStackLayout Spacing="2">
-            <Label TextColor="#2B5A63" FontAttributes="Bold" Text="⑦ 切断・再接続をまたぐ Header View" />
+            <Label TextColor="#2B5A63" FontAttributes="Bold" Text="⑧ 切断・再接続をまたぐ Header View" />
             <Label TextColor="#2B5A63" FontSize="12" Text="{Binding ReconnectText}" />
           </VerticalStackLayout>
         </Border>

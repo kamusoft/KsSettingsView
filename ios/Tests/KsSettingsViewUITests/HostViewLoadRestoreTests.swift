@@ -2,7 +2,8 @@
 // KsSettingsViewUITests
 //
 // Store 接続済みの `KsSettingsViewController` が、view load の時点で Store の現在状態から
-// 表示を構築することを検証する（core/ADR-0019）。
+// 表示を構築すること（core/ADR-0019）と、Store の現在状態に含まれない Root Header / Footer
+// （core/ADR-0005）についても view load 前に渡された値を失わないことを検証する。
 //
 // 検証する順序は「Host 生成 → Store 操作 → view load」であり、view load は
 // `loadViewIfNeeded()` で誘発する。表示の確認は内部状態ではなく、window に載せた実物の
@@ -56,14 +57,12 @@ final class HostViewLoadRestoreTests: XCTestCase {
         return listCell.contentView.subviews.compactMap { $0 as? UILabel }.first
     }
 
-    /// 表示中の Root Header supplementary のテキストを返す。
+    /// 表示中の Root Header / Footer supplementary のテキストを返す。
     ///
     /// Root H/F は layout 全体の boundary supplementary であり indexPath を持たないため、
     /// 表示中の supplementary を kind で列挙して取得する。
-    private func visibleRootHeaderText(_ cv: UICollectionView) -> String? {
-        let views = cv.visibleSupplementaryViews(
-            ofKind: KsSettingsViewController.rootHeaderElementKind
-        )
+    private func visibleRootAccessoryText(_ cv: UICollectionView, kind: String) -> String? {
+        let views = cv.visibleSupplementaryViews(ofKind: kind)
         for view in views {
             guard let listCell = view as? UICollectionViewListCell else { continue }
             if let label = listCell.contentView.subviews.compactMap({ $0 as? UILabel }).first {
@@ -71,6 +70,44 @@ final class HostViewLoadRestoreTests: XCTestCase {
             }
         }
         return nil
+    }
+
+    /// 表示中の Root Header supplementary のテキストを返す。
+    private func visibleRootHeaderText(_ cv: UICollectionView) -> String? {
+        return visibleRootAccessoryText(cv, kind: KsSettingsViewController.rootHeaderElementKind)
+    }
+
+    /// 表示中の Root Footer supplementary のテキストを返す。
+    private func visibleRootFooterText(_ cv: UICollectionView) -> String? {
+        return visibleRootAccessoryText(cv, kind: KsSettingsViewController.rootFooterElementKind)
+    }
+
+    /// 高さを自分で申告する検証用の view。Root accessory の領域が面積を持つようにする。
+    private final class ProbeView: UIView {
+        private let contentHeight: CGFloat
+
+        init(height: CGFloat) {
+            self.contentHeight = height
+            super.init(frame: .zero)
+        }
+
+        @available(*, unavailable)
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) は使用しない")
+        }
+
+        override var intrinsicContentSize: CGSize {
+            CGSize(width: UIView.noIntrinsicMetric, height: contentHeight)
+        }
+    }
+
+    /// 1 Section 1 行の Store と、view 未 load の Host を組み立てる。
+    private func makeUnloadedHost() -> (SettingsRootStore, KsSettingsViewController) {
+        let section = Section(header: .text("S"), cells: [LabelCell(title: "A")])
+        let store = SettingsRootStore(initialRoot: SettingsRoot(sections: [section]))
+        let controller = KsSettingsViewController(store: store)
+        XCTAssertFalse(controller.isViewLoaded, "前提: view は未 load")
+        return (store, controller)
     }
 
     /// snapshot 上の Section ごとの行数を返す。
@@ -248,46 +285,128 @@ final class HostViewLoadRestoreTests: XCTestCase {
         )
     }
 
-    // MARK: - Root accessory（復元対象外）
+    // MARK: - Root accessory（view load 前に渡された値の保持）
 
-    func test_RootAccessoryは復元対象外で所有者の再適用により表示される() {
-        let cell = LabelCell(title: "A")
-        let section = Section(header: .text("S"), cells: [cell])
-        let store = SettingsRootStore(initialRoot: SettingsRoot(sections: [section]))
+    func test_viewLoad前に渡したRootHeaderがload時に表示される() {
+        let (store, controller) = makeUnloadedHost()
 
-        let controller = KsSettingsViewController(store: store)
-        XCTAssertFalse(controller.isViewLoaded, "前提: view は未 load")
-
-        store.updateAccessory(target: .rootHeader, accessory: .root(.text("Root H")))
+        let headerView = ProbeView(height: 60)
+        store.updateAccessory(
+            target: .rootHeader,
+            accessory: .root(.view(KsAnyView.uiKit { headerView }))
+        )
 
         controller.loadViewIfNeeded()
         let (cv, window) = present(controller)
         defer { window.isHidden = true }
 
-        // Root H/F は Store の現在状態に含まれないため、view load 時の復元対象ではない。
-        XCTAssertNil(
+        XCTAssertNotNil(
             controller.rootHeader,
-            "Root header は復元対象外だが Controller に復元されている"
+            "view load 前に渡した Root header が Host に保持されていない"
         )
-        XCTAssertNil(
-            visibleRootHeaderText(cv),
-            "Root header は復元対象外だが表示されている"
+        awaitCondition(
+            "view load 前に渡した Root header の view が window に載る",
+            in: cv,
+            actual: { "headerView.window = \(String(describing: headerView.window))" },
+            until: { headerView.window != nil }
         )
+        XCTAssertNotNil(
+            headerView.window,
+            "view load 前に渡した Root header の view が表示されていない（所有者の再発行なしで表示される必要がある）"
+        )
+    }
 
-        // 所有者が view load 後に再適用すると表示される。
-        store.updateAccessory(target: .rootHeader, accessory: .root(.text("Root H")))
+    func test_viewLoad前に渡したRootFooterがload時に表示される() {
+        let (store, controller) = makeUnloadedHost()
+
+        store.updateAccessory(target: .rootFooter, accessory: .root(.text("Root F")))
+
+        controller.loadViewIfNeeded()
+        let (cv, window) = present(controller)
+        defer { window.isHidden = true }
+
+        XCTAssertEqual(
+            controller.rootFooter,
+            .text("Root F"),
+            "view load 前に渡した Root footer が Host に保持されていない"
+        )
         awaitEqual(
-            "再適用した Root header の実描画",
-            expected: "Root H" as String?,
+            "view load 前に渡した Root footer の実描画",
+            expected: "Root F" as String?,
+            in: cv,
+            actual: { visibleRootFooterText(cv) }
+        )
+        XCTAssertEqual(
+            visibleRootFooterText(cv),
+            "Root F",
+            "view load 前に渡した Root footer が表示されていない"
+        )
+    }
+
+    func test_Root対象の値を受け取ってもviewLoadは起きない() {
+        let (store, controller) = makeUnloadedHost()
+
+        store.updateAccessory(target: .rootHeader, accessory: .root(.text("Root H")))
+
+        // 値を受け取ること自体が view load を誘発しないこと（不変性の確認）。
+        waitForNegativeVerification()
+
+        XCTAssertFalse(
+            controller.isViewLoaded,
+            "Root 対象の更新を受け取っただけで view load が起きている"
+        )
+        XCTAssertEqual(
+            controller.rootHeader,
+            .text("Root H"),
+            "view load を起こさずに値を控えられていない"
+        )
+    }
+
+    func test_viewLoad前に複数回渡したRootHeaderは最後の値が反映される() {
+        let (store, controller) = makeUnloadedHost()
+
+        store.updateAccessory(target: .rootHeader, accessory: .root(.text("Root H1")))
+        store.updateAccessory(target: .rootHeader, accessory: .root(.text("Root H2")))
+
+        controller.loadViewIfNeeded()
+        let (cv, window) = present(controller)
+        defer { window.isHidden = true }
+
+        XCTAssertEqual(
+            controller.rootHeader,
+            .text("Root H2"),
+            "view load 前に複数回渡した Root header の最後の値が保持されていない"
+        )
+        awaitEqual(
+            "最後に渡した Root header の実描画",
+            expected: "Root H2" as String?,
             in: cv,
             actual: { visibleRootHeaderText(cv) }
         )
-
-        XCTAssertEqual(controller.rootHeader, .text("Root H"))
         XCTAssertEqual(
             visibleRootHeaderText(cv),
-            "Root H",
-            "再適用した Root header が表示されていない"
+            "Root H2",
+            "最後に渡した Root header が表示されていない"
+        )
+    }
+
+    func test_viewLoad前のRootFooter解除がload時に反映される() {
+        let (store, controller) = makeUnloadedHost()
+
+        store.updateAccessory(target: .rootFooter, accessory: .root(.text("Root F")))
+        store.updateAccessory(target: .rootFooter, accessory: nil)
+
+        controller.loadViewIfNeeded()
+        let (cv, window) = present(controller)
+        defer { window.isHidden = true }
+
+        XCTAssertNil(
+            controller.rootFooter,
+            "view load 前の解除が Host に反映されていない"
+        )
+        XCTAssertNil(
+            visibleRootFooterText(cv),
+            "view load 前に解除した Root footer が表示されている"
         )
     }
 

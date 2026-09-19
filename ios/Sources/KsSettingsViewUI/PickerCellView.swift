@@ -89,6 +89,12 @@ internal final class PickerCellView: KsListCellBase, @MainActor KsCellRenderer {
             },
             onMultiDone: { newSet in
                 picker.onMultiSelectionChanged?(newSet)
+            },
+            onSingleCompleted: { newIndex in
+                picker.onSelectionCompleted?(newIndex)
+            },
+            onMultiCompleted: { newSet in
+                picker.onMultiSelectionCompleted?(newSet)
             }
         )
     }

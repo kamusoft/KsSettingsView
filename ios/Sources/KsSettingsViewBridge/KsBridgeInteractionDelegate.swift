@@ -88,6 +88,20 @@ public protocol KsBridgeInteractionDelegate: NSObjectProtocol {
     @objc(pickerCellMultiSelectionChanged:indices:)
     func pickerCellMultiSelectionChanged(cellID: String, indices: [Int])
 
+    /// PickerCell (単一選択) の確定した選択面が閉じ切った。
+    /// - Parameters:
+    ///   - cellID: 対象 Cell の cellID
+    ///   - index: 確定した選択 index
+    @objc(pickerCellSelectionCompleted:index:)
+    func pickerCellSelectionCompleted(cellID: String, index: Int)
+
+    /// PickerCell (複数選択) の確定した選択面が閉じ切った。
+    /// - Parameters:
+    ///   - cellID: 対象 Cell の cellID
+    ///   - indices: 確定した選択 index (昇順・重複なし)
+    @objc(pickerCellMultiSelectionCompleted:indices:)
+    func pickerCellMultiSelectionCompleted(cellID: String, indices: [Int])
+
     /// NumberPickerCell の値が変わった。
     /// - Parameters:
     ///   - cellID: 対象 Cell の cellID

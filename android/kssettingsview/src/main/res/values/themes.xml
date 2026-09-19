@@ -12,4 +12,32 @@
     利用者アプリからの参照を意図しない実装詳細であり、名前・値ともに予告なく変わり得る。
   -->
   <style name="Theme.KsSettingsView.Internal" parent="Theme.Material3.DayNight.NoActionBar" />
+
+  <!--
+    スクロールバーを持つリストの生成箇所にだけ重ねるテーマオーバーレイ。
+
+    `recyclerViewStyle` は `RecyclerView(Context)` が defStyleAttr として読む属性であり、
+    テーマに置くとその Context から作られる `RecyclerView` すべてに効く。同梱テーマ
+    （Theme.KsSettingsView.Internal）へ直接置くと、回転ホイールのようにスクロールバーを
+    出さないライブラリ内のリストにも付いてしまう。対象は設定リストと選択面の候補リストの
+    2 つだけなので、その生成箇所でのみ本オーバーレイを重ねる。
+  -->
+  <style name="ThemeOverlay.KsSettingsView.ScrollIndicator" parent="">
+    <item name="recyclerViewStyle">@style/Widget.KsSettingsView.RecyclerView</item>
+  </style>
+
+  <!--
+    スクロールバーを持つリストの `RecyclerView` に当てる style。
+
+    縦スクロールバーを描くには `android:scrollbars` が View の構築時に指定されている必要がある。
+    `setVerticalScrollBarEnabled(true)` は表示フラグを立てるだけで、`android:scrollbars` が
+    `none` のままだと View は ScrollabilityCache（スクロールバーの drawable と描画状態）を
+    作らず、描画要求そのものが無視される。
+
+    表示するかどうかは `Theme.scrollIndicatorVisible` が実行時に切り替えるので、ここでは
+    「スクロールバーを持ち得る View にする」ところまでを担う。
+  -->
+  <style name="Widget.KsSettingsView.RecyclerView" parent="">
+    <item name="android:scrollbars">vertical</item>
+  </style>
 </resources>

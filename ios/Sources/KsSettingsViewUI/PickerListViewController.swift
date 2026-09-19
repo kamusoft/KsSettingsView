@@ -35,6 +35,12 @@ internal final class PickerListViewController: UITableViewController {
     /// 複数選択モードの選択集合（編集中状態を保持）。
     private var currentMulti: Set<Int>
 
+    /// 候補リストの縦スクロールインジケータを表示するか。
+    ///
+    /// 選択面を開いた時点の `Theme.scrollIndicatorVisible` を控える。表示中の選択面は後からの Theme
+    /// 差し替えに追従せず、次に開いたときから新しい値に従う。
+    private let scrollIndicatorVisible: Bool
+
     /// 初期スクロールを実施済みか（レイアウト確定後に 1 度だけ行うためのフラグ）。
     private var hasPerformedInitialScroll = false
 
@@ -42,6 +48,11 @@ internal final class PickerListViewController: UITableViewController {
     private let onSingleDone: ((Int) -> Void)?
     /// 複数選択モード時の確定 callback（「完了」押下時に発火）。
     private let onMultiDone: ((Set<Int>) -> Void)?
+
+    /// 単一選択モード時の閉じ切り callback（確定後、選択面の dismiss 完了で発火）。
+    private let onSingleCompleted: ((Int) -> Void)?
+    /// 複数選択モード時の閉じ切り callback（確定後、選択面の dismiss 完了で発火）。
+    private let onMultiCompleted: ((Set<Int>) -> Void)?
 
     private static let cellReuseIdentifier = "PickerListCell"
 
@@ -62,7 +73,9 @@ internal final class PickerListViewController: UITableViewController {
         cellStyle: CellStyle,
         cellAccentColor: UIColor?,
         onSingleDone: ((Int) -> Void)?,
-        onMultiDone: ((Set<Int>) -> Void)?
+        onMultiDone: ((Set<Int>) -> Void)?,
+        onSingleCompleted: ((Int) -> Void)? = nil,
+        onMultiCompleted: ((Set<Int>) -> Void)? = nil
     ) {
         self.items = items
         self.selectionMode = selectionMode
@@ -71,9 +84,12 @@ internal final class PickerListViewController: UITableViewController {
         self.maxSelectedNumber = maxSelectedNumber
         let effective = EffectiveStyle(theme: theme, cellStyle: cellStyle)
         self.effective = effective
+        self.scrollIndicatorVisible = theme.scrollIndicatorVisible
         self.resolvedAccentColor = cellAccentColor ?? effective.accentColor
         self.onSingleDone = onSingleDone
         self.onMultiDone = onMultiDone
+        self.onSingleCompleted = onSingleCompleted
+        self.onMultiCompleted = onMultiCompleted
         super.init(style: .plain)
         self.title = navigationTitle
     }
@@ -91,6 +107,8 @@ internal final class PickerListViewController: UITableViewController {
         // 面の背景・区切り線は呼び出し元 Cell の実効値を継承する。
         tableView.backgroundColor = effective.cellBackgroundColor
         tableView.separatorColor = effective.separatorColor
+        // 候補リストの縦スクロールインジケータも設定リストと同じ Theme の設定に従う。
+        tableView.showsVerticalScrollIndicator = scrollIndicatorVisible
 
         switch selectionMode {
         case .single:
@@ -269,7 +287,10 @@ internal final class PickerListViewController: UITableViewController {
             currentSingle = indexPath.row
             tableView.reloadData()
             onSingleDone?(indexPath.row)
-            dismissModal()
+            let confirmed = indexPath.row
+            dismissModal { [weak self] in
+                self?.onSingleCompleted?(confirmed)
+            }
 
         case .multiple:
             if currentMulti.contains(indexPath.row) {
@@ -303,17 +324,30 @@ internal final class PickerListViewController: UITableViewController {
     }
 
     @objc private func handleDone() {
-        if selectionMode == .multiple {
-            onMultiDone?(currentMulti)
+        guard selectionMode == .multiple else {
+            // 単一選択に確定ボタンは無く、この経路は確定を伴わない。
+            dismissModal()
+            return
         }
-        dismissModal()
+        let confirmed = currentMulti
+        onMultiDone?(confirmed)
+        dismissModal { [weak self] in
+            self?.onMultiCompleted?(confirmed)
+        }
     }
 
-    private func dismissModal() {
+    /// 選択面を閉じる。確定経路だけが `completion` を渡し、閉じ切った後の通知に使う。
+    /// キャンセル経路は `completion` を渡さないため、非確定 dismiss で閉じ切り通知は発火しない（core/ADR-0034）。
+    private func dismissModal(completion: (() -> Void)? = nil) {
+        guard presentingViewController != nil else {
+            // モーダルとして提示されていない（閉じる対象が無い）ため、すでに閉じ切った状態として扱う。
+            completion?()
+            return
+        }
         if let nav = navigationController, nav.presentingViewController != nil {
-            nav.dismiss(animated: true)
+            nav.dismiss(animated: true, completion: completion)
         } else {
-            dismiss(animated: true)
+            dismiss(animated: true, completion: completion)
         }
     }
 

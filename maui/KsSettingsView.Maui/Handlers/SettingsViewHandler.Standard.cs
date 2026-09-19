@@ -1,3 +1,5 @@
+using System;
+
 namespace KsSettingsView.Handlers;
 
 /// <summary>
@@ -10,7 +12,19 @@ namespace KsSettingsView.Handlers;
 /// </remarks>
 public partial class SettingsViewHandler
 {
-    private partial object CreateHost() => new KsPlaceholderHost();
+    /// <summary>
+    /// Host の生成を失敗させるかどうか。
+    /// </summary>
+    /// <remarks>
+    /// Native Host を持たないこの TFM では Host の生成が失敗し得ないため、生成の失敗に対する
+    /// 後始末をこの口から踏ませる。
+    /// </remarks>
+    internal bool FailsToCreateHost { get; set; }
+
+    private partial object CreateHost()
+        => FailsToCreateHost
+            ? throw new InvalidOperationException("Failed to create the native settings host view.")
+            : new KsPlaceholderHost();
 }
 
 /// <summary>Native Host の代わりに置く空の器。</summary>

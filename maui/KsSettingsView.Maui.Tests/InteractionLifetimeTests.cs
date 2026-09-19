@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Runtime.CompilerServices;
 using KsSettingsView.Internals;
 using KsSettingsView.Tests.Fakes;
 using KsSettingsView.Tests.Support;
+using Microsoft.Maui.Controls;
 using NUnit.Framework;
 
 namespace KsSettingsView.Tests;
@@ -50,6 +52,33 @@ public sealed class InteractionLifetimeTests
 
         Assert.That(cell.On, Is.False);
         Assert.That(scope.Calls, Is.Empty);
+    }
+
+    /// <summary>
+    /// Native Host の解放で、閉じ切り通知の届け先も外れる。解放前に開いていた選択面が後から
+    /// 閉じ切っても、通知を渡す先が無いので Command は実行されない。
+    /// </summary>
+    [Test]
+    public void ReleasingHostLeavesNoDestinationForSelectionCompletion()
+    {
+        int executed = 0;
+        PickerCell cell = new()
+        {
+            ItemsSource = new List<string> { "松", "竹" },
+            SelectedCommand = new Command(() => executed++),
+        };
+        SettingsView view = new() { Root = { new Section { Cells = { cell } } } };
+        GatewayScope scope = GatewayScope.Connect(view);
+        string cellId = view.Controller.FindCellId(cell)!;
+
+        // 解放前は閉じ切り通知が Command まで届く経路になっている。
+        scope.Gateway.Sink!.PickerCellSelectionCompleted(cellId, 1);
+        Assert.That(executed, Is.EqualTo(1));
+
+        view.ReleaseHost();
+
+        Assert.That(scope.Gateway.Sink, Is.Null);
+        Assert.That(executed, Is.EqualTo(1));
     }
 
     /// <summary>再接続では通知先が取り直され、書き戻しが再び機能する。</summary>

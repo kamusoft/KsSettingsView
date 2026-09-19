@@ -174,6 +174,9 @@ internal class PickerSheetRowViews(
  * - 単一選択: 候補行タップで [onSingleSelected] を発火して閉じる
  * - 複数選択: 候補行タップは作業状態のトグルのみ、確定ボタンで [onMultiConfirmed] を発火して閉じる
  *
+ * 確定経路では確定した値を [completedSelection] / [completedMultiSelection] へ控える。閉じ切りを
+ * 知るのは dismiss リスナーを持つ提示側なので、提示側はこの控えを読んで確定で閉じたことを判別する。
+ *
  * 候補行は主表示のみの1行構成で、副表示（[PickerItem.subText]）を持つ候補だけが2行構成になる。
  * 副表示は description 系統の実効値を継承し、長さによらず1行に収めて末尾を省略する。
  *
@@ -192,6 +195,7 @@ internal class PickerSheetRowViews(
  * @param initialSelectedIndices 複数選択モードの初期選択集合
  * @param maxSelectedNumber 複数選択の上限（`0` 以下で無制限）
  * @param sheetStyle 解決済みのスタイル値
+ * @param scrollIndicatorVisible 候補リストの縦スクロールバーを表示するか（開いた時点の Theme の値）
  * @param onSingleSelected 単一選択の確定 callback
  * @param onMultiConfirmed 複数選択の確定 callback
  */
@@ -204,12 +208,27 @@ internal class PickerSelectionSheet(
     initialSelectedIndices: Set<Int>,
     private val maxSelectedNumber: Int,
     private val sheetStyle: PickerSheetStyle,
+    private val scrollIndicatorVisible: Boolean,
     private val onSingleSelected: (Int) -> Unit,
     private val onMultiConfirmed: (Set<Int>) -> Unit,
 ) : BottomSheetDialog(hostContext.ksThemedContext()) {
 
     /** 複数選択モードの作業状態。確定操作を経ない限りモデルへは反映しない。 */
     private val workingSelection: MutableSet<Int> = initialSelectedIndices.toMutableSet()
+
+    /**
+     * 確定した単一選択の控え。確定操作を通ったときだけ立てる。
+     *
+     * シートが閉じ切ったことを知るのは [Dialog.setOnDismissListener] を持つ提示側であり、この控えは
+     * そこから「確定で閉じたのか」を読み取るために置く。取消・外側タップ・Back・下スワイプでは
+     * 立たないので、提示側は控えの有無だけで確定を判別できる。
+     */
+    internal var completedSelection: Int? = null
+        private set
+
+    /** 確定した複数選択の控え。意味は [completedSelection] と同じ。 */
+    internal var completedMultiSelection: Set<Int>? = null
+        private set
 
     private val density: Float = context.resources.displayMetrics.density
 
@@ -232,7 +251,9 @@ internal class PickerSelectionSheet(
         showConfirm = selectionMode == PickerSelectionMode.Multiple,
         onCancel = { cancel() },
         onConfirm = {
-            onMultiConfirmed(workingSelection.toSet())
+            val confirmed = workingSelection.toSet()
+            onMultiConfirmed(confirmed)
+            completedMultiSelection = confirmed
             dismiss()
         },
     )
@@ -252,8 +273,13 @@ internal class PickerSelectionSheet(
     /** ヘッダー右のスロット（確定ラベルの当たり判定を担う）。 */
     internal val confirmSlot: FrameLayout get() = headerView.confirmSlot
 
-    /** 候補リスト。 */
-    internal val listView: RecyclerView = SelfContainedRecyclerView(context)
+    /**
+     * 候補リスト。
+     *
+     * 設定リストと同じく縦スクロールバーを持ち得る Context から生成する。同じ選択面の中でも回転
+     * ホイールは対象外なので、ラップはこのリストの生成だけに掛ける。
+     */
+    internal val listView: RecyclerView = SelfContainedRecyclerView(context.ksScrollIndicatorContext())
 
     /**
      * 触覚フィードバックの実行経路。要求が受け付けられたかを返す。
@@ -336,6 +362,8 @@ internal class PickerSelectionSheet(
         listView.apply {
             layoutManager = LinearLayoutManager(context)
             adapter = itemsAdapter
+            // 縦スクロールバーの表示は、選択面を開いた時点の Theme の設定に従う。
+            isVerticalScrollBarEnabled = scrollIndicatorVisible
             // 最後の行までスクロールしきったときに下端の余白を確保する。
             clipToPadding = false
             setPadding(0, 0, 0, dp(LIST_PADDING_BOTTOM_DP))
@@ -494,6 +522,7 @@ internal class PickerSelectionSheet(
         when (selectionMode) {
             PickerSelectionMode.Single -> {
                 onSingleSelected(index)
+                completedSelection = index
                 dismiss()
             }
             PickerSelectionMode.Multiple -> {

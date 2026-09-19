@@ -12,7 +12,9 @@ import jp.kamusoft.kssettingsview.ui.PickerSelectionMode
  *
  * 選択変更は [selectionMode] に応じて
  * [KsBridgeInteractionListener.pickerCellSelectionChanged] または
- * [KsBridgeInteractionListener.pickerCellMultiSelectionChanged] で通知される。
+ * [KsBridgeInteractionListener.pickerCellMultiSelectionChanged] で通知され、確定した選択 UI が
+ * 閉じ切ると続けて [KsBridgeInteractionListener.pickerCellSelectionCompleted] または
+ * [KsBridgeInteractionListener.pickerCellMultiSelectionCompleted] が同じ値で通知される。
  */
 class KsBridgePickerCell @JvmOverloads constructor(
     title: String,
@@ -72,6 +74,7 @@ class KsBridgePickerCell @JvmOverloads constructor(
                 pageTitle = pageTitle,
                 accentColor = KsBridgeColor.color(accentColor),
                 onMultiSelectionChanged = { relay.pickerCellMultiSelectionChanged(id, it) },
+                onMultiSelectionCompleted = { relay.pickerCellMultiSelectionCompleted(id, it) },
                 isEnabled = isEnabled,
                 isVisible = isVisible,
             )
@@ -90,6 +93,7 @@ class KsBridgePickerCell @JvmOverloads constructor(
                 pageTitle = pageTitle,
                 accentColor = KsBridgeColor.color(accentColor),
                 onSelectionChanged = { relay.pickerCellSelectionChanged(id, it) },
+                onSelectionCompleted = { relay.pickerCellSelectionCompleted(id, it) },
                 isEnabled = isEnabled,
                 isVisible = isVisible,
             )

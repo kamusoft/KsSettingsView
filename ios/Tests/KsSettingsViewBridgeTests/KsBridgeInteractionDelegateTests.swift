@@ -56,6 +56,14 @@ private final class RecordingInteractionDelegate: NSObject, KsBridgeInteractionD
         notifications.append("pickerCellMultiSelectionChanged(\(cellID),\(indices))")
     }
 
+    func pickerCellSelectionCompleted(cellID: String, index: Int) {
+        notifications.append("pickerCellSelectionCompleted(\(cellID),\(index))")
+    }
+
+    func pickerCellMultiSelectionCompleted(cellID: String, indices: [Int]) {
+        notifications.append("pickerCellMultiSelectionCompleted(\(cellID),\(indices))")
+    }
+
     func numberPickerCellChanged(cellID: String, value: Int) {
         notifications.append("numberPickerCellChanged(\(cellID),\(value))")
     }
@@ -151,6 +159,66 @@ final class KsBridgeInteractionDelegateTests: XCTestCase {
             "pickerCellMultiSelectionChanged(\(multiple.cellID),[0, 2])",
             "numberPickerCellChanged(\(number.cellID),42)",
         ])
+    }
+
+    func test_picker閉じ切りが確定通知の後に同じ値で届く() {
+        let single = KsBridgePickerCell(title: "単一選択")
+        single.items = ["A", "B", "C"].map { KsBridgePickerItem(text: $0) }
+        let multiple = KsBridgePickerCell(title: "複数選択")
+        multiple.items = ["A", "B", "C"].map { KsBridgePickerItem(text: $0) }
+        multiple.selectionMode = 1
+        let bridge = KsBridgeFixture.withCells([single, multiple])
+        let recorder = RecordingInteractionDelegate()
+        bridge.interactionDelegate = recorder
+
+        let cells = bridge.store.root.sections.first?.cells ?? []
+        let singleCell = cells[0] as? PickerCell
+        let multipleCell = cells[1] as? PickerCell
+        singleCell?.onSelectionChanged?(1)
+        singleCell?.onSelectionCompleted?(1)
+        multipleCell?.onMultiSelectionChanged?([2, 0])
+        multipleCell?.onMultiSelectionCompleted?([2, 0, 2])
+
+        XCTAssertEqual(recorder.notifications, [
+            "pickerCellSelectionChanged(\(single.cellID),1)",
+            "pickerCellSelectionCompleted(\(single.cellID),1)",
+            "pickerCellMultiSelectionChanged(\(multiple.cellID),[0, 2])",
+            "pickerCellMultiSelectionCompleted(\(multiple.cellID),[0, 2])",
+        ])
+    }
+
+    func test_picker閉じ切りはdispose後に届かない() {
+        let single = KsBridgePickerCell(title: "単一選択")
+        single.items = ["A", "B"].map { KsBridgePickerItem(text: $0) }
+        let multiple = KsBridgePickerCell(title: "複数選択")
+        multiple.items = ["A", "B"].map { KsBridgePickerItem(text: $0) }
+        multiple.selectionMode = 1
+        let bridge = KsBridgeFixture.withCells([single, multiple])
+        let recorder = RecordingInteractionDelegate()
+        bridge.interactionDelegate = recorder
+
+        let cells = bridge.store.root.sections.first?.cells ?? []
+        let singleCell = cells[0] as? PickerCell
+        let multipleCell = cells[1] as? PickerCell
+        bridge.dispose()
+        singleCell?.onSelectionCompleted?(1)
+        multipleCell?.onMultiSelectionCompleted?([0])
+
+        XCTAssertEqual(recorder.notifications, [])
+    }
+
+    func test_datePickerは閉じ切りを中継しない() {
+        let date = KsBridgeDatePickerCell(title: "日付")
+        let bridge = KsBridgeFixture.withCells([date])
+        let recorder = RecordingInteractionDelegate()
+        bridge.interactionDelegate = recorder
+
+        let cell: DatePickerCell? = KsBridgeFixture.storedCell(bridge)
+        XCTAssertNil(cell?.onValueCompleted, "閉じ切りは interaction 経路へ結線しない")
+
+        cell?.onValueChanged?(makeDate(year: 2026, month: 8, day: 10))
+
+        XCTAssertEqual(recorder.notifications, ["datePickerCellChanged(\(date.cellID),2026-08-10)"])
     }
 
     func test_時刻と日付の変更がISO文字列で通知される() {

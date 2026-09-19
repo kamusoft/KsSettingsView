@@ -88,6 +88,7 @@ class DateCalendarDialogTest {
         todayText: String? = null,
         isEnabled: Boolean = true,
         onValueChanged: ((LocalDate) -> Unit)? = null,
+        onValueCompleted: ((LocalDate) -> Unit)? = null,
     ): DatePickerCell = DatePickerCell(
         title = title,
         pickerTitle = pickerTitle,
@@ -98,6 +99,7 @@ class DateCalendarDialogTest {
         uiStyle = DatePickerUIStyle.Material,
         isEnabled = isEnabled,
         onValueChanged = onValueChanged,
+        onValueCompleted = onValueCompleted,
     )
 
     /** Cell の行タップで選択面を開き、表示された [DateCalendarDialog] を返す。 */
@@ -237,6 +239,46 @@ class DateCalendarDialogTest {
         dialog.dismiss()
 
         assertTrue("非確定の閉じ方で通知された: $notified", notified.isEmpty())
+    }
+
+    /** 値 callback と閉じ切り callback を発生順に記録するカレンダーの Cell を作る。 */
+    private fun recordingCalendarCell(events: MutableList<String>): DatePickerCell = dateCell(
+        onValueChanged = { events.add("changed:$it") },
+        onValueCompleted = { events.add("completed:$it") },
+    )
+
+    @Test
+    fun `カレンダーの確定は値 callback の後に閉じ切り callback を同じ日付で1回ずつ発火する`() {
+        val events = mutableListOf<String>()
+        val dialog = openDialog(recordingCalendarCell(events))
+
+        select(dialog, LocalDate.of(2026, 8, 9))
+        dialog.confirmSelection()
+
+        // 閉じ切りの通知は dismiss リスナー経由で届くため、確定操作の直後にはまだ出ていない。
+        assertEquals(listOf("changed:2026-08-09"), events)
+        assertFalse(dialog.isShowing)
+
+        awaitMainLooperCondition(diagnostics = { "受け取った通知: $events" }) { events.size == 2 }
+        assertEquals(listOf("changed:2026-08-09", "completed:2026-08-09"), events)
+    }
+
+    @Test
+    fun `カレンダーの非確定 dismiss ではどの経路でも閉じ切り callback を発火しない`() {
+        // 取消操作は Dialog の cancel、外側タップ / Back は dismiss へ帰着する。
+        val cancelEvents = mutableListOf<String>()
+        val cancelled = openDialog(recordingCalendarCell(cancelEvents))
+        select(cancelled, LocalDate.of(2026, 8, 9))
+        cancelled.cancel()
+        drainMainLooperForUnchangedCheck()
+        assertTrue("取消で通知された: $cancelEvents", cancelEvents.isEmpty())
+
+        val dismissEvents = mutableListOf<String>()
+        val dismissed = openDialog(recordingCalendarCell(dismissEvents))
+        select(dismissed, LocalDate.of(2026, 8, 9))
+        dismissed.dismiss()
+        drainMainLooperForUnchangedCheck()
+        assertTrue("dismiss で通知された: $dismissEvents", dismissEvents.isEmpty())
     }
 
     @Test

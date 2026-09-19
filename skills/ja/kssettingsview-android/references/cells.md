@@ -191,6 +191,17 @@ PickerCell(
 
 シートのタイトルは `pageTitle` で指定でき、未指定なら Cell の `title` が使われる。
 
+シートが消え切ってから次の処理へ進みたいときは `onSelectionCompleted` を渡す。ボトムシートの dismiss が完了した後に確定 index を受け取る。値の state (指定していれば `onItemSelected` も) が先に更新され、キャンセル・Back・外側タップなど確定しない閉じ方では発火しない。
+
+```kotlin
+PickerCell(
+    title = "Theme",
+    items = listOf("Light", "Dark", "System"),
+    selectedIndex = themeIndex,
+    onSelectionCompleted = { index -> openThemeDetails(index) },
+)
+```
+
 ## リストから object を 1 つ選ぶ
 
 候補は文字列でなくてもよい。ジェネリックな overload が任意の要素リストと射影 `displayText` を取り、`subText` を渡すとシートの各候補の下に 2 行目が付く (subText の無い候補は 1 行のまま)。`onItemSelected` には選ばれた要素そのものが届く。要素リストは Cell 構築時にコピーされるため、元コレクションへの後からの変更は in-place の書き換えではなく新しいリストの供給で反映する。
@@ -246,7 +257,19 @@ PickerCell(
 
 複数選択にも object の overload がある。任意の要素リストと `displayText` (必要なら `subText` も) を渡すと、`onItemsSelected` に確定された要素が index 昇順で届く。書き戻される state は `Set<Int>` のまま — 複数選択には要素型の state は無い。
 
-Store 用に `jp.kamusoft.kssettingsview.ui` の `PickerCell` クラスでツリーを組む場合 ([updates.md](updates.md) を参照)、候補は `PickerItem` (主表示 `text` + 任意の副表示 `subText`) のリストで持ち、単一 / 複数は `selectionMode` (`PickerSelectionMode.Single` / `Multiple`) で切り替える。callback は単一が `onSelectionChanged`、複数が `onMultiSelectionChanged`。DSL の overload はどれも引数の組み合わせからこれらを設定するので、宣言側で直接指定することはない。
+選択面が閉じ切ってから後続処理をしたいときは `onMultiSelectionCompleted` を使う。値を書き戻した後に `onMultiSelectionChanged` と同じ確定 index 集合を受け取り、確定しない閉じ方では発火しない。
+
+```kotlin
+PickerCell(
+    title = "Topics",
+    items = listOf("News", "Sports", "Music", "Travel"),
+    selectedIndices = topics,
+    maxSelectedNumber = 2,
+    onMultiSelectionCompleted = { indices -> showTopicSummary(indices) },
+)
+```
+
+Store 用に `jp.kamusoft.kssettingsview.ui` の `PickerCell` クラスでツリーを組む場合 ([updates.md](updates.md) を参照)、候補は `PickerItem` (主表示 `text` + 任意の副表示 `subText`) のリストで持ち、単一 / 複数は `selectionMode` (`PickerSelectionMode.Single` / `Multiple`) で切り替える。値の callback は単一が `onSelectionChanged`、複数が `onMultiSelectionChanged`、閉じ切り後の callback は `onSelectionCompleted` と `onMultiSelectionCompleted`。DSL の overload はどれも引数の組み合わせからこれらを設定するので、宣言側で直接指定することはない。
 
 ## 単位付きの数値を選ぶ
 
@@ -305,10 +328,11 @@ DatePickerCell(
     format = "yyyy/MM/dd",
     uiStyle = DatePickerUIStyle.Material,
     todayText = "Today",
+    onValueCompleted = { confirmedDate -> openDateSummary(confirmedDate) },
 )
 ```
 
-ここでも書き戻しは確定操作の 1 回だけで、他の閉じ方はどれも変更を破棄する。カレンダーダイアログは、Activity 再生成の前後で Cell の ID が安定していれば選択状態を保ったまま回転を生き延びる ([updates.md](updates.md) を参照)。Spinner のシートは他のボトムシートと同じく、回転では何も通知せず閉じる。`androidButtonColor` は `Spinner` のシートのヘッダー操作 (確定・キャンセル) の色だけを上書きし、`Material` のダイアログには効かない。
+ここでも書き戻しは確定操作の 1 回だけで、他の閉じ方はどれも変更を破棄する。`onValueCompleted` はその同じ日付を選択面が閉じ切った後に確定ごと 1 回受け取る。キャンセルなど確定しない閉じ方では発火しない。カレンダーダイアログは、Activity 再生成の前後で Cell の ID が安定していれば選択状態を保ったまま回転を生き延びる ([updates.md](updates.md) を参照)。Spinner のシートは他のボトムシートと同じく、回転では何も通知せず閉じる。`androidButtonColor` は `Spinner` のシートのヘッダー操作 (確定・キャンセル) の色だけを上書きし、`Material` のダイアログには効かない。
 
 `minDate` と `maxDate` で選べる範囲を制限できる。どちらか一方だけでもよい。現在値が範囲外なら、最も近い範囲端へ丸めて提示される。
 

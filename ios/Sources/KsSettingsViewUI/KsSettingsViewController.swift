@@ -382,6 +382,7 @@ public final class KsSettingsViewController: UIViewController {
     public func applyTheme(_ theme: Theme) {
         self.currentTheme = theme
         applyBackgroundColor(theme: theme)
+        applyScrollIndicatorVisibility(theme: theme)
         // Section 装飾（余白・角丸・ボーダー・箱の塗り色）を layout へ反映する。
         // 余白は sectionProvider が、装飾値は decoration が読むため、双方を再評価させる。
         refreshSectionBoxAppearance()
@@ -415,11 +416,16 @@ public final class KsSettingsViewController: UIViewController {
         container.backgroundColor = .systemBackground
 
         let layout = makeLayout(for: style)
-        let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
+        // 押下色（Theme.selectedColor）を指を置いた瞬間に出すための collection view。
+        // タッチ遅延を持たないことと、Cell 内の UIControl 上から始めたドラッグでもスクロール
+        // できることは、この型が自分で担保する。
+        let cv = ImmediateTouchCollectionView(frame: .zero, collectionViewLayout: layout)
         // Theme.backgroundColor を初期化時から反映してチラつきを回避する
         // （viewDidLoad での applyBackgroundColor までの間、`.systemBackground` で
         // 一瞬表示されるのを防ぐ）。
         cv.backgroundColor = currentTheme.backgroundColor
+        // Theme.scrollIndicatorVisible も背景色と同じく初期化時から反映する。
+        cv.showsVerticalScrollIndicator = currentTheme.scrollIndicatorVisible
         // AiForms 互換: スクロール時に編集中のキーボードを閉じる挙動を有効化する
         // （`EntryCell` 編集中にドラッグするとキーボードが自動的に閉じる）。
         cv.keyboardDismissMode = .onDrag
@@ -444,8 +450,71 @@ public final class KsSettingsViewController: UIViewController {
         applyFullSnapshot(root: root, animated: false)
         // Theme.backgroundColor を反映
         applyBackgroundColor(theme: currentTheme)
+        // Theme.scrollIndicatorVisible を反映（Store 接続時は resync で取り込んだ Theme が正）
+        applyScrollIndicatorVisibility(theme: currentTheme)
         // Section 単位の余白のうち list 端に接する分を反映
         applyListEdgeMargin()
+    }
+
+    public override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        isDisappearing = false
+        // 遷移で残していた押下色は、戻りのアニメーションの途中で解除する
+        // （消え方は Cell 側のフェードアウトが担う）。戻り始めと同時に消え始めないよう、
+        // 解除の開始だけ少し遅らせる。
+        if let coordinator = transitionCoordinator {
+            pendingDeselectTask?.cancel()
+            pendingDeselectTask = Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(Self.returnDeselectDelay))
+                guard !Task.isCancelled, let self else { return }
+                self.pendingDeselectTask = nil
+                guard coordinator.isInteractive else {
+                    // 通常の戻る操作。遷移の途中でフェードアウトを始める。
+                    self.deselectAllItems(animated: true)
+                    return
+                }
+                // エッジスワイプ中は行き先が決まらないため、完了を待って判定する。
+                // 取り消して元の画面に留まった場合は押下色を残す。
+                coordinator.animate(alongsideTransition: nil, completion: { [weak self] context in
+                    guard !context.isCancelled else { return }
+                    self?.deselectAllItems(animated: true)
+                })
+            }
+        } else {
+            deselectAllItems(animated: animated)
+        }
+    }
+
+    public override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        isDisappearing = true
+    }
+
+    /// タップ後に押下色を残す猶予時間（秒）。この時間内に画面が隠れ始めなければ解除する。
+    private static let selectionHoldDuration: TimeInterval = 0.1
+
+    /// 遷移から戻ったあと、押下色を消し始めるまでの待ち時間（秒）。
+    private static let returnDeselectDelay: TimeInterval = 0.08
+
+    /// 画面が隠れ始めたか。タップで遷移が起きたかの判定に使う。
+    private var isDisappearing = false
+
+    /// 解除待ちを担う Task。タップ後の猶予と戻り際の待ちで共有し、張り直しのたびに
+    /// 前の待ちを取り消すため 1 本だけ保持する。
+    private var pendingDeselectTask: Task<Void, Never>?
+
+    /// 現在選択されている Cell をすべて解除する。
+    ///
+    /// 解除の時期はライブラリが決める (ios/ADR-0005) — その場で完結するタップは猶予の後、
+    /// 遷移を起こしたタップは戻りのアニメーションの途中で解除する。
+    ///
+    /// 解除の対象を tap 時の indexPath に固定すると、選択が残っているあいだの別 Cell のタップや
+    /// snapshot の適用で対象がずれるため、その時点の選択から取り直す。
+    private func deselectAllItems(animated: Bool) {
+        guard isViewLoaded, let selected = collectionView.indexPathsForSelectedItems else { return }
+        for indexPath in selected {
+            collectionView.deselectItem(at: indexPath, animated: animated)
+        }
     }
 
     /// 接続中 Store の現在状態（root / theme）を内部状態へ取り込む。
@@ -458,7 +527,8 @@ public final class KsSettingsViewController: UIViewController {
     /// 取り込む対象は Store が現在状態として保持するもの、すなわち設定ツリーの構造・
     /// Cell 内容・Section の accessory・Theme に限る。Root Header / Footer は UI 層
     /// プロパティであり Store の現在状態に含まれない（core/ADR-0005）ため対象外で、
-    /// その反映は所有者（呼び出し側）が view load 後に適用する責務とする。
+    /// view load 前に届いた分は `applyBeforeViewLoad` が受け取った時点でプロパティへ
+    /// 控えている（core/ADR-0033）。
     ///
     /// Store 接続中は Store の Theme を正とする。Store 未接続（root 直接指定）の場合は
     /// 何もせず、初期化時に受け取った root / theme をそのまま使う。
@@ -479,6 +549,14 @@ public final class KsSettingsViewController: UIViewController {
     private func applyBackgroundColor(theme: Theme) {
         guard let cv = self.collectionView else { return }
         cv.backgroundColor = theme.backgroundColor
+    }
+
+    /// `Theme.scrollIndicatorVisible` を `UICollectionView.showsVerticalScrollIndicator` に反映する。
+    ///
+    /// 設定リストは縦にしかスクロールしないため、横方向のインジケータは扱わない。
+    private func applyScrollIndicatorVisibility(theme: Theme) {
+        guard let cv = self.collectionView else { return }
+        cv.showsVerticalScrollIndicator = theme.scrollIndicatorVisible
     }
 
     // MARK: - レイアウト構築
@@ -1172,6 +1250,11 @@ public final class KsSettingsViewController: UIViewController {
             textColor: isFooter
                 ? currentTheme.footerTextColor
                 : currentTheme.headerTextColor,
+            // `Theme.headerBackgroundColor` / `Theme.footerBackgroundColor` をテキスト accessory の
+            // 領域全体へ塗る。
+            backgroundColor: isFooter
+                ? currentTheme.footerBackgroundColor
+                : currentTheme.headerBackgroundColor,
             // Header テキストは下端揃え（AiForms `TextHeaderView.SetVerticalAlignment(LayoutAlignment.End)` 既定）、
             // Footer テキストは上端揃え（AiForms `TextFooterView` 既定の TopAnchor 制約挙動）。
             verticalAlignment: isFooter ? .top : .bottom,
@@ -1200,6 +1283,11 @@ public final class KsSettingsViewController: UIViewController {
             accessoryText: accessory.flatMap(rootTextValue),
             accessoryView: accessory.flatMap(rootViewValue),
             textColor: currentTheme.headerTextColor,
+            // 背景色は Header / Footer それぞれの Theme 属性から解決する（文字色が headerTextColor を
+            // 流用するのと異なる点。背景色は Section accessory と同じ規則に揃える）。
+            backgroundColor: isFooter
+                ? currentTheme.footerBackgroundColor
+                : currentTheme.headerBackgroundColor,
             verticalAlignment: isFooter ? .top : .bottom,
             // Root も Section と同じく Theme.headerFont / footerFont を反映する。
             font: isFooter
@@ -1232,6 +1320,7 @@ public final class KsSettingsViewController: UIViewController {
         accessoryText: String?,
         accessoryView: KsAnyView?,
         textColor: UIColor,
+        backgroundColor: UIColor,
         verticalAlignment: AccessoryVerticalAlignment = .center,
         font: UIFont? = nil,
         extraContentInsets: UIEdgeInsets = .zero
@@ -1263,6 +1352,7 @@ public final class KsSettingsViewController: UIViewController {
             accessoryText: accessoryText,
             accessoryView: accessoryView,
             textColor: textColor,
+            backgroundColor: backgroundColor,
             verticalAlignment: verticalAlignment,
             font: font,
             extraContentInsets: extraContentInsets,
@@ -1311,8 +1401,8 @@ public final class KsSettingsViewController: UIViewController {
     /// - Parameter diff: 適用する Diff
     public func applyDiff(_ diff: SettingsRootDiff) {
         guard let dataSource = self.dataSource else {
-            // viewDidLoad 前の呼び出しは内部 root のみ更新し、UI 反映は viewDidLoad 内で行う。
-            updateInternalRoot(for: diff)
+            // viewDidLoad 前の呼び出しは内部状態のみ更新し、UI 反映は viewDidLoad 内で行う。
+            applyBeforeViewLoad(diff)
             return
         }
 
@@ -1353,11 +1443,38 @@ public final class KsSettingsViewController: UIViewController {
         refreshSectionUnitPresentation()
     }
 
-    /// `viewDidLoad` 前に Diff を受け取った場合の内部 root 補正。
-    /// `Full` のみ root 自体を差し替える（他ケースは初期 root 構築前なので無視）。
-    private func updateInternalRoot(for diff: SettingsRootDiff) {
-        if case .full(let newRoot) = diff {
+    /// `viewDidLoad` 前に Diff を受け取った場合の内部状態の更新。
+    ///
+    /// 構造・Cell 内容・Section の accessory・Theme は Store が現在状態として保持するため、
+    /// ここで個々の Diff を取り込まなくても view load 時の `resyncFromStore` で収束する
+    /// （`Full` のみ、Store 未接続でも root を追随させるために差し替える）。
+    ///
+    /// Root Header / Footer は Store の現在状態に含まれず（core/ADR-0005）、通知も再生されない
+    /// ため、受け取った時点で Host のプロパティへ控えることでしか view load 時の構築に間に合わ
+    /// ない（view load 前に渡された Root の header / footer を失わない Host 保証 — core/ADR-0033）。
+    /// 控えた値は `loadView` の `makeLayout` と `viewDidLoad` の
+    /// `applyListEdgeMargin` が読み、最初の表示に含まれる。
+    ///
+    /// プロパティの didSet が呼ぶレイアウト再構築・可視 supplementary の再描画は
+    /// `collectionView` が未生成の間は何もしないため、値を控えること自体が view load を
+    /// 誘発しない。
+    private func applyBeforeViewLoad(_ diff: SettingsRootDiff) {
+        switch diff {
+        case .full(let newRoot):
             self.root = newRoot
+
+        case let .updateAccessory(target: target, accessory: accessory):
+            switch target {
+            case .rootHeader:
+                self.rootHeader = extractRootAccessory(accessory)
+            case .rootFooter:
+                self.rootFooter = extractRootAccessory(accessory)
+            case .sectionHeader, .sectionFooter:
+                break
+            }
+
+        default:
+            break
         }
     }
 
@@ -2118,6 +2235,9 @@ public final class KsSettingsViewController: UIViewController {
                 accessoryText: accessory.flatMap(rootTextValue),
                 accessoryView: accessory.flatMap(rootViewValue),
                 textColor: textColor,
+                backgroundColor: isFooter
+                    ? currentTheme.footerBackgroundColor
+                    : currentTheme.headerBackgroundColor,
                 verticalAlignment: verticalAlignment,
                 font: isFooter
                     ? Self.resolveFooterFont(theme: currentTheme)
@@ -2192,6 +2312,10 @@ public final class KsSettingsViewController: UIViewController {
                 textColor: isFooter
                     ? currentTheme.footerTextColor
                     : currentTheme.headerTextColor,
+                // 背景色も文字色と同じく Header / Footer で別の Theme 属性から解決する。
+                backgroundColor: isFooter
+                    ? currentTheme.footerBackgroundColor
+                    : currentTheme.headerBackgroundColor,
                 verticalAlignment: isFooter ? .top : .bottom,
                 font: isFooter
                     ? Self.resolveFooterFont(theme: currentTheme)
@@ -2219,7 +2343,8 @@ public final class KsSettingsViewController: UIViewController {
     /// テキスト accessory も専用の再利用 View 型を挟まず本関数を経由する。
     ///
     /// - テキスト accessory（`accessoryText != nil`）→ `applyAccessoryLabel` で UILabel +
-    ///   AutoLayout 制約により Header = 下端揃え / Footer = 上端揃え。
+    ///   AutoLayout 制約により Header = 下端揃え / Footer = 上端揃え。背景は `backgroundColor` で
+    ///   領域全体を塗る。
     /// - SwiftUI View（`KsAnyView.swiftUI`）→ `UIHostingConfiguration` を `contentConfiguration` に適用。
     /// - UIKit View（`KsAnyView.uiKit`）→ `contentView` に `addSubview` + 四辺制約。
     /// - いずれもなし → contentView をクリアして空表示。
@@ -2231,6 +2356,7 @@ public final class KsSettingsViewController: UIViewController {
         accessoryText: String?,
         accessoryView: KsAnyView?,
         textColor: UIColor,
+        backgroundColor: UIColor,
         verticalAlignment: AccessoryVerticalAlignment,
         font: UIFont? = nil,
         extraContentInsets: UIEdgeInsets = .zero,
@@ -2239,6 +2365,13 @@ public final class KsSettingsViewController: UIViewController {
         // 既存 subview をクリア（uiKit backing で addSubview したものを残さない）
         listCell.contentView.subviews.forEach { $0.removeFromSuperview() }
         listCell.contentConfiguration = nil
+
+        // 背景色はテキスト accessory にだけ塗る。View 形式の accessory は利用者の View が見た目を
+        // 決める領域なのでライブラリからは塗らず、再利用で前回の色を持ち越さないよう明示的に消す。
+        // 塗る範囲を cell 全体にするため inset / 角丸を持たない `.clear()` を土台に使う。
+        var background = UIBackgroundConfiguration.clear()
+        background.backgroundColor = (accessoryText != nil) ? backgroundColor : nil
+        listCell.backgroundConfiguration = background
 
         // テキスト accessory: UILabel + AutoLayout。
         if let text = accessoryText {
@@ -2408,13 +2541,25 @@ extension KsSettingsViewController: UICollectionViewDelegate {
     /// 行タップ通知に対応する CellView が `tapHandler` プロパティに `onTap` / `onValueChanged`
     /// クロージャを保持しているため、共通の Protocol 経由で呼び出す。
     public func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        defer {
-            // 選択ハイライトは残さない（チェックマーク状態は accessory で表現される）
-            collectionView.deselectItem(at: indexPath, animated: true)
-        }
-        guard let cell = collectionView.cellForItem(at: indexPath) else { return }
-        if let handler = (cell as? TapNotifyingRenderer)?.tapHandler {
+        // タップで画面が遷移する場合は、押下色を遷移のあいだ残して戻り際に解除する
+        // （選択状態そのものはチェックマーク等の accessory で表現する方針を変えない）。
+        // 遷移が始まったかは同期的には分からない（SwiftUI の NavigationStack は path の変更を
+        // 次の更新で反映する）ため、猶予時間のあいだに画面が隠れ始めたかで判定する。
+        // 合図の初期化は tapHandler より前に行う。UIKit から直接使う場合、handler の中で
+        // 同期的に push されて viewWillDisappear が届くため、後で初期化すると合図を消してしまう。
+        isDisappearing = false
+        if let cell = collectionView.cellForItem(at: indexPath),
+           let handler = (cell as? TapNotifyingRenderer)?.tapHandler {
             handler()
+        }
+        // 猶予は「最後のタップから」数える。前のタップの待ちが残っていると、続けてタップした
+        // Cell の押下色を早く切ってしまうため、張り直す。
+        pendingDeselectTask?.cancel()
+        pendingDeselectTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(Self.selectionHoldDuration))
+            guard !Task.isCancelled, let self, !self.isDisappearing else { return }
+            self.pendingDeselectTask = nil
+            self.deselectAllItems(animated: true)
         }
     }
 }

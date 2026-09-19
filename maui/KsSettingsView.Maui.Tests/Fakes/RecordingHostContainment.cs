@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using KsSettingsView.Handlers;
 using KsSettingsView.Internals;
@@ -31,14 +32,29 @@ internal sealed class RecordingHostContainment(SettingsViewHandler handler, Fake
     /// <summary>成立を確定させた時点までに gateway へ届いていた呼び出しの件数。</summary>
     public int GatewayCallCountOnConfirm { get; private set; }
 
+    /// <summary>登録した時点までに gateway へ届いていた呼び出しの件数。</summary>
+    public int GatewayCallCountOnAdd { get; private set; }
+
     /// <summary>解消した時点までに Native Host が解放された回数。</summary>
     public int ReleaseHostCountOnRemove { get; private set; }
+
+    /// <summary>登録を失敗させるかどうか。Host を作る途中の失敗を再現するために使う。</summary>
+    public bool FailsToAdd { get; set; }
+
+    /// <summary>解消を失敗させるかどうか。後片付け自体が失敗する経路を再現するために使う。</summary>
+    public bool FailsToRemove { get; set; }
 
     /// <inheritdoc/>
     public void AddToParent()
     {
         HandlerHadPlatformViewOnAdd = HasPlatformView();
+        GatewayCallCountOnAdd = gateway.Calls.Count;
         _steps.Add(nameof(AddToParent));
+
+        if (FailsToAdd)
+        {
+            throw new InvalidOperationException("adding the host to its parent failed");
+        }
     }
 
     /// <inheritdoc/>
@@ -54,6 +70,11 @@ internal sealed class RecordingHostContainment(SettingsViewHandler handler, Fake
     {
         ReleaseHostCountOnRemove = gateway.ReleaseHostCount;
         _steps.Add(nameof(Remove));
+
+        if (FailsToRemove)
+        {
+            throw new InvalidOperationException("removing the host from its parent failed");
+        }
     }
 
     /// <summary>Handler が platform view を抱えているかどうか。</summary>

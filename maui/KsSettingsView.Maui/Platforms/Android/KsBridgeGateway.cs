@@ -616,6 +616,14 @@ internal sealed class KsBridgeGateway : IKsSettingsGateway
             => Sink.PickerCellMultiSelectionChanged(cellID, indices);
 
         /// <inheritdoc/>
+        public void PickerCellSelectionCompleted(string cellID, int index)
+            => Sink.PickerCellSelectionCompleted(cellID, index);
+
+        /// <inheritdoc/>
+        public void PickerCellMultiSelectionCompleted(string cellID, int[] indices)
+            => Sink.PickerCellMultiSelectionCompleted(cellID, indices);
+
+        /// <inheritdoc/>
         public void NumberPickerCellChanged(string cellID, int value)
             => Sink.NumberPickerCellChanged(cellID, value);
 

@@ -283,6 +283,9 @@ internal class DateCandidates(
  * 下方向スワイプ）では callback を発火しない。「今日」へのジャンプもホイール位置を動かすだけで
  * 発火しない。
  *
+ * 確定経路では確定した日付を [completedDate] へ控える。閉じ切りを知るのは dismiss リスナーを持つ
+ * 提示側なので、提示側はこの控えを読んで確定で閉じたことを判別する。
+ *
  * 年・月の選択が変わると、月・日の候補を新しい範囲へ差し替え、組み立てた日付が有効範囲を外れる
  * 場合は範囲内の最も近い日付へ丸める。
  *
@@ -307,6 +310,15 @@ internal class DateSelectionSheet(
     @ColorInt actionColor: Int,
     private val onConfirmed: (LocalDate) -> Unit,
 ) : BottomSheetDialog(hostContext.ksThemedContext()) {
+
+    /**
+     * 確定した日付の控え。確定操作を通ったときだけ立てる。
+     *
+     * 取消・シート外側タップ・Back・下方向スワイプでは立たないので、提示側は控えの有無だけで
+     * 確定で閉じたことを判別できる。
+     */
+    internal var completedDate: LocalDate? = null
+        private set
 
     /** シート内容のルート（ドラッグハンドル + ヘッダー + 3連ホイール + 「今日」）。 */
     internal val contentRoot: LinearLayout = LinearLayout(context).apply {
@@ -656,7 +668,9 @@ internal class DateSelectionSheet(
      * 確定操作。その時点で選択中の年・月・日から組み立てた日付を1回だけ通知して閉じる。
      */
     private fun confirmSelection() {
-        onConfirmed(selectedDate)
+        val confirmed = selectedDate
+        onConfirmed(confirmed)
+        completedDate = confirmed
         dismiss()
     }
 

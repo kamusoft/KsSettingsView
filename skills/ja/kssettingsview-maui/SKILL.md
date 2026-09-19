@@ -9,7 +9,7 @@ metadata:
 
 # KsSettingsView for .NET MAUI
 
-KsSettingsView は、iOS の設定アプリのようなリスト形式の設定画面を組み立てる UI ライブラリ。画面は Cell を Section にまとめたツリーとして宣言し、そのツリーがそのまま画面になる。この Skill が扱うのは .NET MAUI 版で、XAML と C# から使えるコントロール一式 (`SettingsView`・`Section`・各 Cell) として提供される。記述は XAML でも C# でもよい。Cell を描くのは各 platform の Native 設定 list で、MAUI 側の型はそこへ渡すデータにあたる。
+KsSettingsView は、iOS の設定アプリのようなリスト形式の設定画面を組み立てる UI ライブラリ。画面は Cell を Section にまとめたツリーとして宣言し、そのツリーがそのまま画面になる。この Skill が扱うのは .NET MAUI 版で、XAML と C# から使えるコントロール一式 (`SettingsView`・`Section`・各 Cell) として提供される。記述は XAML でも C# でもよい。Cell を描くのは各 platform の Native 設定 list で、MAUI 側の型はそこへ渡すデータにあたる。Section と Cell は所有者の論理子として生き続け、Header / Footer の View と `CustomCell.Content` は最初の表示から組み込まれ、View インスタンスを差し替えるまで内部状態を保つ。
 
 ## できること
 
@@ -17,10 +17,10 @@ KsSettingsView は、iOS の設定アプリのようなリスト形式の設定�
 |---|---|
 | Cell を置く: ラベル、操作、ボタン、スイッチ、チェックボックス、ラジオ、テキスト入力、リスト選択、数値、時刻、日付 | [references/cells.md](references/cells.md) |
 | Cell を Section にまとめる、アイコン・説明・ヒントを付ける、Cell を無効化・非表示にする | [references/cells.md](references/cells.md) |
-| リスト選択の確定操作を Command で受け取る (`PickerCell.SelectedCommand`) | [references/cells.md](references/cells.md) |
+| 選択面が閉じ切った後に Command を実行する (`PickerCell.SelectedCommand`) | [references/cells.md](references/cells.md) |
 | 表示中の画面を変える: Cell と Section の追加・削除・移動・差し替え | [references/updates.md](references/updates.md) |
 | ユーザーの操作を ViewModel で受け取る、コレクションから Cell を生成する、ページを離れて戻っても状態を保つ | [references/updates.md](references/updates.md) |
-| 色・フォント・Cell の高さ、Classic / Modern の list 外観、Section の Container | [references/styling.md](references/styling.md) |
+| 色・フォント・Cell の高さ、list のスクロールバー、Classic / Modern の list 外観、Section の Container | [references/styling.md](references/styling.md) |
 | 端末のライト / ダーク外観に追随させる、両外観の色を自分で決める、Cell 1 つの色を外観に合わせて切り替える | [references/styling.md](references/styling.md) |
 | スタイルプロパティの一覧を引く (画面全体の既定と Cell ごとの上書き) | [references/styling.md](references/styling.md) |
 | Section と画面全体の Header / Footer (任意の View も置ける)、ページ上での配置場所 | [references/styling.md](references/styling.md) |

@@ -429,7 +429,9 @@ interface KsBridgePickerItem
 /// <summary>
 /// 一覧から項目を選ぶ Cell を輸送する DTO。選択値は Native の実体である index で運ぶ
 /// (maui/ADR-0012)。選択変更は SelectionMode に応じて InteractionDelegate の
-/// PickerCellSelectionChanged または PickerCellMultiSelectionChanged で通知される。
+/// PickerCellSelectionChanged または PickerCellMultiSelectionChanged で通知され、確定した
+/// 選択面が閉じ切ると続けて PickerCellSelectionCompleted または
+/// PickerCellMultiSelectionCompleted が同じ値で通知される。
 /// </summary>
 [BaseType(typeof(KsBridgeCell))]
 [DisableDefaultCtor]
@@ -675,6 +677,18 @@ interface KsBridgeInteractionDelegate
     [Abstract]
     [Export("pickerCellMultiSelectionChanged:indices:")]
     void PickerCellMultiSelectionChanged(string cellID, NSNumber[] indices);
+
+    /// <summary>PickerCell (単一選択) の確定した選択面が閉じ切った。</summary>
+    [Abstract]
+    [Export("pickerCellSelectionCompleted:index:")]
+    void PickerCellSelectionCompleted(string cellID, nint index);
+
+    /// <summary>
+    /// PickerCell (複数選択) の確定した選択面が閉じ切った。index は昇順・重複なし。
+    /// </summary>
+    [Abstract]
+    [Export("pickerCellMultiSelectionCompleted:indices:")]
+    void PickerCellMultiSelectionCompleted(string cellID, NSNumber[] indices);
 
     /// <summary>NumberPickerCell の値が変わった。</summary>
     [Abstract]

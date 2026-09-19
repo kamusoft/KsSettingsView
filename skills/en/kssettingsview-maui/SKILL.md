@@ -9,7 +9,7 @@ metadata:
 
 # KsSettingsView for .NET MAUI
 
-KsSettingsView is a UI library for building settings screens - the list-style screens the iOS Settings app is made of. You declare the screen as a tree of cells grouped into sections, and that tree is the screen. This Skill covers the .NET MAUI build, which comes as a set of controls you use from XAML and C# (`SettingsView`, `Section`, and the cells). The cells are drawn by the native settings list on each platform; the MAUI types are the data you bind to.
+KsSettingsView is a UI library for building settings screens - the list-style screens the iOS Settings app is made of. You declare the screen as a tree of cells grouped into sections, and that tree is the screen. This Skill covers the .NET MAUI build, which comes as a set of controls you use from XAML and C# (`SettingsView`, `Section`, and the cells). The cells are drawn by the native settings list on each platform; the MAUI types are the data you bind to. Sections and cells remain live logical children of their owner, while accessory views and `CustomCell.Content` are present in the first rendered screen and keep their own view state until you replace the view instance.
 
 ## What you can do
 
@@ -17,10 +17,10 @@ KsSettingsView is a UI library for building settings screens - the list-style sc
 |---|---|
 | Place a cell: label, action, button, switch, checkbox, radio, text field, list picker, number, time, date | [references/cells.md](references/cells.md) |
 | Group cells into sections, add icons, descriptions, hints; disable or hide a cell | [references/cells.md](references/cells.md) |
-| Receive the confirmation of a list selection as a command (`PickerCell.SelectedCommand`) | [references/cells.md](references/cells.md) |
+| Run a command after a list selection surface has finished closing (`PickerCell.SelectedCommand`) | [references/cells.md](references/cells.md) |
 | Change the screen after it is on display: add, remove, move, replace cells and sections | [references/updates.md](references/updates.md) |
 | Receive user edits in a view model, generate cells from a collection, keep state across page visits | [references/updates.md](references/updates.md) |
-| Colors, fonts, cell height, Classic / Modern list appearance, section boxes | [references/styling.md](references/styling.md) |
+| Colors, fonts, cell height, the list scrollbar, Classic / Modern list appearance, section boxes | [references/styling.md](references/styling.md) |
 | Follow the light and dark appearance of the device, decide the colors of both yourself, or switch the colors of one cell with the appearance | [references/styling.md](references/styling.md) |
 | Look up the style property list (screen-wide defaults and per-cell overrides) | [references/styling.md](references/styling.md) |
 | Section and screen headers / footers, including arbitrary views in them, and where to place the control on a page | [references/styling.md](references/styling.md) |

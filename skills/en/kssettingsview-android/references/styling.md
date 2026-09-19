@@ -82,12 +82,12 @@ These are all the fields of `Theme`, in declaration order. `Theme` is a data cla
 | Height | `rowHeight` | `Int` | `-1` (automatic) |
 | Height | `hasUnevenRows` | `Boolean` | `true` |
 | Header | `headerTextColor` | `Color` | `Color.Unspecified` - appearance default |
-| Header | `headerBackgroundColor` | `Color` | `Color.Unspecified` - appearance default |
+| Header | `headerBackgroundColor` | `Color` | transparent |
 | Header | `headerFontSize` | `Double` | `-1.0` |
 | Header | `headerFont` | `TextStyle?` | `null` |
 | Header | `headerHeight` | `Double` | `-1.0` (automatic) |
 | Footer | `footerTextColor` | `Color` | `Color.Unspecified` - appearance default |
-| Footer | `footerBackgroundColor` | `Color` | `Color.Unspecified` - appearance default |
+| Footer | `footerBackgroundColor` | `Color` | transparent |
 | Footer | `footerFontSize` | `Double` | `-1.0` |
 | Footer | `footerFont` | `TextStyle?` | `null` |
 | Cell defaults | `cellTitleColor` | `Color` | `Color.Unspecified` - appearance default, per cell kind |
@@ -129,7 +129,7 @@ KsSettingsView(theme = brandedTheme) {
 
 Outside a Composable - a view holder, an activity driving the XML view host - use `KsSettingsViewDefaults.theme(darkTheme = ...)`, or `lightTheme()` / `darkTheme()` to name a set outright.
 
-The `Theme` returned by these factories carries the ten colors of the list, the cells, the separator, the selection, the accent, the disabled text and the header / footer text and background. The rest stay `Color.Unspecified` in it, because they are decided when the row is drawn: title and description from the appearance, value text from the title, hint text from the accent, the placeholder from the bundled theme, and the section border from nothing at all. Pass a factory set that disagrees with the device - `darkTheme()` on a light device - and those late-resolved colors follow the device instead; `copy` the returned theme and state them if you need them pinned.
+The `Theme` returned by these factories carries the ten colors of the list, the cells, the separator, the selection, the accent, the disabled text and the header / footer text and background. Header and footer backgrounds are transparent in both appearance sets. The rest stay `Color.Unspecified` in it, because they are decided when the row is drawn: title and description from the appearance, value text from the title, hint text from the accent, the placeholder from the bundled theme, and the section border from nothing at all. Pass a factory set that disagrees with the device - `darkTheme()` on a light device - and those late-resolved colors follow the device instead; `copy` the returned theme and state them if you need them pinned.
 
 The `Theme` companion no longer publishes color constants; only `DEFAULT_CELL_ICON_SIZE_DP_VALUE` and `DEFAULT_CELL_ICON_RADIUS_DP_VALUE`, the two `Float` dp values behind the icon frame, still live there.
 
@@ -259,6 +259,10 @@ val boxedTheme = Theme(
 
 The box covers only the cells of a section: section headers and footers sit outside it, and the screen header and footer are never boxed. In `Classic` only the vertical parts of `sectionMargin` apply, because a classic section spans the full width.
 
+## Show or hide the list scroll indicator
+
+`Theme.scrollIndicatorVisible` controls the vertical scroll indicator of the settings list and defaults to `true`. Changing it on a displayed view updates the indicator without rebuilding rows or moving the scroll position. The same value is captured when a `PickerCell` candidate sheet opens; number, date and time wheel surfaces and lists inside your own `CustomCell` or view accessory are not controlled by it.
+
 ## Control cell height
 
 Height resolves from `CellStyle.cellHeight`, then `Theme.rowHeight`, then the platform minimum of 60dp. The two are written differently: `CellStyle.cellHeight` is a `Dp?` and takes `80.dp`, while `Theme.rowHeight` is a plain `Int` counted in dp, with `-1` meaning unspecified, so it takes `64` and rejects `64.dp`.
@@ -338,6 +342,8 @@ KsSettingsView(
     }
 }
 ```
+
+For text headers and footers, `headerBackgroundColor` and `footerBackgroundColor` paint the corresponding area. Their library defaults are transparent in both appearances, so the list background shows through. A header or footer supplied as a view is owned by that view, is built with the host context, and does not receive the library background paint.
 
 ## Hide a section header without clearing it
 

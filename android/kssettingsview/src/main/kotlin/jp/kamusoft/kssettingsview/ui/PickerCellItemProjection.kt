@@ -23,6 +23,7 @@ private fun newPickerCellId(): String = "picker-cell-${java.util.UUID.randomUUID
  * @param displayText 要素から主表示テキストを作る射影
  * @param subText 要素から副表示テキストを作る射影（`null` または空文字列を返した要素は副表示なし）
  * @param onItemSelected 確定した index に対応する元要素を受け取る callback
+ * @param onSelectionCompleted 確定した選択 UI が閉じ切った後に確定 index を受け取る callback
  */
 public fun <T> PickerCell(
     id: String = newPickerCellId(),
@@ -40,6 +41,7 @@ public fun <T> PickerCell(
     accentColor: Color = Color.Unspecified,
     onSelectionChanged: ((Int) -> Unit)? = null,
     onItemSelected: ((T) -> Unit)? = null,
+    onSelectionCompleted: ((Int) -> Unit)? = null,
     isEnabled: Boolean = true,
     isVisible: Boolean = true,
 ): PickerCell {
@@ -58,6 +60,7 @@ public fun <T> PickerCell(
         pageTitle = pageTitle,
         accentColor = accentColor,
         onSelectionChanged = composeSingleSelection(elements, onSelectionChanged, onItemSelected),
+        onSelectionCompleted = onSelectionCompleted,
         isEnabled = isEnabled,
         isVisible = isVisible,
     )
@@ -72,6 +75,7 @@ public fun <T> PickerCell(
  *
  * @param onItemsSelected 確定した index 集合に対応する元要素を index 昇順で受け取る callback
  *   （範囲外 index に対応する要素は含まれない）
+ * @param onMultiSelectionCompleted 確定した選択 UI が閉じ切った後に確定 index 集合を受け取る callback
  */
 public fun <T> PickerCell(
     id: String = newPickerCellId(),
@@ -90,6 +94,7 @@ public fun <T> PickerCell(
     accentColor: Color = Color.Unspecified,
     onMultiSelectionChanged: ((Set<Int>) -> Unit)? = null,
     onItemsSelected: ((List<T>) -> Unit)? = null,
+    onMultiSelectionCompleted: ((Set<Int>) -> Unit)? = null,
     isEnabled: Boolean = true,
     isVisible: Boolean = true,
 ): PickerCell {
@@ -109,6 +114,7 @@ public fun <T> PickerCell(
         pageTitle = pageTitle,
         accentColor = accentColor,
         onMultiSelectionChanged = composeMultiSelection(elements, onMultiSelectionChanged, onItemsSelected),
+        onMultiSelectionCompleted = onMultiSelectionCompleted,
         isEnabled = isEnabled,
         isVisible = isVisible,
     )
@@ -134,6 +140,7 @@ public fun PickerCell(
     accentColor: Color = Color.Unspecified,
     onSelectionChanged: ((Int) -> Unit)? = null,
     onItemSelected: ((String) -> Unit)? = null,
+    onSelectionCompleted: ((Int) -> Unit)? = null,
     isEnabled: Boolean = true,
     isVisible: Boolean = true,
 ): PickerCell = PickerCell(
@@ -152,6 +159,7 @@ public fun PickerCell(
     accentColor = accentColor,
     onSelectionChanged = onSelectionChanged,
     onItemSelected = onItemSelected,
+    onSelectionCompleted = onSelectionCompleted,
     isEnabled = isEnabled,
     isVisible = isVisible,
 )
@@ -173,6 +181,7 @@ public fun PickerCell(
     accentColor: Color = Color.Unspecified,
     onMultiSelectionChanged: ((Set<Int>) -> Unit)? = null,
     onItemsSelected: ((List<String>) -> Unit)? = null,
+    onMultiSelectionCompleted: ((Set<Int>) -> Unit)? = null,
     isEnabled: Boolean = true,
     isVisible: Boolean = true,
 ): PickerCell = PickerCell(
@@ -192,6 +201,7 @@ public fun PickerCell(
     accentColor = accentColor,
     onMultiSelectionChanged = onMultiSelectionChanged,
     onItemsSelected = onItemsSelected,
+    onMultiSelectionCompleted = onMultiSelectionCompleted,
     isEnabled = isEnabled,
     isVisible = isVisible,
 )

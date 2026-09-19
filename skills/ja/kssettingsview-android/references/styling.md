@@ -82,12 +82,12 @@ KsSettingsView(theme = warmTheme) {
 | 高さ | `rowHeight` | `Int` | `-1` (自動) |
 | 高さ | `hasUnevenRows` | `Boolean` | `true` |
 | Header | `headerTextColor` | `Color` | `Color.Unspecified` — 外観の既定 |
-| Header | `headerBackgroundColor` | `Color` | `Color.Unspecified` — 外観の既定 |
+| Header | `headerBackgroundColor` | `Color` | 透明 |
 | Header | `headerFontSize` | `Double` | `-1.0` |
 | Header | `headerFont` | `TextStyle?` | `null` |
 | Header | `headerHeight` | `Double` | `-1.0` (自動) |
 | Footer | `footerTextColor` | `Color` | `Color.Unspecified` — 外観の既定 |
-| Footer | `footerBackgroundColor` | `Color` | `Color.Unspecified` — 外観の既定 |
+| Footer | `footerBackgroundColor` | `Color` | 透明 |
 | Footer | `footerFontSize` | `Double` | `-1.0` |
 | Footer | `footerFont` | `TextStyle?` | `null` |
 | Cell 既定値 | `cellTitleColor` | `Color` | `Color.Unspecified` — 外観の既定 (Cell 種別ごと) |
@@ -129,7 +129,7 @@ KsSettingsView(theme = brandedTheme) {
 
 Composable の外 (ViewHolder や XML の View ホストを駆動する Activity) では `KsSettingsViewDefaults.theme(darkTheme = ...)` を使うか、`lightTheme()` / `darkTheme()` でセットを名指しする。
 
-factory が返す `Theme` が値を持つのは、list 下地・Cell 背景・罫線・選択色・accent・無効時文字・Header / Footer の文字と背景の 10 色である。残りは返り値の中でも `Color.Unspecified` のままで、Cell を描く時点で決まる — title と description は外観から、valueText は title から、hintText は accent から、placeholder は同梱テーマから、Section の Border はどこからも取らず透明になる。端末の外観と食い違うセット (ライトの端末で `darkTheme()`) を渡すと、これら後から決まる色だけが端末側に従う。固定したい場合は返された `Theme` を `copy` して明示する。
+factory が返す `Theme` が値を持つのは、list 下地・Cell 背景・罫線・選択色・accent・無効時文字・Header / Footer の文字と背景の 10 色である。Header / Footer の背景は両外観セットとも透明である。残りは返り値の中でも `Color.Unspecified` のままで、Cell を描く時点で決まる — title と description は外観から、valueText は title から、hintText は accent から、placeholder は同梱テーマから、Section の Border はどこからも取らず透明になる。端末の外観と食い違うセット (ライトの端末で `darkTheme()`) を渡すと、これら後から決まる色だけが端末側に従う。固定したい場合は返された `Theme` を `copy` して明示する。
 
 `Theme` companion に色の定数は無くなった。残っているのは icon の枠を決める 2 つの `Float` の dp 値、`DEFAULT_CELL_ICON_SIZE_DP_VALUE` と `DEFAULT_CELL_ICON_RADIUS_DP_VALUE` だけである。
 
@@ -259,6 +259,10 @@ val boxedTheme = Theme(
 
 Container が覆うのは Section の Cell だけ。Section の Header / Footer は Container の外に置かれ、画面全体の Header / Footer は装飾対象にならない。`Classic` では `sectionMargin` の上下成分だけが効く (Classic の Section は全幅のため)。
 
+## List のスクロールインジケータを表示・非表示にする
+
+`Theme.scrollIndicatorVisible` は設定 list の縦スクロールインジケータを制御し、既定は `true`。表示中の View で変更しても行を作り直したりスクロール位置を動かしたりせずに反映される。`PickerCell` の候補シートも開いた時点の同じ値を使うが、数値・日付・時刻のホイール選択面や、利用者の `CustomCell` / View 形式 accessory の中の list は対象外。
+
 ## Cell の高さを決める
 
 高さは `CellStyle.cellHeight` → `Theme.rowHeight` → platform の最低値 60dp の順で解決する。この 2 つは書き方が違う。`CellStyle.cellHeight` は `Dp?` で `80.dp` を取り、`Theme.rowHeight` は dp を単位とする素の `Int` で未指定が `-1`、つまり `64` を取り `64.dp` は受け付けない。
@@ -338,6 +342,8 @@ KsSettingsView(
     }
 }
 ```
+
+文字列の Header / Footer には `headerBackgroundColor` / `footerBackgroundColor` が対応する領域の背景として適用される。ライブラリの既定は両外観とも透明なので list の下地が見える。View として渡した Header / Footer はホスト Context で作られるその View の所有物で、ライブラリの背景塗りは適用されない。
 
 ## 内容を消さずに Section の Header を隠す
 

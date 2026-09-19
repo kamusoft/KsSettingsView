@@ -51,6 +51,10 @@ public struct PickerCell: KsCell, DSLReidentifiable, DSLStyleModifiable, DSLIcon
     public let onSelectionChanged: (@Sendable (Int) -> Void)?
     /// 複数選択モードの選択変更 callback
     public let onMultiSelectionChanged: (@Sendable (Set<Int>) -> Void)?
+    /// 単一選択モードで、確定した選択面が閉じ切った後に確定 index を届ける callback
+    public let onSelectionCompleted: (@Sendable (Int) -> Void)?
+    /// 複数選択モードで、確定した選択面が閉じ切った後に確定 index 集合を届ける callback
+    public let onMultiSelectionCompleted: (@Sendable (Set<Int>) -> Void)?
     public let isEnabled: Bool
     public let isVisible: Bool
 
@@ -69,6 +73,7 @@ public struct PickerCell: KsCell, DSLReidentifiable, DSLStyleModifiable, DSLIcon
         pageTitle: String? = nil,
         accentColor: UIColor? = nil,
         onSelectionChanged: (@Sendable (Int) -> Void)? = nil,
+        onSelectionCompleted: (@Sendable (Int) -> Void)? = nil,
         isEnabled: Bool = true,
         isVisible: Bool = true
     ) {
@@ -88,6 +93,8 @@ public struct PickerCell: KsCell, DSLReidentifiable, DSLStyleModifiable, DSLIcon
         self.accentColor = accentColor
         self.onSelectionChanged = onSelectionChanged
         self.onMultiSelectionChanged = nil
+        self.onSelectionCompleted = onSelectionCompleted
+        self.onMultiSelectionCompleted = nil
         self.isEnabled = isEnabled
         self.isVisible = isVisible
     }
@@ -106,6 +113,7 @@ public struct PickerCell: KsCell, DSLReidentifiable, DSLStyleModifiable, DSLIcon
         selectedIndex: Binding<Int?>,
         pageTitle: String? = nil,
         accentColor: UIColor? = nil,
+        onSelectionCompleted: (@Sendable (Int) -> Void)? = nil,
         isEnabled: Bool = true,
         isVisible: Bool = true
     ) {
@@ -122,6 +130,7 @@ public struct PickerCell: KsCell, DSLReidentifiable, DSLStyleModifiable, DSLIcon
             pageTitle: pageTitle,
             accentColor: accentColor,
             onSelectionChanged: PickerCell.indexSetter(for: selectedIndex),
+            onSelectionCompleted: onSelectionCompleted,
             isEnabled: isEnabled,
             isVisible: isVisible
         )
@@ -145,6 +154,7 @@ public struct PickerCell: KsCell, DSLReidentifiable, DSLStyleModifiable, DSLIcon
         pageTitle: String? = nil,
         accentColor: UIColor? = nil,
         onMultiSelectionChanged: (@Sendable (Set<Int>) -> Void)? = nil,
+        onMultiSelectionCompleted: (@Sendable (Set<Int>) -> Void)? = nil,
         isEnabled: Bool = true,
         isVisible: Bool = true
     ) {
@@ -164,6 +174,8 @@ public struct PickerCell: KsCell, DSLReidentifiable, DSLStyleModifiable, DSLIcon
         self.accentColor = accentColor
         self.onSelectionChanged = nil
         self.onMultiSelectionChanged = onMultiSelectionChanged
+        self.onSelectionCompleted = nil
+        self.onMultiSelectionCompleted = onMultiSelectionCompleted
         self.isEnabled = isEnabled
         self.isVisible = isVisible
     }
@@ -185,6 +197,7 @@ public struct PickerCell: KsCell, DSLReidentifiable, DSLStyleModifiable, DSLIcon
         maxSelectedNumber: Int = 0,
         pageTitle: String? = nil,
         accentColor: UIColor? = nil,
+        onMultiSelectionCompleted: (@Sendable (Set<Int>) -> Void)? = nil,
         isEnabled: Bool = true,
         isVisible: Bool = true
     ) {
@@ -202,6 +215,7 @@ public struct PickerCell: KsCell, DSLReidentifiable, DSLStyleModifiable, DSLIcon
             pageTitle: pageTitle,
             accentColor: accentColor,
             onMultiSelectionChanged: PickerCell.indicesSetter(for: selectedIndices),
+            onMultiSelectionCompleted: onMultiSelectionCompleted,
             isEnabled: isEnabled,
             isVisible: isVisible
         )
@@ -246,6 +260,8 @@ public struct PickerCell: KsCell, DSLReidentifiable, DSLStyleModifiable, DSLIcon
         accentColor: UIColor?,
         onSelectionChanged: (@Sendable (Int) -> Void)?,
         onMultiSelectionChanged: (@Sendable (Set<Int>) -> Void)?,
+        onSelectionCompleted: (@Sendable (Int) -> Void)?,
+        onMultiSelectionCompleted: (@Sendable (Set<Int>) -> Void)?,
         isEnabled: Bool,
         isVisible: Bool
     ) {
@@ -265,6 +281,8 @@ public struct PickerCell: KsCell, DSLReidentifiable, DSLStyleModifiable, DSLIcon
         self.accentColor = accentColor
         self.onSelectionChanged = onSelectionChanged
         self.onMultiSelectionChanged = onMultiSelectionChanged
+        self.onSelectionCompleted = onSelectionCompleted
+        self.onMultiSelectionCompleted = onMultiSelectionCompleted
         self.isEnabled = isEnabled
         self.isVisible = isVisible
     }
@@ -354,6 +372,8 @@ public struct PickerCell: KsCell, DSLReidentifiable, DSLStyleModifiable, DSLIcon
             accentColor: accentColor,
             onSelectionChanged: onSelectionChanged,
             onMultiSelectionChanged: onMultiSelectionChanged,
+            onSelectionCompleted: onSelectionCompleted,
+            onMultiSelectionCompleted: onMultiSelectionCompleted,
             isEnabled: isEnabled,
             isVisible: isVisible
         )
@@ -377,6 +397,8 @@ public struct PickerCell: KsCell, DSLReidentifiable, DSLStyleModifiable, DSLIcon
             accentColor: accentColor,
             onSelectionChanged: onSelectionChanged,
             onMultiSelectionChanged: onMultiSelectionChanged,
+            onSelectionCompleted: onSelectionCompleted,
+            onMultiSelectionCompleted: onMultiSelectionCompleted,
             isEnabled: isEnabled,
             isVisible: isVisible
         )
@@ -400,6 +422,8 @@ public struct PickerCell: KsCell, DSLReidentifiable, DSLStyleModifiable, DSLIcon
             accentColor: accentColor,
             onSelectionChanged: onSelectionChanged,
             onMultiSelectionChanged: onMultiSelectionChanged,
+            onSelectionCompleted: onSelectionCompleted,
+            onMultiSelectionCompleted: onMultiSelectionCompleted,
             isEnabled: isEnabled,
             isVisible: isVisible
         )

@@ -3,7 +3,7 @@ type: concept
 title: Cell の MAUI 表現 (KsSettingsView.Maui)
 description: core の Cell 意味論を MAUI の型でどう表すか — 公開プロパティの型 (MAUI 慣例型)・PickerCell の候補と選択・ユーザー操作の書き戻し (TwoWay)・CustomCell
 tags: [maui, facade, cells, binding]
-timestamp: 2026-09-04
+timestamp: 2026-09-19
 ---
 
 # Cell の MAUI 表現 (KsSettingsView.Maui)
@@ -43,9 +43,11 @@ timestamp: 2026-09-04
 
 ### SelectedCommand (選択操作の完了通知)
 
-`SelectedCommand` (`ICommand?`、OneWay・既定 null) は**利用者による選択操作の完了**を通知する — 値の TwoWay とは別軸で、同じ選択を確定し直しても実行される (値の変化ではなく確定操作の通知)。値の書き戻し (TwoWay) だけでは初期化・プログラム更新と利用者操作を区別できないため、完了通知は独立の公開面を持つ。発火源は native の選択確定通知のみ: 公開選択値の直接設定・cancel・非確定 dismiss では実行されない。実行は選択値の書き戻しと相互導出の完了後で、ViewModel は Command 内から新しい選択値を観測できる。
+`SelectedCommand` (`ICommand?`、OneWay・既定 null) は**利用者による選択操作の完了**を通知する — 値の TwoWay とは別軸で、同じ選択を確定し直しても実行される (値の変化ではなく確定操作の通知)。値の書き戻し (TwoWay) だけでは初期化・プログラム更新と利用者操作を区別できないため、完了通知は独立の公開面を持つ。発火源は native の**閉じ切り通知**のみ: 公開選択値の直接設定・cancel・非確定 dismiss では実行されない。
 
-実行引数は届いた確定通知の種類で決まり、単一選択の通知で `SelectedItem`、複数選択の通知で `SelectedItems` (選択面表示中に `SelectionMode` が変わっても、利用者が確定した種類に対応する引数を渡す)。移植元互換で `CanExecute` は確認せず `Execute` を直接呼ぶ (`CommandCell.Command` が実効有効に反映するのと意図的に異なる)。任意の `CommandParameter` は提供しない。
+実行時点は選択面が閉じ切った後である ([core/ADR-0034](../../../decisions/core/0034-picker-selection-completed-after-dismiss.md))。選択値の書き戻しと相互導出は確定通知の時点 (選択面が閉じる前) に済んでおり、Command はその後の閉じ切り通知で実行されるため、ViewModel は Command 内から新しい選択値を観測できる。iOS では確定直後に別のモーダルを提示しても UIKit が提示を無視するため、Command の中からダイアログや画面遷移を固定待ちなしで始められるのはこの時点差による。
+
+実行引数は届いた閉じ切り通知の種類で決まり、単一選択の通知で `SelectedItem`、複数選択の通知で `SelectedItems` (選択面表示中に `SelectionMode` が変わっても、利用者が確定した種類に対応する引数を渡す)。引数は閉じ切り通知を受けた時点の Cell の現値であり、確定時点の snapshot ではない — 確定から閉じ切りまでの間にアプリが `ItemsSource` や選択を変えれば変更後の値が渡る。移植元互換で `CanExecute` は確認せず `Execute` を直接呼ぶ (`CommandCell.Command` が実効有効に反映するのと意図的に異なる)。任意の `CommandParameter` は提供しない。
 
 ## ユーザー操作と双方向バインド
 
@@ -65,7 +67,7 @@ timestamp: 2026-09-04
 `CommandCell` / `ButtonCell` はタップで `Tapped` イベントと `Command` (`CommandParameter` 付き) を発火する Cell。実効有効状態は `IsEnabled && (Command?.CanExecute(CommandParameter) ?? true)` で、`CanExecuteChanged` に追随する。タップは実効有効のときだけ発火し、順序は `Tapped` イベント → `Command.Execute(CommandParameter)`。
 
 - `EntryCell` の値変更 event / callback は公開しない — 経路は `ValueText` の TwoWay バインドのみ (AiForms 原典にも値変更 callback は無く、TwoWay バインドで足りるとするオーナー判断)
-- `PickerCell` の選択操作の完了は `SelectedCommand` で通知される (上記「SelectedCommand」)
+- `PickerCell` の選択操作の完了は `SelectedCommand` で通知される。実行は選択面が閉じ切った後である (上記「SelectedCommand」)
 
 ## CustomCell (任意の View を行の内容にする)
 

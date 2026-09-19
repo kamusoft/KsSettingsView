@@ -32,6 +32,8 @@ private class SwitchRecordingListener : KsBridgeInteractionListener {
     override fun entryCellTextChanged(cellID: String, text: String) = Unit
     override fun pickerCellSelectionChanged(cellID: String, index: Int) = Unit
     override fun pickerCellMultiSelectionChanged(cellID: String, indices: IntArray) = Unit
+    override fun pickerCellSelectionCompleted(cellID: String, index: Int) = Unit
+    override fun pickerCellMultiSelectionCompleted(cellID: String, indices: IntArray) = Unit
     override fun numberPickerCellChanged(cellID: String, value: Int) = Unit
     override fun timePickerCellChanged(cellID: String, time: String) = Unit
     override fun datePickerCellChanged(cellID: String, date: String) = Unit

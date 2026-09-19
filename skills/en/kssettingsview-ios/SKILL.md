@@ -15,7 +15,7 @@ KsSettingsView is a UI library for building settings screens - the list-style sc
 
 | What you want to do | Where to look |
 |---|---|
-| Place a cell: label, action, button, switch, checkbox, radio, text field, list picker, number, time, date | [references/cells.md](references/cells.md) |
+| Place a cell: label, action, button, switch, checkbox, radio, text field, list picker, number, time, date; observe selection completion | [references/cells.md](references/cells.md) |
 | Group cells into sections, add icons, descriptions, hints; disable or hide a cell | [references/cells.md](references/cells.md) |
 | Change the screen after it is on display: insert, remove, move, replace cells, batch updates | [references/updates.md](references/updates.md) |
 | Keep cells identified across re-evaluations, drive visibility from state, host the screen from UIKit | [references/updates.md](references/updates.md) |
@@ -54,7 +54,7 @@ let package = Package(
 
 The declaration uses `exact:` so that it resolves to exactly the version you write, prerelease or not. `from:` also resolves prereleases when its lower bound is one, but its upper bound stays open up to the next major version, so it does not pin anything.
 
-You link that one product, but you `import` by module name: it bundles three modules, `KsSettingsViewCore` (settings tree), `KsSettingsViewUI` (cells, `Theme`, `CellStyle`, UIKit host), and `KsSettingsViewSwiftUI` (SwiftUI view and declarative DSL). The built-in cell types are covered one by one in [references/cells.md](references/cells.md); `CustomCell` and cell types of your own are in [references/custom-cells.md](references/custom-cells.md).
+You link that one product, but you `import` by module name: it bundles three modules, `KsSettingsViewCore` (settings tree), `KsSettingsViewUI` (cells, `Theme`, `CellStyle`, UIKit host), and `KsSettingsViewSwiftUI` (SwiftUI view and declarative DSL). The `KsSettingsView` closure uses the public `KsSettingsViewBuilder`; when `import SwiftUI` makes `Section` ambiguous, use the public `KsSection` typealias or the `ksSection(...)` factory. The built-in cell types are covered one by one in [references/cells.md](references/cells.md); `CustomCell` and cell types of your own are in [references/custom-cells.md](references/custom-cells.md).
 
 | Requirement | Minimum |
 |---|---|
@@ -87,7 +87,7 @@ struct SettingsScreen: View {
 }
 ```
 
-`ksSection` is used instead of `Section` so the cell builder never collides with `SwiftUI.Section`.
+`ksSection` is used instead of `Section` so the cell builder never collides with `SwiftUI.Section`; `KsSection` is the matching typealias when you need to name a section value directly.
 
 ## Reference files
 

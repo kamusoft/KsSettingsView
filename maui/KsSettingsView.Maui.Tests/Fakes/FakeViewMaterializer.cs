@@ -28,14 +28,37 @@ internal sealed class FakeViewMaterializer : IKsViewMaterializer
     /// <summary>実体化された順の記録。</summary>
     public IReadOnlyList<FakeViewLease> Leases => _leases;
 
+    /// <summary>
+    /// 実体化を成功させる件数。これを超える要求は失敗する。
+    /// </summary>
+    /// <remarks>
+    /// null なら常に成功する。実体化の途中で失敗する接続を作るために使う。
+    /// </remarks>
+    public int? SucceedsUpTo { get; set; }
+
+    /// <summary>
+    /// 実体を 1 つ作るたびに走らせる観測処理。
+    /// </summary>
+    /// <remarks>
+    /// 作られる実体を口の外から捕まえられない場面 (接続や Host 生成の内側で作られる実体) で、
+    /// その実体の破棄の振る舞いを仕込むために使う。
+    /// </remarks>
+    public Action<FakeViewLease>? Materialized { get; set; }
+
     /// <inheritdoc/>
     public IKsViewLease Materialize(View view, Action measureInvalidated)
     {
         ArgumentNullException.ThrowIfNull(view);
         ArgumentNullException.ThrowIfNull(measureInvalidated);
 
+        if (SucceedsUpTo is { } limit && _leases.Count >= limit)
+        {
+            throw new InvalidOperationException("materialization failed");
+        }
+
         FakeViewLease lease = new(view, HandlerFor(view), measureInvalidated);
         _leases.Add(lease);
+        Materialized?.Invoke(lease);
         return lease;
     }
 

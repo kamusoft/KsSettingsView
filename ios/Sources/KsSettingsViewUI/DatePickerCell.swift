@@ -40,6 +40,8 @@ public struct DatePickerCell: KsCell, DSLReidentifiable, DSLStyleModifiable, DSL
     /// Today ボタンの表示文字列（`nil` / 空で非表示）。AiForms `TodayText` 互換。
     public let todayText: String?
     public let onValueChanged: (@Sendable (Date) -> Void)?
+    /// 確定した選択面が閉じ切った後に確定した日付を届ける callback
+    public let onValueCompleted: (@Sendable (Date) -> Void)?
     public let isEnabled: Bool
     public let isVisible: Bool
 
@@ -60,6 +62,7 @@ public struct DatePickerCell: KsCell, DSLReidentifiable, DSLStyleModifiable, DSL
         uiStyle: DatePickerUIStyle = .wheels,
         todayText: String? = nil,
         onValueChanged: (@Sendable (Date) -> Void)? = nil,
+        onValueCompleted: (@Sendable (Date) -> Void)? = nil,
         isEnabled: Bool = true,
         isVisible: Bool = true
     ) {
@@ -79,6 +82,7 @@ public struct DatePickerCell: KsCell, DSLReidentifiable, DSLStyleModifiable, DSL
         self.uiStyle = uiStyle
         self.todayText = todayText
         self.onValueChanged = onValueChanged
+        self.onValueCompleted = onValueCompleted
         self.isEnabled = isEnabled
         self.isVisible = isVisible
     }
@@ -99,6 +103,7 @@ public struct DatePickerCell: KsCell, DSLReidentifiable, DSLStyleModifiable, DSL
         accentColor: UIColor? = nil,
         uiStyle: DatePickerUIStyle = .wheels,
         todayText: String? = nil,
+        onValueCompleted: (@Sendable (Date) -> Void)? = nil,
         isEnabled: Bool = true,
         isVisible: Bool = true
     ) {
@@ -110,7 +115,8 @@ public struct DatePickerCell: KsCell, DSLReidentifiable, DSLStyleModifiable, DSL
             icon: icon, hintText: hintText, date: date.wrappedValue, format: format,
             minDate: minDate, maxDate: maxDate, pickerTitle: pickerTitle, accentColor: accentColor,
             uiStyle: uiStyle, todayText: todayText,
-            onValueChanged: setter, isEnabled: isEnabled, isVisible: isVisible
+            onValueChanged: setter, onValueCompleted: onValueCompleted,
+            isEnabled: isEnabled, isVisible: isVisible
         )
     }
 
@@ -168,7 +174,8 @@ public struct DatePickerCell: KsCell, DSLReidentifiable, DSLStyleModifiable, DSL
             icon: icon, hintText: hintText, date: date, format: format,
             minDate: minDate, maxDate: maxDate, pickerTitle: pickerTitle, accentColor: accentColor,
             uiStyle: uiStyle, todayText: todayText,
-            onValueChanged: onValueChanged, isEnabled: isEnabled, isVisible: isVisible
+            onValueChanged: onValueChanged, onValueCompleted: onValueCompleted,
+            isEnabled: isEnabled, isVisible: isVisible
         )
     }
 
@@ -178,7 +185,8 @@ public struct DatePickerCell: KsCell, DSLReidentifiable, DSLStyleModifiable, DSL
             icon: icon, hintText: hintText, date: date, format: format,
             minDate: minDate, maxDate: maxDate, pickerTitle: pickerTitle, accentColor: accentColor,
             uiStyle: uiStyle, todayText: todayText,
-            onValueChanged: onValueChanged, isEnabled: isEnabled, isVisible: isVisible
+            onValueChanged: onValueChanged, onValueCompleted: onValueCompleted,
+            isEnabled: isEnabled, isVisible: isVisible
         )
     }
 
@@ -188,7 +196,8 @@ public struct DatePickerCell: KsCell, DSLReidentifiable, DSLStyleModifiable, DSL
             icon: icon, hintText: hintText, date: date, format: format,
             minDate: minDate, maxDate: maxDate, pickerTitle: pickerTitle, accentColor: accentColor,
             uiStyle: uiStyle, todayText: todayText,
-            onValueChanged: onValueChanged, isEnabled: isEnabled, isVisible: isVisible
+            onValueChanged: onValueChanged, onValueCompleted: onValueCompleted,
+            isEnabled: isEnabled, isVisible: isVisible
         )
     }
 }

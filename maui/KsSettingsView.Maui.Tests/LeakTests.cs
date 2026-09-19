@@ -123,7 +123,6 @@ public sealed class LeakTests
         GatewayScope scope = GatewayScope.Connect(view);
         Label accessory = new();
         view.RootHeaderView = accessory;
-        scope.Attach();
 
         WeakReference host = TakeHostReference(scope, accessory);
         view.RootHeaderView = null;
@@ -142,7 +141,6 @@ public sealed class LeakTests
         GatewayScope scope = GatewayScope.Connect(view);
         Label accessory = new();
         section.HeaderView = accessory;
-        scope.Attach();
 
         WeakReference host = TakeHostReference(scope, accessory);
         retire(view, section, scope);

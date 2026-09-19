@@ -1,5 +1,6 @@
 package jp.kamusoft.kssettingsview.ui
 
+import android.util.Log
 import jp.kamusoft.kssettingsview.core.AccessoryTarget
 import jp.kamusoft.kssettingsview.core.Cell
 import jp.kamusoft.kssettingsview.core.Section
@@ -13,6 +14,9 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.lang.ref.WeakReference
+import java.util.concurrent.CopyOnWriteArrayList
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * `SettingsRoot` の状態管理と部分更新 Diff 発行を担う Store。
@@ -80,6 +84,19 @@ public class SettingsRootStore(
      */
     internal val accessoryMeasureInvalidations: SharedFlow<AccessoryTarget> =
         _accessoryMeasureInvalidations.asSharedFlow()
+
+    /**
+     * Root H/F の更新を知らせる相手（bind 中の [RootAccessoryReceiver]）の登録。
+     *
+     * Root H/F は本 Store の現在状態に含まれない（core/ADR-0005）ため、通知を取りこぼすと復元できない。
+     * [diffs] は replay を持たず容量も有限で、購読の開始が bind から戻る時点に間に合う保証も無いので、
+     * Root 対象だけは登録先へ同期に直接知らせる（core/ADR-0033）。
+     *
+     * 保持するのは登録だけで値は持たない。相手は弱参照で覚え、参照が切れた登録は次に知らせる時点で
+     * 取り除く。どのスレッドからの更新でも壊れないよう、走査と追加・削除は複製で進む実装を使う。
+     */
+    private val rootAccessoryReceivers: CopyOnWriteArrayList<WeakReference<RootAccessoryReceiver>> =
+        CopyOnWriteArrayList()
 
     // MARK: - Root 全体操作
 
@@ -251,11 +268,18 @@ public class SettingsRootStore(
      * Section H/F の `sectionId` が現在状態に存在しない場合は、state 更新も Diff emit も行わない
      * no-op とする（core/ADR-0020）。Root H/F は `SettingsRoot` 値型に state を持たないため
      * sectionId 検証の対象外であり、常に Diff を emit する。
+     *
+     * どのスレッドから呼んでもよい。Root H/F の値は bind 中の Host へその場で知らせ、表示への反映は
+     * Host がメインスレッドで行う。ある Host での反映が失敗しても呼び出し元へは伝わらず、他の Host
+     * への知らせと Diff の emit は続く。
      */
     public fun updateAccessory(target: AccessoryTarget, accessory: SettingsAccessory?) {
         when (target) {
             AccessoryTarget.RootHeader, AccessoryTarget.RootFooter -> {
-                // state 変更不要（UI 層プロパティへの反映は applyDiff 側で行う）
+                // state は変えず、bind 中の Host へ直接知らせる（表示への反映は Host が行う）。
+                deliverRootAccessory(
+                    SettingsRootDiff.UpdateAccessory(target = target, accessory = accessory),
+                )
             }
             is AccessoryTarget.SectionHeader -> {
                 val updated = updateSectionAccessory(
@@ -301,6 +325,60 @@ public class SettingsRootStore(
         _theme.value = theme
     }
 
+    // MARK: - Root accessory の受け口
+
+    /**
+     * Root H/F の更新を知らせる相手として [receiver] を登録する。
+     *
+     * 登録は相手ごとに 1 件で、同じ相手を登録し直しても増えない。登録は [receiver] を弱参照で覚える
+     * ため、Store が生きていても相手の寿命は延びない。
+     */
+    internal fun registerRootAccessoryReceiver(receiver: RootAccessoryReceiver) {
+        pruneRootAccessoryReceivers()
+        if (rootAccessoryReceivers.any { it.get() === receiver }) return
+        rootAccessoryReceivers.add(WeakReference(receiver))
+    }
+
+    /** [receiver] への知らせを止める。登録が無ければ何もしない。 */
+    internal fun unregisterRootAccessoryReceiver(receiver: RootAccessoryReceiver) {
+        rootAccessoryReceivers.removeIf { reference ->
+            val registered = reference.get()
+            registered == null || registered === receiver
+        }
+    }
+
+    /**
+     * Root 対象の更新を、登録されている全ての相手へ知らせる。
+     *
+     * 自分を配送元として渡すことで、受け取り側は現在結び付いている Store からの更新だけを受理できる。
+     * ある相手での失敗は記録に残すだけで、他の相手への知らせと Diff の emit は続ける。ただしコルーチンの
+     * キャンセルの合図は握り潰さずそのまま投げ直す — 更新の呼び出し元が中断されたことを消してしまうため。
+     */
+    private fun deliverRootAccessory(update: SettingsRootDiff.UpdateAccessory) {
+        pruneRootAccessoryReceivers()
+        for (reference in rootAccessoryReceivers) {
+            val receiver = reference.get() ?: continue
+            try {
+                receiver.receiveRootAccessoryUpdate(source = this, update = update)
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (error: RuntimeException) {
+                Log.e(LOG_TAG, "updateAccessory: root accessory delivery failed for a receiver", error)
+            }
+        }
+    }
+
+    /** 参照が切れた登録を取り除く。 */
+    private fun pruneRootAccessoryReceivers() {
+        rootAccessoryReceivers.removeIf { it.get() == null }
+    }
+
+    /** Test / 診断用に、現在生きている登録の件数を返す。 */
+    internal fun internalRootAccessoryReceiverCount(): Int {
+        pruneRootAccessoryReceivers()
+        return rootAccessoryReceivers.size
+    }
+
     // MARK: - 内部ヘルパ
 
     private fun emitDiff(diff: SettingsRootDiff) {
@@ -337,6 +415,10 @@ public class SettingsRootStore(
     }
 
     public companion object {
+
+        /** 診断ログのタグ。 */
+        private const val LOG_TAG = "SettingsRootStore"
+
         /**
          * Preview / Test 用ファクトリ。
          *

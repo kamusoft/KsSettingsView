@@ -92,23 +92,21 @@ public class ImplicitStyleTests
 
         SettingsView view = new();
         GatewayScope scope = GatewayScope.Connect(view);
-        scope.Attach();
 
         GatewayCall.UpdateAccessory call = scope.All<GatewayCall.UpdateAccessory>()
             .Last(c => c.Target == KsAccessoryTarget.RootHeader);
         Assert.That(call.Text, Is.EqualTo("header"));
     }
 
-    /// <summary>暗黙 Style で置いた root header の View も、取り付け後に実体として配信される。</summary>
+    /// <summary>暗黙 Style で置いた root header の View も、Host を作る時点で実体として配信される。</summary>
     [Test]
-    public void ImplicitStyleRootHeaderViewIsDeliveredOnAttach()
+    public void ImplicitStyleRootHeaderViewIsDeliveredOnHostCreation()
     {
         Label accessory = new();
         RegisterImplicitStyle(SettingsView.RootHeaderViewProperty, accessory);
 
         SettingsView view = new();
         GatewayScope scope = GatewayScope.Connect(view);
-        scope.Attach();
 
         GatewayCall.UpdateAccessoryView call = scope.All<GatewayCall.UpdateAccessoryView>()
             .Last(c => c.Target == KsAccessoryTarget.RootHeader);

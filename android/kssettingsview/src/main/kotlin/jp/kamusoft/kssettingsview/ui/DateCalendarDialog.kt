@@ -172,6 +172,9 @@ internal data class DateCalendarDisplayState(
  * 確定経路は確定操作だけで、そのとき選択中の日付を [onConfirmed] へ1回渡して閉じる。それ以外の
  * 閉じ方（取消操作・ダイアログ外側のタップ・Back 操作）では callback を発火しない。
  *
+ * 確定経路では確定した日付を [completedDate] へ控える。閉じ切りを知るのは dismiss リスナーを持つ
+ * 提示側なので、提示側はこの控えを読んで確定で閉じたことを判別する。
+ *
  * ダイアログ内の Compose からは `viewModel()` 系を使わない。`ComponentDialog` は `ViewTree` の
  * lifecycle / savedStateRegistry の所有者は供給するが、`ViewModelStore` の所有者は供給しない。
  *
@@ -197,6 +200,15 @@ internal class DateCalendarDialog(
     restoredState: DateCalendarDisplayState? = null,
     private val onConfirmed: (LocalDate) -> Unit,
 ) : ComponentDialog(hostContext.ksThemedContext()) {
+
+    /**
+     * 確定した日付の控え。確定操作を通ったときだけ立てる。
+     *
+     * 取消・ダイアログ外側のタップ・Back では立たないので、提示側は控えの有無だけで確定で閉じた
+     * ことを判別できる。
+     */
+    internal var completedDate: LocalDate? = null
+        private set
 
     /**
      * カレンダーの選択状態。
@@ -275,7 +287,9 @@ internal class DateCalendarDialog(
      */
     internal fun confirmSelection() {
         val selected = state.selectedDateMillis ?: return
-        onConfirmed(selected.toLocalDateUtc())
+        val confirmed = selected.toLocalDateUtc()
+        onConfirmed(confirmed)
+        completedDate = confirmed
         dismiss()
     }
 

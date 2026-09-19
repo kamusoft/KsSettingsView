@@ -42,6 +42,31 @@ internal final class DatePickerCellView: KsListCellBase, @MainActor KsCellRender
     /// strong 参照で保持し明示的に nil 化する）。
     private var currentCalendarController: DatePickerCalendarSheetController?
 
+    /// ホイールの確定から閉じ切り通知までの間だけ保持する待ち受け。
+    ///
+    /// 入力面の非表示完了は `resignFirstResponder()` の中で同期に報告されることがあるため、
+    /// 報告と値 callback の送出をそれぞれ記録し、両方そろってから閉じ切りを知らせる
+    /// （値 callback より先に閉じ切りを出さない）。
+    private struct WheelsCompletionWatch {
+        /// 確定した日付。
+        let date: Date
+        /// 閉じ切りの通知先。
+        let notify: @Sendable (Date) -> Void
+        /// 値 callback を送出済みか。
+        var isValueDelivered = false
+        /// 入力面の非表示完了が報告されたか。
+        var isHideReported = false
+    }
+
+    /// 閉じ切り通知を待っている間だけ非 nil。通知するか打ち切った時点で `nil` に戻る。
+    private var wheelsCompletionWatch: WheelsCompletionWatch?
+
+    /// 閉じ切りの通知が届かなかった場合に待ち受けを打ち切るタスク。
+    private var wheelsHideTimeoutTask: Task<Void, Never>?
+
+    /// 入力面の非表示完了を待つ上限時間（秒）。この時間を過ぎたら、発火しないより早く発火する側に倒す。
+    private static let wheelsHideTimeout: TimeInterval = 1.0
+
     override init(frame: CGRect) {
         super.init(frame: frame)
         embeddedField.translatesAutoresizingMaskIntoConstraints = true
@@ -134,6 +159,10 @@ internal final class DatePickerCellView: KsListCellBase, @MainActor KsCellRender
             onDismissed: { [weak self] in
                 // dismiss 完了で参照を解放し、次回タップで再提示できるようにする
                 self?.currentCalendarController = nil
+            },
+            onDoneCompleted: { [weak self] newDate in
+                guard let self else { return }
+                cell.onValueCompleted?(self.normalizedDoneDate(newDate, for: cell))
             }
         )
         PresentationAppearance.inherit(from: self, to: vc)
@@ -165,6 +194,7 @@ internal final class DatePickerCellView: KsListCellBase, @MainActor KsCellRender
         self.tapHandler = nil
         self.lastCell = nil
         self.currentCalendarController = nil
+        cancelWheelsHideWatch()
     }
 
     // MARK: - Wheels モード Toolbar 操作
@@ -179,9 +209,73 @@ internal final class DatePickerCellView: KsListCellBase, @MainActor KsCellRender
             embeddedField.resignFirstResponder()
             return
         }
-        let newDate = wheelsPicker.date
-        embeddedField.resignFirstResponder()
-        applyDoneDate(newDate, for: cell)
+        let confirmed = normalizedDoneDate(wheelsPicker.date, for: cell)
+        // 先の確定の待ち受けが残っていれば捨て、最後の確定に対する 1 回として張り直す。
+        cancelWheelsHideWatch()
+        if let notify = cell.onValueCompleted {
+            beginWheelsHideWatch(date: confirmed, notify: notify)
+        }
+        let wasFirstResponder = embeddedField.isFirstResponder
+        let didResign = embeddedField.resignFirstResponder()
+        cell.onValueChanged?(confirmed)
+        wheelsCompletionWatch?.isValueDelivered = true
+        if !wasFirstResponder || !didResign {
+            // 入力面が出ていないため非表示完了の通知は届かない。すでに閉じ切ったものとして扱う。
+            wheelsCompletionWatch?.isHideReported = true
+        }
+        deliverWheelsCompletionIfReady()
+    }
+
+    // MARK: - ホイール入力面の閉じ切り待ち
+
+    /// 入力面の非表示完了を一回限り待ち受ける。確定した日付は待ち受けと一緒に控える。
+    private func beginWheelsHideWatch(date: Date, notify: @escaping @Sendable (Date) -> Void) {
+        wheelsCompletionWatch = WheelsCompletionWatch(date: date, notify: notify)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleKeyboardDidHide),
+            name: UIResponder.keyboardDidHideNotification,
+            object: nil
+        )
+        wheelsHideTimeoutTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(Self.wheelsHideTimeout * 1_000_000_000))
+            guard !Task.isCancelled else { return }
+            // 非表示完了が届かないまま上限時間を過ぎた。発火しないより早く発火する側に倒す。
+            self?.markWheelsHideReported()
+        }
+    }
+
+    /// 入力面の非表示完了が報告された。値 callback の送出が済んでいれば閉じ切りを知らせる。
+    private func markWheelsHideReported() {
+        guard wheelsCompletionWatch != nil else { return }
+        wheelsCompletionWatch?.isHideReported = true
+        deliverWheelsCompletionIfReady()
+    }
+
+    /// 値 callback の送出と非表示完了の報告がそろっていれば、控えた確定日付を通知して待ち受けを畳む。
+    private func deliverWheelsCompletionIfReady() {
+        guard let watch = wheelsCompletionWatch,
+              watch.isValueDelivered,
+              watch.isHideReported else { return }
+        cancelWheelsHideWatch()
+        watch.notify(watch.date)
+    }
+
+    /// 待ち受けを通知せずに畳む。
+    private func cancelWheelsHideWatch() {
+        guard wheelsCompletionWatch != nil else { return }
+        wheelsCompletionWatch = nil
+        wheelsHideTimeoutTask?.cancel()
+        wheelsHideTimeoutTask = nil
+        NotificationCenter.default.removeObserver(
+            self,
+            name: UIResponder.keyboardDidHideNotification,
+            object: nil
+        )
+    }
+
+    @objc private func handleKeyboardDidHide() {
+        markWheelsHideReported()
     }
 
     /// Today タップ: 範囲チェックを通れば picker の日付を today にセットする
@@ -216,8 +310,14 @@ internal final class DatePickerCellView: KsListCellBase, @MainActor KsCellRender
         wheelsPicker.sendActions(for: .valueChanged)
     }
 
-    /// Done 確定時の共通処理。year/month/day のみ反映し、元 cell.date の hour/minute/second を保持。
+    /// Done 確定時の共通処理。正規化した日付を値の callback へ渡す。
     private func applyDoneDate(_ newDate: Date, for cell: DatePickerCell) {
+        cell.onValueChanged?(normalizedDoneDate(newDate, for: cell))
+    }
+
+    /// 確定した日付を通知用に正規化する。year/month/day のみ反映し、
+    /// 元 cell.date の hour/minute/second を保持する。
+    private func normalizedDoneDate(_ newDate: Date, for cell: DatePickerCell) -> Date {
         let calendar = Calendar.current
         let ymd = calendar.dateComponents([.year, .month, .day], from: newDate)
         let hms = calendar.dateComponents([.hour, .minute, .second], from: cell.date)
@@ -228,8 +328,7 @@ internal final class DatePickerCellView: KsListCellBase, @MainActor KsCellRender
         combined.hour = hms.hour
         combined.minute = hms.minute
         combined.second = hms.second
-        let result = calendar.date(from: combined) ?? newDate
-        cell.onValueChanged?(result)
+        return calendar.date(from: combined) ?? newDate
     }
 
     // MARK: - test hook
@@ -247,5 +346,9 @@ internal final class DatePickerCellView: KsListCellBase, @MainActor KsCellRender
     internal func _simulateWheelsCancel() { handleWheelsCancel() }
     internal func _simulateWheelsToday() { handleWheelsToday() }
     internal var _currentCalendarController: DatePickerCalendarSheetController? { currentCalendarController }
+    /// テスト用: ホイール入力面の閉じ切りを待ち受けている最中かどうか。
+    internal var _isAwaitingWheelsHide: Bool { wheelsCompletionWatch != nil }
+    /// テスト用: ホイールの入力面を担う透明フィールドが first responder かどうか。
+    internal var _embeddedFieldIsFirstResponder: Bool { embeddedField.isFirstResponder }
 }
 #endif

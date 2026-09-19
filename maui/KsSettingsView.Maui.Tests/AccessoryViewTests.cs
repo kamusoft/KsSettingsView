@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using KsSettingsView.Handlers;
 using KsSettingsView.Internals;
 using KsSettingsView.Tests.Fakes;
 using KsSettingsView.Tests.Support;
@@ -26,6 +27,137 @@ internal sealed class AccessoryViewTests
         KsAccessoryTarget.SectionHeader,
         KsAccessoryTarget.SectionFooter,
     ];
+
+    // ---- 最初の表示に含まれること ----
+
+    /// <summary>text を持たない Section の Footer の View は、最初の配信データに載る。</summary>
+    [Test]
+    public void SectionFooterViewWithoutTextIsCarriedByTheInitialDelivery()
+    {
+        Label footer = new();
+        Section section = new() { FooterView = footer };
+        SettingsView view = new() { Root = { section } };
+
+        GatewayScope scope = GatewayScope.Connect(view);
+
+        GatewayCall.SectionTransport transported = scope.Single<GatewayCall.SetRoot>().Transported[0];
+        Assert.That(transported.Section, Is.SameAs(section));
+        Assert.That(section.FooterText, Is.Null);
+        Assert.That(
+            transported.FooterView,
+            Is.SameAs(scope.Views.LatestFor(footer).PlatformView));
+    }
+
+    /// <summary>Section の HeaderView も、最初の配信データに載る。</summary>
+    [Test]
+    public void SectionHeaderViewIsCarriedByTheInitialDelivery()
+    {
+        Label header = new();
+        Section section = new() { HeaderView = header };
+        SettingsView view = new() { Root = { section } };
+
+        GatewayScope scope = GatewayScope.Connect(view);
+
+        Assert.That(
+            scope.Single<GatewayCall.SetRoot>().Transported[0].HeaderView,
+            Is.SameAs(scope.Views.LatestFor(header).PlatformView));
+    }
+
+    /// <summary>root の accessory は、取り付けの通知を待たずに適用される。</summary>
+    [Test]
+    public void RootAccessoryViewIsAppliedWithoutWaitingForTheAttachNotification()
+    {
+        Label header = new();
+        Label footer = new();
+        SettingsView view = new() { RootHeaderView = header, RootFooterView = footer };
+        GatewayScope scope = GatewayScope.ConnectWithoutHost(view);
+
+        // Handler が Native Host を作る。取り付けの通知はまだ来ていない。
+        view.Handler = new SettingsViewHandler();
+
+        IReadOnlyList<GatewayCall.UpdateAccessoryView> calls =
+            scope.All<GatewayCall.UpdateAccessoryView>();
+        Assert.That(
+            calls,
+            Has.One.Matches<GatewayCall.UpdateAccessoryView>(call =>
+                call.Target == KsAccessoryTarget.RootHeader
+                && ReferenceEquals(call.View, scope.Views.LatestFor(header).PlatformView)));
+        Assert.That(
+            calls,
+            Has.One.Matches<GatewayCall.UpdateAccessoryView>(call =>
+                call.Target == KsAccessoryTarget.RootFooter
+                && ReferenceEquals(call.View, scope.Views.LatestFor(footer).PlatformView)));
+    }
+
+    /// <summary>
+    /// 再接続でも、Section の View は Host の生成時点の現在状態に含まれ、root は生成直後に届く。
+    /// </summary>
+    [Test]
+    public void ReconnectDeliversTheViewsBeforeTheHostIsCreated()
+    {
+        Label rootHeader = new();
+        Label sectionHeader = new();
+        Section section = new() { HeaderView = sectionHeader };
+        SettingsView view = new() { Root = { section }, RootHeaderView = rootHeader };
+        GatewayScope scope = GatewayScope.Connect(view);
+        view.ReleaseHost();
+        scope.Reset();
+
+        scope.ConnectFacade();
+
+        // Host はここまでに届いた現在状態から復元する。
+        Assert.That(
+            scope.Gateway.AccessoryViewOf(section, KsAccessoryTarget.SectionHeader),
+            Is.SameAs(scope.Views.LatestFor(sectionHeader).PlatformView));
+        Assert.That(scope.All<GatewayCall.UpdateAccessoryView>(), Has.Count.EqualTo(1));
+
+        scope.CreateHost();
+
+        Assert.That(
+            scope.All<GatewayCall.UpdateAccessoryView>(),
+            Has.One.Matches<GatewayCall.UpdateAccessoryView>(call =>
+                call.Target == KsAccessoryTarget.RootHeader
+                && ReferenceEquals(call.View, scope.Views.LatestFor(rootHeader).PlatformView)));
+    }
+
+    /// <summary>切断中に置いた View も、再接続時の Host の生成時点の現在状態に含まれる。</summary>
+    [Test]
+    public void ViewPlacedWhileDetachedIsCarriedByTheStateAtHostCreation()
+    {
+        Section section = new();
+        SettingsView view = new() { Root = { section } };
+        GatewayScope scope = GatewayScope.Connect(view);
+        view.ReleaseHost();
+
+        Label footer = new();
+        section.FooterView = footer;
+        scope.Reset();
+
+        scope.ConnectFacade();
+
+        Assert.That(
+            scope.Gateway.AccessoryViewOf(section, KsAccessoryTarget.SectionFooter),
+            Is.SameAs(scope.Views.LatestFor(footer).PlatformView));
+    }
+
+    /// <summary>取り付けの通知では、view accessory の配信は新たに起きない。</summary>
+    /// <remarks>取り付けの通知は Handler が受け取るため、Handler の経路で確かめる。</remarks>
+    [Test]
+    public void TheAttachNotificationDoesNotRedeliverViewAccessories()
+    {
+        Label rootHeader = new();
+        Label sectionHeader = new();
+        Section section = new() { HeaderView = sectionHeader };
+        SettingsView view = new() { Root = { section }, RootHeaderView = rootHeader };
+        GatewayScope scope = GatewayScope.Connect(view);
+        SettingsViewHandler handler = new();
+        view.Handler = handler;
+        scope.Reset();
+
+        handler.OnHostAttached();
+
+        Assert.That(scope.Calls, Is.Empty);
+    }
 
     // ---- 設定・クリア ----
 
@@ -175,6 +307,40 @@ internal sealed class AccessoryViewTests
         Assert.That(deliveredAtDispose, Is.EqualTo(1));
     }
 
+    /// <summary>
+    /// 表示中の Root を作り直すときも、旧実体の破棄は新しい設定ツリーを配信した後に行われる。
+    /// </summary>
+    /// <remarks>
+    /// 作り直しでは同じ View が置かれたまま残るため、実体化し直す前に旧実体を破棄する必要がある。
+    /// その破棄が配信より前に起きると、native が参照している wrapper を先に壊すことになる。
+    /// </remarks>
+    /// <param name="target">対象の位置</param>
+    [TestCase(KsAccessoryTarget.SectionHeader)]
+    [TestCase(KsAccessoryTarget.SectionFooter)]
+    public void PreviousViewIsDisposedAfterTheRebuiltRootIsDelivered(KsAccessoryTarget target)
+    {
+        Fixture fixture = Fixture.Connected();
+        Label accessory = new();
+        fixture.SetView(target, accessory);
+        fixture.Reset();
+
+        int rootsAtDispose = -1;
+        fixture.Scope.Views.LatestFor(accessory).OnDispose =
+            () => rootsAtDispose = fixture.Scope.All<GatewayCall.SetRoot>().Count;
+
+        fixture.View.Root = new ObservableCollection<Section> { fixture.Section };
+
+        Assert.That(rootsAtDispose, Is.EqualTo(1));
+
+        // 作り直した実体は、切られていない Handler を持ったまま表示へ届く。
+        FakeViewLease latest = fixture.Scope.Views.LatestFor(accessory);
+        Assert.That(latest.IsDisposed, Is.False);
+        Assert.That(latest.Handler.IsConnected, Is.True);
+        Assert.That(
+            fixture.Scope.Gateway.AccessoryViewOf(fixture.Section, target),
+            Is.SameAs(latest.PlatformView));
+    }
+
     // ---- 内容変化に伴う測り直し ----
 
     /// <summary>必要サイズの変化は、同じ配信の区切りで 1 回だけ測り直しとして送られる。</summary>
@@ -247,7 +413,6 @@ internal sealed class AccessoryViewTests
             ItemTemplate = new DataTemplate(() => new Section { HeaderView = accessory }),
         };
         GatewayScope scope = GatewayScope.Connect(view);
-        scope.Attach();
 
         view.BindingContext = new Owner("view context");
 
@@ -442,7 +607,6 @@ internal sealed class AccessoryViewTests
         fixture.View.BindingContext = new Owner("root-ctx");
         fixture.Section.BindingContext = new Owner("section-ctx");
         fixture.Section.HeaderView = accessory;
-        fixture.Scope.Attach();
 
         // Native Host を手放し、platform 実体が無い状態で誤った配置を試す。
         fixture.View.ReleaseHost();
@@ -579,7 +743,6 @@ internal sealed class AccessoryViewTests
         RangeAddCollection<Section> root = [placedSection];
         SettingsView view = new() { Root = root };
         GatewayScope scope = GatewayScope.Connect(view);
-        scope.Attach();
 
         IReadOnlyList<string> sectionIds = scope.Gateway.SectionIds;
         string placedId = view.Controller.FindSectionId(placedSection)!;
@@ -619,7 +782,6 @@ internal sealed class AccessoryViewTests
         RangeAddCollection<Section> root = [placedSection];
         SettingsView view = new() { Root = root };
         GatewayScope scope = GatewayScope.Connect(view);
-        scope.Attach();
 
         IReadOnlyList<string> sectionIds = scope.Gateway.SectionIds;
         scope.Reset();
@@ -650,7 +812,6 @@ internal sealed class AccessoryViewTests
         RangeAddCollection<Section> root = [placedSection];
         SettingsView view = new() { Root = root };
         GatewayScope scope = GatewayScope.Connect(view);
-        scope.Attach();
 
         IReadOnlyList<string> sectionIds = scope.Gateway.SectionIds;
         object? transported =
@@ -685,7 +846,6 @@ internal sealed class AccessoryViewTests
         RangeReplaceCollection<Section> root = [replacedFirst, replacedSecond, placedSection];
         SettingsView view = new() { Root = root };
         GatewayScope scope = GatewayScope.Connect(view);
-        scope.Attach();
 
         IReadOnlyList<string> sectionIds = scope.Gateway.SectionIds;
         string firstId = view.Controller.FindSectionId(replacedFirst)!;
@@ -716,7 +876,6 @@ internal sealed class AccessoryViewTests
         RangeAddCollection<Section> root = [placedSection];
         SettingsView view = new() { Root = root };
         GatewayScope scope = GatewayScope.Connect(view);
-        scope.Attach();
 
         Label shared = new();
         Section first = new() { HeaderView = shared };
@@ -876,11 +1035,9 @@ internal sealed class AccessoryViewTests
         fixture.Section.BindingContext = new Owner("section-ctx");
         Label accessory = new();
         fixture.SetView(target, accessory);
-        fixture.Scope.Attach();
 
         fixture.View.ReleaseHost();
         fixture.Scope.Reconnect();
-        fixture.Scope.Attach();
 
         FakeViewLease lease = fixture.Scope.Views.LatestFor(accessory);
         Assert.That(fixture.Scope.Views.CountFor(accessory), Is.EqualTo(2));
@@ -916,7 +1073,6 @@ internal sealed class AccessoryViewTests
         Fixture fixture = Fixture.Connected();
         Label accessory = new();
         fixture.SetView(target, accessory);
-        fixture.Scope.Attach();
         FakeViewLease first = fixture.Scope.Views.LatestFor(accessory);
 
         fixture.View.ReleaseHost();
@@ -924,7 +1080,6 @@ internal sealed class AccessoryViewTests
 
         fixture.Reset();
         fixture.Scope.Reconnect();
-        fixture.Scope.Attach();
 
         FakeViewLease second = fixture.Scope.Views.LatestFor(accessory);
         Assert.That(second, Is.Not.SameAs(first));
@@ -942,7 +1097,6 @@ internal sealed class AccessoryViewTests
         Fixture fixture = Fixture.Connected();
         fixture.Section.HeaderText = "header";
         fixture.Section.HeaderView = new Label();
-        fixture.Scope.Attach();
         fixture.Reset();
 
         fixture.View.ReleaseHost();
@@ -953,12 +1107,65 @@ internal sealed class AccessoryViewTests
         Assert.That(call.Text, Is.EqualTo("header"));
     }
 
+    /// <summary>
+    /// 書き戻しに失敗した Section の accessory の実体は、Native Host を解放した後に破棄される。
+    /// </summary>
+    /// <remarks>
+    /// 退役をテキストへ書き戻す更新が届かなかった実体は、native がまだ子として抱えている可能性が
+    /// ある。表示先ごと解放するより前に壊すと、native が破棄済みの実体を指したまま残る。
+    /// 書き戻しの要らない root の実体は従来どおり解放より前に破棄し、通知の解除と Native Host の
+    /// 解放にはどちらの場合も到達する。2 件を失敗させて、書き戻しの全件試行もあわせて観測する。
+    /// </remarks>
+    [Test]
+    public void AccessoryWhoseWriteBackFailedIsDisposedAfterTheNativeHostIsReleased()
+    {
+        Section first = new() { HeaderText = "first" };
+        Section second = new() { HeaderText = "second" };
+        SettingsView view = new() { Root = { first, second } };
+        GatewayScope scope = GatewayScope.Connect(view);
+
+        Label rootHeader = new();
+        Label firstHeader = new();
+        Label secondHeader = new();
+        view.RootHeaderView = rootHeader;
+        first.HeaderView = firstHeader;
+        second.HeaderView = secondHeader;
+
+        FakeViewLease rootLease = scope.Views.LatestFor(rootHeader);
+        FakeViewLease firstLease = scope.Views.LatestFor(firstHeader);
+        FakeViewLease secondLease = scope.Views.LatestFor(secondHeader);
+
+        int releasesWhenRootDisposed = -1;
+        int releasesWhenFirstDisposed = -1;
+        int releasesWhenSecondDisposed = -1;
+        rootLease.OnDispose = () => releasesWhenRootDisposed = scope.All<GatewayCall.ReleaseHost>().Count;
+        firstLease.OnDispose = () => releasesWhenFirstDisposed = scope.All<GatewayCall.ReleaseHost>().Count;
+        secondLease.OnDispose =
+            () => releasesWhenSecondDisposed = scope.All<GatewayCall.ReleaseHost>().Count;
+
+        scope.Gateway.UpdateAccessoryFails = true;
+
+        AggregateException? thrown = Assert.Throws<AggregateException>(() => view.ReleaseHost());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(thrown!.InnerExceptions, Has.Count.EqualTo(2));
+            Assert.That(releasesWhenFirstDisposed, Is.EqualTo(1));
+            Assert.That(releasesWhenSecondDisposed, Is.EqualTo(1));
+            Assert.That(releasesWhenRootDisposed, Is.Zero);
+            Assert.That(rootLease.DisposeCount, Is.EqualTo(1));
+            Assert.That(firstLease.DisposeCount, Is.EqualTo(1));
+            Assert.That(secondLease.DisposeCount, Is.EqualTo(1));
+            Assert.That(scope.Gateway.DetachInteractionsCount, Is.EqualTo(1));
+            Assert.That(scope.Gateway.ReleaseHostCount, Is.EqualTo(1));
+        });
+    }
+
     /// <summary>切断中に置いた View は、取り付け直したときの表示に反映される。</summary>
     [TestCaseSource(nameof(Targets))]
     public void ViewPlacedWhileDetachedIsAppliedOnReattach(KsAccessoryTarget target)
     {
         Fixture fixture = Fixture.Connected();
-        fixture.Scope.Attach();
         fixture.View.ReleaseHost();
         fixture.Reset();
 
@@ -967,7 +1174,6 @@ internal sealed class AccessoryViewTests
         Assert.That(fixture.Scope.All<GatewayCall.UpdateAccessoryView>(), Is.Empty);
 
         fixture.Scope.Reconnect();
-        fixture.Scope.Attach();
 
         Assert.That(
             fixture.Scope.All<GatewayCall.UpdateAccessoryView>(),
@@ -1057,11 +1263,9 @@ internal sealed class AccessoryViewTests
         Fixture fixture = Fixture.Connected();
         Label header = new();
         fixture.Section.HeaderView = header;
-        fixture.Scope.Attach();
 
         fixture.View.ReleaseHost();
         fixture.Scope.Reconnect();
-        fixture.Scope.Attach();
 
         FakeViewLease latest = fixture.Scope.Views.LatestFor(header);
         Assert.That(latest.IsDisposed, Is.False);
@@ -1104,7 +1308,6 @@ internal sealed class AccessoryViewTests
         fixture.View.RootHeaderView = rootAccessory;
         fixture.Section.HeaderView = sectionAccessory;
         fixture.View.BindingContext = new Owner("first");
-        fixture.Scope.Attach();
 
         fixture.View.ReleaseHost();
         fixture.View.BindingContext = new Owner("second");
@@ -1120,7 +1323,6 @@ internal sealed class AccessoryViewTests
         Fixture fixture = Fixture.Connected();
         Label accessory = new();
         fixture.Section.HeaderView = accessory;
-        fixture.Scope.Attach();
 
         fixture.View.ReleaseHost();
 

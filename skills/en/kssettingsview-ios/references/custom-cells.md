@@ -4,7 +4,7 @@ Recipes for content the built-in cells do not cover. Start with `CustomCell`; de
 
 ## Put arbitrary SwiftUI into a cell of the list
 
-`CustomCell` renders any SwiftUI view as a cell with no renderer to write and nothing to register. Pass the values the cell displays as `content` and build the view from the builder argument.
+`CustomCell` renders any SwiftUI view as a full-bleed cell with no shared title, description or icon slots, so there is no renderer to write and nothing to register. Pass the values the cell displays as `content` and build the view from the builder argument.
 
 ```swift
 @State private var volume: Double = 50
@@ -51,7 +51,7 @@ CustomCell(content: planName, showArrow: true, onTap: { openPlans() }) { name in
 }
 ```
 
-`isEnabled: false` blocks both the cell tap and the controls inside the content, and dims the whole content.
+`isEnabled: false` blocks both the cell tap and the controls inside the content, and dims the whole content. On iOS, VoiceOver may still read the content; this is an intentional platform difference from Android's suppression of disabled CustomCell content.
 
 ## Set the height of a custom cell
 

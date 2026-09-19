@@ -268,7 +268,6 @@ public class LogicalChildTests
         Section placedSection = new() { HeaderView = accessory };
         SettingsView placed = new() { Root = { placedSection } };
         GatewayScope placedScope = GatewayScope.Connect(placed);
-        placedScope.Attach();
         placedScope.Reset();
 
         Section target = new();
@@ -293,7 +292,6 @@ public class LogicalChildTests
         CustomCell placedCell = new() { Content = content };
         SettingsView placed = new() { Root = { new Section { Cells = { placedCell } } } };
         GatewayScope placedScope = GatewayScope.Connect(placed);
-        placedScope.Attach();
         placedScope.Reset();
 
         CustomCell target = new();
@@ -317,7 +315,6 @@ public class LogicalChildTests
         Section detached = new() { HeaderView = accessory };
         SettingsView view = new() { Root = { detached } };
         GatewayScope scope = GatewayScope.Connect(view);
-        scope.Attach();
         view.Root.Remove(detached);
 
         Section target = new();

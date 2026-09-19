@@ -963,6 +963,10 @@ public class SettingsView : View
     /// 作って接続し、その時点の設定ツリー全体を表示へ反映させる。接続済みなら既存の gateway を
     /// そのまま返すため、Native Host の解放をまたいでも作り直されない。
     /// ユーザー操作の通知は Native Host のある間だけ起きるため、ここで毎回受け取り始める。
+    /// 実体化の口は Native Host を作るより前に差し込み、置かれている View が最初の表示に
+    /// 含まれるようにする — 初回は設定ツリーの構築が、接続済みなら明示の適用が実体化を担う。
+    /// ただし gateway を作るより先には差し込まない。gateway を作る呼び出しは接続の外側にあり、
+    /// そこで失敗しても接続の後始末は走らないため、先に差し込むと口だけが残ってしまう。
     /// </remarks>
     /// <typeparam name="T">gateway の実装型</typeparam>
     /// <param name="gatewayFactory">未接続のときに gateway を作る関数</param>
@@ -978,27 +982,33 @@ public class SettingsView : View
     {
         ArgumentNullException.ThrowIfNull(gatewayFactory);
 
-        if (Controller.Gateway is not { } connected)
+        IKsSettingsGateway connected;
+        if (Controller.Gateway is { } existing)
+        {
+            connected = existing;
+            Controller.AttachViews(views);
+            Controller.ApplyStoreViews();
+        }
+        else
         {
             connected = gatewayFactory();
+            Controller.AttachViews(views);
             Controller.Connect(connected, dispatcher);
         }
 
         Controller.AttachInteractions();
         Controller.AttachImages(images);
-        Controller.AttachViews(views);
         return (T)connected;
     }
 
     /// <summary>
-    /// Native Host と同じ寿命を持つ表示内容を、現在の所有値で適用し直す。
+    /// root の header / footer を現在の所有値で適用する。
     /// </summary>
     /// <remarks>
     /// root の accessory は Native Host 単位のプロパティであり、Host を作り直すと失われる。
-    /// accessory と Cell の内容の View の実体も Host と同じ寿命を持つ。Host が view 階層へ
-    /// 取り付けられた後にここを通す。
+    /// Host を作った直後、view 階層へ取り付けるより前にここを通す。
     /// </remarks>
-    internal void ApplyHostViews() => Controller.ApplyHostViews();
+    internal void ApplyRootAccessories() => Controller.ApplyRootAccessories();
 
     /// <summary>Native Host だけを解放する。設定ツリーの状態と購読は維持される。</summary>
     internal void ReleaseHost() => Controller.ReleaseHost();

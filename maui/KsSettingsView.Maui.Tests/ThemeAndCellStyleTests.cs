@@ -86,6 +86,77 @@ public class ThemeAndCellStyleTests
         Assert.That(theme.CellTitleFontSize, Is.EqualTo(17));
     }
 
+    /// <summary>
+    /// スクロールバーの表示と Header / Footer の背景色は、未指定なら未指定のまま運ばれる。
+    /// facade が自前の既定値で埋めると、native の既定 (透明) に追随できなくなる。
+    /// </summary>
+    [Test]
+    public void UnsetScrollIndicatorAndHeaderFooterBackgroundsCarryNothing()
+    {
+        SettingsView view = new();
+
+        GatewayScope scope = GatewayScope.Connect(view);
+
+        KsThemeSnapshot theme = scope.All<GatewayCall.SetTheme>().Last().Theme;
+        Assert.That(theme.ScrollIndicatorVisible, Is.Null);
+        Assert.That(theme.HeaderBackgroundColor, Is.Null);
+        Assert.That(theme.FooterBackgroundColor, Is.Null);
+    }
+
+    /// <summary>指定した値は、そのまま native の既定スタイルへ運ばれる。</summary>
+    [Test]
+    public void SetScrollIndicatorAndHeaderFooterBackgroundsCarryTheirValues()
+    {
+        SettingsView view = new()
+        {
+            ScrollIndicatorVisible = false,
+            HeaderBackgroundColor = Colors.Red,
+            FooterBackgroundColor = Colors.Blue,
+        };
+
+        GatewayScope scope = GatewayScope.Connect(view);
+
+        KsThemeSnapshot theme = scope.All<GatewayCall.SetTheme>().Last().Theme;
+        Assert.That(theme.ScrollIndicatorVisible, Is.False);
+        Assert.That(theme.HeaderBackgroundColor, Is.EqualTo(unchecked((int)0xFFFF0000)));
+        Assert.That(theme.FooterBackgroundColor, Is.EqualTo(unchecked((int)0xFF0000FF)));
+    }
+
+    /// <summary>表示中のスクロールバー表示の変更は、そのつど native へ届く。</summary>
+    [Test]
+    public void ScrollIndicatorVisibleChangeWhileConnectedIsApplied()
+    {
+        SettingsView view = new();
+        GatewayScope scope = GatewayScope.Connect(view).Reset();
+
+        view.ScrollIndicatorVisible = false;
+
+        Assert.That(
+            scope.Single<GatewayCall.SetTheme>().Theme.ScrollIndicatorVisible,
+            Is.False);
+    }
+
+    /// <summary>表示中の Header / Footer 背景色の変更も、そのつど native へ届く。</summary>
+    [Test]
+    public void HeaderFooterBackgroundColorChangeWhileConnectedIsApplied()
+    {
+        SettingsView view = new();
+        GatewayScope scope = GatewayScope.Connect(view).Reset();
+
+        view.HeaderBackgroundColor = Colors.Red;
+
+        Assert.That(
+            scope.Single<GatewayCall.SetTheme>().Theme.HeaderBackgroundColor,
+            Is.EqualTo(unchecked((int)0xFFFF0000)));
+
+        scope.Reset();
+        view.FooterBackgroundColor = Colors.Blue;
+
+        Assert.That(
+            scope.Single<GatewayCall.SetTheme>().Theme.FooterBackgroundColor,
+            Is.EqualTo(unchecked((int)0xFF0000FF)));
+    }
+
     /// <summary>何も指定しなければ既定スタイルは全項目が未指定になる。</summary>
     [Test]
     public void UnsetThemeCarriesNothing()
@@ -362,7 +433,6 @@ public class ThemeAndCellStyleTests
         Section section = new() { Cells = { cell } };
         SettingsView view = new() { Root = { section } };
         GatewayScope scope = GatewayScope.Connect(view);
-        scope.Attach();
         scope.Reset();
 
         cell.TitleColor = Colors.Red;

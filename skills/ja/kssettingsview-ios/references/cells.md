@@ -4,7 +4,7 @@
 
 ## Cell を Section にまとめる
 
-Cell は必ず Section の中に置く。`ksSection` は文字列の Header と Footer を任意で受ける。
+Cell は必ず Section の中に置く。`ksSection` は文字列の Header と Footer を任意で受ける。`KsSettingsViewBuilder` の root closure で曖昧にならないファクトリであり、`import SwiftUI` で `Section` が曖昧になるとき、Section の値を名前付けするには公開の `KsSection` typealias を使う。
 
 ```swift
 KsSettingsView {
@@ -143,11 +143,12 @@ EntryCell(
 PickerCell(
     title: "Theme",
     items: ["Light", "Dark", "System"],
-    selectedIndex: $themeIndex
+    selectedIndex: $themeIndex,
+    onSelectionCompleted: { _ in showThemeHelp() }
 )
 ```
 
-`items` は `PickerItem` — 主表示の `text` + 任意の 2 行目 (副表示) `subText` — の列で、上のような文字列配列はその簡易形。`pageTitle` は選択画面のタイトルを上書きする (未指定なら `title` を使う)。Binding の代わりに、`selectedIndex` を値として渡して `onSelectionChanged` callback で受ける形もある。どちらの選択形かは `selectionMode` (`PickerSelectionMode` の `.single` / `.multiple`) として公開され、使った初期化子で決まる。
+`items` は `PickerItem` — 主表示の `text` + 任意の 2 行目 (副表示) `subText` — の列で、上のような文字列配列はその簡易形。`pageTitle` は選択画面のタイトルを上書きする (未指定なら `title` を使う)。Binding の代わりに、`selectedIndex` を値として渡して `onSelectionChanged` callback で受ける形もある。`onSelectionCompleted` は任意で、選択面が閉じ切った後に確定 index を受け取り、値の callback の後に実行される。Cancel など確定しない閉じ方ではどちらの callback も実行されない。どちらの選択形かは `selectionMode` (`PickerSelectionMode` の `.single` / `.multiple`) として公開され、使った初期化子で決まる。
 
 ## 上限つきで複数選ばせる
 
@@ -160,9 +161,12 @@ PickerCell(
     title: "Topics",
     items: ["News", "Sports", "Music", "Travel"],
     selectedIndices: $topics,
-    maxSelectedNumber: 2
+    maxSelectedNumber: 2,
+    onMultiSelectionCompleted: { indices in recordTopics(indices) }
 )
 ```
+
+`onMultiSelectionCompleted` は選択面が閉じ切った後、`onMultiSelectionChanged` の後に確定した集合を受け取る任意 callback。Cancel など確定しない閉じ方では、どちらの callback も実行されない。
 
 ## 自前の object を候補にする
 
@@ -249,11 +253,12 @@ DatePickerCell(
     date: $birthday,
     format: "yyyy/MM/dd",
     uiStyle: .calendar,
-    todayText: "Today"
+    todayText: "Today",
+    onValueCompleted: { date in showNextStep(for: date) }
 )
 ```
 
-`minDate` / `maxDate` は選択できる日付の範囲を定める。`pickerTitle` は日付選択画面のタイトルを上書きする (未指定なら `title` を使う)。
+`minDate` / `maxDate` は選択できる日付の範囲を定める。`pickerTitle` は日付選択画面のタイトルを上書きする (未指定なら `title` を使う)。`onValueCompleted` は任意で、選択面が閉じ切った後に確定日付を受け取り、`onValueChanged` の後に実行される。Cancel など確定しない閉じ方ではどちらの callback も実行されない。
 
 ## Cell にアイコンを付ける
 

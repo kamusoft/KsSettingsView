@@ -10,7 +10,21 @@ internal abstract record GatewayCall
 {
     /// <summary>設定ツリー全体の置き換え。</summary>
     /// <param name="Sections">渡された Section 群</param>
-    internal sealed record SetRoot(IReadOnlyList<Section> Sections) : GatewayCall;
+    /// <param name="Transported">呼び出しの時点で引き当てられた、Section ごとの platform view</param>
+    internal sealed record SetRoot(
+        IReadOnlyList<Section> Sections,
+        IReadOnlyList<SectionTransport> Transported) : GatewayCall;
+
+    /// <summary>設定ツリー全体の配信データに載った Section 1 件分の platform view。</summary>
+    /// <param name="Section">対象の Section</param>
+    /// <param name="HeaderView">header に載った platform view。無ければ null</param>
+    /// <param name="FooterView">footer に載った platform view。無ければ null</param>
+    /// <param name="CellContentViews">配下 Cell の内容に載った platform view (配置順)</param>
+    internal sealed record SectionTransport(
+        Section Section,
+        object? HeaderView,
+        object? FooterView,
+        IReadOnlyList<object?> CellContentViews);
 
     /// <summary>Section の挿入。</summary>
     /// <param name="Section">挿入された Section</param>

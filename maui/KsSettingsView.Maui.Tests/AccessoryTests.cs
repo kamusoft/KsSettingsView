@@ -48,7 +48,7 @@ public class AccessoryTests
         SettingsView view = new() { RootHeaderText = "header", RootFooterText = "footer" };
         GatewayScope scope = GatewayScope.Connect(view).Reset();
 
-        view.ApplyHostViews();
+        view.ApplyRootAccessories();
 
         IReadOnlyList<GatewayCall.UpdateAccessory> calls = scope.All<GatewayCall.UpdateAccessory>();
         Assert.That(calls, Has.Count.EqualTo(2));
@@ -64,11 +64,11 @@ public class AccessoryTests
     {
         SettingsView view = new() { RootHeaderText = "header" };
         GatewayScope scope = GatewayScope.Connect(view);
-        view.ApplyHostViews();
+        view.ApplyRootAccessories();
         scope.Reset();
 
         view.ReleaseHost();
-        view.ApplyHostViews();
+        view.ApplyRootAccessories();
 
         Assert.That(scope.Gateway.ReleaseHostCount, Is.EqualTo(1));
         IReadOnlyList<GatewayCall.UpdateAccessory> calls = scope.All<GatewayCall.UpdateAccessory>();

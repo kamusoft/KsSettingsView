@@ -22,6 +22,12 @@ internal final class KsCellViewState {
     var lastIsFixedHeight: Bool?
     /// Modern の箱に収めるための clip 形状。`layoutSubviews` から mask を作り直すために保持する。
     var sectionBoxClip: SectionBoxCellClip = .none
+    /// 押下色を塗り始めるまでの待ちを担う Task。押下から抜けたら cancel する。
+    var pendingSelectedColorTask: Task<Void, Never>?
+    /// 押下色を現在塗っているか。
+    var isShowingSelectedColor: Bool = false
+    /// 今の押下のあいだに選択が確定したか。解除をフェードアウトにするかの判定に使う。
+    var hasBeenSelectedWhilePressed: Bool = false
 
     init() {}
 }
@@ -68,6 +74,20 @@ internal enum KsCellViewSupport {
         listCell.isUserInteractionEnabled = isEnabled
     }
 
+    /// render 時の背景色を Cell へ適用する。
+    ///
+    /// 押下色を出している最中は平常色で塗り替えない。タップで値が変わる Cell（RadioCell 等）は
+    /// タップ直後に再構成されるため、ここで平常色を入れると押下色が消えてしまう。
+    @MainActor
+    static func applyRenderedBackgroundColor(_ listCell: UICollectionViewListCell) {
+        let s = state(listCell)
+        var bg = listCell.defaultBackgroundConfiguration()
+        bg.backgroundColor = s.isShowingSelectedColor ? s.theme.selectedColor : s.effectiveCellBackgroundColor
+        UIView.performWithoutAnimation {
+            listCell.backgroundConfiguration = bg
+        }
+    }
+
     // MARK: - selectedColor の反映（タッチフィードバック）
 
     /// `configurationUpdateHandler` をインストールする。
@@ -75,26 +95,130 @@ internal enum KsCellViewSupport {
     /// `state.isHighlighted || state.isSelected` のとき `Theme.selectedColor` を `backgroundColor` に塗り、
     /// それ以外で平常時の背景色（CellStyle.backgroundColor ?? Theme.cellBackgroundColor）に戻す。
     /// `isEnabled == false` の Cell では selectedColor を反映しない。
+    ///
+    /// 押下色の出入りには時間をかける。指を置いた瞬間にべた塗りで出ると、スクロールを
+    /// 始めただけのタッチでも行が一瞬光って見えるため、
+    ///
+    /// - 押下に入ってもすぐには塗らず `selectedColorHighlightDelay` だけ待つ。待ちのあいだに
+    ///   押下から抜けたら（スクロールでキャンセルされたら）何も塗らない
+    /// - 待ちの途中で選択が確定したら（速いタップで指が離れたら）待たずに塗り始める
+    /// - 塗りは `selectedColorFadeInDuration` でフェードインする
+    /// - 選択を経てから抜けるとき（タップの解除）は `selectedColorFadeOutDuration` で
+    ///   フェードアウトし、選択を経ずに抜けるとき（キャンセル）はフェードアウトせずに戻す
     static func installSelectedColorHandler(_ listCell: UICollectionViewListCell) {
+        // 押下色をいつ出していつ消すかはライブラリが決める (ios/ADR-0005)。
         listCell.configurationUpdateHandler = { [weak listCell] _, cellState in
             // handler 型は nonisolated で UICellConfigurationState は Sendable ではないため、
             // actor 境界の外で押下状態を Sendable な Bool に確定する。
-            let isPressed = cellState.isHighlighted || cellState.isSelected
+            let isHighlighted = cellState.isHighlighted
+            let isSelected = cellState.isSelected
             // UIKit は configurationUpdateHandler を main thread から呼ぶため、UIKit 状態の
             // 参照と更新は main actor 上に隔離されているものとして扱える。
             MainActor.assumeIsolated {
                 guard let listCell else { return }
-                let s = state(listCell)
-                var bg = listCell.backgroundConfiguration ?? listCell.defaultBackgroundConfiguration()
-                if s.isEnabled && isPressed {
-                    bg.backgroundColor = s.theme.selectedColor
-                } else {
-                    bg.backgroundColor = s.effectiveCellBackgroundColor
-                }
+                updateSelectedColor(listCell, isHighlighted: isHighlighted, isSelected: isSelected)
+            }
+        }
+    }
+
+    /// Cell の再利用時に、予約中の塗り始めと押下色の表示状態を捨てる。
+    ///
+    /// 次に表示する内容へ前の行の押下色が持ち越されないよう、`prepareForReuse` から呼ぶ。
+    @MainActor
+    static func resetSelectedColor(_ listCell: UICollectionViewListCell) {
+        let s = state(listCell)
+        s.pendingSelectedColorTask?.cancel()
+        s.pendingSelectedColorTask = nil
+        s.hasBeenSelectedWhilePressed = false
+        s.isShowingSelectedColor = false
+    }
+
+    /// 押下状態の変化を押下色へ反映する。
+    @MainActor
+    private static func updateSelectedColor(
+        _ listCell: UICollectionViewListCell,
+        isHighlighted: Bool,
+        isSelected: Bool
+    ) {
+        let s = state(listCell)
+        let isPressed = isHighlighted || isSelected
+        guard s.isEnabled, isPressed else {
+            // 押下から抜けた（または無効な Cell）。予約は捨て、選択を経ていたときだけ
+            // フェードアウトで戻し、それ以外はフェードアウトなしで平常色へ戻す。
+            s.pendingSelectedColorTask?.cancel()
+            s.pendingSelectedColorTask = nil
+            let fadesOut = s.hasBeenSelectedWhilePressed && s.isShowingSelectedColor
+            s.hasBeenSelectedWhilePressed = false
+            restoreNormalColor(listCell, fadesOut: fadesOut)
+            return
+        }
+
+        if isSelected {
+            s.hasBeenSelectedWhilePressed = true
+            // 選択が確定したら待たずに塗り始める。
+            s.pendingSelectedColorTask?.cancel()
+            s.pendingSelectedColorTask = nil
+            fadeInSelectedColor(listCell)
+            return
+        }
+
+        // 押下に入っただけの段階。塗り始めを遅らせ、スクロールでキャンセルされたら塗らない。
+        guard !s.isShowingSelectedColor, s.pendingSelectedColorTask == nil else { return }
+        s.pendingSelectedColorTask = Task { @MainActor [weak listCell] in
+            try? await Task.sleep(for: .seconds(selectedColorHighlightDelay))
+            guard !Task.isCancelled, let listCell else { return }
+            state(listCell).pendingSelectedColorTask = nil
+            fadeInSelectedColor(listCell)
+        }
+    }
+
+    /// 押下色をフェードインで塗る。
+    @MainActor
+    private static func fadeInSelectedColor(_ listCell: UICollectionViewListCell) {
+        let s = state(listCell)
+        s.isShowingSelectedColor = true
+        var bg = listCell.backgroundConfiguration ?? listCell.defaultBackgroundConfiguration()
+        bg.backgroundColor = s.theme.selectedColor
+        UIView.animate(
+            withDuration: selectedColorFadeInDuration,
+            delay: 0,
+            options: [.curveEaseIn, .beginFromCurrentState, .allowUserInteraction]
+        ) {
+            listCell.backgroundConfiguration = bg
+        }
+    }
+
+    /// 平常時の背景色へ戻す。`fadesOut` が false ならフェードアウトせずに平常色を入れる
+    /// (進行中のフェードインは完了してから戻ることがある)。
+    @MainActor
+    private static func restoreNormalColor(_ listCell: UICollectionViewListCell, fadesOut: Bool) {
+        let s = state(listCell)
+        s.isShowingSelectedColor = false
+        var bg = listCell.backgroundConfiguration ?? listCell.defaultBackgroundConfiguration()
+        bg.backgroundColor = s.effectiveCellBackgroundColor
+        if fadesOut {
+            UIView.animate(
+                withDuration: selectedColorFadeOutDuration,
+                delay: 0,
+                options: [.curveEaseOut, .beginFromCurrentState, .allowUserInteraction]
+            ) {
+                listCell.backgroundConfiguration = bg
+            }
+        } else {
+            UIView.performWithoutAnimation {
                 listCell.backgroundConfiguration = bg
             }
         }
     }
+
+    // MARK: - 押下色のタイミング定数
+
+    /// 押下に入ってから塗り始めるまでの待ち時間（秒）。
+    private static let selectedColorHighlightDelay: TimeInterval = 0.1
+    /// 押下色をフェードインさせる時間（秒）。
+    private static let selectedColorFadeInDuration: TimeInterval = 0.12
+    /// 選択の解除で押下色をフェードアウトさせる時間（秒）。
+    private static let selectedColorFadeOutDuration: TimeInterval = 0.25
 
     // MARK: - Section の箱への clip
 
