@@ -7,6 +7,7 @@
 #if canImport(UIKit)
 import XCTest
 import UIKit
+import KsSettingsViewTestSupport
 @testable import KsSettingsViewUI
 @testable import KsSettingsViewCore
 
@@ -44,7 +45,8 @@ final class PickerSelectionScreenTests: XCTestCase {
         style: CellStyle = CellStyle(),
         pageTitle: String? = nil,
         accentColor: UIColor? = nil,
-        onSelectionChanged: (@Sendable (Int) -> Void)? = nil
+        onSelectionChanged: (@Sendable (Int) -> Void)? = nil,
+        onSelectionCompleted: (@Sendable (Int) -> Void)? = nil
     ) -> PickerCell {
         return PickerCell(
             style: style,
@@ -53,7 +55,8 @@ final class PickerSelectionScreenTests: XCTestCase {
             selectedIndex: selectedIndex,
             pageTitle: pageTitle,
             accentColor: accentColor,
-            onSelectionChanged: onSelectionChanged
+            onSelectionChanged: onSelectionChanged,
+            onSelectionCompleted: onSelectionCompleted
         )
     }
 
@@ -63,7 +66,8 @@ final class PickerSelectionScreenTests: XCTestCase {
         style: CellStyle = CellStyle(),
         pageTitle: String? = nil,
         accentColor: UIColor? = nil,
-        onMultiSelectionChanged: (@Sendable (Set<Int>) -> Void)? = nil
+        onMultiSelectionChanged: (@Sendable (Set<Int>) -> Void)? = nil,
+        onMultiSelectionCompleted: (@Sendable (Set<Int>) -> Void)? = nil
     ) -> PickerCell {
         return PickerCell(
             style: style,
@@ -72,7 +76,8 @@ final class PickerSelectionScreenTests: XCTestCase {
             selectedIndices: selectedIndices,
             pageTitle: pageTitle,
             accentColor: accentColor,
-            onMultiSelectionChanged: onMultiSelectionChanged
+            onMultiSelectionChanged: onMultiSelectionChanged,
+            onMultiSelectionCompleted: onMultiSelectionCompleted
         )
     }
 
@@ -495,6 +500,248 @@ final class PickerSelectionScreenTests: XCTestCase {
         vc._simulateSelect(2)
         vc._simulateCancel()
         XCTAssertNil(picked, "キャンセルでは編集中の選択が確定されない")
+    }
+
+    // MARK: - 閉じ切り通知
+
+    /// 提示していない選択面 VC は「閉じる対象が無い」ため、確定操作の直後に閉じ切りとして扱われる。
+    /// この経路で検証できるのは、配線・発火順序・運ぶ値・非確定では発火しないことである。
+    ///
+    /// モーダル提示の遷移はこのテスト環境で完了しない (`present` の completion が届かない) ため、
+    /// 「選択面が実際に消えてから届く」ことの確認は、提示した状態では届かないという
+    /// 反対側の検証 (`..._選択面が出ている間は届かない`) と統合ホスト・実機での導線確認で担う。
+
+    func test_閉じ切り_単一選択は値callbackの後に同じindexで届く() throws {
+        let log = PickerCallbackLog()
+        let vc = try makeScreenViaWiring(cell: singleCell(
+            onSelectionChanged: { [log] index in
+                MainActor.assumeIsolated { log.record("changed(\(index))") }
+            },
+            onSelectionCompleted: { [log] index in
+                MainActor.assumeIsolated { log.record("completed(\(index))") }
+            }
+        ))
+        layout(vc)
+
+        vc._simulateSelect(2)
+
+        XCTAssertEqual(log.events, ["changed(2)", "completed(2)"])
+    }
+
+    func test_閉じ切り_単一選択の閉じ切りcallbackは選択面が出ている間は届かない() throws {
+        let (window, root) = makePresenter()
+        let log = PickerCallbackLog()
+        let vc = try presentScreenViaWiring(cell: singleCell(
+            onSelectionChanged: { [log] index in
+                MainActor.assumeIsolated { log.record("changed(\(index))") }
+            },
+            onSelectionCompleted: { [log] index in
+                MainActor.assumeIsolated { log.record("completed(\(index))") }
+            }
+        ), presenter: root)
+
+        vc._simulateSelect(2)
+        waitForNegativeVerification()
+
+        XCTAssertNotNil(root.presentedViewController, "選択面がまだ提示されている状態での検証である")
+        XCTAssertEqual(
+            log.events,
+            ["changed(2)"],
+            "閉じ切り callback は確定時ではなく選択面の dismiss 完了を待つ"
+        )
+        window.isHidden = true
+    }
+
+    func test_閉じ切り_複数選択は確定操作で値callbackの後に同じ集合で届く() throws {
+        let log = PickerCallbackLog()
+        let vc = try makeScreenViaWiring(cell: multiCell(
+            selectedIndices: [],
+            onMultiSelectionChanged: { [log] set in
+                MainActor.assumeIsolated { log.record("changed(\(set.sorted()))") }
+            },
+            onMultiSelectionCompleted: { [log] set in
+                MainActor.assumeIsolated { log.record("completed(\(set.sorted()))") }
+            }
+        ))
+        layout(vc)
+
+        vc._simulateSelect(0)
+        vc._simulateSelect(2)
+        XCTAssertEqual(log.events, [], "候補のトグルだけでは値 callback も閉じ切り callback も発火しない")
+
+        vc._simulateDone()
+
+        XCTAssertEqual(log.events, ["changed([0, 2])", "completed([0, 2])"])
+    }
+
+    func test_閉じ切り_複数選択の閉じ切りcallbackは選択面が出ている間は届かない() throws {
+        let (window, root) = makePresenter()
+        let log = PickerCallbackLog()
+        let vc = try presentScreenViaWiring(cell: multiCell(
+            selectedIndices: [],
+            onMultiSelectionChanged: { [log] set in
+                MainActor.assumeIsolated { log.record("changed(\(set.sorted()))") }
+            },
+            onMultiSelectionCompleted: { [log] set in
+                MainActor.assumeIsolated { log.record("completed(\(set.sorted()))") }
+            }
+        ), presenter: root)
+
+        vc._simulateSelect(1)
+        vc._simulateDone()
+        waitForNegativeVerification()
+
+        XCTAssertNotNil(root.presentedViewController, "選択面がまだ提示されている状態での検証である")
+        XCTAssertEqual(log.events, ["changed([1])"])
+        window.isHidden = true
+    }
+
+    func test_閉じ切り_単一選択のCancelではどちらのcallbackも発火しない() throws {
+        let log = PickerCallbackLog()
+        let vc = try makeScreenViaWiring(cell: singleCell(
+            onSelectionChanged: { [log] index in
+                MainActor.assumeIsolated { log.record("changed(\(index))") }
+            },
+            onSelectionCompleted: { [log] index in
+                MainActor.assumeIsolated { log.record("completed(\(index))") }
+            }
+        ))
+        layout(vc)
+
+        vc._simulateCancel()
+        waitForNegativeVerification()
+
+        XCTAssertEqual(log.events, [])
+    }
+
+    func test_閉じ切り_複数選択のCancelではどちらのcallbackも発火しない() throws {
+        let log = PickerCallbackLog()
+        let vc = try makeScreenViaWiring(cell: multiCell(
+            selectedIndices: [],
+            onMultiSelectionChanged: { [log] set in
+                MainActor.assumeIsolated { log.record("changed(\(set.sorted()))") }
+            },
+            onMultiSelectionCompleted: { [log] set in
+                MainActor.assumeIsolated { log.record("completed(\(set.sorted()))") }
+            }
+        ))
+        layout(vc)
+
+        vc._simulateSelect(1)
+        vc._simulateCancel()
+        waitForNegativeVerification()
+
+        XCTAssertEqual(log.events, [])
+    }
+
+    func test_閉じ切り_対話的dismissでは閉じ切りcallbackが発火しない() throws {
+        let (window, root) = makePresenter()
+        let log = PickerCallbackLog()
+        _ = try presentScreenViaWiring(cell: singleCell(
+            onSelectionChanged: { [log] index in
+                MainActor.assumeIsolated { log.record("changed(\(index))") }
+            },
+            onSelectionCompleted: { [log] index in
+                MainActor.assumeIsolated { log.record("completed(\(index))") }
+            }
+        ), presenter: root)
+
+        // ページシート標準の dismiss 操作は選択面の操作を経ず、提示元の側で提示が解かれる。
+        root.dismiss(animated: false)
+        waitForNegativeVerification()
+
+        XCTAssertEqual(log.events, [])
+        window.isHidden = true
+    }
+
+    func test_閉じ切り_複数選択のトグルだけでは閉じ切りcallbackが発火しない() throws {
+        let log = PickerCallbackLog()
+        let vc = try makeScreenViaWiring(cell: multiCell(
+            selectedIndices: [],
+            onMultiSelectionCompleted: { [log] set in
+                MainActor.assumeIsolated { log.record("completed(\(set.sorted()))") }
+            }
+        ))
+        layout(vc)
+
+        vc._simulateSelect(0)
+        vc._simulateSelect(1)
+        vc._simulateSelect(0)
+        waitForNegativeVerification()
+
+        XCTAssertEqual(log.events, [])
+    }
+
+    func test_閉じ切り_callback未指定の呼び出しは従来どおり確定できる() throws {
+        let log = PickerCallbackLog()
+        let vc = try makeScreenViaWiring(cell: singleCell(
+            onSelectionChanged: { [log] index in
+                MainActor.assumeIsolated { log.record("changed(\(index))") }
+            }
+        ))
+        layout(vc)
+
+        vc._simulateSelect(1)
+
+        XCTAssertEqual(log.events, ["changed(1)"], "値 callback だけが従来どおり発火する")
+    }
+
+    func test_閉じ切り_再構築した派生Cellでも閉じ切りcallbackが残る() throws {
+        let log = PickerCallbackLog()
+        let base = singleCell(
+            onSelectionChanged: { [log] index in
+                MainActor.assumeIsolated { log.record("changed(\(index))") }
+            },
+            onSelectionCompleted: { [log] index in
+                MainActor.assumeIsolated { log.record("completed(\(index))") }
+            }
+        )
+        let derived = base.withStyle(CellStyle(titleColor: .blue)).withIcon(nil).withDSLID(UUID())
+        let vc = try makeScreenViaWiring(cell: derived)
+        layout(vc)
+
+        vc._simulateSelect(0)
+
+        XCTAssertEqual(log.events, ["changed(0)", "completed(0)"])
+    }
+
+    // MARK: - 閉じ切り通知の検証ヘルパ
+
+    /// 選択面を実際にモーダル提示し、提示された選択面 VC を返す。
+    private func presentScreenViaWiring(
+        cell: PickerCell,
+        presenter: UIViewController
+    ) throws -> PickerListViewController {
+        let view = PickerCellView()
+        view.render(cell: cell, theme: Theme())
+        let nav = try XCTUnwrap(view._makePresentedViewControllerForTesting())
+        presenter.present(nav, animated: false)
+        let listVC = try XCTUnwrap(nav.viewControllers.first as? PickerListViewController)
+        listVC.loadViewIfNeeded()
+        listVC.view.frame = CGRect(x: 0, y: 0, width: 375, height: 600)
+        listVC.view.layoutIfNeeded()
+        return listVC
+    }
+
+    /// 提示元の window と root view controller を用意する。
+    private func makePresenter() -> (window: UIWindow, root: UIViewController) {
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 375, height: 667))
+        let root = UIViewController()
+        window.rootViewController = root
+        window.makeKeyAndVisible()
+        return (window, root)
+    }
+}
+
+/// 値 callback と閉じ切り callback の到着順を記録する。
+@MainActor
+private final class PickerCallbackLog {
+
+    /// 到着した通知の並び。
+    private(set) var events: [String] = []
+
+    func record(_ event: String) {
+        events.append(event)
     }
 }
 #endif

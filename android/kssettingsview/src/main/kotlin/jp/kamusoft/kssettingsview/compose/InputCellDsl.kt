@@ -123,6 +123,7 @@ public fun DSLSectionScope.PickerCell(
     pageTitle: String? = null,
     subText: ((String) -> String?)? = null,
     onItemSelected: ((String) -> Unit)? = null,
+    onSelectionCompleted: ((Int) -> Unit)? = null,
     accentColor: Color = Color.Unspecified,
     style: CellStyle = CellStyle(),
 ): CellHandle = PickerCell(
@@ -139,6 +140,7 @@ public fun DSLSectionScope.PickerCell(
     pageTitle = pageTitle,
     subText = subText,
     onItemSelected = onItemSelected,
+    onSelectionCompleted = onSelectionCompleted,
     accentColor = accentColor,
     style = style,
 )
@@ -162,6 +164,7 @@ public fun <T> DSLSectionScope.PickerCell(
     pageTitle: String? = null,
     subText: ((T) -> String?)? = null,
     onItemSelected: ((T) -> Unit)? = null,
+    onSelectionCompleted: ((Int) -> Unit)? = null,
     accentColor: Color = Color.Unspecified,
     style: CellStyle = CellStyle(),
 ): CellHandle = cell(
@@ -180,6 +183,7 @@ public fun <T> DSLSectionScope.PickerCell(
         accentColor = accentColor,
         onSelectionChanged = { newIndex -> selectedIndex.value = newIndex },
         onItemSelected = onItemSelected,
+        onSelectionCompleted = onSelectionCompleted,
         isEnabled = isEnabled,
         isVisible = isVisible,
     ),
@@ -202,6 +206,7 @@ public fun DSLSectionScope.PickerCell(
     isVisible: Boolean = true,
     pageTitle: String? = null,
     subText: ((String) -> String?)? = null,
+    onSelectionCompleted: ((Int) -> Unit)? = null,
     accentColor: Color = Color.Unspecified,
     style: CellStyle = CellStyle(),
 ): CellHandle = PickerCell(
@@ -217,6 +222,7 @@ public fun DSLSectionScope.PickerCell(
     isVisible = isVisible,
     pageTitle = pageTitle,
     subText = subText,
+    onSelectionCompleted = onSelectionCompleted,
     accentColor = accentColor,
     style = style,
 )
@@ -241,6 +247,7 @@ public fun <T> DSLSectionScope.PickerCell(
     isVisible: Boolean = true,
     pageTitle: String? = null,
     subText: ((T) -> String?)? = null,
+    onSelectionCompleted: ((Int) -> Unit)? = null,
     accentColor: Color = Color.Unspecified,
     style: CellStyle = CellStyle(),
 ): CellHandle {
@@ -262,6 +269,7 @@ public fun <T> DSLSectionScope.PickerCell(
             pageTitle = pageTitle,
             accentColor = accentColor,
             onSelectionChanged = { newIndex -> selectedItem.value = elements.getOrNull(newIndex) },
+            onSelectionCompleted = onSelectionCompleted,
             isEnabled = isEnabled,
             isVisible = isVisible,
         ),
@@ -287,6 +295,7 @@ public fun DSLSectionScope.PickerCell(
     pageTitle: String? = null,
     subText: ((String) -> String?)? = null,
     onItemsSelected: ((List<String>) -> Unit)? = null,
+    onMultiSelectionCompleted: ((Set<Int>) -> Unit)? = null,
     accentColor: Color = Color.Unspecified,
     style: CellStyle = CellStyle(),
 ): CellHandle = PickerCell(
@@ -304,6 +313,7 @@ public fun DSLSectionScope.PickerCell(
     pageTitle = pageTitle,
     subText = subText,
     onItemsSelected = onItemsSelected,
+    onMultiSelectionCompleted = onMultiSelectionCompleted,
     accentColor = accentColor,
     style = style,
 )
@@ -328,6 +338,7 @@ public fun <T> DSLSectionScope.PickerCell(
     pageTitle: String? = null,
     subText: ((T) -> String?)? = null,
     onItemsSelected: ((List<T>) -> Unit)? = null,
+    onMultiSelectionCompleted: ((Set<Int>) -> Unit)? = null,
     accentColor: Color = Color.Unspecified,
     style: CellStyle = CellStyle(),
 ): CellHandle = cell(
@@ -347,6 +358,7 @@ public fun <T> DSLSectionScope.PickerCell(
         accentColor = accentColor,
         onMultiSelectionChanged = { newSet -> selectedIndices.value = newSet },
         onItemsSelected = onItemsSelected,
+        onMultiSelectionCompleted = onMultiSelectionCompleted,
         isEnabled = isEnabled,
         isVisible = isVisible,
     ),
@@ -454,6 +466,7 @@ public fun DSLSectionScope.DatePickerCell(
     androidButtonColor: Color = Color.Unspecified,
     pickerTitle: String? = null,
     accentColor: Color = Color.Unspecified,
+    onValueCompleted: ((LocalDate) -> Unit)? = null,
     style: CellStyle = CellStyle(),
 ): CellHandle = cell(
     UiDatePickerCell(
@@ -473,6 +486,7 @@ public fun DSLSectionScope.DatePickerCell(
         androidButtonColor = androidButtonColor,
         accentColor = accentColor,
         onValueChanged = { newValue -> date.value = newValue },
+        onValueCompleted = onValueCompleted,
         isEnabled = isEnabled,
         isVisible = isVisible,
     ),

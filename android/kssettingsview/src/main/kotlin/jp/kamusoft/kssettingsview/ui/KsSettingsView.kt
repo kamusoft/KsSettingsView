@@ -1277,7 +1277,10 @@ public class KsSettingsView @JvmOverloads constructor(
             onConfirmed = { newDate -> cell.onValueChanged?.invoke(newDate) },
         )
         val forgetDialog = trackCalendarDialog(cell.id, dialog)
-        dialog.showAnchoredTo(this, forgetDialog)
+        dialog.showAnchoredTo(this) {
+            forgetDialog()
+            dialog.completedDate?.let { newDate -> cell.onValueCompleted?.invoke(newDate) }
+        }
     }
 
     /** 引き継いだ表示状態に対応する適格な Cell を現 root から探す（一意でなければ `null`）。 */

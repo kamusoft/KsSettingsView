@@ -174,6 +174,9 @@ internal class PickerSheetRowViews(
  * - 単一選択: 候補行タップで [onSingleSelected] を発火して閉じる
  * - 複数選択: 候補行タップは作業状態のトグルのみ、確定ボタンで [onMultiConfirmed] を発火して閉じる
  *
+ * 確定経路では確定した値を [completedSelection] / [completedMultiSelection] へ控える。閉じ切りを
+ * 知るのは dismiss リスナーを持つ提示側なので、提示側はこの控えを読んで確定で閉じたことを判別する。
+ *
  * 候補行は主表示のみの1行構成で、副表示（[PickerItem.subText]）を持つ候補だけが2行構成になる。
  * 副表示は description 系統の実効値を継承し、長さによらず1行に収めて末尾を省略する。
  *
@@ -213,6 +216,20 @@ internal class PickerSelectionSheet(
     /** 複数選択モードの作業状態。確定操作を経ない限りモデルへは反映しない。 */
     private val workingSelection: MutableSet<Int> = initialSelectedIndices.toMutableSet()
 
+    /**
+     * 確定した単一選択の控え。確定操作を通ったときだけ立てる。
+     *
+     * シートが閉じ切ったことを知るのは [Dialog.setOnDismissListener] を持つ提示側であり、この控えは
+     * そこから「確定で閉じたのか」を読み取るために置く。取消・外側タップ・Back・下スワイプでは
+     * 立たないので、提示側は控えの有無だけで確定を判別できる。
+     */
+    internal var completedSelection: Int? = null
+        private set
+
+    /** 確定した複数選択の控え。意味は [completedSelection] と同じ。 */
+    internal var completedMultiSelection: Set<Int>? = null
+        private set
+
     private val density: Float = context.resources.displayMetrics.density
 
     private val itemsAdapter = ItemsAdapter()
@@ -234,7 +251,9 @@ internal class PickerSelectionSheet(
         showConfirm = selectionMode == PickerSelectionMode.Multiple,
         onCancel = { cancel() },
         onConfirm = {
-            onMultiConfirmed(workingSelection.toSet())
+            val confirmed = workingSelection.toSet()
+            onMultiConfirmed(confirmed)
+            completedMultiSelection = confirmed
             dismiss()
         },
     )
@@ -503,6 +522,7 @@ internal class PickerSelectionSheet(
         when (selectionMode) {
             PickerSelectionMode.Single -> {
                 onSingleSelected(index)
+                completedSelection = index
                 dismiss()
             }
             PickerSelectionMode.Multiple -> {

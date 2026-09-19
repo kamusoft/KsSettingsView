@@ -63,6 +63,22 @@ internal interface IKsInteractionSink
     /// <param name="indices">選択された位置の並び</param>
     void PickerCellMultiSelectionChanged(string cellId, IReadOnlyList<int> indices);
 
+    /// <summary>PickerCell (単一選択) の確定した選択面が閉じ切った。</summary>
+    /// <remarks>
+    /// <see cref="PickerCellSelectionChanged"/> の後に同じ cellId と同じ選択で届く。
+    /// </remarks>
+    /// <param name="cellId">対象 Cell の ID</param>
+    /// <param name="index">確定した位置</param>
+    void PickerCellSelectionCompleted(string cellId, int index);
+
+    /// <summary>PickerCell (複数選択) の確定した選択面が閉じ切った。</summary>
+    /// <remarks>
+    /// <see cref="PickerCellMultiSelectionChanged"/> の後に同じ cellId と同じ選択で届く。
+    /// </remarks>
+    /// <param name="cellId">対象 Cell の ID</param>
+    /// <param name="indices">確定した位置の並び</param>
+    void PickerCellMultiSelectionCompleted(string cellId, IReadOnlyList<int> indices);
+
     /// <summary>NumberPickerCell の値が変わった。</summary>
     /// <param name="cellId">対象 Cell の ID</param>
     /// <param name="value">新しい値</param>

@@ -1,0 +1,9 @@
+# Deviation: picker-selection-after-dismiss
+
+- DatePickerCell の閉じ切り通知 (iOS) / Scenario「ホイールの Done で入力面が閉じ切った後に閉じ切り callback が届く」: design Decision 4 では「購読 → resign → 値 callback → 通知で Completed」の手順 → 実装では `resignFirstResponder()` の中で `keyboardDidHideNotification` が同期に届く環境があり、この手順だと Completed が Changed より先に出るため、「値 callback 送出済み」「非表示完了 報告済み」の 2 記録がそろってから Completed を出す待ち受け (`DatePickerCellView.WheelsCompletionWatch`) にした。契約 (Changed → Completed の順・1 回・1 秒打ち切り・再利用時の破棄) は design どおり。理由: 実行環境で発火順が崩れる (2026-09-19)
+- iOS の確定時 dismiss (`PickerListViewController.dismissModal` / `DatePickerCalendarSheetController.dismissSheet`): design に記述なし → 提示元が無い場合は閉じ切り済みとして completion を即時に呼ぶ分岐を追加した。実アプリ経路では常に提示元があるため挙動は変わらず、テストホスト (モーダル遷移が完了しない) から確定操作を駆動する前提を成り立たせるため。理由: テスト駆動の前提 (2026-09-19)
+- [付随修正] `android/kssettingsview/src/main/kotlin/jp/kamusoft/kssettingsview/ui/KsSettingsView.kt` の構成変更後のカレンダー復元経路: 提示し直したカレンダーの dismiss でも `onValueCompleted` を呼ぶよう結線した。理由: 同じ Cell の同じ確定操作が復元後だけ閉じ切り通知を落とすのを避けるため (2026-09-19)
+- [付随修正] `android/kssettingsview/src/test/kotlin/jp/kamusoft/kssettingsview/ui/KsSettingsViewTestSupport.kt`: 閉じ切り通知の配送を待つ条件ベース待機と、不変性確認用の上限つきキュー消化を追加した。理由: dismiss 通知は main looper 経由で届き、Compose の選択面があるため `idle()` で流し切れないため (2026-09-19)
+- [付随修正] `android/kssettingsview/src/test/kotlin/jp/kamusoft/kssettingsview/compose/PickerCellObjectBindingTest.kt`: クラスを Robolectric 実行にした。理由: Compose DSL 経路の閉じ切り通知を選択面の dismiss ごと検証するため (2026-09-19)
+- [付随修正] `maui/KsSettingsView.Maui/PickerCell.cs` の `SelectedCommand` の公開 doc コメント: 実行時点が「選択画面が閉じ切った後」であることと、その中でダイアログ・画面遷移を始められることを書き足した。理由: 旧契約 (確定直後に実行) を語る説明が残るため (2026-09-19)
+- [付随修正] `android/kssettingsview/src/test/kotlin/jp/kamusoft/kssettingsview/ui/DateCalendarRecreationTest.kt` の既存ヘルパ (`launch` / `recreate`) のカレンダー提示後 `idle()`: 条件ベース待機へ置き換える (review-003 Suggestion)。オーナー指示により同梱、確認はテスト 1 回の通過のみで追加レビューは回さない。理由: handbook の禁忌に当たり `--tests` 単体指定ハングの原因候補 (2026-09-19)

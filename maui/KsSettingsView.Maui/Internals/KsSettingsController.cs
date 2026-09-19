@@ -2210,7 +2210,6 @@ internal sealed class KsSettingsController(SettingsView owner)
         }
 
         Write(cell, (int?)index, target => target.SelectedIndex, (target, value) => target.SelectedIndex = value);
-        cell.NotifySelectionCompleted(PickerSelectionMode.Single);
     }
 
     /// <summary>
@@ -2233,8 +2232,24 @@ internal sealed class KsSettingsController(SettingsView owner)
         {
             cell.SelectedIndices = [.. KsWireValues.Indices(indices)];
         }
+    }
 
-        cell.NotifySelectionCompleted(PickerSelectionMode.Multiple);
+    /// <inheritdoc/>
+    public void PickerCellSelectionCompleted(string cellId, int index)
+    {
+        if (FindCell(cellId) is PickerCell cell)
+        {
+            cell.NotifySelectionCompleted(PickerSelectionMode.Single);
+        }
+    }
+
+    /// <inheritdoc/>
+    public void PickerCellMultiSelectionCompleted(string cellId, IReadOnlyList<int> indices)
+    {
+        if (FindCell(cellId) is PickerCell cell)
+        {
+            cell.NotifySelectionCompleted(PickerSelectionMode.Multiple);
+        }
     }
 
     /// <inheritdoc/>

@@ -15,7 +15,9 @@ import KsSettingsViewUI
 ///
 /// 選択変更は `selectionMode` に応じて
 /// `KsBridgeInteractionDelegate.pickerCellSelectionChanged(cellID:index:)` または
-/// `pickerCellMultiSelectionChanged(cellID:indices:)` で通知される。
+/// `pickerCellMultiSelectionChanged(cellID:indices:)` で通知され、確定した選択面が閉じ切ると
+/// 続けて `pickerCellSelectionCompleted(cellID:index:)` または
+/// `pickerCellMultiSelectionCompleted(cellID:indices:)` が同じ値で通知される。
 @objc(KsBridgePickerCell)
 public final class KsBridgePickerCell: KsBridgeCell {
 
@@ -58,6 +60,9 @@ public final class KsBridgePickerCell: KsBridgeCell {
                 pageTitle: pageTitle,
                 accentColor: KsBridgeColor.uiColor(accentColor),
                 onSelectionChanged: { relay.pickerCellSelectionChanged(cellID: notifiedCellID, index: $0) },
+                onSelectionCompleted: {
+                    relay.pickerCellSelectionCompleted(cellID: notifiedCellID, index: $0)
+                },
                 isEnabled: isEnabled,
                 isVisible: isVisible
             )
@@ -77,6 +82,9 @@ public final class KsBridgePickerCell: KsBridgeCell {
                 accentColor: KsBridgeColor.uiColor(accentColor),
                 onMultiSelectionChanged: {
                     relay.pickerCellMultiSelectionChanged(cellID: notifiedCellID, indices: $0)
+                },
+                onMultiSelectionCompleted: {
+                    relay.pickerCellMultiSelectionCompleted(cellID: notifiedCellID, indices: $0)
                 },
                 isEnabled: isEnabled,
                 isVisible: isVisible

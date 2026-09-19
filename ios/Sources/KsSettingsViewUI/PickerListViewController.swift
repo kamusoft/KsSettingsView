@@ -49,6 +49,11 @@ internal final class PickerListViewController: UITableViewController {
     /// 複数選択モード時の確定 callback（「完了」押下時に発火）。
     private let onMultiDone: ((Set<Int>) -> Void)?
 
+    /// 単一選択モード時の閉じ切り callback（確定後、選択面の dismiss 完了で発火）。
+    private let onSingleCompleted: ((Int) -> Void)?
+    /// 複数選択モード時の閉じ切り callback（確定後、選択面の dismiss 完了で発火）。
+    private let onMultiCompleted: ((Set<Int>) -> Void)?
+
     private static let cellReuseIdentifier = "PickerListCell"
 
     /// - Parameters:
@@ -68,7 +73,9 @@ internal final class PickerListViewController: UITableViewController {
         cellStyle: CellStyle,
         cellAccentColor: UIColor?,
         onSingleDone: ((Int) -> Void)?,
-        onMultiDone: ((Set<Int>) -> Void)?
+        onMultiDone: ((Set<Int>) -> Void)?,
+        onSingleCompleted: ((Int) -> Void)? = nil,
+        onMultiCompleted: ((Set<Int>) -> Void)? = nil
     ) {
         self.items = items
         self.selectionMode = selectionMode
@@ -81,6 +88,8 @@ internal final class PickerListViewController: UITableViewController {
         self.resolvedAccentColor = cellAccentColor ?? effective.accentColor
         self.onSingleDone = onSingleDone
         self.onMultiDone = onMultiDone
+        self.onSingleCompleted = onSingleCompleted
+        self.onMultiCompleted = onMultiCompleted
         super.init(style: .plain)
         self.title = navigationTitle
     }
@@ -278,7 +287,10 @@ internal final class PickerListViewController: UITableViewController {
             currentSingle = indexPath.row
             tableView.reloadData()
             onSingleDone?(indexPath.row)
-            dismissModal()
+            let confirmed = indexPath.row
+            dismissModal { [weak self] in
+                self?.onSingleCompleted?(confirmed)
+            }
 
         case .multiple:
             if currentMulti.contains(indexPath.row) {
@@ -312,17 +324,30 @@ internal final class PickerListViewController: UITableViewController {
     }
 
     @objc private func handleDone() {
-        if selectionMode == .multiple {
-            onMultiDone?(currentMulti)
+        guard selectionMode == .multiple else {
+            // 単一選択に確定ボタンは無く、この経路は確定を伴わない。
+            dismissModal()
+            return
         }
-        dismissModal()
+        let confirmed = currentMulti
+        onMultiDone?(confirmed)
+        dismissModal { [weak self] in
+            self?.onMultiCompleted?(confirmed)
+        }
     }
 
-    private func dismissModal() {
+    /// 選択面を閉じる。確定経路だけが `completion` を渡し、閉じ切った後の通知に使う。
+    /// キャンセル経路は `completion` を渡さないため、非確定 dismiss で閉じ切り通知は発火しない。
+    private func dismissModal(completion: (() -> Void)? = nil) {
+        guard presentingViewController != nil else {
+            // モーダルとして提示されていない（閉じる対象が無い）ため、すでに閉じ切った状態として扱う。
+            completion?()
+            return
+        }
         if let nav = navigationController, nav.presentingViewController != nil {
-            nav.dismiss(animated: true)
+            nav.dismiss(animated: true, completion: completion)
         } else {
-            dismiss(animated: true)
+            dismiss(animated: true, completion: completion)
         }
     }
 

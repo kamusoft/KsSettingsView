@@ -50,10 +50,17 @@ class PickerSelectionSheetTest {
     private val parent get() = FrameLayout(ctx)
 
     /** Cell の行タップで選択面を開き、表示された [PickerSelectionSheet] を返す。 */
-    private fun openSheet(cell: PickerCell, theme: Theme = Theme()): PickerSelectionSheet {
-        val vh = PickerCellViewHolder.create(parent)
-        vh.bind(cell, theme)
-        vh.views.root.performClick()
+    private fun openSheet(cell: PickerCell, theme: Theme = Theme()): PickerSelectionSheet =
+        openSheet(PickerCellViewHolder.create(parent), cell, theme)
+
+    /** 指定の行（ViewHolder）をタップして選択面を開く。同じ行からの再提示を書けるように分けている。 */
+    private fun openSheet(
+        holder: PickerCellViewHolder,
+        cell: PickerCell,
+        theme: Theme = Theme(),
+    ): PickerSelectionSheet {
+        holder.bind(cell, theme)
+        holder.views.root.performClick()
         return ShadowDialog.getLatestDialog() as PickerSelectionSheet
     }
 
@@ -223,6 +230,120 @@ class PickerSelectionSheetTest {
         selectedIndices = setOf(0),
         onMultiSelectionChanged = onMulti,
     )
+
+    // MARK: - 閉じ切り通知
+
+    /** 値 callback と閉じ切り callback を発生順に記録する Cell を作る（単一選択）。 */
+    private fun singleCellRecording(events: MutableList<String>): PickerCell = PickerCell(
+        title = "テーマ",
+        items = listOf("ライト", "ダーク", "自動"),
+        selectedIndex = 0,
+        onSelectionChanged = { events.add("changed:$it") },
+        onSelectionCompleted = { events.add("completed:$it") },
+    )
+
+    /** 値 callback と閉じ切り callback を発生順に記録する Cell を作る（複数選択）。 */
+    private fun multiCellRecording(events: MutableList<String>): PickerCell = PickerCell(
+        title = "言語",
+        items = listOf("A", "B", "C", "D"),
+        selectedIndices = setOf(1),
+        onMultiSelectionChanged = { events.add("changed:${it.sorted()}") },
+        onMultiSelectionCompleted = { events.add("completed:${it.sorted()}") },
+    )
+
+    @Test
+    fun `単一選択は値 callback の後に閉じ切り callback を同じ index で1回ずつ発火する`() {
+        val events = mutableListOf<String>()
+        val sheet = openSheet(singleCellRecording(events))
+
+        sheet.bindRow(2).root.performClick()
+
+        // 閉じ切りの通知は dismiss リスナー経由で届くため、確定操作の直後にはまだ出ていない。
+        assertEquals(listOf("changed:2"), events)
+        assertFalse(sheet.isShowing)
+
+        awaitMainLooperCondition(diagnostics = { "受け取った通知: $events" }) { events.size == 2 }
+        assertEquals(listOf("changed:2", "completed:2"), events)
+    }
+
+    @Test
+    fun `単一選択の非確定 dismiss ではどの経路でも閉じ切り callback を発火しない`() {
+        // 取消ボタン・外側タップ / Back（Dialog の cancel）・下方向スワイプ（dismiss）の3経路。
+        val cancelEvents = mutableListOf<String>()
+        openSheet(singleCellRecording(cancelEvents)).cancelView.performClick()
+        drainMainLooperForUnchangedCheck()
+        assertTrue("取消で通知された: $cancelEvents", cancelEvents.isEmpty())
+
+        val backEvents = mutableListOf<String>()
+        openSheet(singleCellRecording(backEvents)).cancel()
+        drainMainLooperForUnchangedCheck()
+        assertTrue("cancel で通知された: $backEvents", backEvents.isEmpty())
+
+        val swipeEvents = mutableListOf<String>()
+        openSheet(singleCellRecording(swipeEvents)).dismiss()
+        drainMainLooperForUnchangedCheck()
+        assertTrue("dismiss で通知された: $swipeEvents", swipeEvents.isEmpty())
+    }
+
+    @Test
+    fun `複数選択は確定操作で値 callback の後に閉じ切り callback を同じ集合で1回ずつ発火する`() {
+        val events = mutableListOf<String>()
+        val sheet = openSheet(multiCellRecording(events))
+
+        sheet.bindRow(3).root.performClick()
+        sheet.confirmView.performClick()
+
+        assertEquals(listOf("changed:[1, 3]"), events)
+        assertFalse(sheet.isShowing)
+
+        awaitMainLooperCondition(diagnostics = { "受け取った通知: $events" }) { events.size == 2 }
+        assertEquals(listOf("changed:[1, 3]", "completed:[1, 3]"), events)
+    }
+
+    @Test
+    fun `複数選択の候補トグルだけでは閉じ切り callback を発火しない`() {
+        val events = mutableListOf<String>()
+        val sheet = openSheet(multiCellRecording(events))
+
+        sheet.bindRow(3).root.performClick()
+        drainMainLooperForUnchangedCheck()
+
+        assertTrue("トグルで通知された: $events", events.isEmpty())
+        assertTrue(sheet.isShowing)
+    }
+
+    @Test
+    fun `複数選択のキャンセルでは閉じ切り callback を発火しない`() {
+        val events = mutableListOf<String>()
+        val sheet = openSheet(multiCellRecording(events))
+
+        sheet.bindRow(3).root.performClick()
+        sheet.cancelView.performClick()
+        drainMainLooperForUnchangedCheck()
+
+        assertTrue("キャンセルで通知された: $events", events.isEmpty())
+    }
+
+    @Test
+    fun `確定して閉じた後に同じ行から選択面を開き直して再び閉じ切り callback が届く`() {
+        val events = mutableListOf<String>()
+        val cell = singleCellRecording(events)
+        val holder = PickerCellViewHolder.create(parent)
+
+        val first = openSheet(holder, cell)
+        first.bindRow(1).root.performClick()
+        awaitMainLooperCondition(diagnostics = { "受け取った通知: $events" }) { events.size == 2 }
+
+        val second = openSheet(holder, cell)
+        assertTrue("再提示できていない", second.isShowing)
+        second.bindRow(2).root.performClick()
+        awaitMainLooperCondition(diagnostics = { "受け取った通知: $events" }) { events.size == 4 }
+
+        assertEquals(
+            listOf("changed:1", "completed:1", "changed:2", "completed:2"),
+            events,
+        )
+    }
 
     // MARK: - ヘッダーのタップ領域・semantics・幅配分
 

@@ -626,6 +626,22 @@ internal sealed class KsBridgeGateway : IKsSettingsGateway
         }
 
         /// <inheritdoc/>
+        public override void PickerCellSelectionCompleted(string cellID, nint index)
+            => Sink.PickerCellSelectionCompleted(cellID, (int)index);
+
+        /// <inheritdoc/>
+        public override void PickerCellMultiSelectionCompleted(string cellID, NSNumber[] indices)
+        {
+            int[] values = new int[indices.Length];
+            for (int i = 0; i < indices.Length; i++)
+            {
+                values[i] = indices[i].Int32Value;
+            }
+
+            Sink.PickerCellMultiSelectionCompleted(cellID, values);
+        }
+
+        /// <inheritdoc/>
         public override void NumberPickerCellChanged(string cellID, nint value)
             => Sink.NumberPickerCellChanged(cellID, (int)value);
 

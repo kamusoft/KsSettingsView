@@ -56,9 +56,12 @@ internal class PickerCellViewHolder(
      *
      * タイトルは `pageTitle ?: title`、候補は `items` の全項目を順序どおり列挙する。
      * 確定 callback は選択面側の確定操作でのみ発火し、モデル値の正規化は行わない。
+     *
+     * 閉じ切り callback は選択面が閉じたことを知る dismiss 経路で発火する。確定で閉じたかどうかは
+     * 選択面が控えた確定値の有無で判別する。
      */
     private fun showPickerSheet(cell: PickerCell, theme: Theme, effective: EffectiveStyle) {
-        PickerSelectionSheet(
+        val sheet = PickerSelectionSheet(
             hostContext = views.root.context,
             sheetTitle = cell.pageTitle ?: cell.title,
             items = cell.items,
@@ -70,7 +73,13 @@ internal class PickerCellViewHolder(
             scrollIndicatorVisible = theme.scrollIndicatorVisible,
             onSingleSelected = { index -> cell.onSelectionChanged?.invoke(index) },
             onMultiConfirmed = { indices -> cell.onMultiSelectionChanged?.invoke(indices) },
-        ).showAnchoredTo(views.root)
+        )
+        sheet.showAnchoredTo(views.root) {
+            sheet.completedSelection?.let { index -> cell.onSelectionCompleted?.invoke(index) }
+            sheet.completedMultiSelection?.let { indices ->
+                cell.onMultiSelectionCompleted?.invoke(indices)
+            }
+        }
     }
 
     override fun reset() {

@@ -94,6 +94,22 @@ interface KsBridgeInteractionListener {
     fun pickerCellMultiSelectionChanged(cellID: String, indices: IntArray)
 
     /**
+     * PickerCell（単一選択）の確定した選択 UI が閉じ切った。
+     *
+     * @param cellID 対象 Cell の cellID
+     * @param index 確定した選択 index
+     */
+    fun pickerCellSelectionCompleted(cellID: String, index: Int)
+
+    /**
+     * PickerCell（複数選択）の確定した選択 UI が閉じ切った。
+     *
+     * @param cellID 対象 Cell の cellID
+     * @param indices 確定した選択 index（昇順・重複なし）
+     */
+    fun pickerCellMultiSelectionCompleted(cellID: String, indices: IntArray)
+
+    /**
      * NumberPickerCell の値が変わった。
      *
      * @param cellID 対象 Cell の cellID

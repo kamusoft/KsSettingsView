@@ -30,6 +30,8 @@ private final class SwitchRecordingDelegate: NSObject, KsBridgeInteractionDelega
     func entryCellTextChanged(cellID: String, text: String) {}
     func pickerCellSelectionChanged(cellID: String, index: Int) {}
     func pickerCellMultiSelectionChanged(cellID: String, indices: [Int]) {}
+    func pickerCellSelectionCompleted(cellID: String, index: Int) {}
+    func pickerCellMultiSelectionCompleted(cellID: String, indices: [Int]) {}
     func numberPickerCellChanged(cellID: String, value: Int) {}
     func timePickerCellChanged(cellID: String, time: String) {}
     func datePickerCellChanged(cellID: String, date: String) {}

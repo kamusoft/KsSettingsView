@@ -72,6 +72,19 @@ internal final class KsBridgeInteractionRelay: @unchecked Sendable {
         )
     }
 
+    /// PickerCell (単一選択) の閉じ切りを転送する。
+    func pickerCellSelectionCompleted(cellID: String, index: Int) {
+        delegate?.pickerCellSelectionCompleted(cellID: cellID, index: index)
+    }
+
+    /// PickerCell (複数選択) の閉じ切りを、昇順・重複なしへ正規化して転送する。
+    func pickerCellMultiSelectionCompleted(cellID: String, indices: Set<Int>) {
+        delegate?.pickerCellMultiSelectionCompleted(
+            cellID: cellID,
+            indices: KsBridgeValueTransport.indexList(from: indices)
+        )
+    }
+
     /// NumberPickerCell の値変更を転送する。
     func numberPickerCellChanged(cellID: String, value: Int) {
         delegate?.numberPickerCellChanged(cellID: cellID, value: value)

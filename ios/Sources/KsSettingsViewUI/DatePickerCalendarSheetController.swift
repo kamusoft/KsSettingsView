@@ -27,6 +27,8 @@ internal final class DatePickerCalendarSheetController: UIViewController, UIAdap
     private let accentColor: UIColor?
     private let onDone: (Date) -> Void
     private let onDismissed: (() -> Void)?
+    /// 確定（完了ボタン）で閉じ切った後に、確定した日付を届ける callback。
+    private let onDoneCompleted: ((Date) -> Void)?
 
     /// Sheet の高さ（detent custom 値）。`.inline` カレンダー grid + ボタンバー + 上下マージン。
     private static let sheetHeight: CGFloat = 480
@@ -47,7 +49,8 @@ internal final class DatePickerCalendarSheetController: UIViewController, UIAdap
         todayText: String?,
         accentColor: UIColor?,
         onDone: @escaping (Date) -> Void,
-        onDismissed: (() -> Void)? = nil
+        onDismissed: (() -> Void)? = nil,
+        onDoneCompleted: ((Date) -> Void)? = nil
     ) {
         self.initial = initial
         self.minimumDate = minimumDate
@@ -57,6 +60,7 @@ internal final class DatePickerCalendarSheetController: UIViewController, UIAdap
         self.accentColor = accentColor
         self.onDone = onDone
         self.onDismissed = onDismissed
+        self.onDoneCompleted = onDoneCompleted
         super.init(nibName: nil, bundle: nil)
         // Sheet 提示の設定
         self.modalPresentationStyle = .pageSheet
@@ -164,15 +168,30 @@ internal final class DatePickerCalendarSheetController: UIViewController, UIAdap
     }
 
     @objc private func handleCancel() {
-        dismiss(animated: true) { [weak self] in
-            self?.onDismissed?()
-        }
+        // 非確定で閉じる経路は完了通知を伴わない。
+        dismissSheet()
     }
 
     @objc private func handleDone() {
-        onDone(datePicker.date)
+        let confirmed = datePicker.date
+        onDone(confirmed)
+        dismissSheet { [weak self] in
+            self?.onDoneCompleted?(confirmed)
+        }
+    }
+
+    /// シートを閉じ、閉じ切った後に参照解放（`onDismissed`）と、確定経路だけが渡す
+    /// `completion` をこの順で呼ぶ。
+    private func dismissSheet(completion: (() -> Void)? = nil) {
+        guard presentingViewController != nil else {
+            // シートとして提示されていない（閉じる対象が無い）ため、すでに閉じ切った状態として扱う。
+            onDismissed?()
+            completion?()
+            return
+        }
         dismiss(animated: true) { [weak self] in
             self?.onDismissed?()
+            completion?()
         }
     }
 

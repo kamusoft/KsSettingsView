@@ -125,6 +125,50 @@ class PickerCellItemsTest {
         assertEquals(plans[1], received)
     }
 
+    // MARK: - 射影 factory 経路の閉じ切り通知
+
+    @Test
+    fun `射影 factory の単一選択でも閉じ切り callback が元要素の書き戻しの後に届く`() {
+        val order = mutableListOf<String>()
+        val cell = PickerCell(
+            title = "プラン",
+            items = plans,
+            displayText = { it.name },
+            onSelectionChanged = { order.add("index:$it") },
+            onItemSelected = { order.add("item:${it.name}") },
+            onSelectionCompleted = { order.add("completed:$it") },
+        )
+
+        confirmSingle(cell, row = 2)
+
+        assertEquals(listOf("index:2", "item:上位"), order)
+        awaitMainLooperCondition(diagnostics = { "受け取った通知: $order" }) { order.size == 3 }
+        assertEquals(listOf("index:2", "item:上位", "completed:2"), order)
+    }
+
+    @Test
+    fun `射影 factory の複数選択でも閉じ切り callback が元要素の書き戻しの後に届く`() {
+        val order = mutableListOf<String>()
+        val cell = PickerCell(
+            title = "プラン",
+            items = plans,
+            displayText = { it.name },
+            selectedIndices = emptySet(),
+            onMultiSelectionChanged = { order.add("indices:${it.sorted()}") },
+            onItemsSelected = { selected -> order.add("items:${selected.map { it.name }}") },
+            onMultiSelectionCompleted = { order.add("completed:${it.sorted()}") },
+        )
+
+        confirmMultiple(cell, toggling = listOf(2, 0))
+
+        assertEquals(listOf("indices:[0, 2]", "items:[無料, 上位]"), order)
+        awaitMainLooperCondition(diagnostics = { "受け取った通知: $order" }) { order.size == 3 }
+        assertEquals(
+            listOf("indices:[0, 2]", "items:[無料, 上位]", "completed:[0, 2]"),
+            order,
+        )
+    }
+
     // MARK: - value 自動表示
 
     @Test

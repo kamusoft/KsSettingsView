@@ -25,6 +25,12 @@ import jp.kamusoft.kssettingsview.core.DSLReidentifiableCell
  * @property valueText 明示指定の valueText（`null` のとき現在の選択値から自動生成）
  * @property onSelectionChanged 単一選択モードでの選択変更 callback
  * @property onMultiSelectionChanged 複数選択モードでの選択変更 callback
+ * @property onSelectionCompleted 単一選択モードで、確定した選択 UI が閉じ切った後に確定 index を
+ *   届ける callback。[onSelectionChanged] と同じ index を 1 回だけ運ぶ。取消・外側タップ・Back・
+ *   下スワイプで閉じたときは発火しない
+ * @property onMultiSelectionCompleted 複数選択モードで、確定した選択 UI が閉じ切った後に確定
+ *   index 集合を届ける callback。[onMultiSelectionChanged] と同じ集合を 1 回だけ運ぶ。候補の
+ *   トグルや非確定の閉じ方では発火しない
  */
 public data class PickerCell(
     override val id: String = "picker-cell-${java.util.UUID.randomUUID()}",
@@ -43,6 +49,8 @@ public data class PickerCell(
     val accentColor: Color = Color.Unspecified,
     val onSelectionChanged: ((Int) -> Unit)? = null,
     val onMultiSelectionChanged: ((Set<Int>) -> Unit)? = null,
+    val onSelectionCompleted: ((Int) -> Unit)? = null,
+    val onMultiSelectionCompleted: ((Set<Int>) -> Unit)? = null,
     val isEnabled: Boolean = true,
     override val isVisible: Boolean = true,
 ) : Cell, DSLReidentifiableCell, DSLStyleModifiableCell, DSLIconModifiableCell, VisibilityAware {

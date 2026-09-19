@@ -86,6 +86,7 @@ class DateSelectionSheetTest {
         style: CellStyle = CellStyle(),
         isEnabled: Boolean = true,
         onValueChanged: ((LocalDate) -> Unit)? = null,
+        onValueCompleted: ((LocalDate) -> Unit)? = null,
     ): DatePickerCell = DatePickerCell(
         title = title,
         pickerTitle = pickerTitle,
@@ -99,6 +100,7 @@ class DateSelectionSheetTest {
         style = style,
         isEnabled = isEnabled,
         onValueChanged = onValueChanged,
+        onValueCompleted = onValueCompleted,
     )
 
     /**
@@ -474,6 +476,54 @@ class DateSelectionSheetTest {
 
         assertEquals(listOf(LocalDate.of(2026, 9, 15)), received)
         assertFalse(sheet.isShowing)
+    }
+
+    /** 値 callback と閉じ切り callback を発生順に記録する Spinner の Cell を作る。 */
+    private fun recordingSpinnerCell(events: MutableList<String>): DatePickerCell = spinnerCell(
+        date = LocalDate.of(2026, 8, 2),
+        onValueChanged = { events.add("changed:$it") },
+        onValueCompleted = { events.add("completed:$it") },
+    )
+
+    @Test
+    fun `Spinner の確定は値 callback の後に閉じ切り callback を同じ日付で1回ずつ発火する`() {
+        val events = mutableListOf<String>()
+        val sheet = openSheet(recordingSpinnerCell(events))
+        selectMonth(sheet, 9)
+        selectDay(sheet, 15)
+        sheet.confirmView.performClick()
+
+        // 閉じ切りの通知は dismiss リスナー経由で届くため、確定操作の直後にはまだ出ていない。
+        assertEquals(listOf("changed:2026-09-15"), events)
+        assertFalse(sheet.isShowing)
+
+        awaitMainLooperCondition(diagnostics = { "受け取った通知: $events" }) { events.size == 2 }
+        assertEquals(listOf("changed:2026-09-15", "completed:2026-09-15"), events)
+    }
+
+    @Test
+    fun `Spinner の非確定 dismiss ではどの経路でも閉じ切り callback を発火しない`() {
+        // 取消ボタン・外側タップ / Back（Dialog の cancel）・下方向スワイプ（dismiss）の3経路。
+        val cancelEvents = mutableListOf<String>()
+        val cancelSheet = openSheet(recordingSpinnerCell(cancelEvents))
+        selectDay(cancelSheet, 20)
+        cancelSheet.cancelView.performClick()
+        drainMainLooperForUnchangedCheck()
+        assertTrue("取消で通知された: $cancelEvents", cancelEvents.isEmpty())
+
+        val backEvents = mutableListOf<String>()
+        val backSheet = openSheet(recordingSpinnerCell(backEvents))
+        selectDay(backSheet, 20)
+        backSheet.cancel()
+        drainMainLooperForUnchangedCheck()
+        assertTrue("cancel で通知された: $backEvents", backEvents.isEmpty())
+
+        val swipeEvents = mutableListOf<String>()
+        val swipeSheet = openSheet(recordingSpinnerCell(swipeEvents))
+        selectDay(swipeSheet, 20)
+        swipeSheet.dismiss()
+        drainMainLooperForUnchangedCheck()
+        assertTrue("dismiss で通知された: $swipeEvents", swipeEvents.isEmpty())
     }
 
     @Test

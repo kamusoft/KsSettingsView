@@ -88,6 +88,9 @@ internal class DatePickerCellViewHolder(
      * タイトルは `pickerTitle ?: title`、選択できる日付は `minDate` / `maxDate` から導いた範囲
      * （[DateCalendarRange]）で、開いた時点の `cell.date` が範囲外なら範囲端へ丸めて提示する。
      * 提示できない指定（[DateCalendarRange.of] が `null`）では選択面を出さない。
+     *
+     * 閉じ切り callback は選択面が閉じたことを知る dismiss 経路で、選択面が控えた確定日付が
+     * あるときだけ発火する。
      */
     private fun showCalendarDialog(cell: DatePickerCell, dialogColors: PickerDialogColors) {
         val range = DateCalendarRange.of(cell) ?: return
@@ -103,7 +106,10 @@ internal class DatePickerCellViewHolder(
         )
         // 構成変更をまたいで提示を続けられるよう、行を載せている View へ表示中であることを預ける。
         val forgetDialog = views.root.findKsSettingsViewHost()?.trackCalendarDialog(cell.id, dialog)
-        dialog.showAnchoredTo(views.root, forgetDialog)
+        dialog.showAnchoredTo(views.root) {
+            forgetDialog?.invoke()
+            dialog.completedDate?.let { newDate -> cell.onValueCompleted?.invoke(newDate) }
+        }
     }
 
     /**
@@ -115,12 +121,15 @@ internal class DatePickerCellViewHolder(
      *
      * ヘッダーの確定 / 取消操作の色は `androidButtonColor` を最優先し、未指定なら強調色の
      * 段階解決（Cell → CellStyle → Theme）に従う。
+     *
+     * 閉じ切り callback は選択面が閉じたことを知る dismiss 経路で、選択面が控えた確定日付が
+     * あるときだけ発火する。
      */
     private fun showDateSelectionSheet(cell: DatePickerCell, theme: Theme, effective: EffectiveStyle) {
         val ctx = views.root.context
         val candidates = DateCandidates.of(cell, DateWheelLabels(ctx.primaryLocale())) ?: return
         val sheetStyle = PickerSheetStyle.from(cell, theme, effective)
-        DateSelectionSheet(
+        val sheet = DateSelectionSheet(
             hostContext = ctx,
             sheetTitle = cell.pickerTitle ?: cell.title,
             candidates = candidates,
@@ -130,7 +139,10 @@ internal class DatePickerCellViewHolder(
             sheetStyle = sheetStyle,
             actionColor = cell.androidButtonColor.toArgbOrElse(sheetStyle.accentColor),
             onConfirmed = { newDate -> cell.onValueChanged?.invoke(newDate) },
-        ).showAnchoredTo(views.root)
+        )
+        sheet.showAnchoredTo(views.root) {
+            sheet.completedDate?.let { newDate -> cell.onValueCompleted?.invoke(newDate) }
+        }
     }
 
     override fun reset() {

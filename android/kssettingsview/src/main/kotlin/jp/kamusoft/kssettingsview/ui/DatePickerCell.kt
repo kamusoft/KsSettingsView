@@ -28,6 +28,9 @@ import java.time.LocalDate
  *   `CellStyle.accentColor` → `Theme.cellAccentColor` の順に解決する
  * @property valueText 明示指定の valueText（`null` で `format` に従って自動表示）
  * @property onValueChanged 日付変更 callback
+ * @property onValueCompleted 確定した選択 UI が閉じ切った後に確定した日付を届ける callback。
+ *   [onValueChanged] と同じ日付を 1 回だけ運ぶ。取消・外側タップ・Back で閉じたときは発火しない。
+ *   [uiStyle] に関係なく同じ契約で発火する
  */
 public data class DatePickerCell(
     override val id: String = "date-picker-cell-${java.util.UUID.randomUUID()}",
@@ -47,6 +50,7 @@ public data class DatePickerCell(
     val androidButtonColor: Color = Color.Unspecified,
     val accentColor: Color = Color.Unspecified,
     val onValueChanged: ((LocalDate) -> Unit)? = null,
+    val onValueCompleted: ((LocalDate) -> Unit)? = null,
     val isEnabled: Boolean = true,
     override val isVisible: Boolean = true,
 ) : Cell, DSLReidentifiableCell, DSLStyleModifiableCell, DSLIconModifiableCell, VisibilityAware {

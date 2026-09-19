@@ -246,11 +246,14 @@ public class PickerCell : CellBase
     }
 
     /// <summary>
-    /// 利用者が選択を確定した後に実行する Command。
+    /// 利用者が選択を確定し、選択画面が閉じ切った後に実行する Command。
     /// </summary>
     /// <remarks>
     /// 単一選択では <see cref="SelectedItem"/>、複数選択では <see cref="SelectedItems"/> を
     /// 引数として、選択値の反映後に実行する。実行可否は確認しない。
+    /// 選択値の反映は確定した時点で行うため、Command の実行は反映より後になる。
+    /// 選択画面が閉じ切ってから実行するので、この Command の中でダイアログや画面遷移を
+    /// 開始できる。
     /// </remarks>
     public ICommand? SelectedCommand
     {
@@ -301,13 +304,14 @@ public class PickerCell : CellBase
         or nameof(AccentColor)
         || base.AffectsSnapshot(propertyName);
 
-    /// <summary>確定通知の種類に対応する選択項目を引数として完了を通知する。</summary>
+    /// <summary>閉じ切り通知の種類に対応する選択項目を引数として完了を通知する。</summary>
     /// <remarks>
     /// 選択面は表示を始めた時点のモードで動く。引数の選び方を <see cref="SelectionMode"/> の
     /// 現在値に委ねると、選択面の表示中にモードが変えられたとき、利用者が確定した種類とは違う
-    /// 引数を渡してしまう。そのため根拠は届いた確定通知の種類に置く。
+    /// 引数を渡してしまう。そのため根拠は届いた閉じ切り通知の種類に置く。
+    /// 引数は通知を受けた時点の現値であり、確定時点の控えではない。
     /// </remarks>
-    /// <param name="mode">確定通知の種類</param>
+    /// <param name="mode">閉じ切り通知の種類</param>
     internal void NotifySelectionCompleted(PickerSelectionMode mode)
     {
         object? parameter = mode == PickerSelectionMode.Multiple

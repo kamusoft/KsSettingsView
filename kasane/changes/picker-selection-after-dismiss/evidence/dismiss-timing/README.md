@@ -54,6 +54,20 @@ binding / facade / Sample の iOS 出力を捨てて再ビルドし、実行フ�
 - 探索で立てた仮説 (値の書き戻しによるセクション reload がメインスレッドを詰まらせる) は棄却 (callbackMs ≤ 7ms)
 - 「500ms 版で体感ラグが残る」観測の残りは、本ライブラリの外 (利用側のダイアログ実装・ホストのメインスレッド) の領分で、本 change では追わない
 
-## 実機
+## 実機 (実装フェーズ、新しい閉じ切り callback を使用)
 
-未実施 (2026-09-18 時点)。dismiss の尺は UIKit のアニメーションで決まり端末クラスへの依存は小さい見込みだが、実装フェーズで新しい閉じ切り callback を使い iPhone 11 実機で 1 系列を取り、この README に追記する (tasks.md 6.x)。
+- 2026-09-19、iPhone 11 (iOS 18.7)、Debug 構成、`samples/ios` を `xcodebuild` (`DEVELOPMENT_TEAM` はコマンドラインで指定) でビルドし `devicectl` で導入
+- 計測方法: 「入力 Cell 5 種デモ」の都道府県 (47 件) PickerCell に一時コード (commit しない。計測後に `git checkout` で復元) を入れ、`t1` = Binding の setter (値の書き戻し = `onSelectionChanged` 経路) が呼ばれた時点、`t2` = `onSelectionCompleted` が呼ばれた時点として `dismissMs = t2 - t1` を `CACurrentMediaTime()` で取った。結果は端末の Documents に書き出し `devicectl device copy from` で回収
+- 同じ一時コードで、`onSelectionCompleted` の中から直接 SwiftUI の alert (モーダル) を提示した。固定待ちなしで毎回アラートが表示され、オーナーが端末で目視確認した (tasks 7.3 の実機分: ColorAnalyzer 相当の「確定後にモーダルを提示する」導線)
+
+| 試行 | 候補数 | dismissMs |
+|---|---|---|
+| 1 | 47 | 594 |
+| 2 | 47 | 582 |
+| 3 | 47 | 591 |
+| 4 | 47 | 597 |
+| 5 | 47 | 587 |
+| 6 | 47 | 589 |
+
+- 中央値 590ms (最小 582 / 最大 597)。Simulator の Native 直接 (中央値 546ms) との差は 44ms で、判定基準 (100ms 以内) に収まり **一致**
+- 実機は Simulator よりわずかに長いが UIKit 既定のページシート dismiss の尺の範囲内。ライブラリ側の要因なしという提案段階の判定は変わらない
