@@ -1,6 +1,6 @@
 # Skill 単位のプロンプトテンプレート
 
-器 `ksn-implementer` で起動するサブエージェント (Claude Code: `subagent_type` / codex: エージェント name で指定) へ渡すプロンプト。`{{...}}` のプレースホルダを埋めてから渡す。
+器 `ksn-scribe` で起動するサブエージェント (Claude Code: `subagent_type` / codex: エージェント name で指定) へ渡すプロンプト。`{{...}}` のプレースホルダを埋めてから渡す。
 
 ```
 # コンテキストパッケージ

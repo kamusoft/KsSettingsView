@@ -1,6 +1,6 @@
 # README 単位のプロンプトテンプレート
 
-器 `ksn-implementer` で起動するサブエージェント (Claude Code: `subagent_type` / codex: エージェント name で指定) へ渡すプロンプト。`{{...}}` のプレースホルダを埋めてから渡す。
+器 `ksn-scribe` で起動するサブエージェント (Claude Code: `subagent_type` / codex: エージェント name で指定) へ渡すプロンプト。`{{...}}` のプレースホルダを埋めてから渡す。
 
 README は Skill に属さず、源泉 concepts も持たない (更新の根拠はコードを正とする機械チェックと `--all` / `--readme-only` の見直し) ため、Skill 用テンプレートとは別立てにする。`--readme-only` 実行時に委譲するのはこのテンプレートだけである。
 
