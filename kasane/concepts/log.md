@@ -460,3 +460,6 @@
 
 ## 2026-09-19
 - distilled: ios-swiftui-representable-safe-area (ios/ADR-0006 accepted / ios/api/ios-swiftui.md 更新: 配置とセーフエリアの節と `respectsSafeArea` modifier を追加)
+
+## 2026-09-20
+- distilled: date-time-picker-locale (core/ADR-0035 accepted / `core/cells/input-cells.md`・`time-picker-selection-surface.md`・`date-picker-selection-surface.md` を更新 — OS 管理のアプリ単位言語を優先し、なければ端末 Locale を使う。選択面と自動 `valueText` を揃え、明示値・時制・未確定入力を保持)

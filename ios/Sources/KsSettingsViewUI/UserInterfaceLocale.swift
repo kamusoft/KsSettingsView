@@ -6,7 +6,8 @@
 #if canImport(UIKit)
 import Foundation
 
-/// OS のアプリ単位言語を優先し、端末の地域と組み合わせた表示用 Locale を返す。
+/// OS のアプリ単位言語を優先し、端末の地域と組み合わせた表示用 Locale を返す
+/// (core/ADR-0035)。
 internal enum UserInterfaceLocale {
     /// 現在の表示用 Locale。
     ///

@@ -3,7 +3,7 @@ type: concept
 title: DatePickerCell の選択面
 description: DatePickerCell の行タップで開く日付選択 UI のプラットフォーム共通契約 (確定と破棄・閉じ切り通知・min/max・todayText) と、uiStyle ごとの器の違い・Android 固有の配色/ホイール/回転復元契約
 tags: [cells, date-picker, selection-surface, styling]
-timestamp: 2026-09-19
+timestamp: 2026-09-20
 ---
 
 # DatePickerCell の選択面
@@ -35,6 +35,12 @@ Android のホイール `KsWheelView` は internal の内部部品であり、�
 - 範囲外の初期値 (Android): 開いた時点の `date` が範囲外なら、最も近い範囲端へ丸めて提示する (`Material` / `Spinner` 共通)。`minDate > maxDate` のような提示できない範囲指定では選択面を提示せず警告ログを残す (両形式共通。`Spinner` はさらに空範囲・過大範囲も防御する — 後述)
 - 確定のみ反映: 確定操作 (Android の OK / iOS の Done) で、その時点の選択日から作った値を引数に `onValueChanged` を1回発火して閉じる。非確定の閉じ方 (キャンセル・外側タップ・Back・下スワイプ等、器が提供するすべての経路) では発火せず、変更は破棄される
 - iOS の確定値は選んだ年月日に**元の `cell.date` の時刻成分を保持**して合成する (`Date` 型のため)。Android は `LocalDate` をそのまま渡す
+
+### 表示言語・地域
+
+選択面と Cell の自動 `valueText` は同じ表示 Locale を使う。表示 Locale は、OS が管理するアプリ単位の言語設定があればそれを優先し、なければ端末全体の言語・地域から解決する。アプリ独自の言語設定と、アプリバンドルが提供する localization の範囲には依存しない ([core/ADR-0035](../../../decisions/core/0035-date-time-display-follows-user-device-locale.md))。
+
+Android は Host Context の現在 Locale を選択面の提示時と Cell の bind 時に使う。iOS は表示中に Locale 変更通知が届いた場合も、Wheels / Calendar と自動 `valueText` の Locale だけを更新する。利用者がまだ確定していない日付は保持し、Locale 変更を値変更として通知しない。
 
 ### 閉じ切り通知
 
@@ -109,7 +115,7 @@ View 階層の状態保存は ID を持つ View にしか働かないため、`K
 - 初期選択: 開いた時点の `date`。範囲外なら最も近い範囲端へ丸めて提示する
 - 日候補の追随: 年・月の変更で日候補件数が実日数 (閏年含む) に追随し、末日超過は末日へ、範囲外は範囲内最近傍へ丸める (1/31 → 2月 → 2/28。iOS `UIDatePicker` の標準挙動と揃えた形)
 - 不正・過大な範囲への防御: `minDate > maxDate`、既定値 (1900 / 2100) を当てた結果として範囲が空になる構成 (例: `maxDate` のみ 1850 年を指定すると既定の下限 1900 年と逆転する)、年候補件数が提示上限 1,000,000 件を超える指定 (件数は桁あふれを避けるため 64bit 整数で算出する) では、選択面を提示せず警告ログを残す
-- 候補表示: 端末 Locale の日付表記慣行から導出する (自前の翻訳文字列は同梱しない。日本語なら「2026年 / 8月 / 2日」)。系列の並びは Locale によらず年→月→日で固定
+- 候補表示: 表示 Locale の日付表記慣行から導出する (自前の翻訳文字列は同梱しない。日本語なら「2026年 / 8月 / 2日」)。系列の並びは Locale によらず年→月→日で固定
 - 操作ラベル: OS の公開文字列リソース (`android.R.string.ok` / `android.R.string.cancel`) — [NumberPickerCell の選択面](number-picker-selection-surface.md) と同じ方針
 - スナップ静止 (ホイールが候補位置で止まって初めてその候補が選択中になること) の意味論・候補領域の下スワイプが dismiss にならないこと・アクセシビリティ (系列ごとの選択中公開と前後候補アクション) も NumberPicker の選択面と同じ契約
 
@@ -121,6 +127,7 @@ View 階層の状態保存は ID を持つ View にしか働かないため、`K
 - 閉じ切り callback は確定 callback より後に、同じ日付で1回だけ発火する — 順序が逆転すると、利用側が閉じ切り時に読むモデル値が確定前のものになる
 - 選択面が提示する日付は常に `minDate`..`maxDate` の範囲内にある (初期表示・年月変更後・今日ジャンプ後のいずれでも) — 範囲外の値が確定されると利用者側のバリデーションを素通りする
 - `todayText` の提示条件 (非 null かつ非空文字) と範囲外セーフガードは iOS / Android で同一である
+- 選択面と自動 `valueText` は同じ表示 Locale を使い、実行中の Locale 更新で未確定の日付を失わない (core/ADR-0035)
 
 ## してはいけないこと
 
@@ -149,3 +156,4 @@ case の名前がずれる例: ホイール型は iOS `.wheels` ⇄ Android `Spi
 - [android/ADR-0019](../../../decisions/android/0019-datepickercell-calendar-compose-datepicker.md) — カレンダー型を Compose Material3 DatePicker のダイアログ表示に統一した決定
 - [android/ADR-0021](../../../decisions/android/0021-calendar-dialog-restore-via-view-instance-state.md) — 回転復元を View インスタンス状態で自前化した決定
 - [core/ADR-0034](../../../decisions/core/0034-picker-selection-completed-after-dismiss.md) — 確定して閉じ切った後を値付きの callback で知らせる決定
+- [core/ADR-0035](../../../decisions/core/0035-date-time-display-follows-user-device-locale.md) — 日付・時刻表示が使う Locale の決定

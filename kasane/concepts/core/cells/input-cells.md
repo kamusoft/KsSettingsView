@@ -3,7 +3,7 @@ type: reference
 title: 入力 Cell
 description: 文字列・候補・数値・時刻・日付を編集する入力5種の公開契約
 tags: [cells, input, public-api]
-timestamp: 2026-09-19
+timestamp: 2026-09-20
 ---
 
 この文書は、`EntryCell`、`PickerCell`、`NumberPickerCell`、`TimePickerCell`、`DatePickerCell` の公開契約を説明する。読むと、各入力 Cell の状態型、TwoWay 経路、表示値の生成、iOS / Android 固有 API の差が分かる。
@@ -39,6 +39,8 @@ timestamp: 2026-09-19
 - `valueText` があれば自動表示より優先する。なければ Picker は選択項目、NumberPicker は `unit` 適用結果 (`NumberPickerCell.format`: `unit` が空なら数値のみ、非空なら `"<値> <unit>"`。iOS / Android 共通)、TimePicker / DatePicker は `format` 適用結果を表示する。
 - Picker の自動表示は選択項目の `PickerItem.text` のみで組み立てる (`subText` は含めない)。複数選択は有効な index を順に `, ` で連結する。
 - 表示の加工は縁の射影 (`displayText`) が担う — 旧 `displayFormatter` は削除済み ([core/ADR-0029](../../../decisions/core/0029-pickercell-item-model-with-generic-edge-projection.md))。
+
+TimePicker / DatePicker の自動 `valueText` と選択面は、OS が管理するアプリ単位の言語設定があればそれを優先し、なければ端末全体の言語・地域を使う。アプリ独自の言語設定は参照せず、アプリバンドルが提供する localization の範囲だけにも制限しない。両表示面は同じ Locale から言語・日付要素の順序・午前午後表記を導出する ([core/ADR-0035](../../../decisions/core/0035-date-time-display-follows-user-device-locale.md))。明示した `valueText` は自動生成ではないため Locale 変更でも書き換えない。
 
 行タップで開く選択 UI の契約は、Cell ごとに次の文書が正である:
 
@@ -98,6 +100,7 @@ Android の `EntryCell` はフォーカス中の入力欄を値の SSoT とし�
 - `NumberPickerCell.step <= 0` は描画側で1へ fallback する。iOS は表示時に値を min / max と候補 step に合わせる。
 - `EntryCell.maxLength` を超える入力は受け付けず、`isPassword` は Native の secure/password 入力へ反映する。
 - `isEnabled = false` は入力 control、picker 起動、callback を無効にする。
+- TimePicker / DatePicker の自動 `valueText` と選択面は、同じ OS 選択の言語・地域を反映する。Locale は時制を決めず、TimePicker の 12 / 24 時間制は `is24Hour` だけで決まる。
 - キーボード回避 (フォーカスした入力 Cell がソフトウェアキーボードに隠れない) はライブラリに明示実装を持たず、各 platform の標準機構で成立する。見え方は OS で異なる — iOS はコンテンツのスクロール調整 (画面上部の行は残る)、Android / MAUI Android は window ごと押し上げる pan 系。
 - どの環境でもフォーカスした Cell はキーボード直上に収まる (iOS / Android / MAUI iOS / MAUI Android の4環境で実測確認 2026-08-24。MAUI Android は `WindowSoftInputMode` 未指定の構成のまま動作する)。
 - `KsCellRegistry.registerInputCells()`（iOS）/ `KsCellRegistry.registerInputCells(context)`（Android）で5種を一括登録できる。

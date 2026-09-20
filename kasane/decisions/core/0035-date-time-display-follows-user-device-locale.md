@@ -1,7 +1,7 @@
 ---
 id: 0035
 title: 日付・時刻の自動表示は OS で選択された言語・地域に従う
-status: proposed
+status: accepted
 date: 2026-09-20
 ---
 
@@ -40,4 +40,6 @@ Apple のアプリ有効 Locale は、端末の言語・地域だけでなく OS
 
 前提 (Context) が崩れたとき。
 
-出典: kasane/changes/date-time-picker-locale/exploration.md / 探索の会話中の議論 (2026-09-20)
+出典: kasane/changes/archive/2026-09-20-date-time-picker-locale/exploration.md / 探索の会話中の議論 (2026-09-20)
+
+現行照合: 2026-09-20 — Native iOS / Android の実装・テスト・実描画証跡と照合済み。
