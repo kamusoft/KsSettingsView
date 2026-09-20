@@ -705,3 +705,7 @@ internal fun Context.primaryLocale(): Locale {
     val locales = resources.configuration.locales
     return if (locales.isEmpty) Locale.getDefault() else locales[0]
 }
+
+/** 構成変更通知の第一 Locale。 */
+internal fun android.content.res.Configuration.primaryLocale(): Locale =
+    if (locales.isEmpty) Locale.getDefault() else locales[0]

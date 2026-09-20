@@ -34,5 +34,6 @@
 | [0033](0033-root-accessory-survives-pre-attach-delivery.md) | Root の header / footer は Host が購読できていない間に渡されても失わない | accepted (amends 0019) | core/ADR-0019 の「所有者が view load / attach 後に適用する責務」だけを置き換える (amends 0019)。保証は Host 側で実現し Store には持たせない (Android は Store から Host への同期の受け口で bind 中ずっと受け取り、iOS は view load 前の分を控える)。MAUI は View の header / footer を Section・Root の区別なく初回配信に間に合わせる。内容なしの行を作らない判定 (ADR-0023) は不変。 |
 
 | [0034](0034-picker-selection-completed-after-dismiss.md) | モーダル提示する選択面 (PickerCell / DatePickerCell) は「確定して閉じ切った後」を値付きの callback で知らせ、MAUI の SelectedCommand はその時点で実行する | accepted | 対象は iOS でモーダル提示する PickerCell / DatePickerCell (Number / Time は対象外)。Native に `onSelectionCompleted` / `onMultiSelectionCompleted` / `onValueCompleted` を足し、値の callback の後に同じ値で 1 回だけ発火させる (値の callback は確定直後のまま、非確定 dismiss は発火しない)。閉じ切りは「プラットフォームが dismiss 完了として報告する時点」で、Android のカレンダーだけフェード前になるのは意図的差異。bridge は Picker の 2 メソッドだけを中継し、MAUI の `SelectedCommand` をその受信時点で実行する (値の書き戻しは即時のまま、公開 API は不変)。別通知の新設・確定 callback ごと遅らせる案・毎回通知 + フラグ・確定時 snapshot は却下。 |
+| [0035](0035-date-time-display-follows-user-device-locale.md) | 日付・時刻の自動表示は OS で選択された言語・地域に従う | proposed | OS のアプリ単位言語設定を優先し、なければ端末全体の Locale を使う。Picker と Cell 右側値を揃え、localization 提供範囲だけには制限しない。 |
 
 番号は旧フラット時代の採番を温存 (採番規則は [../index.md](../index.md) を参照)。

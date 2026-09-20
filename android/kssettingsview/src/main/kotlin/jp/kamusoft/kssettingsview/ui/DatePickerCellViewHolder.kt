@@ -8,6 +8,7 @@ import androidx.compose.ui.graphics.toArgb
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 import jp.kamusoft.kssettingsview.R
 
 /**
@@ -33,7 +34,8 @@ internal class DatePickerCellViewHolder(
 
     override fun bind(cell: DatePickerCell, theme: Theme) {
         val effective = EffectiveStyle.from(theme, cell.style, views.root.context.isKsDarkAppearance())
-        val displayValueText: String = cell.valueText ?: formatDate(cell.date, cell.format)
+        val displayValueText: String =
+            cell.valueText ?: formatDate(cell.date, cell.format, views.root.context.primaryLocale())
 
         applyCellBaseLayout(
             views = views,
@@ -179,14 +181,17 @@ internal class DatePickerCellViewHolder(
          * 同一 format を持つ ViewHolder の bind ごとに `DateTimeFormatter.ofPattern` を
          * 再構築するコスト（内部の正規表現パース等）を避けるために共有する。
          */
-        private val formatterCache: java.util.concurrent.ConcurrentHashMap<String, DateTimeFormatter> =
+        private data class FormatterKey(val format: String, val localeTag: String)
+
+        private val formatterCache: java.util.concurrent.ConcurrentHashMap<FormatterKey, DateTimeFormatter> =
             java.util.concurrent.ConcurrentHashMap()
 
-        private fun formatterFor(format: String): DateTimeFormatter? {
-            formatterCache[format]?.let { return it }
+        private fun formatterFor(format: String, locale: Locale): DateTimeFormatter? {
+            val key = FormatterKey(format, locale.toLanguageTag())
+            formatterCache[key]?.let { return it }
             return try {
-                val fmt = DateTimeFormatter.ofPattern(format)
-                formatterCache[format] = fmt
+                val fmt = DateTimeFormatter.ofPattern(format, locale)
+                formatterCache[key] = fmt
                 fmt
             } catch (_: Throwable) {
                 null
@@ -196,8 +201,8 @@ internal class DatePickerCellViewHolder(
         /**
          * `LocalDate` を `DateTimeFormatter.ofPattern(format)` で文字列化するヘルパ。
          */
-        internal fun formatDate(date: LocalDate, format: String): String {
-            val fmt = formatterFor(format) ?: return date.toString()
+        internal fun formatDate(date: LocalDate, format: String, locale: Locale): String {
+            val fmt = formatterFor(format, locale) ?: return date.toString()
             return try {
                 date.format(fmt)
             } catch (_: Throwable) {

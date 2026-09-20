@@ -6,6 +6,7 @@ import android.widget.FrameLayout
 import androidx.appcompat.widget.AppCompatImageView
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 import jp.kamusoft.kssettingsview.R
 
 /**
@@ -22,7 +23,8 @@ internal class TimePickerCellViewHolder(
 
     override fun bind(cell: TimePickerCell, theme: Theme) {
         val effective = EffectiveStyle.from(theme, cell.style, views.root.context.isKsDarkAppearance())
-        val displayValueText: String = cell.valueText ?: formatTime(cell.time, cell.format)
+        val displayValueText: String =
+            cell.valueText ?: formatTime(cell.time, cell.format, views.root.context.primaryLocale())
 
         applyCellBaseLayout(
             views = views,
@@ -103,14 +105,17 @@ internal class TimePickerCellViewHolder(
          * 不正パターンは負例としても再構築コストを抑えるため `Optional` 的に sentinel を入れず、
          * 例外が出た pattern はキャッシュせず毎回 fallback ルートを取らせる。
          */
-        private val formatterCache: java.util.concurrent.ConcurrentHashMap<String, DateTimeFormatter> =
+        private data class FormatterKey(val format: String, val localeTag: String)
+
+        private val formatterCache: java.util.concurrent.ConcurrentHashMap<FormatterKey, DateTimeFormatter> =
             java.util.concurrent.ConcurrentHashMap()
 
-        private fun formatterFor(format: String): DateTimeFormatter? {
-            formatterCache[format]?.let { return it }
+        private fun formatterFor(format: String, locale: Locale): DateTimeFormatter? {
+            val key = FormatterKey(format, locale.toLanguageTag())
+            formatterCache[key]?.let { return it }
             return try {
-                val fmt = DateTimeFormatter.ofPattern(format)
-                formatterCache[format] = fmt
+                val fmt = DateTimeFormatter.ofPattern(format, locale)
+                formatterCache[key] = fmt
                 fmt
             } catch (_: Throwable) {
                 null
@@ -121,8 +126,8 @@ internal class TimePickerCellViewHolder(
          * `LocalTime` を `DateTimeFormatter.ofPattern(format)` で文字列化するヘルパ。
          * パターンエラー時はトースト不要の単純な toString フォールバック。
          */
-        internal fun formatTime(time: LocalTime, format: String): String {
-            val fmt = formatterFor(format) ?: return time.toString()
+        internal fun formatTime(time: LocalTime, format: String, locale: Locale): String {
+            val fmt = formatterFor(format, locale) ?: return time.toString()
             return try {
                 time.format(fmt)
             } catch (_: Throwable) {

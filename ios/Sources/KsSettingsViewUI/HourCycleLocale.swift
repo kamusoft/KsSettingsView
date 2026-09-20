@@ -18,9 +18,9 @@ internal enum HourCycleLocale {
     ///
     /// - Parameters:
     ///   - is24Hour: `true` で 24時間制（時 0–23）、`false` で 12時間制（時 1–12 と午前/午後）
-    ///   - base: 言語・地域の由来となる Locale（既定は端末の `Locale.current`）
-    internal static func forcing(is24Hour: Bool, base: Locale = .current) -> Locale {
-        if base == .current {
+    ///   - base: 言語・地域の由来となる Locale（既定は OS で選択された表示 Locale）
+    internal static func forcing(is24Hour: Bool, base: Locale = UserInterfaceLocale.current) -> Locale {
+        if base == UserInterfaceLocale.current {
             return currentBased(is24Hour: is24Hour)
         }
         return build(is24Hour: is24Hour, base: base)
@@ -52,7 +52,7 @@ internal enum HourCycleLocale {
     nonisolated(unsafe) private static var cache: CurrentBasedCache?
 
     private static func currentBased(is24Hour: Bool) -> Locale {
-        let current = Locale.current
+        let current = UserInterfaceLocale.current
         lock.lock()
         defer { lock.unlock() }
         if cache?.base != current {
