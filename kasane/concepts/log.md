@@ -463,3 +463,6 @@
 
 ## 2026-09-20
 - distilled: date-time-picker-locale (core/ADR-0035 accepted / `core/cells/input-cells.md`・`time-picker-selection-surface.md`・`date-picker-selection-surface.md` を更新 — OS 管理のアプリ単位言語を優先し、なければ端末 Locale を使う。選択面と自動 `valueText` を揃え、明示値・時制・未確定入力を保持)
+
+## 2026-09-22
+- distilled: ios-root-accessory-unexpected-accent-background (S 級 — decisions: 新規なし。View 形式 accessory の背景を利用者が所有し、未指定領域には list 下地を見せる既存契約の局所的な回復であり、ADR 選別3基準の対象外 / concepts: `core/styling/list-appearance.md` の現行記述と一致を確認し、本文変更なし / handbook: 新しい規約・手順なし / lessons: 追加捕捉なし、昇格候補なし / deviation: なし / 媒体: 6 件削除 / 検証: review-001 APPROVED、iOS 全 1,116 tests 成功、変更前変異で3テスト・6アサーション失敗、Native・MAUI Sample の Root / Section で実行時確認 / relations: KsDialogs の overlap と公開契約に触れないため知らせなし / archive: `changes/archive/2026-09-22-ios-root-accessory-unexpected-accent-background/`)
