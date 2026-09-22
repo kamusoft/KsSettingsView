@@ -19,11 +19,11 @@
 ## cells/
 
 - [cells/basic-cells.md](cells/basic-cells.md) — 表示・操作・二値・単一選択を担う基本7種の Cell
-- [cells/input-cells.md](cells/input-cells.md) — 文字列・候補・数値・時刻・日付を編集する入力5種の Cell
+- [cells/input-cells.md](cells/input-cells.md) — 文字列・候補・数値・時刻・日付を編集する入力5種の Cell と日付・時刻の表示 Locale
 - [cells/picker-selection-surface.md](cells/picker-selection-surface.md) — PickerCell の選択面の共通契約と意図的なプラットフォーム差
 - [cells/number-picker-selection-surface.md](cells/number-picker-selection-surface.md) — NumberPickerCell の選択面の共通契約 (候補生成・unit 適用・確定と破棄) と意図的なプラットフォーム差
-- [cells/time-picker-selection-surface.md](cells/time-picker-selection-surface.md) — TimePickerCell の選択面の契約 (Android のボトムシート + 時・分ホイール・12/24h の決定・確定と破棄) と iOS との対比
-- [cells/date-picker-selection-surface.md](cells/date-picker-selection-surface.md) — DatePickerCell の選択面の共通契約 (確定と破棄・min/max・todayText) と uiStyle ごとの器・Android 固有の配色/ホイール/回転復元契約
+- [cells/time-picker-selection-surface.md](cells/time-picker-selection-surface.md) — TimePickerCell の選択面の契約 (表示 Locale・12/24h・確定と破棄) と iOS / Android の器
+- [cells/date-picker-selection-surface.md](cells/date-picker-selection-surface.md) — DatePickerCell の選択面の共通契約 (表示 Locale・確定と破棄・min/max・todayText) と uiStyle ごとの器
 - [cells/ks-image.md](cells/ks-image.md) — Cell の icon を表す KsImage と platform fallback
 - [cells/custom-cell.md](cells/custom-cell.md) — 事前登録なしで任意の宣言 UI を1行にする CustomCell の公開契約とカスタムセル3層の使い分け
 

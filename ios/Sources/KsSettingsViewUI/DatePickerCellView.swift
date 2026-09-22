@@ -18,6 +18,8 @@ import KsSettingsViewCore
 internal final class DatePickerCellView: KsListCellBase, @MainActor KsCellRenderer {
     internal var tapHandler: (@Sendable () -> Void)?
     private var lastCell: DatePickerCell?
+    private var lastTheme: Theme?
+    private var localeProvider: @MainActor () -> Locale = { UserInterfaceLocale.current }
 
     /// Cancel 時に戻すための「Picker 提示開始時点」の Date。
     private var preSelectedDate: Date = Date()
@@ -76,6 +78,12 @@ internal final class DatePickerCellView: KsListCellBase, @MainActor KsCellRender
         contentView.sendSubviewToBack(embeddedField)
 
         embeddedField.inputView = wheelsPicker
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleLocaleChanged),
+            name: NSLocale.currentLocaleDidChangeNotification,
+            object: nil
+        )
     }
 
     func render(cell: any KsCell, theme: Theme) {
@@ -84,22 +92,12 @@ internal final class DatePickerCellView: KsListCellBase, @MainActor KsCellRender
             return
         }
         self.lastCell = dc
-        let effective = EffectiveStyle(theme: theme, cellStyle: dc.style)
-
-        applyCellBaseLayout(
-            self,
-            title: dc.title,
-            description: dc.description,
-            icon: dc.icon,
-            hintText: dc.hintText,
-            effective: effective,
-            theme: theme,
-            isEnabled: dc.isEnabled,
-            valueLabelText: dc.effectiveValueText(),
-            accessoryView: makeChevronView()
-        )
+        self.lastTheme = theme
+        let locale = localeProvider()
+        renderRow(cell: dc, theme: theme, locale: locale)
 
         // Wheels モードの Picker を最新化（Calendar モードは提示時に動的構築するため不要）
+        wheelsPicker.locale = locale
         wheelsPicker.date = dc.date
         wheelsPicker.minimumDate = dc.minDate
         wheelsPicker.maximumDate = dc.maxDate
@@ -121,6 +119,23 @@ internal final class DatePickerCellView: KsListCellBase, @MainActor KsCellRender
         } else {
             self.tapHandler = nil
         }
+    }
+
+    private func renderRow(cell: DatePickerCell, theme: Theme, locale: Locale) {
+        let effective = EffectiveStyle(theme: theme, cellStyle: cell.style)
+
+        applyCellBaseLayout(
+            self,
+            title: cell.title,
+            description: cell.description,
+            icon: cell.icon,
+            hintText: cell.hintText,
+            effective: effective,
+            theme: theme,
+            isEnabled: cell.isEnabled,
+            valueLabelText: cell.effectiveValueText(locale: locale),
+            accessoryView: makeChevronView()
+        )
     }
 
     /// `uiStyle` に応じて Wheels (becomeFirstResponder) / Calendar (sheet present) を分岐。
@@ -153,6 +168,7 @@ internal final class DatePickerCellView: KsListCellBase, @MainActor KsCellRender
             pickerTitle: cell.pickerTitle,
             todayText: cell.todayText,
             accentColor: cell.accentColor,
+            locale: localeProvider(),
             onDone: { [weak self] newDate in
                 self?.applyDoneDate(newDate, for: cell)
             },
@@ -193,8 +209,20 @@ internal final class DatePickerCellView: KsListCellBase, @MainActor KsCellRender
         }
         self.tapHandler = nil
         self.lastCell = nil
+        self.lastTheme = nil
         self.currentCalendarController = nil
         cancelWheelsHideWatch()
+    }
+
+    @objc private func handleLocaleChanged() {
+        guard let cell = lastCell, let theme = lastTheme else { return }
+        let locale = localeProvider()
+        renderRow(cell: cell, theme: theme, locale: locale)
+        wheelsPicker.locale = locale
+        currentCalendarController?.applyLocale(locale)
+        if embeddedField.isFirstResponder {
+            embeddedField.reloadInputViews()
+        }
     }
 
     // MARK: - Wheels モード Toolbar 操作
@@ -341,11 +369,19 @@ internal final class DatePickerCellView: KsListCellBase, @MainActor KsCellRender
     }
     internal var _lastCell: DatePickerCell? { lastCell }
     internal var _currentWheelsDate: Date { wheelsPicker.date }
+    internal var _wheelsLocale: Locale? { wheelsPicker.locale }
+    internal func _setLocaleProviderForTesting(_ provider: @escaping @MainActor () -> Locale) {
+        localeProvider = provider
+    }
+    internal func _applyLocaleForTesting(_ locale: Locale) { wheelsPicker.locale = locale }
     internal func _simulateWheelsChange(to newDate: Date) { wheelsPicker.date = newDate }
     internal func _simulateWheelsDone() { handleWheelsDone() }
     internal func _simulateWheelsCancel() { handleWheelsCancel() }
     internal func _simulateWheelsToday() { handleWheelsToday() }
     internal var _currentCalendarController: DatePickerCalendarSheetController? { currentCalendarController }
+    internal func _registerCalendarControllerForTesting(_ controller: DatePickerCalendarSheetController) {
+        currentCalendarController = controller
+    }
     /// テスト用: ホイール入力面の閉じ切りを待ち受けている最中かどうか。
     internal var _isAwaitingWheelsHide: Bool { wheelsCompletionWatch != nil }
     /// テスト用: ホイールの入力面を担う透明フィールドが first responder かどうか。

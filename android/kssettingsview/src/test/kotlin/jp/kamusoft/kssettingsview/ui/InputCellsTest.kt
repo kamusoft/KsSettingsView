@@ -33,6 +33,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import java.time.LocalDate
 import java.time.LocalTime
+import java.util.Locale
 
 /**
  * 入力系 Cell 5 種（[EntryCell] / [PickerCell] / [NumberPickerCell] / [TimePickerCell] /
@@ -977,8 +978,22 @@ class InputCellsTest {
 
     @Test
     fun `TimePickerCell formatTime は LocalTime を format 文字列化する`() {
-        val s = TimePickerCellViewHolder.formatTime(LocalTime.of(7, 30), "HH:mm")
+        val s = TimePickerCellViewHolder.formatTime(LocalTime.of(7, 30), "HH:mm", Locale.JAPAN)
         assertEquals("07:30", s)
+    }
+
+    @Test
+    fun `TimePickerCell formatTime は Locale ごとに午前午後表記を切り替える`() {
+        val time = LocalTime.of(22, 15)
+        assertEquals("10:15 午後", TimePickerCellViewHolder.formatTime(time, "h:mm a", Locale.JAPAN))
+        assertEquals("10:15 PM", TimePickerCellViewHolder.formatTime(time, "h:mm a", Locale.US))
+    }
+
+    @Test
+    fun `TimePickerCellViewHolder bind は明示 valueText を Locale 変換しない`() {
+        val vh = TimePickerCellViewHolder.create(parent)
+        vh.bind(TimePickerCell(title = "アラーム", valueText = "CUSTOM", time = LocalTime.of(22, 15)), Theme())
+        assertEquals("CUSTOM", vh.views.valueTextView.text?.toString())
     }
 
     @Test
@@ -1004,8 +1019,22 @@ class InputCellsTest {
 
     @Test
     fun `DatePickerCell formatDate は LocalDate を format 文字列化する`() {
-        val s = DatePickerCellViewHolder.formatDate(LocalDate.of(2000, 1, 15), "yyyy/MM/dd")
+        val s = DatePickerCellViewHolder.formatDate(LocalDate.of(2000, 1, 15), "yyyy/MM/dd", Locale.JAPAN)
         assertEquals("2000/01/15", s)
+    }
+
+    @Test
+    fun `DatePickerCell formatDate は Locale ごとに月名を切り替える`() {
+        val date = LocalDate.of(2000, 1, 15)
+        assertEquals("1月", DatePickerCellViewHolder.formatDate(date, "MMMM", Locale.JAPAN))
+        assertEquals("January", DatePickerCellViewHolder.formatDate(date, "MMMM", Locale.US))
+    }
+
+    @Test
+    fun `DatePickerCellViewHolder bind は明示 valueText を Locale 変換しない`() {
+        val vh = DatePickerCellViewHolder.create(parent)
+        vh.bind(DatePickerCell(title = "誕生日", valueText = "CUSTOM", date = LocalDate.of(2000, 1, 15)), Theme())
+        assertEquals("CUSTOM", vh.views.valueTextView.text?.toString())
     }
 
     @Test

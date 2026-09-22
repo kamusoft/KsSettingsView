@@ -146,6 +146,9 @@ public class KsSettingsView @JvmOverloads constructor(
     /** [internalTheme] を解決した時点の外観がダークだったか。再解決の要否判定に使う。 */
     private var resolvedDarkTheme: Boolean = false
 
+    /** Cell の自動生成値を解決した時点の Host Locale。 */
+    private var resolvedLocaleTag: String = context.primaryLocale().toLanguageTag()
+
     /**
      * スクロールバーの thumb をどの外観で解決したか（ダークなら `true`）。
      *
@@ -443,23 +446,26 @@ public class KsSettingsView @JvmOverloads constructor(
         // 解決時と attach 時で外観が違い得る（別の外観で構築された View がそのまま attach される、
         // detach 中に夜間モードが変わる等）。ここで照合して必要なら解決し直す。
         reresolveThemeIfAppearanceChanged()
+        rebindCellsIfLocaleChanged()
 
         isAttachedToHostWindow = true
         scheduleRestoreScanIfReady()
     }
 
-    /**
-     * 構成変更のうち夜間モードの変化だけを拾い、未指定色を新しい外観で解決し直して再適用する。
-     *
-     * Activity が uiMode を自前処理して再生成されないホストでは、この View が生き残ったまま外観だけが
-     * 変わる。夜間モードが変わらない構成変更（画面向き等）では再適用しない。
-     */
+    /** Host が自前処理する夜間モードと Locale の変更を表示中の行へ反映する。 */
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         val darkTheme = newConfig.isKsDarkAppearance()
-        if (darkTheme == resolvedDarkTheme) return
-        resolvedDarkTheme = darkTheme
-        applyThemeInternal(themeBacking.resolvedFor(darkTheme))
+        val localeTag = newConfig.primaryLocale().toLanguageTag()
+        val darkThemeChanged = darkTheme != resolvedDarkTheme
+        val localeChanged = localeTag != resolvedLocaleTag
+        resolvedLocaleTag = localeTag
+        if (darkThemeChanged) {
+            resolvedDarkTheme = darkTheme
+            applyThemeInternal(themeBacking.resolvedFor(darkTheme))
+        } else if (localeChanged) {
+            notifyLocaleChangedToCells()
+        }
     }
 
     override fun onDetachedFromWindow() {
@@ -1052,6 +1058,14 @@ public class KsSettingsView @JvmOverloads constructor(
         reapplyResolvedTheme()
     }
 
+    /** detach 中に Host Locale が変わった場合も、attach 時に Cell の自動生成値を更新する。 */
+    private fun rebindCellsIfLocaleChanged() {
+        val localeTag = context.primaryLocale().toLanguageTag()
+        if (localeTag == resolvedLocaleTag) return
+        resolvedLocaleTag = localeTag
+        notifyLocaleChangedToCells()
+    }
+
     /**
      * 新 Theme を View / Adapter / Decoration に反映する。
      *
@@ -1100,6 +1114,14 @@ public class KsSettingsView @JvmOverloads constructor(
         val footerCount = footerAdapter.itemCount
         if (footerCount > 0) {
             footerAdapter.notifyItemRangeChanged(0, footerCount, PAYLOAD_THEME)
+        }
+    }
+
+    /** Locale に依存する Cell の自動生成値を現在の Host Context で再 bind する。 */
+    private fun notifyLocaleChangedToCells() {
+        val count = mainListAdapter.itemCount
+        if (count > 0) {
+            mainListAdapter.notifyItemRangeChanged(0, count, PAYLOAD_LOCALE)
         }
     }
 
@@ -1464,6 +1486,9 @@ public class KsSettingsView @JvmOverloads constructor(
          * 設計判断: android/ADR-0001（change アニメーション無効化との二重担保）。
          */
         internal const val PAYLOAD_CONTENT: String = "ks-content"
+
+        /** Locale 変更時に Cell の自動生成値を再 bind する payload。 */
+        internal const val PAYLOAD_LOCALE: String = "ks-locale"
 
         /**
          * View accessory の Section Header で **固定高さだけが変わった**ときの

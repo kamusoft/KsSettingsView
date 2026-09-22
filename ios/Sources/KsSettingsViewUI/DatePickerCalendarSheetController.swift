@@ -25,6 +25,7 @@ internal final class DatePickerCalendarSheetController: UIViewController, UIAdap
     private let pickerTitle: String?
     private let todayText: String?
     private let accentColor: UIColor?
+    private var locale: Locale
     private let onDone: (Date) -> Void
     private let onDismissed: (() -> Void)?
     /// 確定（完了ボタン）で閉じ切った後に、確定した日付を届ける callback。
@@ -48,6 +49,7 @@ internal final class DatePickerCalendarSheetController: UIViewController, UIAdap
         pickerTitle: String?,
         todayText: String?,
         accentColor: UIColor?,
+        locale: Locale = UserInterfaceLocale.current,
         onDone: @escaping (Date) -> Void,
         onDismissed: (() -> Void)? = nil,
         onDoneCompleted: ((Date) -> Void)? = nil
@@ -58,6 +60,7 @@ internal final class DatePickerCalendarSheetController: UIViewController, UIAdap
         self.pickerTitle = pickerTitle
         self.todayText = todayText
         self.accentColor = accentColor
+        self.locale = locale
         self.onDone = onDone
         self.onDismissed = onDismissed
         self.onDoneCompleted = onDoneCompleted
@@ -108,6 +111,7 @@ internal final class DatePickerCalendarSheetController: UIViewController, UIAdap
         }()
 
         // DatePicker 設定
+        datePicker.locale = locale
         datePicker.date = initial
         datePicker.minimumDate = minimumDate
         datePicker.maximumDate = maximumDate
@@ -172,6 +176,12 @@ internal final class DatePickerCalendarSheetController: UIViewController, UIAdap
         dismissSheet()
     }
 
+    /// OS の Locale 変更を表示中のカレンダーへ反映する。
+    internal func applyLocale(_ locale: Locale) {
+        self.locale = locale
+        datePicker.locale = locale
+    }
+
     @objc private func handleDone() {
         let confirmed = datePicker.date
         onDone(confirmed)
@@ -222,6 +232,7 @@ internal final class DatePickerCalendarSheetController: UIViewController, UIAdap
     // MARK: - test hook
 
     internal var _currentDate: Date { datePicker.date }
+    internal var _pickerLocale: Locale? { datePicker.locale }
     internal func _simulateChange(to newDate: Date) { datePicker.date = newDate }
     internal func _simulateDone() { handleDone() }
     internal func _simulateCancel() { handleCancel() }

@@ -699,9 +699,13 @@ internal class DateSelectionSheet(
 }
 
 /**
- * 端末の第一 Locale（表示文字列の導出に使う）。
+ * 端末の第一 Locale（表示文字列の導出に使う、core/ADR-0035）。
  */
 internal fun Context.primaryLocale(): Locale {
     val locales = resources.configuration.locales
     return if (locales.isEmpty) Locale.getDefault() else locales[0]
 }
+
+/** 構成変更通知の第一 Locale。 */
+internal fun android.content.res.Configuration.primaryLocale(): Locale =
+    if (locales.isEmpty) Locale.getDefault() else locales[0]

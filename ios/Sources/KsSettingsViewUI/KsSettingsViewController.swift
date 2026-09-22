@@ -2370,7 +2370,7 @@ public final class KsSettingsViewController: UIViewController {
         // 決める領域なのでライブラリからは塗らず、再利用で前回の色を持ち越さないよう明示的に消す。
         // 塗る範囲を cell 全体にするため inset / 角丸を持たない `.clear()` を土台に使う。
         var background = UIBackgroundConfiguration.clear()
-        background.backgroundColor = (accessoryText != nil) ? backgroundColor : nil
+        background.backgroundColor = (accessoryText != nil) ? backgroundColor : .clear
         listCell.backgroundConfiguration = background
 
         // テキスト accessory: UILabel + AutoLayout。

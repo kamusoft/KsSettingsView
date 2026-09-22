@@ -520,6 +520,13 @@ final class InputCellsTests: XCTestCase {
         )
     }
 
+    private func displayedPickerValue(_ view: KsListCellBase) -> String? {
+        view.contentStack.arrangedSubviews
+            .compactMap { $0 as? UILabel }
+            .first { $0 !== view.titleLabel }?
+            .text
+    }
+
     func test_PickerCellView_valueTextは行内でchevronはアクセサリ列() {
         let view = PickerCellView()
         let cell = PickerCell(title: "テーマ", items: ["ライト", "ダーク", "自動"], selectedIndex: 1)
@@ -734,11 +741,103 @@ final class InputCellsTests: XCTestCase {
         XCTAssertEqual(cell.effectiveValueText(), "07:30")
     }
 
+    func test_UserInterfaceLocale_アプリ単位言語を端末地域と組み合わせる() {
+        let locale = UserInterfaceLocale.resolve(
+            preferredLanguages: ["ja-JP"],
+            regionalLocale: Locale(identifier: "en_US")
+        )
+        XCTAssertEqual(locale.language.languageCode?.identifier, "ja")
+        XCTAssertEqual(locale.region?.identifier, "US")
+    }
+
+    func test_CachedDateFormatter_Localeごとに午前午後表記を切り替える() {
+        let date = Calendar(identifier: .gregorian).date(
+            from: DateComponents(year: 2026, month: 1, day: 1, hour: 22, minute: 15)
+        )!
+        XCTAssertEqual(
+            CachedDateFormatter.string(from: date, format: "h:mm a", locale: Locale(identifier: "ja_JP")),
+            "10:15 午後"
+        )
+        XCTAssertEqual(
+            CachedDateFormatter.string(from: date, format: "h:mm a", locale: Locale(identifier: "en_US")),
+            "10:15 PM"
+        )
+    }
+
+    func test_CachedDateFormatter_同じformatでもLocaleが違えば別instanceを使う() {
+        let japanese = CachedDateFormatter.formatter(for: "MMMM", locale: Locale(identifier: "ja_JP"))
+        let english = CachedDateFormatter.formatter(for: "MMMM", locale: Locale(identifier: "en_US"))
+        XCTAssertFalse(japanese === english)
+    }
+
+    func test_TimePickerCell_effectiveValueText_明示値をLocale変換しない() {
+        let cell = TimePickerCell(title: "アラーム", valueText: "CUSTOM", time: Date(), format: "h:mm a")
+        XCTAssertEqual(cell.effectiveValueText(), "CUSTOM")
+    }
+
     func test_TimePickerCellView_lastCell保持() {
         let view = TimePickerCellView()
         let cell = TimePickerCell(title: "アラーム", time: Date())
         view.render(cell: cell, theme: Theme())
         XCTAssertNotNil(view._lastCell)
+    }
+
+    func test_TimePickerCellView_Locale通知で表示更新し未確定選択と時制を保持する() {
+        let calendar = Calendar(identifier: .gregorian)
+        let original = calendar.date(
+            from: DateComponents(year: 2026, month: 1, day: 1, hour: 22, minute: 15)
+        )!
+        let pending = calendar.date(
+            from: DateComponents(year: 2026, month: 1, day: 1, hour: 23, minute: 45)
+        )!
+        var locale = Locale(identifier: "en_US")
+        var captured: Date?
+        let view = TimePickerCellView()
+        view._setLocaleProviderForTesting { locale }
+        view.render(
+            cell: TimePickerCell(
+                title: "Time",
+                time: original,
+                format: "h:mm a",
+                is24Hour: false,
+                onValueChanged: { captured = $0 }
+            ),
+            theme: Theme()
+        )
+        XCTAssertEqual(displayedPickerValue(view), "10:15 PM")
+        XCTAssertEqual(view._pickerLocale?.language.languageCode?.identifier, "en")
+        XCTAssertEqual(resolvedIs24Hour(view._pickerLocale), false)
+
+        view._simulateChange(to: pending)
+        locale = Locale(identifier: "ja_JP")
+        NotificationCenter.default.post(name: NSLocale.currentLocaleDidChangeNotification, object: nil)
+
+        XCTAssertEqual(displayedPickerValue(view), "10:15 午後")
+        XCTAssertEqual(view._pickerLocale?.language.languageCode?.identifier, "ja")
+        XCTAssertEqual(resolvedIs24Hour(view._pickerLocale), false)
+        XCTAssertEqual(
+            calendar.dateComponents([.hour, .minute], from: view._currentPickerDate),
+            DateComponents(hour: 23, minute: 45)
+        )
+
+        view._simulateDone()
+        XCTAssertEqual(
+            calendar.dateComponents([.hour, .minute], from: captured ?? Date()),
+            DateComponents(hour: 23, minute: 45)
+        )
+    }
+
+    func test_TimePickerCellView_Locale通知でも明示valueTextを保持する() {
+        var locale = Locale(identifier: "en_US")
+        let view = TimePickerCellView()
+        view._setLocaleProviderForTesting { locale }
+        view.render(
+            cell: TimePickerCell(title: "Time", valueText: "CUSTOM", time: Date(), format: "h:mm a"),
+            theme: Theme()
+        )
+        locale = Locale(identifier: "ja_JP")
+        NotificationCenter.default.post(name: NSLocale.currentLocaleDidChangeNotification, object: nil)
+        XCTAssertEqual(displayedPickerValue(view), "CUSTOM")
     }
 
     // MARK: - TimePickerCell の時制 (is24Hour)
@@ -886,6 +985,131 @@ final class InputCellsTests: XCTestCase {
         let d = Calendar.current.date(from: DateComponents(year: 2000, month: 12, day: 31))!
         let cell = DatePickerCell(title: "誕生日", date: d)
         XCTAssertEqual(cell.effectiveValueText(), "2000/12/31")
+    }
+
+    func test_CachedDateFormatter_Localeごとに月名を切り替える() {
+        let date = Calendar(identifier: .gregorian).date(from: DateComponents(year: 2000, month: 1, day: 15))!
+        XCTAssertEqual(
+            CachedDateFormatter.string(from: date, format: "MMMM", locale: Locale(identifier: "ja_JP")),
+            "1月"
+        )
+        XCTAssertEqual(
+            CachedDateFormatter.string(from: date, format: "MMMM", locale: Locale(identifier: "en_US")),
+            "January"
+        )
+    }
+
+    func test_DatePickerCell_effectiveValueText_明示値をLocale変換しない() {
+        let cell = DatePickerCell(title: "誕生日", valueText: "CUSTOM", date: Date(), format: "MMMM")
+        XCTAssertEqual(cell.effectiveValueText(), "CUSTOM")
+    }
+
+    func test_DatePickerCellView_wheelsのLocaleを切り替えられる() {
+        let view = DatePickerCellView()
+        view.render(cell: DatePickerCell(title: "誕生日", date: Date()), theme: Theme())
+        view._applyLocaleForTesting(Locale(identifier: "ja_JP"))
+        XCTAssertEqual(view._wheelsLocale?.language.languageCode?.identifier, "ja")
+        view._applyLocaleForTesting(Locale(identifier: "en_US"))
+        XCTAssertEqual(view._wheelsLocale?.language.languageCode?.identifier, "en")
+    }
+
+    func test_DatePickerCalendarSheetController_表示Localeをpickerへ適用する() {
+        let vc = DatePickerCalendarSheetController(
+            initial: Date(),
+            minimumDate: nil,
+            maximumDate: nil,
+            pickerTitle: nil,
+            todayText: nil,
+            accentColor: nil,
+            locale: Locale(identifier: "ja_JP"),
+            onDone: { _ in }
+        )
+        vc.loadViewIfNeeded()
+        XCTAssertEqual(vc._pickerLocale?.language.languageCode?.identifier, "ja")
+    }
+
+    func test_DatePickerCellView_Locale通知でWheels表示更新し未確定選択を保持する() {
+        let calendar = Calendar(identifier: .gregorian)
+        let original = calendar.date(from: DateComponents(year: 2026, month: 1, day: 15))!
+        let pending = calendar.date(from: DateComponents(year: 2026, month: 2, day: 20))!
+        var locale = Locale(identifier: "en_US")
+        var captured: Date?
+        let view = DatePickerCellView()
+        view._setLocaleProviderForTesting { locale }
+        view.render(
+            cell: DatePickerCell(
+                title: "Date",
+                date: original,
+                format: "MMMM",
+                onValueChanged: { captured = $0 }
+            ),
+            theme: Theme()
+        )
+        XCTAssertEqual(displayedPickerValue(view), "January")
+        XCTAssertEqual(view._wheelsLocale?.language.languageCode?.identifier, "en")
+
+        view._simulateWheelsChange(to: pending)
+        locale = Locale(identifier: "ja_JP")
+        NotificationCenter.default.post(name: NSLocale.currentLocaleDidChangeNotification, object: nil)
+
+        XCTAssertEqual(displayedPickerValue(view), "1月")
+        XCTAssertEqual(view._wheelsLocale?.language.languageCode?.identifier, "ja")
+        XCTAssertEqual(
+            calendar.dateComponents([.year, .month, .day], from: view._currentWheelsDate),
+            DateComponents(year: 2026, month: 2, day: 20)
+        )
+
+        view._simulateWheelsDone()
+        XCTAssertEqual(
+            calendar.dateComponents([.year, .month, .day], from: captured ?? Date()),
+            DateComponents(year: 2026, month: 2, day: 20)
+        )
+    }
+
+    func test_DatePickerCellView_Locale通知でCalendar表示更新し未確定選択を保持する() {
+        let calendar = Calendar(identifier: .gregorian)
+        let original = calendar.date(from: DateComponents(year: 2026, month: 1, day: 15))!
+        let pending = calendar.date(from: DateComponents(year: 2026, month: 2, day: 20))!
+        var locale = Locale(identifier: "en_US")
+        let view = DatePickerCellView()
+        view._setLocaleProviderForTesting { locale }
+        view.render(
+            cell: DatePickerCell(
+                title: "Date",
+                date: original,
+                format: "MMMM",
+                uiStyle: .calendar
+            ),
+            theme: Theme()
+        )
+        let controller = try! XCTUnwrap(view._makeCalendarSheetControllerForTesting())
+        view._registerCalendarControllerForTesting(controller)
+        controller.loadViewIfNeeded()
+        controller._simulateChange(to: pending)
+        XCTAssertEqual(controller._pickerLocale?.language.languageCode?.identifier, "en")
+
+        locale = Locale(identifier: "ja_JP")
+        NotificationCenter.default.post(name: NSLocale.currentLocaleDidChangeNotification, object: nil)
+
+        XCTAssertEqual(displayedPickerValue(view), "1月")
+        XCTAssertEqual(controller._pickerLocale?.language.languageCode?.identifier, "ja")
+        XCTAssertEqual(
+            calendar.dateComponents([.year, .month, .day], from: controller._currentDate),
+            DateComponents(year: 2026, month: 2, day: 20)
+        )
+    }
+
+    func test_DatePickerCellView_Locale通知でも明示valueTextを保持する() {
+        var locale = Locale(identifier: "en_US")
+        let view = DatePickerCellView()
+        view._setLocaleProviderForTesting { locale }
+        view.render(
+            cell: DatePickerCell(title: "Date", valueText: "CUSTOM", date: Date(), format: "MMMM"),
+            theme: Theme()
+        )
+        locale = Locale(identifier: "ja_JP")
+        NotificationCenter.default.post(name: NSLocale.currentLocaleDidChangeNotification, object: nil)
+        XCTAssertEqual(displayedPickerValue(view), "CUSTOM")
     }
 
     func test_DatePickerCellView_lastCell保持() {

@@ -121,11 +121,11 @@ public struct DatePickerCell: KsCell, DSLReidentifiable, DSLStyleModifiable, DSL
     }
 
     /// 自動 valueText: 明示があればそれを、`nil` のときは `format` で文字列化（year / month / day のみ）。
-    /// `DateFormatter` はフォーマット文字列ごとに `CachedDateFormatter` でキャッシュし、
+    /// `DateFormatter` はフォーマット文字列と Locale ごとに `CachedDateFormatter` でキャッシュし、
     /// `effectiveValueText()` 呼び出し毎の新規生成コスト（ICU バインディング初期化を含む）を回避する。
-    internal func effectiveValueText() -> String? {
+    internal func effectiveValueText(locale: Locale = UserInterfaceLocale.current) -> String? {
         if let v = valueText { return v }
-        return CachedDateFormatter.string(from: date, format: format)
+        return CachedDateFormatter.string(from: date, format: format, locale: locale)
     }
 
     public static func == (lhs: DatePickerCell, rhs: DatePickerCell) -> Bool {

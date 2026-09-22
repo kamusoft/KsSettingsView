@@ -239,16 +239,18 @@ AiForms は `ButtonCell` で `Description` とそのフォント系プロパテ�
 | `NumberPickerCell.SelectedCommand` | 提供しない | `Number` の双方向バインドの裏の setter で受ける |
 | (新規) | `NumberPickerCell.Step` (`int`、1) | 選べる数値の刻み幅 |
 | `TimePickerCell.Time` (`TimeSpan`) | `TimePickerCell.Time` (`TimeSpan`) | 既定で双方向 |
-| `TimePickerCell.Format` | `TimePickerCell.Format` (`string?`) | 表示専用: Cell に見せる値の書式であり、選択面には影響しない |
-| (時制は端末設定が決めていた) | `TimePickerCell.Is24Hour` (`bool`、true) | 選択面の 12/24 時間制を決める唯一の値。`Format` も端末の地域・24時間表示設定も関与しない。**既定は 24 時間制**なので、端末設定に追従していた Cell で 12 時間制の選択を出すには `Is24Hour="False"` を明示する |
+| `TimePickerCell.Format` | `TimePickerCell.Format` (`string?`) | 表示専用。`ValueText` を明示しないとき、Native 側がこの書式 (null なら Native 既定) と OS が選んだ Locale で行の値を作る。選択面には影響しない |
+| (時制は端末設定が決めていた) | `TimePickerCell.Is24Hour` (`bool`、true) | 選択面の 12/24 時間制を決める唯一の値。OS が選んだ Locale は言語と午前/午後の表記を供給するが、Locale も端末の24時間表示設定も時制を決めない。**既定は 24 時間制**なので、端末設定に追従していた Cell で 12 時間制の選択を出すには `Is24Hour="False"` を明示する |
 | `TimePickerCell.PickerTitle` | `TimePickerCell.PickerTitle` (`string?`) | |
 | `DatePickerCell.Date` (`DateTime?`、null) | `DatePickerCell.Date` (`DateTime`、1970-01-01) | 双方向なのは両者同じだが nullable ではなくなった。`DateTime?` の ViewModel プロパティはそのままではバインドできない。未設定の Cell に見せる日付を決めて初期値を入れる。意味を持つのは日付部分のみ |
 | `DatePickerCell.MinimumDate` (`DateTime`、1900-01-01) / `MaximumDate` (`DateTime`、2100-12-31) | `DatePickerCell.MinimumDate` / `MaximumDate` (`DateTime?`) | null が無制限を表し、固定値だった 2 つの番兵日付を置き換える |
-| `DatePickerCell.Format` | `DatePickerCell.Format` (`string?`) | |
+| `DatePickerCell.Format` | `DatePickerCell.Format` (`string?`) | 表示専用。`ValueText` を明示しないとき、Native 側がこの書式 (null なら Native 既定) と OS が選んだ Locale で行の値を作る。選択面も同じ Locale の言語と日付要素の順序を使う |
 | `DatePickerCell.TodayText` | `DatePickerCell.TodayText` (`string?`) | |
 | `DatePickerCell.InitialDate` (`DateTime`) | 提供しない | `Date` が null の間の初期表示を与えるプロパティで、新 API では null になり得ない。`Date` 自体を初期化する |
 | `DatePickerCell.IsAndroidSpinnerStyle` (`bool`、Android のみ) | `DatePickerCell.UIStyle` (`DatePickerUIStyle?`、両 platform) | `Wheels` が旧 spinner、`Calendar` がカレンダー面、null が platform 既定。Android の `Calendar` は Material date picker 固有の挙動 (テキスト入力モードへの切替) を伴うが、ホスト Activity の型・テーマへの要求はない |
 | `DatePickerCell.AndroidButtonColor` (`Color`) | `DatePickerCell.AndroidButtonColor` (`Color?`) | |
+
+両 Picker の自動的な行の値表示と選択面は、同じ OS 選択 Locale を使う。OS が管理するアプリ単位の言語設定があればそれを優先し、なければ端末全体の言語・地域を使う。アプリ独自の言語設定は参照せず、アプリバンドルの localization の範囲にも制限しない。その Locale から言語・日付要素の順序・午前/午後表記を導出するが、`TimePickerCell.Is24Hour` の指定を上書きしない。明示した `ValueText` は Locale 変更時にも自動生成し直さない。
 
 ## 独自の View を Cell に置く (CustomCell)
 

@@ -10,6 +10,7 @@
 #if canImport(UIKit)
 import XCTest
 import UIKit
+import SwiftUI
 import KsSettingsViewTestSupport
 @testable import KsSettingsViewUI
 @testable import KsSettingsViewCore
@@ -147,6 +148,30 @@ final class AccessoryBackgroundColorTests: XCTestCase {
         return cell?.backgroundConfiguration?.backgroundColor
     }
 
+    /// View 形式の accessory 背景が、tint 色へフォールバックしない明示的な透明色であることを検証する。
+    private func assertTransparentBackground(
+        _ cv: UICollectionView,
+        _ slot: Slot,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        guard let configured = backgroundColor(cv, slot) else {
+            XCTFail("\(slot) の背景色が未指定で、tint 色へフォールバックする", file: file, line: line)
+            return
+        }
+        for style in [UIUserInterfaceStyle.light, .dark] {
+            let resolved = configured.resolvedColor(
+                with: UITraitCollection(userInterfaceStyle: style)
+            )
+            XCTAssertEqual(
+                alpha(of: resolved), 0, accuracy: 0.001,
+                "\(slot) の背景は \(style) でも透明になる",
+                file: file,
+                line: line
+            )
+        }
+    }
+
     private static let headerBefore = UIColor(red: 0.9, green: 0.8, blue: 0.1, alpha: 1.0)
     private static let footerBefore = UIColor(red: 0.1, green: 0.8, blue: 0.9, alpha: 1.0)
     private static let headerAfter = UIColor(red: 0.2, green: 0.1, blue: 0.7, alpha: 1.0)
@@ -260,21 +285,38 @@ final class AccessoryBackgroundColorTests: XCTestCase {
 
     // MARK: - View 形式は塗らない
 
-    func test_View形式のSectionHeaderには背景色を塗らない() throws {
+    func test_View形式のSectionHeaderとFooterは明示的な透明背景になる() throws {
         let (_, cv) = hostController(
             sections: [
                 KsSettingsViewCore.Section(
                     header: .view(KsAnyView.uiKit { UIView() }),
+                    footer: .view(KsAnyView.swiftUI { EmptyView() }),
                     cells: [LabelCell(title: "A")]
                 )
             ],
-            theme: Theme(headerBackgroundColor: Self.headerBefore)
+            theme: Theme(
+                headerBackgroundColor: Self.headerBefore,
+                footerBackgroundColor: Self.footerBefore
+            )
         )
 
-        XCTAssertNil(
-            backgroundColor(cv, .header),
-            "View 形式の accessory はライブラリが背景を塗らない（利用者の View が見た目を決める）"
+        assertTransparentBackground(cv, .header)
+        assertTransparentBackground(cv, .footer)
+    }
+
+    func test_View形式のRootHeaderとFooterは明示的な透明背景になる() throws {
+        let (_, cv) = hostController(
+            sections: [KsSettingsViewCore.Section(cells: [LabelCell(title: "A")])],
+            rootHeader: .view(KsAnyView.uiKit { UIView() }),
+            rootFooter: .view(KsAnyView.swiftUI { EmptyView() }),
+            theme: Theme(
+                headerBackgroundColor: Self.headerBefore,
+                footerBackgroundColor: Self.footerBefore
+            )
         )
+
+        assertTransparentBackground(cv, .rootHeader)
+        assertTransparentBackground(cv, .rootFooter)
     }
 
     // MARK: - 既定は透明
@@ -432,13 +474,13 @@ final class AccessoryBackgroundColorTests: XCTestCase {
             "Header が View 形式へ差し替わる",
             in: cv,
             actual: { "背景 = \(String(describing: self.backgroundColor(cv, .header)))" },
-            until: { self.backgroundColor(cv, .header) == nil }
+            until: {
+                guard let background = self.backgroundColor(cv, .header) else { return false }
+                return self.alpha(of: background) == 0
+            }
         )
 
-        XCTAssertNil(
-            backgroundColor(cv, .header),
-            "View 形式へ差し替えた Header に以前の背景色が残っている"
-        )
+        assertTransparentBackground(cv, .header)
     }
 }
 #endif

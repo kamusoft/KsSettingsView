@@ -33,6 +33,8 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.android.controller.ActivityController
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowDialog
+import java.time.LocalDate
+import java.time.LocalTime
 
 /**
  * 未指定色が現在の外観（ライト / ダーク）の既定セットへ解決され、外観の変化に追随することの検証。
@@ -491,6 +493,42 @@ class ThemeAppearanceResolutionTest {
         idle()
 
         assertSame("ItemDecoration は作り直されない", decorationBefore, view.internalCurrentDecoration())
+    }
+
+    @Test
+    @Config(qualifiers = "en-rUS-notnight")
+    fun `Locale だけの構成変更で表示中の日付時刻 Cell を再 bind する`() {
+        val root = SettingsRoot(
+            sections = listOf(
+                Section(
+                    id = "locale",
+                    cells = listOf(
+                        TimePickerCell(id = "time", title = "Time", time = LocalTime.of(22, 15), format = "h:mm a"),
+                        DatePickerCell(id = "date", title = "Date", date = LocalDate.of(2026, 1, 15), format = "MMMM"),
+                    ),
+                ),
+            ),
+        )
+        val view = showView(root = root)
+        assertEquals("10:15 PM", rowHolders(view).filterIsInstance<TimePickerCellViewHolder>().single().views.valueTextView.text)
+        assertEquals("January", rowHolders(view).filterIsInstance<DatePickerCellViewHolder>().single().views.valueTextView.text)
+
+        RuntimeEnvironment.setQualifiers("ja-rJP-notnight")
+        view.dispatchConfigurationChanged(view.resources.configuration)
+
+        fun renderedValues(): Pair<String, String> {
+            val time = rowHolders(view).filterIsInstance<TimePickerCellViewHolder>().single()
+                .views.valueTextView.text.toString()
+            val date = rowHolders(view).filterIsInstance<DatePickerCellViewHolder>().single()
+                .views.valueTextView.text.toString()
+            return time to date
+        }
+        awaitMainLooperCondition(diagnostics = { "表示中の日付時刻: ${renderedValues()}" }) {
+            renderedValues() == ("10:15 午後" to "1月")
+        }
+
+        assertEquals("10:15 午後", rowHolders(view).filterIsInstance<TimePickerCellViewHolder>().single().views.valueTextView.text)
+        assertEquals("1月", rowHolders(view).filterIsInstance<DatePickerCellViewHolder>().single().views.valueTextView.text)
     }
 
     @Test

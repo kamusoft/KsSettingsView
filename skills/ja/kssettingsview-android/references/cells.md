@@ -304,7 +304,7 @@ TimePickerCell(
 )
 ```
 
-シートの時が 0–23 になるか、1–12 + 午前/午後ホイールになるかは `is24Hour` だけで決まる。既定の `true` は 24 時間制。`format` も端末の 24 時間設定も関与しないため、同じ Cell はどの端末でも同じシートを開く — `format` を `is24Hour` と食い違わせないのは利用者の責任になる。12 時間制のシートでは午前/午後のラベルとホイールの並びが端末の Locale に従う。
+シートの時が 0–23 になるか、1–12 + 午前/午後ホイールになるかは `is24Hour` だけで決まる。既定の `true` は 24 時間制。`format` も端末の 24 時間設定も関与しないため、同じ Cell はどの端末でも同じ時制を使う — `format` を `is24Hour` と食い違わせないのは利用者の責任になる。シートと自動生成の `valueText` は同じ表示 Locale を使う。Android は Host Context の現在の先頭 Locale を使い、OS 管理のアプリ単位の言語設定があればそれを優先し、なければ端末の言語・地域に従う。アプリ独自の言語設定やアプリに同梱した localization はこの選択を制限しない。12 時間制のシートでは午前/午後のラベルとホイールの並びがこの Locale に従う。Locale の構成変更では表示中の Cell が表示だけのために再 bind され、時刻や未確定の選択は変わらない。明示した `valueText` は書いたまま維持される。
 
 ```kotlin
 TimePickerCell(
@@ -317,7 +317,7 @@ TimePickerCell(
 
 ## 日付を選ぶ
 
-`DatePickerCell` は `java.time.LocalDate` を編集する。`uiStyle` が選択面を決める — `DatePickerUIStyle.Material` はテキスト入力モードも備えたカレンダーダイアログ、`DatePickerUIStyle.Spinner` は 3 連ホイールのボトムシート。空でない `todayText` を渡すと、どちらの選択面にも「今日」へ移動する操作が付く。移動は選択を動かすだけで確定はせず、今日が選択可能範囲の外なら何もしない。
+`DatePickerCell` は `java.time.LocalDate` を編集する。`uiStyle` が選択面を決める — `DatePickerUIStyle.Material` はテキスト入力モードも備えたカレンダーダイアログ、`DatePickerUIStyle.Spinner` は 3 連ホイールのボトムシート。選択面と自動生成の `valueText` は同じ表示 Locale を使う。Android は Host Context の現在の先頭 Locale を使い、OS 管理のアプリ単位の言語設定があればそれを優先し、なければ端末の言語・地域に従う。アプリ独自の言語設定やアプリに同梱した localization はこの選択を制限しない。Spinner の候補ラベルはこの Locale の日付表記慣行に従うが、ホイールの並びは年・月・日で固定される。Locale の構成変更では表示中の Cell が表示だけのために再 bind され、日付や未確定の選択は変わらない。明示した `valueText` は書いたまま維持される。空でない `todayText` を渡すと、どちらの選択面にも「今日」へ移動する操作が付く。移動は選択を動かすだけで確定はせず、今日が選択可能範囲の外なら何もしない。
 
 ```kotlin
 val birthday = remember { mutableStateOf(LocalDate.of(1990, 1, 1)) }

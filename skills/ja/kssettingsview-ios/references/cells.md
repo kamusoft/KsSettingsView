@@ -239,7 +239,7 @@ TimePickerCell(
 )
 ```
 
-選択 UI の時制 (12/24 時間制) は `is24Hour` だけで決まる (既定 `true` = 24 時間制)。`format` は Cell に出る文字列にしか効かず、端末の 24 時間設定も参照されない。12 時間制にするなら `is24Hour: false` と、それに合う `"h:mm a"` のような `format` を組で渡す (両者の食い違いをライブラリは検証しない)。`pickerTitle` は時刻選択画面のタイトルを上書きする (未指定なら `title` を使う)。
+Cell の自動 `valueText` と picker は同じ表示 Locale を使う。iOS は OS が管理するアプリ単位の言語設定を優先し、無ければ端末の言語・地域を使う。アプリ独自の言語設定やアプリバンドルの localization には依存しない。選択 UI の時制 (12/24 時間制) は `is24Hour` だけで決まる (既定 `true` = 24 時間制)。`format` は Cell に出る文字列にしか効かず、端末の 24 時間設定も参照されない。12 時間制にするなら `is24Hour: false` と、それに合う `"h:mm a"` のような `format` を組で渡す — 午前/午後のラベルと picker の並びは表示 Locale に従い、`format` と `is24Hour` の食い違いをライブラリは検証しない。picker 表示中に OS の Locale が変わると、Cell の文字列と picker は更新されるが、未確定の時刻を変えず callback も発火しない。明示した `valueText` はそのまま保たれる。`pickerTitle` は時刻選択画面のタイトルを上書きする (未指定なら `title` を使う)。
 
 ## 日付を選ばせる
 
@@ -258,7 +258,7 @@ DatePickerCell(
 )
 ```
 
-`minDate` / `maxDate` は選択できる日付の範囲を定める。`pickerTitle` は日付選択画面のタイトルを上書きする (未指定なら `title` を使う)。`onValueCompleted` は任意で、選択面が閉じ切った後に確定日付を受け取り、`onValueChanged` の後に実行される。Cancel など確定しない閉じ方ではどちらの callback も実行されない。
+自動 `valueText` と `.wheels` / `.calendar` の両方の選択面は、同じ表示 Locale を使う。iOS は OS が管理するアプリ単位の言語設定を優先し、無ければ端末の言語・地域を使う。アプリ独自の言語設定やアプリバンドルの localization には依存しない。`format` は利用者が渡した書式を保ちつつ、月名など Locale に依存する要素と選択面の日付要素の並びはこの Locale に従う。選択面を表示中に OS の Locale が変わると、Cell の文字列と選択面だけが更新され、未確定の日付を保持して callback は発火しない。明示した `valueText` は書き換えられない。`minDate` / `maxDate` は選択できる日付の範囲を定める。`pickerTitle` は日付選択画面のタイトルを上書きする (未指定なら `title` を使う)。`onValueCompleted` は任意で、選択面が閉じ切った後に確定日付を受け取り、`onValueChanged` の後に実行される。Cancel など確定しない閉じ方ではどちらの callback も実行されない。
 
 ## Cell にアイコンを付ける
 

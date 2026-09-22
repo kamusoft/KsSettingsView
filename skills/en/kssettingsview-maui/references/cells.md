@@ -204,7 +204,9 @@ A `Step` of zero or less falls back to 1, and a `Number` that is not one of the 
 
 ## Choose a time
 
-`Time` is a `TimeSpan`. `Is24Hour` alone decides the hour cycle of the picker: `True` (the default) opens a 24-hour picker, `False` a 12-hour one with an AM/PM column - on every device, because neither the device's 24-hour setting nor `Format` takes part. `Format` only shapes the value text on the cell, and it is carried through to the platform date and time formatter that draws it - `DateFormatter` on iOS, `DateTimeFormatter` on Android - so write a pattern those accept, not a .NET format specifier, and keep it consistent with `Is24Hour` yourself (nothing validates the pair).
+`Time` is a `TimeSpan`. The picker and an automatically generated `ValueText` use the same display locale. The OS-managed app language takes precedence; otherwise the device language and region are used. The app's own language setting and bundled localizations do not override this choice. On Android, the current locale from the host Context is used when the picker opens and when the cell binds. On iOS, a locale change while the picker is visible updates the picker and automatically generated `ValueText` without changing the pending time or firing a value callback. An explicitly set `ValueText` is left as written.
+
+`Is24Hour` alone decides the hour cycle of the picker: `True` (the default) opens a 24-hour picker, `False` a 12-hour one with an AM/PM column - on every device, because neither the device's 24-hour setting nor `Format` takes part. In the 12-hour picker, the AM/PM labels and column order follow the display locale. `Format` only shapes the value text on the cell, and it is carried through to the platform date and time formatter that draws it - `DateFormatter` on iOS, `DateTimeFormatter` on Android - so write a pattern those accept, not a .NET format specifier, and keep it consistent with `Is24Hour` yourself (nothing validates the pair).
 
 ```xml
 <ks:TimePickerCell Title="Alarm"
@@ -230,6 +232,8 @@ On Android the picker is a bottom sheet with hour and minute wheels on every hos
                    TodayText="Today"
                    PickerTitle="Birthday" />
 ```
+
+The picker and an automatically generated `ValueText` use the same display locale. The OS-managed app language takes precedence; otherwise the device language and region are used. The app's own language setting and bundled localizations do not override this choice. On Android, the current locale from the host Context is used when the picker opens and when the cell binds. On iOS, a locale change while a picker is visible updates the picker and automatically generated `ValueText` without changing the pending date or firing a value callback. The locale controls locale-sensitive names and the date component order in the picker. An explicitly set `ValueText` is left as written.
 
 `Calendar` on Android opens a Material 3 calendar dialog that also offers a text input mode the user can switch to; it works on any host activity and theme. `Wheels` uses the Android wheel-style surface. `TodayText` adds a jump-to-today action on every date surface; it only changes the pending selection, and the bound `Date` changes when the user confirms. If today is outside `MinimumDate` and `MaximumDate`, the action leaves the pending selection unchanged. `AndroidButtonColor` colors the OK and CANCEL actions of the `Wheels` surface on Android and falls back to the `AccentColor` resolution when unset - it is an Android-only setting and does not affect the display on other platforms.
 

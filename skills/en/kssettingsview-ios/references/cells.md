@@ -239,7 +239,7 @@ TimePickerCell(
 )
 ```
 
-The hour cycle of the picker is decided by `is24Hour` alone (default `true` = 24-hour): `format` only shapes the text on the cell, and the device's 24-hour setting is never consulted. For a 12-hour picker pass `is24Hour: false` together with a matching format such as `"h:mm a"` - the library does not validate that the two agree. `pickerTitle` overrides the title of the time picker; left out, `title` is used.
+The cell's automatic `valueText` and the picker use the same display locale. iOS first uses the language selected for the app by the OS, then the device language and region; app-specific language settings and the app bundle's localization do not override it. The hour cycle of the picker is decided by `is24Hour` alone (default `true` = 24-hour): `format` only shapes the text on the cell, and the device's 24-hour setting is never consulted. For a 12-hour picker pass `is24Hour: false` together with a matching format such as `"h:mm a"` - the AM/PM labels and picker order follow the display locale, while the library does not validate that `format` and `is24Hour` agree. If the OS locale changes while the picker is visible, the cell text and picker update without changing the pending time or firing a callback. An explicit `valueText` is left unchanged. `pickerTitle` overrides the title of the time picker; left out, `title` is used.
 
 ## Choose a date
 
@@ -258,7 +258,7 @@ DatePickerCell(
 )
 ```
 
-`minDate` / `maxDate` limit the selectable range, and `pickerTitle` overrides the title of the date picker; left out, `title` is used. `onValueCompleted` is optional and receives the confirmed date after the selection surface has finished dismissing, after `onValueChanged`. Cancel and every other non-confirming dismissal call neither callback.
+The automatic `valueText` and both picker surfaces use the same display locale. iOS first uses the language selected for the app by the OS, then the device language and region; app-specific language settings and the app bundle's localization do not override it. The `format` string remains the format you provide, while locale-sensitive names and the date component order in the picker follow that locale. If the OS locale changes while a picker is visible, the cell text and picker update without changing the pending date or firing a callback. An explicit `valueText` is left unchanged. `minDate` / `maxDate` limit the selectable range, and `pickerTitle` overrides the title of the date picker; left out, `title` is used. `onValueCompleted` is optional and receives the confirmed date after the selection surface has finished dismissing, after `onValueChanged`. Cancel and every other non-confirming dismissal call neither callback.
 
 ## Add an icon to a cell
 
