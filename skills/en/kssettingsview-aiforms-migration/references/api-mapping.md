@@ -239,16 +239,18 @@ There is no `TextPickerCell`. A `PickerCell` in `Single` mode does the same job 
 | `NumberPickerCell.SelectedCommand` | Not provided | React in the setter behind the two-way `Number` binding |
 | (new) | `NumberPickerCell.Step` (`int`, 1) | Step width between selectable numbers |
 | `TimePickerCell.Time` (`TimeSpan`) | `TimePickerCell.Time` (`TimeSpan`) | Two-way by default |
-| `TimePickerCell.Format` | `TimePickerCell.Format` (`string?`) | Display only: it formats the value shown on the cell and has no effect on the selection surface |
-| (the device settings decided the hour cycle) | `TimePickerCell.Is24Hour` (`bool`, true) | The sole decider of the selection surface's 12/24-hour cycle; neither `Format` nor the device's region and 24-hour settings participate. **The default is 24-hour**, so a cell that used to follow the device needs `Is24Hour="False"` to offer 12-hour selection |
+| `TimePickerCell.Format` | `TimePickerCell.Format` (`string?`) | Display only. With no explicit `ValueText`, the native side formats the row value with this pattern (or its native default when null) using the OS-selected locale; it has no effect on the selection surface |
+| (the device settings decided the hour cycle) | `TimePickerCell.Is24Hour` (`bool`, true) | The sole decider of the selection surface's 12/24-hour cycle. The OS-selected locale still supplies the language and AM/PM presentation, but neither the locale nor the device's 24-hour setting chooses the hour cycle. **The default is 24-hour**, so a cell that used to follow the device needs `Is24Hour="False"` to offer 12-hour selection |
 | `TimePickerCell.PickerTitle` | `TimePickerCell.PickerTitle` (`string?`) | |
 | `DatePickerCell.Date` (`DateTime?`, null) | `DatePickerCell.Date` (`DateTime`, 1970-01-01) | Two-way on both sides, but nullable no longer. A `DateTime?` view model property no longer binds; pick the date an unset cell should show and seed it. Only the date part carries meaning |
 | `DatePickerCell.MinimumDate` (`DateTime`, 1900-01-01) / `MaximumDate` (`DateTime`, 2100-12-31) | `DatePickerCell.MinimumDate` / `MaximumDate` (`DateTime?`) | null means unbounded, replacing the two fixed sentinel dates |
-| `DatePickerCell.Format` | `DatePickerCell.Format` (`string?`) | |
+| `DatePickerCell.Format` | `DatePickerCell.Format` (`string?`) | Display only. With no explicit `ValueText`, the native side formats the row value with this pattern (or its native default when null) using the OS-selected locale; the selection surface uses that same locale for its language and date-field order |
 | `DatePickerCell.TodayText` | `DatePickerCell.TodayText` (`string?`) | |
 | `DatePickerCell.InitialDate` (`DateTime`) | Not provided | It seeded the surface while `Date` was null, which cannot happen now; seed `Date` itself |
 | `DatePickerCell.IsAndroidSpinnerStyle` (`bool`, Android only) | `DatePickerCell.UIStyle` (`DatePickerUIStyle?`, both platforms) | `Wheels` is the old spinner, `Calendar` the calendar surface, null the platform default. On Android `Calendar` brings the Material date picker behaviors with it, including its text-entry mode; it puts no requirement on the host activity type or theme |
 | `DatePickerCell.AndroidButtonColor` (`Color`) | `DatePickerCell.AndroidButtonColor` (`Color?`) | |
+
+For both pickers, the automatic row value and the selection surface use the same OS-selected locale: an app-level language chosen by the OS takes priority, otherwise the device language and region are used. The library does not consult an app-specific language setting or restrict the result to localizations in the app bundle. That locale supplies the language, date-field order and AM/PM presentation; it does not override `TimePickerCell.Is24Hour`. An explicit `ValueText` is not regenerated when the locale changes.
 
 ## Put your own view in a cell (CustomCell)
 

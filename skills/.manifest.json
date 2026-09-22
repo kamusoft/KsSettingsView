@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "generatedAt": "2026-09-19T09:16:01Z",
+  "generatedAt": "2026-09-22T06:40:23Z",
   "concepts": {
     "android/api/android-compose.md": "d8b2c16a446a6ad3c40c5db53d107fd98ee82379b84cb66afc521e9e52fa0d9f",
     "android/api/android-native-host.md": "c24c459dbeee1a477a79cbcc460907b15d773029a53ca6d7a49facae0277d579",
@@ -13,12 +13,12 @@
     "core/architecture/store-and-update-streams.md": "13455b557b7f443b69be13e63ce6d822b233cd30d0ca66ab61ee49a2a6eee49b",
     "core/cells/basic-cells.md": "b662b7513d936934aeffeb8372be659fd3ae3b1be017bc50736fe87228c298ea",
     "core/cells/custom-cell.md": "de5fab7c4be9615c6e501568b5d2d83152eefb322cfb211b0e55f6423c20a58b",
-    "core/cells/date-picker-selection-surface.md": "9071937b4ec991d01094787f84bb8c75bdd24710c18d44902e220afa874b3a66",
-    "core/cells/input-cells.md": "00806625bf3af9eac3ef74f93304d3a34a108de375eaef40742319382c6b5e68",
+    "core/cells/date-picker-selection-surface.md": "f06fa8e6836dd05c4812af078f4e510a3d8f507786d4ad71ec3b0c25f43f34be",
+    "core/cells/input-cells.md": "c4aae97020f5e2ff5fd79ceb9108ed111ca00b85cea3a142e36f2cabf58ccca6",
     "core/cells/ks-image.md": "00c6fe74b223639e6ac7c38c6708d523f3ff1bc0b951ccd5f1db5ed6a4f6b480",
     "core/cells/number-picker-selection-surface.md": "4ebef92859257e8c177eace514c6d87dd93ce14017f523ac59213177f746ab08",
     "core/cells/picker-selection-surface.md": "608a248b530a685cf82adbacbae7e62266df19e74deb99d5d02beef15447da58",
-    "core/cells/time-picker-selection-surface.md": "4b91ae7447b7009fd28ce298d6802da0aaf69eaa7b50a8eeed6f3c2d67b90b1d",
+    "core/cells/time-picker-selection-surface.md": "4754514388693cbe661453cffa1be83bbe550db2303b52ae15ea363b2ca7fc4f",
     "core/core-model/settings-tree.md": "deec17d65a234fd6b53dc41263bffd725ac7be4a19cba65aa3797de6500bb129",
     "core/core-model/structural-changes.md": "4e4ed36438b86419016a886ea1e85b9fc29d973b34079f6848eee6ce2b23aac2",
     "core/styling/cell-row-layout.md": "f4463e4b3ac1826a763797be0528e352a5415596918afb7dc208e95f34774dd0",
@@ -207,9 +207,13 @@
     "README_ja.md"
   ],
   "lastUpdatedFiles": [
-    "skills/en/kssettingsview-ios/SKILL.md",
-    "skills/en/kssettingsview-ios/references/styling.md",
-    "skills/ja/kssettingsview-ios/SKILL.md",
-    "skills/ja/kssettingsview-ios/references/styling.md"
+    "skills/en/kssettingsview-aiforms-migration/references/api-mapping.md",
+    "skills/ja/kssettingsview-aiforms-migration/references/api-mapping.md",
+    "skills/en/kssettingsview-android/references/cells.md",
+    "skills/ja/kssettingsview-android/references/cells.md",
+    "skills/en/kssettingsview-ios/references/cells.md",
+    "skills/ja/kssettingsview-ios/references/cells.md",
+    "skills/en/kssettingsview-maui/references/cells.md",
+    "skills/ja/kssettingsview-maui/references/cells.md"
   ]
 }

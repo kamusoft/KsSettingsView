@@ -204,7 +204,9 @@ public SettingsViewModel()
 
 ## 時刻を選ばせる
 
-`Time` は `TimeSpan`。選択面の時制は `Is24Hour` だけで決まる — `True` (既定) なら 24 時間制、`False` なら午前/午後の列を持つ 12 時間制で、端末の 24 時間表示設定も `Format` も関与しないため、どの端末でも同じ時制で開く。`Format` が効くのは Cell の値テキストの整形だけで、Cell を描く platform の日時フォーマッタ (iOS は `DateFormatter`、Android は `DateTimeFormatter`) へそのまま渡されるので、.NET の書式指定子ではなくそれらが解釈するパターンを書き、`Is24Hour` との整合は自分で保つ (組み合わせの検証は行われない)。
+`Time` は `TimeSpan`。選択面と自動生成の `ValueText` は同じ表示 Locale を使う。OS が管理するアプリ単位の言語設定を優先し、無ければ端末の言語・地域を使う。アプリ独自の言語設定やアプリに同梱した localization はこの選択を上書きしない。Android は選択面を開くときと Cell を bind するときに Host Context の現在 Locale を使う。iOS は選択面の表示中に Locale が変わると、選択面と自動生成の `ValueText` だけを更新し、未確定の時刻を変えず値 callback も発火しない。明示した `ValueText` は書いたまま維持される。
+
+選択面の時制は `Is24Hour` だけで決まる — `True` (既定) なら 24 時間制、`False` なら午前/午後の列を持つ 12 時間制で、端末の 24 時間表示設定も `Format` も関与しないため、どの端末でも同じ時制で開く。12 時間制の午前/午後ラベルと列の並びは表示 Locale に従う。`Format` が効くのは Cell の値テキストの整形だけで、Cell を描く platform の日時フォーマッタ (iOS は `DateFormatter`、Android は `DateTimeFormatter`) へそのまま渡されるので、.NET の書式指定子ではなくそれらが解釈するパターンを書き、`Is24Hour` との整合は自分で保つ (組み合わせの検証は行われない)。
 
 ```xml
 <ks:TimePickerCell Title="Alarm"
@@ -230,6 +232,8 @@ Android の選択面はホストによらず時・分ホイールのボトムシ
                    TodayText="Today"
                    PickerTitle="Birthday" />
 ```
+
+選択面と自動生成の `ValueText` は同じ表示 Locale を使う。OS が管理するアプリ単位の言語設定を優先し、無ければ端末の言語・地域を使う。アプリ独自の言語設定やアプリに同梱した localization はこの選択を上書きしない。Android は選択面を開くときと Cell を bind するときに Host Context の現在 Locale を使う。iOS は選択面の表示中に Locale が変わると、選択面と自動生成の `ValueText` だけを更新し、未確定の日付を変えず値 callback も発火しない。`Format` は利用者が渡した書式を保ちつつ、月名など Locale に依存する要素と選択面の日付要素の並びは表示 Locale に従う。明示した `ValueText` は書き換えられない。
 
 Android の `Calendar` は Material 3 のカレンダーダイアログを開く。ユーザーが切り替えられるテキスト入力モードも付いていて、ホストの Activity 型・テーマを問わず動く。`Wheels` は Android のホイール形式の選択面を使う。`TodayText` を指定すると全形式に「今日」へ飛ぶ操作が出るが、変更されるのは確定前の選択だけで、`Date` のバインド先が変わるのは確定時。今日が `MinimumDate` / `MaximumDate` の範囲外なら選択は変わらない。`AndroidButtonColor` は Android の `Wheels` 選択面の OK / CANCEL 操作の色で、未指定なら `AccentColor` 系の解決に従う — Android 専用の指定で、他の platform では表示に影響しない。
 

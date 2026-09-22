@@ -304,7 +304,7 @@ TimePickerCell(
 )
 ```
 
-Whether the sheet counts hours as 0-23 or as 1-12 with an AM/PM wheel is decided by `is24Hour` alone; `true`, the default, is 24-hour. Neither `format` nor the 24-hour setting of the device takes part, so the same cell opens the same sheet on every device - and keeping `format` consistent with `is24Hour` is on you. In the 12-hour sheet the AM/PM labels and the wheel order follow the device locale.
+Whether the sheet counts hours as 0-23 or as 1-12 with an AM/PM wheel is decided by `is24Hour` alone; `true`, the default, is 24-hour. Neither `format` nor the 24-hour setting of the device takes part, so the same cell uses the same hour cycle on every device - and keeping `format` consistent with `is24Hour` is on you. The sheet and an automatically generated `valueText` use the same display locale: Android takes the current first locale from the host Context configuration, which includes an OS-managed app language when one is set and otherwise follows the device language and region. The app's own language setting and bundled localizations do not limit this choice. In the 12-hour sheet, the AM/PM labels and wheel order follow that locale. A locale configuration change rebinds visible cells for display only; it does not change the time or an unconfirmed selection. An explicit `valueText` is left as written.
 
 ```kotlin
 TimePickerCell(
@@ -317,7 +317,7 @@ TimePickerCell(
 
 ## Choose a date
 
-`DatePickerCell` edits a `java.time.LocalDate`. `uiStyle` picks the surface - `DatePickerUIStyle.Material` for a calendar dialog that also offers a text-input mode, `DatePickerUIStyle.Spinner` for a bottom sheet with three wheels - and a non-empty `todayText` adds a jump-to-today control to either surface. Jumping moves the selection without confirming it, and does nothing when today is outside the allowed range.
+`DatePickerCell` edits a `java.time.LocalDate`. `uiStyle` picks the surface - `DatePickerUIStyle.Material` for a calendar dialog that also offers a text-input mode, `DatePickerUIStyle.Spinner` for a bottom sheet with three wheels - and a non-empty `todayText` adds a jump-to-today control to either surface. The surface and an automatically generated `valueText` use the same display locale: Android takes the current first locale from the host Context configuration, which includes an OS-managed app language when one is set and otherwise follows the device language and region. The app's own language setting and bundled localizations do not limit this choice. Spinner candidate labels follow that locale's date conventions, while the wheel order remains year, month, day. A locale configuration change rebinds visible cells for display only; it does not change the date or an unconfirmed selection. An explicit `valueText` is left as written. Jumping moves the selection without confirming it, and does nothing when today is outside the allowed range.
 
 ```kotlin
 val birthday = remember { mutableStateOf(LocalDate.of(1990, 1, 1)) }
