@@ -17,14 +17,19 @@ timestamp: 2026-09-26
 設定行は、任意の icon、title と任意の description、trailing 側の要素 (下記 2 系統)、任意の hintText から構成する。
 
 - title と valueText は同じ**主行**へ置き、description は title の下へ置く。主行とは、行から icon と Cell 級アクセサリを除いた領域のうち、title と行内 trailing が横に並ぶ 1 行を指す。
-- trailing 側は 2 系統に区別する。
-  - **Cell 級アクセサリ** — Cell 種別固有の操作・状態コントロール (SwitchCell の Switch、CheckboxCell の checkbox、RadioCell / SimpleCheckCell の checkmark、CommandCell / Picker 系の chevron)。セル全体 (title + description) に対して垂直センターへ置く。
-  - **行内 trailing** — valueText と、EntryCell の入力フィールド (両 platform)。title と同じ主行内に置く。移植初期の Android は入力フィールドを accessory 領域に置いていたが、これは原典 [AiForms](../../../handbook/cross/aiforms-origin-reference.md) と乖離した配置であり、行内配置へ訂正済み ([android/ADR-0002](../../../decisions/android/0002-cell-row-width-allocation-linearlayout-weight.md))。
+- trailing 側は 2 系統 (Cell 級アクセサリ / 行内 trailing) に区別する (下表)。
 - description の表示幅は Cell 級アクセサリの領域と重ねない。description はアクセサリより leading 側で折り返す。
 - hintText は trailing 側の要素の有無に依存せず、行の右上を基準にする。
 - 任意要素がない場合は対応 View を隠し、そのための空領域を残さない。
 
+| 系統 | 含む要素 | 置き方 |
+|---|---|---|
+| **Cell 級アクセサリ** | Cell 種別固有の操作・状態コントロール (SwitchCell の Switch、CheckboxCell の checkbox、RadioCell / SimpleCheckCell の checkmark、CommandCell / Picker 系の chevron) | セル全体 (title + description) に対して垂直センターへ置く |
+| **行内 trailing** | valueText と、EntryCell の入力フィールド (両 platform) | title と同じ主行内に置く |
+
 この配置は原典 AiForms がアクセサリを `AccessoryView` / `Accessory` (ContentView の外側) としてセル縦センターに置く構造を、両 platform で踏襲したものである (iOS 側の決定の経緯は [ios/ADR-0001](../../../decisions/ios/0001-accessory-column-outside-content-stack.md))。
+
+移植初期の Android は EntryCell の入力フィールドを accessory 領域に置いていたが、これは原典 [AiForms](../../../handbook/cross/aiforms-origin-reference.md) と乖離した配置であり、行内配置へ訂正済み ([android/ADR-0002](../../../decisions/android/0002-cell-row-width-allocation-linearlayout-weight.md))。
 
 垂直センターは幾何配置だけでは見た目が揃わない場合があり、**光学中央への補正**を許容する。Android では chevron drawable (`ic_navigate_next`) のパスを viewport 縦中央へ補正し (原典からの意図的 deviation)、フォントメトリクス由来のテキストの沈み (約 1dp) を contentRow の `translationY` で打ち消している ([android/ADR-0004](../../../decisions/android/0004-cell-row-optical-vertical-centering.md))。iOS はこの補正を必要としていない。
 
@@ -93,12 +98,17 @@ CellStyle の高さを指定しない場合は Theme へ継承し、Theme の ro
 
 ## 関連
 
+### 概念・規約
+
 - [スタイルの所有と実効値解決](style-resolution.md)
 - [Cell の視覚状態](cell-visual-states.md)
 - [基本 Cell](../cells/basic-cells.md)
 - [入力 Cell](../cells/input-cells.md)
 - [Cell Renderer Registry](../architecture/cell-renderer-registry.md)
 - [移植元 AiForms の在り処と参照ルール](../../../handbook/cross/aiforms-origin-reference.md)
+
+### 決定記録
+
 - [android/ADR-0002](../../../decisions/android/0002-cell-row-width-allocation-linearlayout-weight.md) — 主行の幅配分を LinearLayout + weight で行う決定
 - [android/ADR-0004](../../../decisions/android/0004-cell-row-optical-vertical-centering.md) — テキストとアクセサリを光学中央で揃える決定
 - [ios/ADR-0001](../../../decisions/ios/0001-accessory-column-outside-content-stack.md) — Cell 級アクセサリを contentStack 外の列に置く決定

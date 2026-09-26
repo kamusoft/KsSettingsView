@@ -17,7 +17,8 @@ iOS では `KsCell`、Android では `Cell` を実装する。直接構築時の
 ## Cell 共通契約
 
 - 値 + callback 経路では、利用者または Store が状態値を保持し、callback を受けて新しい Cell 値を供給する。
-- 宣言 DSL は、対象 Cell に TwoWay overload がある場合だけ Binding / MutableState から現在値を読み、操作 callback で同じ状態所有者へ書き戻す。基本7種では Android `SwitchCell` の `MutableState<Boolean>` overload だけが該当し、iOS の基本 Cell と Android の他6種は値 + callback を使う。
+- 宣言 DSL は、対象 Cell に TwoWay overload がある場合だけ Binding / MutableState から現在値を読み、操作 callback で同じ状態所有者へ書き戻す。
+- 基本7種で TwoWay overload を持つのは Android `SwitchCell` の `MutableState<Boolean>` overload だけで、iOS の基本 Cell と Android の他6種は値 + callback を使う。
 - `style` は Cell 単位の視覚上書きで、UI 層が Theme と合成する。
 - `isEnabled = false` は操作を無効にし、`isVisible = false` は [設定ツリー](../core-model/settings-tree.md) で定義する visible projection から Cell を除外する。
 
