@@ -312,7 +312,10 @@ def target_files(root: str, paths: list[str], ext: set[str], excludes: list[str]
                 continue
             if os.path.splitext(rel)[1].lower() not in ext:
                 continue
-            if LP.is_excluded(LP.normalize_rel(rel, root), excludes):
+            nrel = LP.normalize_rel(rel, root)
+            if LP.is_excluded(nrel, excludes):
+                continue
+            if extra and LP.is_build_artifact(nrel):  # 未追跡のビルド出力 (local-path-lint と同じ規則)
                 continue
             files.append(rel)
     # unmerged path はステージごとに重複して返るため排除し、順序も安定させる
@@ -534,6 +537,9 @@ def selftest() -> int:
         os.makedirs(os.path.join(tmp, "kasane"))
         with open(os.path.join(tmp, "kasane", "config.yaml"), "w", encoding="utf-8") as f:
             f.write("lint:\n  comment-policy:\n    exclude:\n      - vendor\n")
+        os.makedirs(os.path.join(tmp, "app", "DerivedData18"))
+        with open(os.path.join(tmp, "app", "DerivedData18", "Gen.kt"), "w", encoding="utf-8") as f:
+            f.write("// 仕様: kasane/changes/foo/spec.md\n")
 
         print("[lint 疎通 (未追跡ファイルの列挙・config 除外)]")
         buf = io.StringIO()
@@ -543,6 +549,7 @@ def selftest() -> int:
         check("src/A.kt" in out, "未追跡の新規ファイルが走査対象に入る")
         check(code == 1, "違反ありで exit 1")
         check("vendor/B.kt" not in out, "comment-policy.exclude のパスは検査しない")
+        check("DerivedData18/Gen.kt" not in out, "未追跡のビルド出力 (DerivedData*) は検査しない")
 
         print("[hook 疎通]")
         # worktree 配下のパスでも検査されること (対象外の除外に巻き込まれないこと) を含めて確認する

@@ -16,6 +16,11 @@
   - プレースホルダ: `/Users/<USER>/` `/Volumes/<name>` `${HOME}` `$USER` 等、名前部分が実名でないもの
   - 省略例示: `/Users/.../` `/Volumes/...`
   - kasane/config.yaml の `lint.exclude` に列挙したリポジトリ相対パス (先頭セグメント一致、または fnmatch glob)
+  - 未追跡 (git 管理外で ignore もされていない) かつビルド出力の名前 (BUILD_DIR_GLOBS: `DerivedData*` `build`
+    `node_modules` 等) のディレクトリ配下のファイル。`.gitignore` が `DerivedData/` しか書いていないときに
+    `DerivedData18/` のような派生名の成果物が lint に流れ込むのを塞ぐ。追跡ファイルは名前に関わらず検査する
+    (`bin/` `build/` にスクリプトを置くリポジトリで偽陰性を出さないため)。`lint.exclude` とは和集合で、
+    追跡ファイルまで外したいときはそちらに書く
 
 兄弟スクリプト (identity-lint.py / log-sanitize.py) はこのファイルの共通ヘルパ (repo_root / normalize_rel /
 load_config / texts_from_hook_input) を importlib で読み込んで使う。
@@ -43,6 +48,9 @@ PATTERNS = [
 # git grep 用の粗い候補パターン (判定は PATTERNS で行う)
 GREP_PATTERN = r"/Users/|/Volumes/|[A-Za-z]:\\\\?Users"
 WORKTREE_PREFIX = re.compile(r"^\.claude/worktrees/[^/]+/")
+# 未追跡ファイルを既定で読み飛ばすビルド出力ディレクトリ名 (パスのどのセグメントにも fnmatch で当てる)
+BUILD_DIR_GLOBS = ("DerivedData*", "build", ".build", "node_modules", "bin", "obj", "dist", "target",
+                   ".gradle", "Pods", "__pycache__")
 
 # lint スクリプト自身は検査しない: ソースには自己テストの違反例 (検出対象の見本) がリテラルで
 # 載るため、検査すると自分自身を違反として報告してしまう。worktree 内のコピーや、更新版
@@ -206,6 +214,25 @@ def is_excluded(rel: str, excludes: list[str]) -> bool:
     return False
 
 
+def is_build_artifact(rel: str) -> bool:
+    """パスのいずれかのディレクトリセグメントが BUILD_DIR_GLOBS に当たるか (末尾のファイル名は見ない)。"""
+    return any(fnmatch.fnmatch(seg, g) for seg in rel.split("/")[:-1] for g in BUILD_DIR_GLOBS)
+
+
+def untracked_files(root: str) -> set[str]:
+    """未追跡 (ignore 済みは除く) のファイルをリポジトリ相対で返す。git 外なら空集合。"""
+    proc = subprocess.run(["git", "ls-files", "--others", "--exclude-standard", "-z"],
+                          cwd=root, capture_output=True, text=True)
+    if proc.returncode != 0:
+        return set()
+    return {normalize_rel(p, root) for p in proc.stdout.split("\0") if p}
+
+
+def is_skipped(rel: str, excludes: list[str], untracked: set[str]) -> bool:
+    """lint の走査で読み飛ばすか: `lint.exclude` (追跡・未追跡とも) または未追跡のビルド出力。"""
+    return is_excluded(rel, excludes) or (rel in untracked and is_build_artifact(rel))
+
+
 class PathNotFound(Exception):
     """`--paths` に存在しないパスが渡された。無言で読み飛ばすと「違反なし」の偽陽性になるため例外にする。"""
 
@@ -241,6 +268,7 @@ def expand_paths(root: str, paths: list[str], suffixes: tuple[str, ...] | None =
 
 def lint(root: str, paths: list[str] | None) -> int:
     excludes = load_excludes(root)
+    untracked = untracked_files(root)
     cmd = ["git", "grep", "--untracked", "-nI", "-E", GREP_PATTERN, "--"]
     cmd += paths if paths else ["."]
     proc = subprocess.run(cmd, cwd=root, capture_output=True, text=True)
@@ -254,7 +282,7 @@ def lint(root: str, paths: list[str] | None) -> int:
         except ValueError:
             continue
         rel = normalize_rel(path, root)
-        if is_self_file(rel) or is_excluded(rel, excludes):
+        if is_self_file(rel) or is_skipped(rel, excludes, untracked):
             continue
         if is_violation(text):
             violations.append(f"{rel}:{lineno}: {text.strip()}")
@@ -314,6 +342,14 @@ def selftest() -> int:
         os.makedirs(os.path.join(tmp, "scripts"))
         with open(os.path.join(tmp, "scripts", SELF_BASENAME), "w", encoding="utf-8") as f:
             f.write("cd /Users/taro/proj\n")
+        # 未追跡のビルド出力 (派生名・ネスト) は読み飛ばし、同名でも追跡されていれば検査する
+        os.makedirs(os.path.join(tmp, "apps", "iosApp", "DerivedData18", "Logs"))
+        with open(os.path.join(tmp, "apps", "iosApp", "DerivedData18", "Logs", "build.log"), "w", encoding="utf-8") as f:
+            f.write("cd /Users/taro/proj\n")
+        os.makedirs(os.path.join(tmp, "build"))
+        with open(os.path.join(tmp, "build", "tracked.sh"), "w", encoding="utf-8") as f:
+            f.write("cd /Users/taro/proj\n")
+        subprocess.run(["git", "add", "build/tracked.sh"], cwd=tmp, check=True, capture_output=True)
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
             code = lint(tmp, None)
@@ -324,6 +360,10 @@ def selftest() -> int:
         check(code == 1, "違反ありで exit 1")
         check("vendor/b.md" not in out, "lint.exclude のパスは検査しない")
         check("scripts/" + SELF_BASENAME not in out, "自分自身 (同名ファイル) は検査しない")
+        check("DerivedData18/" not in out, "未追跡のビルド出力 (DerivedData*) は検査しない")
+        check("build/tracked.sh" in out, "追跡ファイルはビルド出力の名前でも検査する")
+        check(not is_build_artifact("build") and not is_build_artifact("src/build.gradle.kts"),
+              "ファイル名は BUILD_DIR_GLOBS に当てない")
 
         print("[hook 疎通]")
         for name, fname, text, expect_deny in [
