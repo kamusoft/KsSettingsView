@@ -6,7 +6,7 @@ applies-when:
   tasks: [Sample のデモ画面・文言の追加・変更]
 title: Sample のプラットフォーム間一致
 description: Sample アプリは全 platform で同一の文言・画面構成で実装し、プラットフォーム間検証の装置として機能させる規約
-timestamp: 2026-08-29
+timestamp: 2026-09-26
 ---
 
 # Sample のプラットフォーム間一致
@@ -23,7 +23,7 @@ KsSettingsView はプラットフォーム間で仕様・動作を統一する�
 
 - **画面の集合**: デモ画面とルートメニュー項目は全 platform に同一の構成で存在する
 - **表示文言の完全一致**: 画面タイトル・メニュー項目・Section の header / footer・Cell の表示フィールド (title / description / hintText 等 — [基本 Cell](../../concepts/core/cells/basic-cells.md) 参照)・デモデータ (初期値・選択肢の文言) は一字一句一致させる。大文字小文字の違いや「〜デモ」の有無のような表記ゆれも不一致とみなす
-- **画面構成の一致**: Section 数・Cell 数・並び順と、各 Cell に渡すパラメータ (例: 選択肢の数、min / max / step / unit、初期値、初期選択、maxSelectedNumber、`accentColor` 等の色) を一致させる。**色に platform 固有の semantic color (iOS の `UIColor.systemXxx` など) を使わない** — 実値が platform 間でずれるため、同一の RGBA を Sample 共通の定義 (`SampleTheme`) に置いて両 platform から参照する。dark mode 追随のような platform らしさより一致を優先する
+- **画面構成の一致**: Section 数・Cell 数・並び順と、各 Cell に渡すパラメータ (例: 選択肢の数、min / max / step / unit、初期値、初期選択、maxSelectedNumber、`accentColor` 等の色) を一致させる。**色に platform 固有の semantic color (iOS の `UIColor.systemXxx` など) を使わない** — 実値が platform 間でずれるため、同一の RGBA を各 platform の `SampleTheme` に置いて参照する。ダーク外観も同じ RGBA のプリセットを共有する
 - **メニューと画面タイトルの一致**: ルートメニューのリンク文言と遷移先画面自身のタイトルは同一文字列にする (別々に定義される二重管理が表記ゆれの主要因)
 
 模範例: isVisible デモ (`samples/ios/KsSettingsViewSample/VisibilityDemoView.swift` と `samples/android/app/src/main/kotlin/jp/kamusoft/kssettingsview/samples/android/VisibilityDemoScreen.kt`) は全文言・構成が完全に一致している。
@@ -32,7 +32,7 @@ KsSettingsView はプラットフォーム間で仕様・動作を統一する�
 
 - OS 標準のナビゲーション chrome や既定フォント・描画差など、platform の見た目そのもの (例: iOS は `NavigationStack`、Android は `TopAppBar` を持つ共通ラッパーで画面を包む)。これらはむしろ「同じ宣言内容が platform らしく描画される」ことの確認対象
 - 本体公開 API の platform 命名差に由来する、画面文言に出ないコード上の差 (引数名・型名・リソース指定方法)
-- Sample が明示的に渡していないパラメータの、**本体既定値の platform 差** (例: `titleColor` 未指定の ButtonCell が iOS では青、Android では Material 3 の紫で描画される)。Sample 側で色を明示すると「既定色のデモ」という意図が壊れるため解消できない。規約違反としては扱わないが、本体の統一課題として deviation.md に記録して追跡する
+- Sample が明示的に渡していないパラメータの、**本体既定値の platform 差** (例: 本体の既定色が platform ごとに異なるパラメータを、既定値そのものを見せるデモとして Sample が指定しない場合)。Sample 側で値を明示すると「既定値のデモ」という意図が壊れるため解消できない。規約違反としては扱わないが、本体の統一課題として deviation.md に記録して追跡する
 - **実装順序による一時的な片側先行**。change が platform 別に分かれる場合など、先行 platform だけにデモ画面・文言変更が存在する期間は許容する。本規約が要求する一致は**収束状態**であり、常時同時である必要はない。ただし恒久化させないこと — 未追随 platform への追随を tasks / 後続 change として残し、追跡できる状態を保つ (追跡が切れた片側限定の差異は、この規約の違反になる)
 
 ## 例外: デモ対象の公開 API が存在しない platform

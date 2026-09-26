@@ -3,7 +3,7 @@ type: concept
 title: 宣言 UI と Native Host の Bridge
 description: SwiftUI・Compose の宣言状態を Store と Native Host の共通更新経路へ接続する境界
 tags: [architecture, declarative-ui, swiftui, compose]
-timestamp: 2026-08-06
+timestamp: 2026-09-26
 ---
 
 この文書は、SwiftUI / Compose Bridge に共通する Store 方式と DSL 方式の収束を説明する。読むと、状態の所有者、宣言ツリー再評価、値と callback の橋渡し、Native Host との責務分担、そして両方式の観測結果対称性の契約が分かる。

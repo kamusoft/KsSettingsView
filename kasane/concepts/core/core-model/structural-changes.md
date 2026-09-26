@@ -3,7 +3,7 @@ type: reference
 title: SettingsRootDiff による構造変更
 description: 設定ツリーの全体・Section・Cell・Accessory 更新を表す公開 Diff 契約
 tags: [core, diff, public-api]
-timestamp: 2026-08-09
+timestamp: 2026-09-26
 ---
 
 この文書は、`SettingsRootDiff` が設定ツリーの変更意図をどう表すかを説明する。読むと、Cell 内容更新と identity 変更の違い、移動可能な範囲、UI 層・Store が担う責務が分かる。
@@ -69,7 +69,7 @@ target と payload 種別の一致は呼び出し側の事前条件である。S
 ## 利用例
 
 ```swift
-let updated = CustomCell(id: oldCell.id, title: "通知（更新）")
+let updated = LabelCell(id: oldCell.id, title: "通知（更新）")
 let diff: SettingsRootDiff = .replaceCell(
     cellID: KsCellID(cell: oldCell),
     new: updated

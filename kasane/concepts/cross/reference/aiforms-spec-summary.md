@@ -3,7 +3,7 @@ type: reference
 title: 移植元 AiForms の仕様要約
 description: 移植元 AiForms.Maui.SettingsView / NativeCollectionView の公開 API・構造・実装パターンの要約。凍結された歴史資料であり、最終的な正は移植元コード
 tags: [aiforms, origin, porting, reference, legacy]
-timestamp: 2026-08-26
+timestamp: 2026-09-26
 ---
 
 # 移植元 AiForms の仕様要約

@@ -3,7 +3,7 @@ type: reference
 title: CustomCell
 description: 事前登録なしで任意の宣言 UI を1行にする CustomCell の公開契約とカスタムセル3層の使い分け
 tags: [cells, public-api, custom, declarative-ui]
-timestamp: 2026-08-16
+timestamp: 2026-09-26
 ---
 
 # CustomCell
@@ -42,7 +42,7 @@ timestamp: 2026-08-16
 
 ## DSL による配置
 
-Android は `DSLSectionScope` の拡張関数 (content あり / なしの 2 形)、iOS は SectionBuilder への struct 直書き。戻り値・準拠により `.cellHeight(...)` / `.cellID(...)` 等の既存 modifier チェーンが機能する。**icon modifier は型として非対応** (アイコン領域が存在しない)。
+Android は `DSLSectionScope` の拡張関数 (content あり / なしの 2 形)、iOS は SectionBuilder への struct 直書き。戻り値・準拠により `.cellHeight(...)` / `.cellID(...)` 等の既存 modifier チェーンが機能する。**icon modifier は効かない** — CustomCell は icon modifier の対象型に準拠しないため、`.icon(...)` を書いてもコンパイルは通り、実行時に何もしない (アイコン領域が存在しない)。
 
 ## カスタムセル3層の使い分け
 
@@ -97,7 +97,7 @@ KsSettingsView {
                 Icon(Icons.Default.VolumeUp, contentDescription = null)
                 Slider(value = v, onValueChange = { volume = it })
             }
-        }.cellHeight(72)
+        }.cellHeight(72.dp)
     }
 }
 ```

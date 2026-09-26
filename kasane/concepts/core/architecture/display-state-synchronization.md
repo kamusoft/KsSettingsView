@@ -3,7 +3,7 @@ type: concept
 title: 表示状態同期
 description: 構造・同一 ID の内容・可視性・Theme を異なる更新経路へ分ける共通原則
 tags: [architecture, state, diff, visibility]
-timestamp: 2026-08-24
+timestamp: 2026-09-26
 ---
 
 この文書は、設定ツリーの変更を Native 表示へ同期する4つの経路を説明する。読むと、値等価と構造 identity を分ける理由、同じ ID の内容更新、visible projection、Theme の扱いが分かる。
@@ -31,9 +31,9 @@ Theme 変更が表示中の要素へ届く範囲は、両 platform とも次の�
 
 **text 形式の Header / Footer (Root / Section とも)** は表示中のまま色・フォントを in-place で再適用する。行 identity・supplementary の再構成は伴わない。
 
-**View 形式の Header / Footer (`KsAnyView.AndroidView` / `.Compose`、iOS の view accessory)** は Theme 通知の再 bind 対象にしない。再 bind は factory の再実行になり hosted view の内部状態 (入力・フォーカス等) を失わせるためで、Theme を反映したい View accessory は利用者が自分の View を更新する。
+**View 形式の Header / Footer (`KsAnyView.AndroidView` / `.Compose`、iOS の view accessory)** は Theme 通知の再 bind 対象にしない。再 bind は factory の再実行になり hosted view の内部状態 (入力・フォーカス等) を失わせるためで、Theme を反映したい View accessory は利用者が自分の View を更新する。例外は iOS の Root Header / Footer で、Theme 変更によって Section 単位余白の解決値が変わったとき (`sectionMargin` の変更) に限り、余白を付け直すため種別を問わず作り直す (`refreshRootAccessoriesIfMarginChanged`)。可視 Section が 0 件と非 0 件の間で遷移したときも同じ理由で作り直す。このとき View accessory は内部状態を失う。
 
-full 更新の共通出口 (Android の `setRootDirect`) が theme を取り込むときも、内部フィールドへの代入だけで済ませず、Cell・Root accessory・Section supplementary の各 adapter へ上記ルールどおりの Theme 変更通知を発行する — 通知を欠くと「Store 再接続経由の Theme 変更だけ表示に反映されない」という経路依存の非対称が生じる。
+full 更新の共通出口 (Android の `applyRootDirect`。`SettingsRootDiff.Full` などの構造更新は Theme を伴わない `setRootStructureOnly` から、Store への bind は Theme を伴う `setRootDirect` から入る) が theme を取り込むときも、内部フィールドへの代入だけで済ませず、Cell・Root accessory・Section supplementary の各 adapter へ上記ルールどおりの Theme 変更通知を発行する — 通知を欠くと「Store 再接続経由の Theme 変更だけ表示に反映されない」という経路依存の非対称が生じる。
 
 ## model と visible projection
 
@@ -45,13 +45,13 @@ model は hidden Section / Cell を含む完全な `SettingsRoot`、visible proj
 
 両 platform の Native 表示は差分適用基盤の上にある (Android は平坦 list を `submitList` へ渡す DiffUtil、iOS は Diffable Data Source の snapshot)。このため full 更新は「現在の model 全体から作り直す」と言っても、実際に行われるのは旧・新の visible projection の全行を ID で照合し直すこと (全行照合) であり、画面の再描画は差分のある行に限られる。
 
-Android は新しい平坦 list 全体を `submitList` し、DiffUtil は行の追加・削除・移動 (構造差) を計算する。CellRow は DiffUtil で内容比較しない建付けのため、同一 ID で残る Cell の内容差は共通出口 `setRootDirect` が発行する payload 付き内容通知が補う (後述の「内容更新」節、`android/ADR-0012`)。Section header / footer 行だけは DiffUtil の内容比較で payload rebind へ落ちる。
+Android は新しい平坦 list 全体を `submitList` し、DiffUtil は行の追加・削除・移動 (構造差) を計算する。CellRow は DiffUtil で内容比較しない建付けのため、同一 ID で残る Cell の内容差は共通出口 `applyRootDirect` が発行する payload 付き内容通知が補う (後述の「内容更新」節、`android/ADR-0012`)。Section header / footer 行だけは DiffUtil の内容比較で payload rebind へ落ちる。
 
 iOS は新しい snapshot を apply する。snapshot は ID のみで構築されるためセルの内容変化それ自体は snapshot 差分に現れず、同一 ID で残る Cell の内容差は `applyFullSnapshot` が snapshot 適用時の `reconfigureItems` で一括再適用して補う (後述の「内容更新」節)。header / footer が変わった Section だけが `reloadSections` で supplementary を再構成し、固定高さは apply 完了後の `invalidateLayout()` が再評価する (後述の「Section header の固定高さ」節)。
 
 部分更新 API (`replaceCell` / `replaceCells` / `updateAccessory`) との違いは再描画コストではなく、全行照合の計算コストと、「何が変わったか」を呼び出し側が特定済みか (特定済みなら照合が要らず、副作用も局所に留まる) にある。変化点を特定できる更新は部分更新 API を使い、変化点を特定できない・可視性が絡む更新だけを full 更新へ流す。
 
-`replaceSection` は API の型として Section 全体の置換であり、header / footer / 固定高さ / 可視性 (`isVisible`) / cells の任意の組み合わせの変化を内包し得る。このため両 platform とも細粒度の差分抽出を試みず、**full 経路で処理する** — 利用者 API `replaceSection` は `SettingsRootDiff` の `ReplaceSection` として Host の diff 適用へ渡り ([SettingsRootDiff による構造変更](../core-model/structural-changes.md))、Android では full 更新の共通出口 `setRootDirect` に、iOS では `applyFullSnapshot` (full snapshot 適用の実体) に合流する。iOS は `.view` が絡む Section に限り追加の強制 reload を行う (後述の「Section accessory の内容更新」節)。局所 API に見えるが実行コストは full 更新と同等以上で、「Section 単位だから安い」という期待で選ぶ API ではない。
+`replaceSection` は API の型として Section 全体の置換であり、header / footer / 固定高さ / 可視性 (`isVisible`) / cells の任意の組み合わせの変化を内包し得る。このため両 platform とも細粒度の差分抽出を試みず、**full 経路で処理する** — 利用者 API `replaceSection` は `SettingsRootDiff` の `ReplaceSection` として Host の diff 適用へ渡り ([SettingsRootDiff による構造変更](../core-model/structural-changes.md))、Android では `setRootStructureOnly` を経て full 更新の共通出口 `applyRootDirect` に、iOS では `applyFullSnapshot` (full snapshot 適用の実体) に合流する。iOS は `.view` が絡む Section に限り追加の強制 reload を行う (後述の「Section accessory の内容更新」節)。局所 API に見えるが実行コストは full 更新と同等以上で、「Section 単位だから安い」という期待で選ぶ API ではない。
 
 ## 内容更新
 
@@ -59,7 +59,7 @@ iOS は新しい snapshot を apply する。snapshot は ID のみで構築さ�
 
 Android の `replaceCells` は RadioCell など連動する複数 Cell を一回の状態更新へまとめ、一回の `submitList` 完了後に対象行を再 bind する。iOS は Diffable Data Source の item identity を維持して各対象を reconfigure する。ただし同一 ID のまま具象型が変わった Cell (例: `LabelCell → SwitchCell`) は Renderer も変わるため reconfigure では反映できず、iOS の部分更新経路 (`replaceCell` 単発・`replaceCells` バッチ) は full 経路と同じ具象型比較で当該 Cell だけを `reloadItems` の cell 交換へ振り分ける。型変化を reconfigure に流すと UIKit が reuse identifier 不一致の例外でクラッシュする — この検出は full 経路 (後述) と部分更新経路の両方が持つ。
 
-full 更新でも同一 ID の Cell の内容変化は取りこぼさない。Android の full 更新の共通出口 `setRootDirect` は、構造を DiffUtil で反映した後、旧・新 visible projection の双方に存在し値が変わった Cell へ payload 付き内容通知を一括発行して完結する (`android/ADR-0012`)。新規挿入・削除・hidden の Cell へ内容通知は重ねず、内容通知の対象が空でも構造の反映は必ず実行される。
+full 更新でも同一 ID の Cell の内容変化は取りこぼさない。Android の full 更新の共通出口 `applyRootDirect` は、構造を DiffUtil で反映した後、旧・新 visible projection の双方に存在し値が変わった Cell へ payload 付き内容通知を一括発行して完結する (`android/ADR-0012`)。新規挿入・削除・hidden の Cell へ内容通知は重ねず、内容通知の対象が空でも構造の反映は必ず実行される。
 
 iOS の full 更新も同じ規律で補う。`applyFullSnapshot` は旧・新 visible projection の双方に存在し値が変わった同一 ID の Cell を純粋 helper `FullSnapshotContentTargets` で選び、snapshot 適用時に `reconfigureItems` で内容を再適用する (行 identity は維持される)。同一 ID のまま具象型が変わった Cell は reconfigure では Native cell を維持できないため `reloadItems` の cell 交換で反映し、`reloadSections` で再構成される Section の Cell は reload 側が内容ごと再構成するため対象から除外する。Android と同様、新規挿入・削除・hidden へ内容再適用は重ねず、対象が空でも構造の反映は必ず実行される。
 
@@ -81,7 +81,7 @@ View 形式 accessory の等価判定は view の中身を比較できない。�
 
 `Section.headerHeight` も accessory と同じく、section identity が変わらない更新では再 bind または layout の再評価を経てはじめて表示へ反映される。
 
-Android は `CellListItemDiffCallback` が固定高さの差も内容差として扱い、accessory 内容と同じ payload 付き rebind へ落とす。比較対象は Text accessory の header に限る — 高さを表示へ反映するのは Text accessory だけであり、View accessory で高さ差を内容差とすると `KsAnyView` の View が factory から作り直されて内部状態を失う。
+Android は `CellListItemDiffCallback` が固定高さの差も内容差として扱い、accessory 内容と同じ payload 付き rebind へ落とす。固定高さは accessory の種別に依らず表示に効くため ([core/ADR-0021](../../../decisions/core/0021-header-height-applies-regardless-of-accessory-kind.md))、Text / View のどちらの header も比較対象にする。Text accessory は内容と同じ payload 付き rebind で付け直す。View accessory で高さだけが変わった差には高さ専用の payload (`PAYLOAD_HEADER_HEIGHT`) を付けて行の高さだけを付け直し、中身は factory から作り直さない — 作り直すと `KsAnyView` の View が内部状態を失う。
 
 iOS は固定高さを layout の supplementary item サイズとして解決し、visible projection 更新後の `invalidateLayout()` で追従する。
 
@@ -94,7 +94,7 @@ iOS は固定高さを layout の supplementary item サイズとして解決し
 - 同一 section identity の accessory 内容変化 (非 null → 非 null) を、どの更新経路でも表示へ反映する。
 - 可視性の変化では完全な model から visible projection を再構築する。
 - Theme 更新で Section / Cell の ID と構造を変更しない。
-- Theme 変更を text 形式の Root / Section Header / Footer へ表示中でも反映する。View 形式の Header / Footer は Theme 通知で再 bind しない (内部状態の保持を優先する)。
+- Theme 変更を text 形式の Root / Section Header / Footer へ表示中でも反映する。View 形式の Header / Footer は Theme 通知で再 bind しない (内部状態の保持を優先する。iOS の Root Header / Footer が余白の変化で作り直される例外を除く)。
 - hidden 対象への操作を model に保持する。
 
 ## してはいけないこと

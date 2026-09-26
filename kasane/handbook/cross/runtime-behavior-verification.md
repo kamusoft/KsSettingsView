@@ -5,7 +5,7 @@ applies-when:
   tasks: [実行時挙動の不具合調査, 不具合修正の完了判定]
 title: 実行時挙動の検証規約
 description: 実行時挙動 (IME・フォーカス・アニメーション・タイミング) が絡む不具合修正を「完了」と判定する条件 — 実環境での再現確立と修正後の同一手順による解消確認、および iOS 基本 Cell Sample の目視確認項目
-timestamp: 2026-08-29
+timestamp: 2026-09-26
 ---
 
 # 実行時挙動の検証規約
@@ -35,14 +35,14 @@ timestamp: 2026-08-29
 
 ## iOS Basic Cell Sample の目視確認
 
-`samples/ios/KsSettingsViewSample/BasicCellsDemoView.swift` を Simulator または実機で起動し、Sample Theme と基本 Cell の統合状態を次の観測点で確認する。これは色値一覧を正典化するものではなく、Theme の値は `samples/ios/KsSettingsViewSample/SampleTheme.swift`、画面の文言と構成は `SampleScreen.swift` および画面実装が正である。
+`samples/ios/KsSettingsViewSample/BasicCellsDemoView.swift` を Simulator または実機のライト外観で起動し、Sample Theme と基本 Cell の統合状態を次の観測点で確認する (この画面は list style を指定しないため既定の Classic で描かれる)。これは色値一覧を正典化するものではなく、Theme の値は `samples/ios/KsSettingsViewSample/SampleTheme.swift`、画面の文言と構成は `SampleScreen.swift` および画面実装が正である。
 
 | 観測点 | 確認する結果 |
 |---|---|
 | Sticky Footer | RadioCell Section の footer `You can select either TypeA or TypeB.` が画面下端へ固定されず、content とともにスクロールアウトする |
 | canvas と Cell 背景 | Section 間と Header / Footer 領域にベージュ系の canvas 背景が描かれ、白い Cell 背景とは別の二層として見える |
 | Header / Footer の空領域 | Header text や Footer text がない Section（CommandCell / LabelCell / SwitchCell / CheckboxCell / SimpleCheckCell / ButtonCell の Footer など）に不要な余白が生じない |
-| separator inset | Section 先頭・末尾の境界線は全幅、Section 内の線は icon ありで 52pt、icon なしで 16pt の leading inset を持つ |
+| separator inset | Section 先頭・末尾の境界線は全幅、Section 内の線は icon の有無にかかわらず 16pt の leading inset を持つ ([設定 list の外観](../../concepts/core/styling/list-appearance.md) の Classic の separator) |
 | icon | CommandCell の `Tanaka Taro` に `person.crop.circle`、LabelCell の `Storage` に `externaldrive` の SF Symbols が描画される |
 | 順序と文言 | CommandCell → LabelCell → SwitchCell → CheckboxCell → RadioCell → SimpleCheckCell → ButtonCell の順で、title / description / valueText と RadioCell footer が Android Sample と一致する |
 

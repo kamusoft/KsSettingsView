@@ -3,14 +3,14 @@ type: design-tokens
 title: Cell 共通行のレイアウト
 description: Cell 種別をまたいで共有する視覚文法と platform 別の行寸法
 tags: [styling, layout, cell, design-tokens]
-timestamp: 2026-08-25
+timestamp: 2026-09-26
 ---
 
 # Cell 共通行のレイアウト
 
 この文書は、基本 Cell と入力 Cell が共有する行構造と platform 別の高さ規則を説明する。読むと、共通要素、trailing 2 系統 (Cell 級アクセサリと行内 trailing) の責務、主行の幅配分、icon 枠、可変高・固定高、iOS / Android の最低行高が分かる。
 
-適用範囲は**共通行構造を持つ Cell** (標準の基本・入力 Cell 群および同型の利用者定義 Cell)。full-bleed 宣言 UI ホスティング型の [CustomCell](../cells/custom-cell.md) は適用除外で ([core/ADR-0015](../../../decisions/core/0015-customcell-exemption-from-shared-row-layout.md))、共通の視覚文法・主行の幅配分は適用されない (「高さの解決」の契約には CustomCell も従う)。
+適用範囲は**共通行構造を持つ Cell** (標準の基本・入力 Cell 群および同型の利用者定義 Cell)。full-bleed 宣言 UI ホスティング型の [CustomCell](../cells/custom-cell.md) は適用除外で ([core/ADR-0022](../../../decisions/core/0022-customcell-lifecycle-delegated-to-platform-adr.md))、共通の視覚文法・主行の幅配分は適用されない (「高さの解決」の契約には CustomCell も従う)。
 
 ## 共通の視覚文法
 

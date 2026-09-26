@@ -3,7 +3,7 @@ type: reference
 title: 基本 Cell
 description: 表示・操作・二値・単一選択を担う基本7種の Cell と状態所有の公開契約
 tags: [cells, public-api, ui]
-timestamp: 2026-08-24
+timestamp: 2026-09-26
 ---
 
 この文書は、`LabelCell`、`CommandCell`、`ButtonCell`、`SwitchCell`、`CheckboxCell`、`RadioCell`、`SimpleCheckCell` の用途と公開契約を説明する。読むと、各 Cell の選び方、状態と callback の責務、iOS / Android の宣言 DSL での使い方が分かる。
@@ -35,6 +35,8 @@ iOS では `KsCell`、Android では `Cell` を実装する。直接構築時の
 
 全7種が `style`、`title`、`valueText`、`icon`、`hintText`、`isEnabled`（既定 `true`）、`isVisible`（既定 `true`）を持つ。`ButtonCell` だけは `description` を公開しない。
 
+選択系の `SwitchCell` / `CheckboxCell` / `RadioCell` / `SimpleCheckCell` は、control の強調色を Cell 単位で上書きする `accentColor` を持つ。未指定は iOS が `nil`、Android が `Color.Unspecified` で、`CellStyle.accentColor` → `Theme.cellAccentColor` の順に解決する ([スタイルの所有と実効値解決](../styling/style-resolution.md))。
+
 `ButtonCell.titleAlignment` の既定は center で、Swift は `.start` / `.center` / `.end`、Kotlin は `START` / `CENTER` / `END` を使う。alignment が視覚に出るのは title が主行の全幅を使える行 — つまり `valueText` (行内 trailing) を持たない行に限る。`valueText` がある行では title 領域はコンテンツ幅になり、配る余白がないため CENTER / END は視覚に出ない ([Cell 共通行のレイアウト](../styling/cell-row-layout.md) の主行の幅配分、core/ADR-0026)。`icon` / `hintText` は主行の幅配分に参加しないため、これらだけを持つ行では alignment は従来どおり働く。補助フィールドの有無にかかわらず Disclosure Indicator は表示しない。
 
 画像の case と fallback は [KsImage](ks-image.md) を参照する。
@@ -51,7 +53,7 @@ iOS では `KsCell`、Android では `Cell` を実装する。直接構築時の
 - `isVisible = false` では Cell 値を model に保持したまま visible projection から除外する。
 - `CheckboxCell` と `SimpleCheckCell` は反転した二値を通知する。
 - Android の `RadioCell` は選択済み行の再タップで `onSelected` を再通知しない。iOS は選択済みでも `onSelected(value)` を通知するため、共通ロジックは再通知の有無へ依存しない。
-- `KsCellRegistry.registerBasicCells()`（iOS）/ `KsCellRegistry.registerBasicCells(context)`（Android）で7種を一括登録できる。
+- `KsCellRegistry.shared.registerBasicCells()`（iOS。Registry インスタンスのメソッド）/ `KsCellRegistry.registerBasicCells(context)`（Android）で7種を一括登録できる。
 
 ## してはいけないこと
 
