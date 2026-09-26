@@ -96,19 +96,21 @@ hidden な Section / Cell は model から削除しない。hidden 対象への�
 
 `KsCellRegistry` は具象 `KsCell` 型と `UICollectionViewCell & KsCellRenderer` 型の対応を保持する。Host は Registry から型を解決して `render(cell:theme:)` を呼ぶため、独自 Cell を追加しても Controller に型分岐を加えない。
 
-標準 Cell 12 種は、既定の `KsCellRegistry.shared` を使う Controller で自動登録できる。独立 Registry を注入する場合、自動登録 flag が `true` でも shared Registry にはならないため、必要な標準 Cell と独自 Cell をその Registry へ登録する。
+標準 Cell 13 種 (基本 7・入力 5・CustomCell) は、既定の `KsCellRegistry.shared` を使う Controller で自動登録できる。独立 Registry を注入する場合、自動登録 flag が `true` でも shared Registry にはならないため、必要な標準 Cell と独自 Cell をその Registry へ登録する。
 
 ```swift
 let registry = KsCellRegistry()
 registry.registerBasicCells()
 registry.registerInputCells()
+registry.registerCustomCell()
 registry.register(cellType: MyCell.self, rendererType: MyCellView.self)
 
 let controller = KsSettingsViewController(
     store: store,
     registry: registry,
     autoRegisterBasicCells: false,
-    autoRegisterInputCells: false
+    autoRegisterInputCells: false,
+    autoRegisterCustomCell: false
 )
 ```
 

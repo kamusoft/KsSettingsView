@@ -109,7 +109,7 @@ SwiftUI は再評価ごとに Section と Cell の値を作り直すため、一
 - 静的 Section は header text と位置、静的 Cell は親 Section ID・位置・Cell 型から fallback ID を解決する。
 - title、選択値、CellStyle などの内容は identity に含めない。
 
-同じ要素では、DSL 専用 `ForEach` の key と `sectionID(_:)` / `cellID(_:)` を併用しない。どちらか一方だけを identity として指定する。両方を組み合わせた優先順位は [core/ADR-0008](../../../decisions/core/0008-stable-declarative-tree-identity.md) と現行 iOS 実装に drift があるためである。
+同じ要素では、DSL 専用 `ForEach` の key と `sectionID(_:)` / `cellID(_:)` を併用しない。どちらか一方だけを identity として指定する。両方を指定すると明示 ID が採用され ([core/ADR-0036](../../../decisions/core/0036-explicit-id-wins-over-collection-key.md))、key による追跡が効かなくなるためである。
 
 位置 fallback は動的な挿入・削除・並べ替えに弱い。動的構造で位置を意味上の identity として使わない。一つの `ForEach` item から同じ階層へ複数 Section / Cell を返すと、現行実装では同じ hint が付き ID 衝突を起こすため、一 item は一要素へ対応させる。
 

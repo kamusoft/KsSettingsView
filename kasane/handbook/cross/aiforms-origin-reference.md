@@ -5,7 +5,7 @@ applies-when:
   tasks: [未移植機能の実装, 移植元との挙動差・不具合の調査]
 title: 移植元 AiForms リポジトリの参照
 description: KsSettingsView の移植元 (AiForms.Maui.SettingsView / NativeCollectionView) の在り処と、移植前の仕様・不具合調査で参照するルール。移植完了までの時限規約
-timestamp: 2026-07-31
+timestamp: 2026-09-26
 ---
 
 # 移植元 AiForms リポジトリの参照

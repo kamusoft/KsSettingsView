@@ -7,7 +7,7 @@
 | [0005](0005-root-section-accessory-boundary.md) | Root と Section の装飾責務を分離する | accepted | Section 装飾をモデル、Root 装飾を View の責務として分ける。 |
 | [0006](0006-structural-diff-ui-store-boundary.md) | 構造 Diff と UI Store で更新責務を分離する | accepted | Core の閉じた Diff と UI 層の Store を更新境界とする。 |
 | [0007](0007-declarative-dsl-and-store-convergence.md) | 宣言 DSL と Store API を併存させ同じ更新経路へ収束する | accepted | DSL と Store を用途別に公開し、内部では同じ Diff 適用経路へ流す。 |
-| [0008](0008-stable-declarative-tree-identity.md) | 宣言ツリーの安定同一性 | accepted | 動的キー・明示 ID・安定位置から再評価をまたぐ同一性を解決する。 |
+| [0008](0008-stable-declarative-tree-identity.md) | 宣言ツリーの安定同一性 | accepted | 動的キー・明示 ID・安定位置から再評価をまたぐ同一性を解決する。一部改訂: [0036](0036-explicit-id-wins-over-collection-key.md) (collection key と明示 ID の併用時は明示 ID を採用)。 |
 | [0009](0009-ui-layer-native-styling.md) | スタイルを UI 層に隔離し Native 型で表現 | accepted | Theme と CellStyle を UI 層へ置き、各プラットフォームの Native 型を使う。 |
 | [0010](0010-three-way-display-state-synchronization.md) | 表示状態同期を構造・内容・可視性に分離 | accepted | 構造同期、内容再構成、visible projection 再構築を別経路にする。 |
 | [0011](0011-composed-shared-cell-row-layout.md) | Cell 共通行レイアウトをコンポジションで統一 | accepted | 共通行レイアウト関数と accessory slot で Cell の重複を減らす。 |
@@ -35,5 +35,6 @@
 
 | [0034](0034-picker-selection-completed-after-dismiss.md) | モーダル提示する選択面 (PickerCell / DatePickerCell) は「確定して閉じ切った後」を値付きの callback で知らせ、MAUI の SelectedCommand はその時点で実行する | accepted | 対象は iOS でモーダル提示する PickerCell / DatePickerCell (Number / Time は対象外)。Native に `onSelectionCompleted` / `onMultiSelectionCompleted` / `onValueCompleted` を足し、値の callback の後に同じ値で 1 回だけ発火させる (値の callback は確定直後のまま、非確定 dismiss は発火しない)。閉じ切りは「プラットフォームが dismiss 完了として報告する時点」で、Android のカレンダーだけフェード前になるのは意図的差異。bridge は Picker の 2 メソッドだけを中継し、MAUI の `SelectedCommand` をその受信時点で実行する (値の書き戻しは即時のまま、公開 API は不変)。別通知の新設・確定 callback ごと遅らせる案・毎回通知 + フラグ・確定時 snapshot は却下。 |
 | [0035](0035-date-time-display-follows-user-device-locale.md) | 日付・時刻の自動表示は OS で選択された言語・地域に従う | accepted | OS のアプリ単位言語設定を優先し、なければ端末全体の Locale を使う。Picker と Cell 右側値を揃え、localization 提供範囲だけには制限しない。 |
+| [0036](0036-explicit-id-wins-over-collection-key.md) | 宣言ツリーで明示 ID と collection key が同じ要素に付いたときは明示 ID を採用する | accepted (amends 0008) | ADR-0008 の解決順のうち、collection key と明示 ID の併用時の関係だけを置き換え、iOS / Android の現行実装 (明示 ID 優先) に合わせる。位置 fallback・DSL 専用 ForEach / forEach・ID 再束縛は ADR-0008 のまま。実装を key 優先へ戻す案と併用のエラー化は却下。 |
 
 番号は旧フラット時代の採番を温存 (採番規則は [../index.md](../index.md) を参照)。

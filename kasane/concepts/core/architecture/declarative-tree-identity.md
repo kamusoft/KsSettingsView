@@ -3,7 +3,7 @@ type: concept
 title: 宣言ツリーの安定 identity
 description: 宣言 UI の再評価をまたいで Section と Cell を継続追跡する識別契約
 tags: [architecture, identity, declarative-ui, diff]
-timestamp: 2026-07-19
+timestamp: 2026-09-26
 ---
 
 この文書は、SwiftUI / Compose の DSL が再評価ごとに生成する Section / Cell を同じ要素として追跡する契約を説明する。読むと、動的 key、明示 ID、位置 fallback の安全な使い分けと、内容を identity に含めない理由が分かる。
@@ -16,7 +16,7 @@ timestamp: 2026-07-19
 | 静的だが意味上の名前が必要 | `sectionID` / `cellID` の明示 hint | `"app-version"` |
 | 追加・削除・並べ替えのない静的構造 | 親 ID・位置・型などから導く fallback | 固定された設定項目列 |
 
-同じ要素に動的 collection key と明示 ID を併用しない。どちらか一方だけを identity の入力にする。accepted [ADR-0008](../../../decisions/core/0008-stable-declarative-tree-identity.md) と現行 iOS / Android 実装で併用時の優先順位が一致しないため、優先順位へ依存しないことが現在安全な利用契約である。
+同じ要素に動的 collection key と明示 ID を併用しない。どちらか一方だけを identity の入力にする。併用した場合は明示 ID が採用される ([ADR-0036](../../../decisions/core/0036-explicit-id-wins-over-collection-key.md) が [ADR-0008](../../../decisions/core/0008-stable-declarative-tree-identity.md) の解決順を一部改訂) ため collection key による追跡が効かなくなり、項目ごとに変わらない明示 ID を付けると全項目が同じ ID に解決される。
 
 位置 fallback は挿入・削除・並べ替えで意味が変わるため、動的構造に使わない。一つの collection item から同じ階層へ複数 Section / Cell を返すと同じ key hint が付き得るため、一 item は一要素へ対応させる。
 
@@ -28,7 +28,7 @@ identity の入力値と最終 ID は同じものではない。SwiftUI は hint
 
 hint は型も identity の一部として扱う。整数 `1` と文字列 `"1"` は表示上の文字が同じでも別の hint であり、同一要素として扱わない。
 
-title、選択値、CellStyle などの内容を identity に含めない。同じ ID で内容が変わった Cell は同じ行の reconfigure / rebind へ流れる。
+title、選択値、CellStyle などの内容を identity に含めない。同じ ID で内容が変わった Cell は同じ行の reconfigure / rebind へ流れる。例外は明示 ID も collection key もない Section で、位置 fallback の入力にテキストヘッダの文字列が入る。この Section はヘッダ文言を変えると ID も変わるため、文言が変わり得る Section には明示 ID を付ける。
 
 ## 利用者定義 Cell
 

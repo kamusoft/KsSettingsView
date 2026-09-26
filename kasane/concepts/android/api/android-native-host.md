@@ -77,7 +77,7 @@ hidden な Section / Cell は model から削除しない。hidden 対象への�
 
 `KsCellRegistry` は具象 `Cell` 型を `viewType` と `CellViewHolder` factory へ対応付ける。Host は Registry から型を解決して `bind(cell, theme)` を呼ぶため、独自 Cell を追加しても Host に型分岐を加えない。
 
-標準 Cell 12 種は Host の構築時に自動登録される。利用者定義 Cell は表示前に登録し、Root / Section Accessory の予約値を避けるため `KsCellRegistry.CELL_VIEW_TYPE_MIN` 以上の `viewType` を使う。
+標準 Cell 13 種 (基本 7・入力 5・CustomCell) は Host の構築時に自動登録される。利用者定義 Cell は表示前に登録し、Root / Section Accessory の予約値を避けるため `KsCellRegistry.CELL_VIEW_TYPE_MIN` 以上の `viewType` を使う。
 
 ```kotlin
 KsCellRegistry.strictMode = BuildConfig.DEBUG

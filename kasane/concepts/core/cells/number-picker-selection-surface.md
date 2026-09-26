@@ -22,7 +22,7 @@ timestamp: 2026-08-02
 | ヘッダー | ドラッグハンドル + 「キャンセル (テキストボタン) / タイトル / OK (強調色で塗ったボタン)」(ラベル文言は OS リソース — 後述)。意匠は `PickerSelectionSheet` ([android/ADR-0005](../../../decisions/android/0005-pickercell-selection-ui-bottom-sheet.md)) と共有 | 入力ツールバー (Cancel / タイトル / Done) |
 | 非確定の閉じ方 | キャンセル・外側タップ・Back・ハンドル / ヘッダー起点の下スワイプ (候補領域 = ホイール面からの下スワイプでは閉じず候補が遷移する) | Cancel とキーボード標準の dismiss 操作 |
 
-Android のホイール (`KsWheelView`) は RecyclerView + LinearSnapHelper による自作部品で、**internal に留める** (公開 API ではない)。将来の DatePicker ホイール版展開の内部土台であり、部品の詳細は android/ADR-0007 とコード・テストを正とする。
+Android のホイール (`KsWheelView`) は RecyclerView + LinearSnapHelper による自作部品で、**internal に留める** (公開 API ではない)。NumberPicker のほか、DatePicker の `Spinner` 3連ホイール ([android/ADR-0009](../../../decisions/android/0009-datepicker-spinner-bottom-sheet-triple-wheel.md)) と TimePicker の時・分ホイール ([android/ADR-0018](../../../decisions/android/0018-timepickercell-bottom-sheet-wheel-unification.md)) でも共用する内部部品であり、部品の詳細は android/ADR-0007 とコード・テストを正とする。
 
 ## 共通の挙動契約
 

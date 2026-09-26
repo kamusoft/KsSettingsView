@@ -142,7 +142,7 @@ Compose は Recomposition ごとに Section / Cell の値を作り直すため�
 - `.sectionID(...)` / `.cellID(...)` は明示 hint を与えるが、引数値そのものを最終 ID 文字列にする API ではない。
 - title、選択値、CellStyle などの内容は identity に含めない。
 
-同じ要素では `forEach` key と `sectionID` / `cellID` を併用しない。どちらか一方だけを identity として指定する。両方を組み合わせた優先順位は [core/ADR-0008](../../../decisions/core/0008-stable-declarative-tree-identity.md) と現行 Android 実装で食い違うためである。
+同じ要素では `forEach` key と `sectionID` / `cellID` を併用しない。どちらか一方だけを identity として指定する。両方を指定すると明示 ID が採用され ([core/ADR-0036](../../../decisions/core/0036-explicit-id-wins-over-collection-key.md))、key による追跡が効かなくなるためである。
 
 位置 fallback は動的な挿入・削除・並べ替えに弱い。動的構造で位置を意味上の identity として使わない。一つの `forEach` item から同じ階層へ複数 Section / Cell を返すと、同じ hint により ID が衝突するため、一 item は一要素へ対応させる。
 
