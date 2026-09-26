@@ -466,3 +466,6 @@
 
 ## 2026-09-22
 - distilled: ios-root-accessory-unexpected-accent-background (S 級 — decisions: 新規なし。View 形式 accessory の背景を利用者が所有し、未指定領域には list 下地を見せる既存契約の局所的な回復であり、ADR 選別3基準の対象外 / concepts: `core/styling/list-appearance.md` の現行記述と一致を確認し、本文変更なし / handbook: 新しい規約・手順なし / lessons: 追加捕捉なし、昇格候補なし / deviation: なし / 媒体: 6 件削除 / 検証: review-001 APPROVED、iOS 全 1,116 tests 成功、変更前変異で3テスト・6アサーション失敗、Native・MAUI Sample の Root / Section で実行時確認 / relations: KsDialogs の overlap と公開契約に触れないため知らせなし / archive: `changes/archive/2026-09-22-ios-root-accessory-unexpected-accent-background/`)
+
+## 2026-09-26
+- distilled: ios26-5-supplementary-recycle-test-timeout (S 級 — decisions: 新規なし。既存の handbook 規約「framework が決める値を待機条件の代理にしない」をテストへ当てはめたもので、ADR 選別3基準の対象外 / handbook: `cross/test-execution.md` の「何を待機条件に選ぶか」で画面外判定の例を header / footer へ一般化し、小節「代理をやめたときに通らなくなる経路」を追加 / concepts: テストのみの変更で影響する概念なし / lessons: 捕捉 1 件は handbook へ回したため inbox から削除、昇格候補なし / deviation: あり (2 件。論点1 の決定を位置判定のみからテスト側の作り直しへ変更、記録なしのコメント言い換え) / 媒体: なし / 検証: review-001 NEEDS_DISCUSSION → review-002 APPROVED、iOS 全 1,116 tests 成功、再設定を壊す変異 3 種で対象テストの失敗を実測 / relations: KsDialogs の overlap と公開契約に触れないため知らせなし / archive: `changes/archive/2026-09-26-ios26-5-supplementary-recycle-test-timeout/`)
