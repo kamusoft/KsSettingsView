@@ -254,8 +254,14 @@ final class KsBridgeAccessoryViewTests: XCTestCase {
 
     // MARK: - 再バインド安全性
 
-    /// 画面外へ出て戻る (accessory の再バインドが起きる) 間、同一 view が例外なく再表示される。
-    func test_リサイクルを挟んだ再表示が失敗しない() {
+    /// 画面外にある間に作り直された header supplementary へ、同一 view が例外なく再バインドされる。
+    ///
+    /// 画面外へ出た supplementary を UIKit がいつ手放すかは実行機の速さで決まるため、使い回しの
+    /// 時期をテストが決められない。そこで画面外にある間に同じ view を指定し直して先頭 Section の
+    /// supplementary を作り直させ、戻したときにスクロール前と別の実体へ同じ view が載ることを
+    /// 再バインドの完了として待つ。作り直しの経路は、スクロールで使い回された supplementary に
+    /// accessory を載せ直す経路と同じ supplementary の提供処理を通る。
+    func test_リサイクルを挟んだ再表示が失敗しない() throws {
         let bridge = KsSettingsBridge()
         let builder = KsBridgeRootBuilder()
         var sectionIDs: [String] = []
@@ -283,22 +289,74 @@ final class KsBridgeAccessoryViewTests: XCTestCase {
         let maxOffset = max(0, collectionView.contentSize.height - collectionView.bounds.height)
         XCTAssertGreaterThan(maxOffset, 0, "前提: 画面外へスクロールできる長さの list になっていない")
 
-        // 画面外へ出た supplementary の回収は次のレイアウト周回で確定するため、回収そのものを待つ。
-        collectionView.contentOffset = CGPoint(x: 0, y: maxOffset)
-        awaitCondition(
-            "先頭 Section header が画面外へ出て回収される",
-            in: collectionView,
-            actual: { KsBridgeTestHost.describe(KsBridgeTestHost.headerAccessoryView(attachment, section: 0)) },
-            until: { KsBridgeTestHost.headerAccessoryView(attachment, section: 0) == nil }
+        let headerIndexPath = IndexPath(item: 0, section: 0)
+        let headerSupplementary = {
+            collectionView.supplementaryView(
+                forElementKind: UICollectionView.elementKindSectionHeader,
+                at: headerIndexPath
+            )
+        }
+        let supplementaryBeforeScroll = try XCTUnwrap(
+            headerSupplementary(),
+            "前提: 先頭 Section header の supplementary が表示されていない"
         )
-        XCTAssertNil(KsBridgeTestHost.headerAccessoryView(attachment, section: 0),
-                     "前提: 先頭 header が画面外へ出ていない")
 
-        collectionView.contentOffset = .zero
-        KsBridgeTestHost.awaitSameView(attachment, "先頭 Section header の再バインド", is: probe) {
-            KsBridgeTestHost.headerAccessoryView(attachment, section: 0)
+        // 先頭 header のレイアウト上の位置が可視矩形と重なっていないか。
+        // `supplementaryView(forElementKind:at:)` が nil を返すことを画面外の判定に使わない —
+        // UICollectionView は可視矩形の外へ出た supplementary をしばらく返し続け、手放す時期は
+        // 実行機の速さで変わる。位置で判定すれば、UIKit が supplementary を保持し続けても判定の
+        // 意味は変わらない。
+        let headerFrame = {
+            collectionView.layoutAttributesForSupplementaryElement(
+                ofKind: UICollectionView.elementKindSectionHeader,
+                at: headerIndexPath
+            )?.frame
+        }
+        let headerIsOffscreen = {
+            guard let frame = headerFrame() else { return false }
+            return !frame.intersects(collectionView.bounds)
+        }
+        // 失敗時に止まった理由を切り分けられるよう、header の位置・可視矩形・保持中の
+        // supplementary の状態と、スクロール前の supplementary の実体を並べて出す。
+        let observedHeaderState = {
+            let retained = headerSupplementary()
+            return """
+                先頭 header frame \(headerFrame().map { "\($0)" } ?? "なし") / \
+                可視矩形 \(collectionView.bounds) / \
+                保持中の supplementary \(KsBridgeTestHost.describe(retained)) \
+                hidden \(retained.map { "\($0.isHidden)" } ?? "なし") / \
+                スクロール前の supplementary \(KsBridgeTestHost.describe(supplementaryBeforeScroll)) / \
+                載っている view \(KsBridgeTestHost.describe(KsBridgeTestHost.headerAccessoryView(attachment, section: 0)))
+                """
         }
 
+        collectionView.contentOffset = CGPoint(x: 0, y: maxOffset)
+        awaitCondition(
+            "先頭 Section header が画面外へ出る",
+            in: collectionView,
+            actual: observedHeaderState,
+            until: headerIsOffscreen
+        )
+        XCTAssertTrue(headerIsOffscreen(),
+                      "前提: 先頭 header が画面外へ出ていない (\(observedHeaderState()))")
+
+        // 画面外にある間に同じ view を指定し直し、先頭 Section の supplementary を作り直させる。
+        bridge.updateAccessoryView(target: .sectionHeader, sectionID: sectionIDs[0], view: probe)
+
+        collectionView.contentOffset = .zero
+        awaitCondition(
+            "先頭 Section header が別の supplementary 実体で再バインドされる",
+            in: collectionView,
+            actual: observedHeaderState,
+            until: {
+                guard let current = headerSupplementary() else { return false }
+                return current !== supplementaryBeforeScroll
+                    && KsBridgeTestHost.headerAccessoryView(attachment, section: 0) === probe
+            }
+        )
+
+        XCTAssertFalse(headerSupplementary() === supplementaryBeforeScroll,
+                       "先頭 header がスクロール前と同じ supplementary のまま (\(observedHeaderState()))")
         XCTAssertTrue(KsBridgeTestHost.headerAccessoryView(attachment, section: 0) === probe,
                       "同一 view が再バインドで再表示される")
     }
