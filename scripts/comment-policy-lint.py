@@ -446,7 +446,7 @@ def hook() -> int:
         + "\n".join("  - " + h for h in hits[:10])
         + (f"\n  - (他 {len(hits) - 10} 件)" if len(hits) > 10 else "")
         + "\n"
-        "  - 参照が装飾なら行ごと削除 / 設計理由と一体なら `<domain>/ADR-NNNN` へ置換、対応 ADR が無ければ自己完結する説明に書き直す\n"
+        "  - 参照が装飾なら行ごと削除 / 設計理由と一体なら ADR ID (decisions/ 直下の ADR は `ADR-NNNN`、decisions/<domain>/ 配下の ADR は `<domain>/ADR-NNNN`) へ置換、対応 ADR が無ければ自己完結する説明に書き直す\n"
         "  - MUST / SHOULD 等は自然な日本語 (「〜する」「〜してはいけない」) に直す\n"
         "規約全文: kasane/handbook/ の comment-policy.md。"
         f"誤検知の場合のみ、その行に {ALLOW_MARKER} を書き添えれば除外されます。"
@@ -465,7 +465,8 @@ def hook() -> int:
 
 # (説明, ソース, 期待する禁止件数)
 SELFTEST_CASES = [
-    ("許容: ADR 参照", "// 判断の根拠は cross/ADR-0007 に従う\n", 0),
+    ("許容: ADR 参照 (ドメイン付き)", "// 判断の根拠は cross/ADR-0007 に従う\n", 0),
+    ("許容: ADR 参照 (ドメインなし)", "// 判断の根拠は ADR-0007 に従う\n", 0),
     ("許容: URL", "// 詳細は https://example.com/changes/design.md を参照\n", 0),
     ("許容: 恒常規格", "// RFC 6749 のトークン形式に合わせる\n", 0),
     ("許容: 文字列リテラル内の禁止語", 'val s = "kasane/changes/foo/spec.md"\n', 0),
@@ -487,6 +488,7 @@ PUBLIC_DOC_CASES = [
     ("要確認: 注釈を挟んだ公開関数", ".kt", "/** cross/ADR-0007 */\n@Composable\nfun Cell() {}\n", 1),
     ("要確認: Swift の /// doc", ".swift", "/// 根拠: ui/ADR-0012\n/// 補足\npublic struct Cell {}\n", 1),
     ("要確認: C# の明示 public", ".cs", "/// <summary>core/ADR-0003</summary>\npublic sealed class Cell {}\n", 1),
+    ("要確認: ドメインなしの ADR ID", ".kt", "/** 判断は ADR-0007 に従う */\nclass Cell\n", 1),
     ("許容: Kotlin の internal", ".kt", "/** cross/ADR-0007 */\ninternal class Cell\n", 0),
     ("許容: Kotlin の private", ".kt", "/** cross/ADR-0007 */\nprivate fun helper() {}\n", 0),
     ("許容: C# の暗黙非公開", ".cs", "/// <summary>core/ADR-0003</summary>\nsealed class Cell {}\n", 0),

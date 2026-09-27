@@ -20,6 +20,13 @@
   nest-depth     箇条書きのネストが 3 段以上                 → 違反 (小節か表へ移す)
   heading-chars  1 見出しあたりの散文字数が 1200 字を超える   → 警告 (節を割らずに育てた長文)
   file-chars     1 ファイルの散文が 10000 字を超える          → 警告 (分割の検討。判断は ksn-core references/concepts.md)
+  adr-title-chars     ADR のタイトルが 100 字を超える             → 違反 (1 文に縮め、細部は出典へ)
+  adr-decision-chars  ADR の Decision 節の散文が 1500 字を超える  → 違反 (設計に当たる記述を concepts / 出典へ移す)
+  adr-alternatives    ADR の却下案が 10 件を超える                → 違反 (同じ方向の中の案は出典に残す)
+
+adr-* の 3 検査は kasane/decisions/ 配下で status が proposed (または未記載) のファイルにだけ掛かる — ADR が詳細設計書に
+なるのを昇格前に止めるための検査で、accepted 以後は本文が不変で是正できない。規約は ksn-core references/decisions.md
+「決定の粒度」。
 
 heading-chars の分子は**表・コードブロック・図・frontmatter を除いた字数**。表や mermaid で書くほど数値が下がる
 (推奨表現を使うことが数値の改善に一致する)。
@@ -63,12 +70,19 @@ DEFAULTS = {
     "nest-depth": 3,
     "heading-chars": 1200,
     "file-chars": 10000,
+    "adr-title-chars": 100,
+    "adr-decision-chars": 1500,
+    "adr-alternatives": 10,
 }
 
 BULLET = re.compile(r"^(\s*)(?:[-*+]|\d+[.)])\s+(.*)$")
 HEADING = re.compile(r"^(#{1,6})\s+(.*)$")
 FENCE = re.compile(r"^\s*(?:```|~~~)")
 TABLE = re.compile(r"^\s*\|")
+TABLE_SEP = re.compile(r"^\s*\|\s*:?-")
+FM_KEY = re.compile(r"^([A-Za-z][A-Za-z-]*):\s*(.*)$")
+# ADR の決定の粒度の検査を掛ける status (accepted 以後は本文が不変)
+ADR_CHECK_STATES = {"", "proposed"}
 
 
 class Item:
@@ -160,11 +174,86 @@ def parse(src: str) -> dict:
     }
 
 
-def check(src: str, th: dict) -> tuple[list[tuple[int, str]], list[str]]:
-    """1 ファイルの (違反, 警告) を返す。違反は (行番号, 本文) の組。"""
+def frontmatter(src: str) -> tuple[dict, int]:
+    """先頭の frontmatter を (キー → 値, 本文の開始行) で返す。無ければ ({}, 0)。"""
+    lines = src.split("\n")
+    if not lines or lines[0].strip() != "---":
+        return {}, 0
+    fm: dict[str, str] = {}
+    for j in range(1, len(lines)):
+        if lines[j].strip() == "---":
+            return fm, j + 1
+        m = FM_KEY.match(lines[j])
+        if m:
+            fm[m.group(1)] = m.group(2).strip().strip("\"'")
+    return {}, 0
+
+
+def is_adr(rel: str) -> bool:
+    return "decisions" in rel.split("/")
+
+
+def adr_metrics(src: str) -> dict:
+    """ADR の決定の粒度のメトリクス: タイトル字数・Decision 節の散文字数・却下案の件数。
+
+    節は h2 で切る (Decision 節の h3 小節は Decision に含める)。散文は parse() と同じく表・コードブロックを
+    数えない。却下案は Alternatives Considered 節のトップレベル項目と、表の見出し行・区切り行を除いた行を数える。
+    """
+    fm, start = frontmatter(src)
+    section = None
+    in_fence = False
+    decision = 0
+    alts = 0
+    seen_sep = False
+    for raw in src.split("\n")[start:]:
+        if FENCE.match(raw):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        m = HEADING.match(raw)
+        if m:
+            if len(m.group(1)) <= 2:
+                section = m.group(2).strip()
+                seen_sep = False
+            continue
+        if TABLE.match(raw):
+            if section == "Alternatives Considered":
+                if TABLE_SEP.match(raw):
+                    seen_sep = True
+                elif seen_sep:
+                    alts += 1
+            continue
+        b = BULLET.match(raw)
+        if section == "Decision":
+            decision += len((b.group(2) if b else raw).strip())
+        elif section == "Alternatives Considered" and b and len(b.group(1).expandtabs(4)) == 0:
+            alts += 1
+    return {
+        "title": fm.get("title", ""),
+        "status": fm.get("status", ""),
+        "decision_chars": decision,
+        "alternatives": alts,
+    }
+
+
+def check(src: str, th: dict, adr: bool = False) -> tuple[list[tuple[int, str]], list[str]]:
+    """1 ファイルの (違反, 警告) を返す。違反は (行番号, 本文) の組。adr なら決定の粒度の 3 検査も掛ける。"""
     m = parse(src)
     errors: list[tuple[int, str]] = []
     warns: list[str] = []
+
+    if adr:
+        a = adr_metrics(src)
+        if len(a["title"]) > th["adr-title-chars"]:
+            errors.append((0, f"ADR のタイトルが {len(a['title'])} 字 — 「何を〜する」の 1 文に縮め、"
+                              f"細部は Decision 節にも書かず出典に残す (ksn-core references/decisions.md「決定の粒度」)"))
+        if a["decision_chars"] > th["adr-decision-chars"]:
+            errors.append((0, f"ADR の Decision 節の散文が {a['decision_chars']} 字 — 書き換えてもタイトルが変わらない"
+                              f"記述 (名前の一覧・既定値・場合分け・読み口) は設計。concepts か出典へ移す"))
+        if a["alternatives"] > th["adr-alternatives"]:
+            errors.append((0, f"ADR の却下案が {a['alternatives']} 件 — 採ってもタイトルが変わらない案は設計の却下案。"
+                              f"出典の design.md に残し ADR から外す"))
 
     for it in m["items"]:
         if it.chars > th["item-chars"]:
@@ -299,11 +388,14 @@ def main(argv: list[str]) -> int:
         sys.stderr.write(f"--paths に存在しないパスがあります: {e} "
                          f"(複数パスは引数を分けて渡す。zsh の未クォート変数展開は単語分割されない)\n")
         return 2
+    adr_checked = False
     for rel in target_list:
         full = os.path.join(root, rel)
         with open(full, encoding="utf-8") as f:
             src = f.read()
-        e, w = check(src, th)
+        adr = is_adr(rel) and adr_metrics(src)["status"] in ADR_CHECK_STATES
+        adr_checked = adr_checked or adr
+        e, w = check(src, th, adr)
         if e or w:
             by_file.append((rel, e, w))
         if stats:
@@ -323,6 +415,9 @@ def main(argv: list[str]) -> int:
               f"{total_e} 件 / {sum(1 for _, e, _ in by_file if e)} ファイル:")
         print(f"  上限: 項目 {th['item-chars']} 字 / 節あたり {th['section-items']} 項目 / "
               f"ネスト {th['nest-depth'] - 1} 段")
+        if adr_checked:
+            print(f"  proposed の ADR の上限: タイトル {th['adr-title-chars']} 字 / Decision 節の散文 "
+                  f"{th['adr-decision-chars']} 字 / 却下案 {th['adr-alternatives']} 件")
         for rel, errs, _ in by_file:
             if not errs:
                 continue
@@ -384,6 +479,24 @@ def selftest() -> int:
     }
     archived = "kasane/roadmaps/archive/2026-01-01-old/phases/phase-1-a/agenda.md"
 
+    # ADR の決定の粒度: タイトル 150 字・Decision 節 2500 字・却下案 12 件 (表) を持つ本文。
+    # 箇条書きを使わないため、一般の構造検査には掛からない (掛かるのは adr-* の 3 検査だけ)
+    def adr(status: str, bloated: bool) -> str:
+        title = "あ" * (150 if bloated else 40)
+        decision = ("い" * 100 + "\n\n") * (25 if bloated else 5)
+        if bloated:
+            alts = "| 案 | 却下理由 |\n|---|---|\n" + "".join(f"| 案{i} | 理由 |\n" for i in range(12))
+        else:
+            alts = "".join(f"- 案{i}: 理由\n" for i in range(3))
+        return (f"---\nid: 0001\ntitle: {title}\nstatus: {status}\ndate: 2026-01-01\n---\n\n"
+                f"## Context\n\n背景\n\n## Decision\n\n{decision}"
+                f"## Alternatives Considered\n\n{alts}\n## Consequences\n\n- 正: a\n- 負: b\n\n"
+                f"## Revisit When\n\n- 前提が崩れたとき\n")
+
+    files["kasane/decisions/core/0001-bloated-proposed.md"] = adr("proposed", True)
+    files["kasane/decisions/core/0002-bloated-accepted.md"] = adr("accepted", True)
+    files["kasane/decisions/core/0003-lean-proposed.md"] = adr("proposed", False)
+
     print("[フェーズ一覧の読み取り]")
     states = dict(phase_states(roadmap))
     check(states == {"phase-1-done": "completed", "phase-2-drop": "dropped", "phase-3-wip": "in-progress"},
@@ -417,6 +530,15 @@ def selftest() -> int:
         code, out = run("--paths", "kasane/roadmaps/live/phases/phase-1-done/agenda.md")
         check(code == 1 and "phase-1-done/agenda.md" in out, "completed のフェーズを指定すれば検出する",
               f"exit {code}")
+
+        print("[ADR の決定の粒度]")
+        code, out = run("--paths", "kasane/decisions")
+        check(code == 1 and "0001-bloated-proposed.md" in out, "proposed で粒度を超えた ADR を検出する", f"exit {code}")
+        check("タイトルが 150 字" in out, "タイトルの字数を検出する")
+        check("Decision 節の散文が 2500 字" in out, "Decision 節の散文字数を検出する")
+        check("却下案が 12 件" in out, "表の却下案の件数を検出する (見出し行・区切り行は数えない)")
+        check("0002-bloated-accepted.md" not in out, "accepted の ADR には掛けない")
+        check("0003-lean-proposed.md" not in out, "粒度に収まる proposed の ADR は検出しない")
 
         print("[scope の明示指定]")
         with open(os.path.join(tmp, "kasane", "config.yaml"), "w", encoding="utf-8") as f:
