@@ -62,7 +62,7 @@ graph LR
 | phase-6-accessory-views | completed | change | [agenda](phases/phase-6-accessory-views/agenda.md) | [changes/archive/2026-08-12-add-maui-accessory-views](../../changes/archive/2026-08-12-add-maui-accessory-views/proposal.md) |
 | phase-5-custom-cell | completed | change | [agenda](phases/phase-5-custom-cell/agenda.md) | [changes/archive/2026-08-12-add-maui-custom-cell](../../changes/archive/2026-08-12-add-maui-custom-cell/proposal.md) |
 | phase-7-drag-sort | pending | change | [agenda](phases/phase-7-drag-sort/agenda.md) | — |
-| phase-8-scroll-control | pending | change | [agenda](phases/phase-8-scroll-control/agenda.md) | — |
+| phase-8-scroll-control | in-progress | change | [agenda](phases/phase-8-scroll-control/agenda.md) | [changes/add-scroll-control](../../changes/add-scroll-control/proposal.md) |
 | phase-9-accessory-visibility | completed | change | [agenda](phases/phase-9-accessory-visibility/agenda.md) | [changes/archive/2026-08-19-add-accessory-visibility-toggle](../../changes/archive/2026-08-19-add-accessory-visibility-toggle/proposal.md) |
 | phase-10-template-virtualization | pending | change | [agenda](phases/phase-10-template-virtualization/agenda.md) | — |
 | phase-11-modern-style | completed | change | [agenda](phases/phase-11-modern-style/agenda.md) | [changes/archive/2026-08-20-add-maui-modern-style](../../changes/archive/2026-08-20-add-maui-modern-style/proposal.md) |
