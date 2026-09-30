@@ -87,15 +87,62 @@ final class ScrollControlTests: XCTestCase {
         awaitCondition(
             "命令 \(count) 件の処理とアニメーションの停止",
             in: controller.view,
-            actual: {
-                "processed=\(controller.processedScrollCommandCount) animating=\(controller.activeScrollAnimation != nil)"
-            },
+            actual: { scrollCommandState(controller) },
             file: file,
             line: line,
             until: {
                 controller.processedScrollCommandCount >= count && controller.activeScrollAnimation == nil
             }
         )
+    }
+
+    /// 命令を出した時点の記録。
+    @MainActor
+    private final class IssuedCommand {
+        let issuedAt = DispatchTime.now()
+        /// 命令の直後に積んだ `main.async` が回ったか。
+        var mainQueueRan = false
+    }
+
+    /// 直近に出した命令の記録。次の命令を記録するまで残る。
+    private var lastIssuedCommand: IssuedCommand?
+
+    /// 命令 (位置の戻しを含む) を出した直後に呼び、命令からの経過時間と main キューの消化を
+    /// 失敗報告に載せられるようにする。
+    private func markIssued() {
+        let issued = IssuedCommand()
+        lastIssuedCommand = issued
+        DispatchQueue.main.async { issued.mainQueueRan = true }
+    }
+
+    /// 命令の処理を待つ待機が deadline を超えたときに載せる観測値。
+    ///
+    /// 命令が止まった位置を切り分けるため、Host の待ち行列・実行の条件・main キューの消化をまとめて出す。
+    private func scrollCommandState(_ host: KsSettingsViewController) -> String {
+        let cv: UICollectionView? = host.isViewLoaded ? host.collectionView : nil
+        let queue = "待ち行列: 遅延前=\(host.incomingScrollEntries.count)"
+            + " 遅延後=\(host.readyScrollEntries.count)"
+            + " 遅延の予約中=\(host.isScrollDeferralScheduled)"
+        let conditions = "実行の条件: 最初の反映済み=\(host.hasAppliedInitialSnapshot)"
+            + " 適用中の snapshot=\(host.applyingSnapshotCount)"
+            + " window=\(cv?.window != nil)"
+            + " 高さ=\(cv.map { "\($0.bounds.height)" } ?? "view 未読込")"
+        let issue: String
+        if let issued = lastIssuedCommand {
+            let seconds = Double(DispatchTime.now().uptimeNanoseconds - issued.issuedAt.uptimeNanoseconds)
+                / 1_000_000_000
+            issue = "命令から \(String(format: "%.3f", seconds)) 秒"
+                + " 命令の直後の main.async=\(issued.mainQueueRan ? "回った" : "未実行")"
+        } else {
+            issue = "命令の記録なし"
+        }
+        return [
+            "processed=\(host.processedScrollCommandCount)",
+            queue,
+            conditions,
+            "アニメーション中=\(host.activeScrollAnimation != nil)",
+            issue,
+        ].joined(separator: " / ")
     }
 
     private func visibleTop(_ cv: UICollectionView) -> CGFloat {
@@ -157,6 +204,7 @@ final class ScrollControlTests: XCTestCase {
         let controlling: any KsScrollControlling = handle
 
         controlling.scrollToEnd()
+        markIssued()
 
         awaitScrollSettled(host, processed: 1)
         XCTAssertEqual(cv.contentOffset.y, maxOffset(cv), accuracy: 0.5, "protocol 型からの命令で末尾へ届く")
@@ -223,6 +271,7 @@ final class ScrollControlTests: XCTestCase {
         hostB.scrollController = handle
 
         handle.scrollToEnd(animated: false)
+        markIssued()
 
         awaitScrollSettled(hostB, processed: 1)
         XCTAssertEqual(cvB.contentOffset.y, maxOffset(cvB), accuracy: 0.5, "後から接続した Host B が末尾へ動く")
@@ -296,6 +345,7 @@ final class ScrollControlTests: XCTestCase {
         // 追加はアニメーション付きで反映される。命令はその反映の完了を待って実行される。
         fixture.store.insertCell(added, in: lastSection.id, at: lastSection.cells.count)
         handle.scrollToEnd(animated: false)
+        markIssued()
 
         awaitScrollSettled(host, processed: 1)
         XCTAssertEqual(cv.contentOffset.y, maxOffset(cv), accuracy: 0.5, "末尾まで届く")
@@ -320,6 +370,7 @@ final class ScrollControlTests: XCTestCase {
         // 命令を先に出し、同じ処理で Cell を追加する。命令の遅延 (main.async) の時点では追加の
         // 反映 (アニメーション付きの apply) がまだ完了していない。
         handle.scrollToEnd(animated: false)
+        markIssued()
         DispatchQueue.main.async {
             observedAtDeferral = (host.applyingSnapshotCount, host.processedScrollCommandCount)
         }
@@ -345,6 +396,7 @@ final class ScrollControlTests: XCTestCase {
         // 先行の命令はアニメーション付き。後続の命令の実行で止められ、最終位置は後続の命令のものになる。
         handle.scrollTo(id: fixture.cellID(section: 2, item: 1), position: .start, animated: true)
         handle.scrollToSection(id: targetSection.id, animated: false)
+        markIssued()
 
         awaitScrollSettled(host, processed: 2)
         let header = headerFrame(host, sectionID: targetSection.id)
@@ -363,6 +415,7 @@ final class ScrollControlTests: XCTestCase {
         handle.scrollTo(id: removed, animated: false)
         fixture.store.removeCell(cellID: removed)
         handle.scrollToEnd(animated: false)
+        markIssued()
 
         awaitScrollSettled(host, processed: 2)
         XCTAssertNil(cellFrame(host, removed), "前提: 対象は表示から消えている")
@@ -377,6 +430,7 @@ final class ScrollControlTests: XCTestCase {
         XCTAssertFalse(host.isViewLoaded, "前提: view は未読込")
 
         handle.scrollToEnd(animated: false)
+        markIssued()
         let cv = present(host)
 
         awaitScrollSettled(host, processed: 1)
@@ -394,6 +448,7 @@ final class ScrollControlTests: XCTestCase {
 
         host.view.removeFromSuperview()
         handle.scrollToSection(id: target.id, animated: false)
+        markIssued()
 
         waitForNegativeVerification()
         XCTAssertNil(cv.window, "前提: window から外れている")
@@ -420,6 +475,7 @@ final class ScrollControlTests: XCTestCase {
         XCTAssertGreaterThan(cellFrame(host, target)?.minY ?? 0, visibleBottom(cv), "前提: 対象は表示範囲の下方")
 
         handle.scrollTo(id: target, position: .center, animated: false)
+        markIssued()
 
         awaitScrollSettled(host, processed: 1)
         let frame = cellFrame(host, target)
@@ -436,6 +492,7 @@ final class ScrollControlTests: XCTestCase {
         let target = fixture.cellID(section: 6, item: 4)
 
         handle.scrollTo(id: target, position: .end, animated: false)
+        markIssued()
 
         awaitScrollSettled(host, processed: 1)
         XCTAssertEqual(cellFrame(host, target)?.maxY ?? .nan, visibleBottom(cv), accuracy: 0.5)
@@ -450,6 +507,7 @@ final class ScrollControlTests: XCTestCase {
         let last = fixture.cellID(section: 11, item: 4)
 
         handle.scrollTo(id: last, position: .start, animated: false)
+        markIssued()
 
         awaitScrollSettled(host, processed: 1)
         XCTAssertEqual(cv.contentOffset.y, maxOffset(cv), accuracy: 0.5, "末尾側の端で止まり、行き過ぎない")
@@ -468,6 +526,7 @@ final class ScrollControlTests: XCTestCase {
 
         handle.scrollTo(id: KsCellID(cell: hidden), animated: false)
         handle.scrollTo(id: KsCellID(id: UUID()), animated: false)
+        markIssued()
 
         awaitScrollSettled(host, processed: 2)
         XCTAssertEqual(cv.contentOffset.y, initial, accuracy: 0.5, "非表示と未知の ID への命令で位置は変わらない")
@@ -484,6 +543,7 @@ final class ScrollControlTests: XCTestCase {
         let target = fixture.sections[9]
 
         handle.scrollToSection(id: target.id, animated: false)
+        markIssued()
 
         awaitScrollSettled(host, processed: 1)
         XCTAssertEqual(headerFrame(host, sectionID: target.id)?.minY ?? .nan, visibleTop(cv), accuracy: 0.5)
@@ -500,6 +560,7 @@ final class ScrollControlTests: XCTestCase {
         host.scrollController = handle
 
         handle.scrollToSection(id: headless.id, animated: false)
+        markIssued()
 
         awaitScrollSettled(host, processed: 1)
         let firstCell = cellFrame(host, KsCellID(cell: headless.cells[0]))
@@ -517,6 +578,7 @@ final class ScrollControlTests: XCTestCase {
                              "前提: 対象は表示範囲の下方")
 
         handle.scrollToSection(id: endTarget.id, position: .end, animated: false)
+        markIssued()
 
         awaitScrollSettled(host, processed: 1)
         XCTAssertEqual(footerFrame(host, sectionID: endTarget.id)?.maxY ?? .nan, visibleBottom(cv), accuracy: 0.5,
@@ -524,6 +586,7 @@ final class ScrollControlTests: XCTestCase {
 
         let centerTarget = fixture.sections[2]
         handle.scrollToSection(id: centerTarget.id, position: .center, animated: false)
+        markIssued()
 
         awaitScrollSettled(host, processed: 2)
         let header = try XCTUnwrap(headerFrame(host, sectionID: centerTarget.id))
@@ -547,6 +610,7 @@ final class ScrollControlTests: XCTestCase {
         host.scrollController = handle
 
         handle.scrollToSection(id: tall.id, position: .end, animated: false)
+        markIssued()
 
         awaitScrollSettled(host, processed: 1)
         let header = try XCTUnwrap(headerFrame(host, sectionID: tall.id))
@@ -567,6 +631,7 @@ final class ScrollControlTests: XCTestCase {
 
         handle.scrollToSection(id: hiddenSection.id, animated: false)
         handle.scrollToSection(id: emptySection.id, animated: false)
+        markIssued()
 
         awaitScrollSettled(host, processed: 2)
         XCTAssertEqual(cv.contentOffset.y, initial, accuracy: 0.5)
@@ -583,6 +648,7 @@ final class ScrollControlTests: XCTestCase {
         host.scrollController = handle
 
         handle.scrollToEnd(animated: false)
+        markIssued()
 
         awaitScrollSettled(host, processed: 1)
         let footer = cv.layoutAttributesForSupplementaryElement(
@@ -601,9 +667,11 @@ final class ScrollControlTests: XCTestCase {
         let handle = KsScrollController()
         host.scrollController = handle
         handle.scrollToEnd(animated: false)
+        markIssued()
         awaitScrollSettled(host, processed: 1)
 
         handle.scrollToStart(animated: false)
+        markIssued()
 
         awaitScrollSettled(host, processed: 2)
         let header = cv.layoutAttributesForSupplementaryElement(
@@ -627,9 +695,10 @@ final class ScrollControlTests: XCTestCase {
         line: UInt = #line
     ) throws -> KsActiveScrollAnimation {
         issue()
+        markIssued()
         awaitCondition(
             "命令の処理",
-            actual: { "processed=\(host.processedScrollCommandCount)" },
+            actual: { scrollCommandState(host) },
             file: file,
             line: line,
             until: { host.processedScrollCommandCount >= 1 }
@@ -757,6 +826,7 @@ final class ScrollControlTests: XCTestCase {
         let target = fixture.sections[3]
 
         handle.scrollToSection(id: target.id, animated: false)
+        markIssued()
 
         awaitScrollSettled(host, processed: 2)
         XCTAssertNil(host.activeScrollAnimation, "先行のアニメーションは止まっている")
@@ -784,10 +854,11 @@ final class ScrollControlTests: XCTestCase {
         handle.scrollToSection(id: hiddenSection.id, animated: false)
         handle.scrollToSection(id: emptySection.id, animated: false)
         handle.scrollToSection(id: UUID(), animated: true)
+        markIssued()
 
         awaitCondition(
             "対象の無い命令の処理",
-            actual: { "processed=\(host.processedScrollCommandCount)" },
+            actual: { scrollCommandState(host) },
             until: { host.processedScrollCommandCount >= 6 }
         )
         XCTAssertNotNil(host.activeScrollAnimation, "対象の無い命令では先行のアニメーションは止まらない")
@@ -829,10 +900,11 @@ final class ScrollControlTests: XCTestCase {
         defer { observation.invalidate() }
 
         handle.scrollToSection(id: target.id, position: .start, animated: false)
+        markIssued()
 
         awaitCondition(
             "命令の処理",
-            actual: { "processed=\(host.processedScrollCommandCount)" },
+            actual: { scrollCommandState(host) },
             until: { host.processedScrollCommandCount >= 1 }
         )
         // 処理した時点 (次の表示の更新より前) で、見出しの上端が表示範囲の上端にある。
@@ -853,6 +925,7 @@ final class ScrollControlTests: XCTestCase {
         let handle = KsScrollController()
         hostA.scrollController = handle
         handle.scrollTo(id: cellID, animated: false)
+        markIssued()
         awaitScrollSettled(hostA, processed: 1)
         cvA.setContentOffset(CGPoint(x: 0, y: cvA.contentOffset.y + 10), animated: false)
         layoutNow(cvA)
@@ -870,6 +943,7 @@ final class ScrollControlTests: XCTestCase {
 
         let hostB = KsSettingsViewController(store: fixture.store)
         hostB.restoreScrollAnchor(anchor)
+        markIssued()
         let cvB = present(hostB)
 
         awaitScrollSettled(hostB, processed: 1)
@@ -886,6 +960,7 @@ final class ScrollControlTests: XCTestCase {
 
         let hostB = KsSettingsViewController(store: fixture.store)
         hostB.restoreScrollAnchor(anchor)
+        markIssued()
         let cvB = present(hostB)
 
         awaitScrollSettled(hostB, processed: 1)
@@ -900,6 +975,7 @@ final class ScrollControlTests: XCTestCase {
 
         let hostB = KsSettingsViewController(store: fixture.store)
         hostB.restoreScrollAnchor(anchor)
+        markIssued()
         let cvB = present(hostB)
 
         awaitScrollSettled(hostB, processed: 1)
@@ -916,6 +992,7 @@ final class ScrollControlTests: XCTestCase {
         hostB.scrollController = handle
         hostB.restoreScrollAnchor(anchor)
         handle.scrollToEnd(animated: false)
+        markIssued()
         let cvB = present(hostB)
 
         awaitScrollSettled(hostB, processed: 2)
@@ -937,9 +1014,11 @@ final class ScrollControlTests: XCTestCase {
         hostB.scrollController = handle
         let cvB = present(hostB)
         handle.scrollToEnd(animated: false)
+        markIssued()
         awaitScrollSettled(hostB, processed: 1)
 
         hostB.restoreScrollAnchor(anchor)
+        markIssued()
 
         awaitScrollSettled(hostB, processed: 2)
         XCTAssertEqual(cvB.contentOffset.y, minOffset(cvB), accuracy: 0.5, "Root Header の上端が上端に戻る")
@@ -955,6 +1034,7 @@ final class ScrollControlTests: XCTestCase {
 
         // 見出しが上端から 5pt 上にはみ出す位置で控える。
         handleA.scrollToSection(id: target.id, animated: false)
+        markIssued()
         awaitScrollSettled(hostA, processed: 1)
         cvA.setContentOffset(CGPoint(x: 0, y: cvA.contentOffset.y + 5), animated: false)
         layoutNow(cvA)
@@ -973,6 +1053,7 @@ final class ScrollControlTests: XCTestCase {
 
         let hostB = KsSettingsViewController(store: fixture.store)
         hostB.restoreScrollAnchor(headerAnchor)
+        markIssued()
         let cvB = present(hostB)
 
         awaitScrollSettled(hostB, processed: 1)
@@ -980,6 +1061,7 @@ final class ScrollControlTests: XCTestCase {
                        "Section の見出しが同じずれで上端にかかる")
 
         hostB.restoreScrollAnchor(footerAnchor)
+        markIssued()
 
         awaitScrollSettled(hostB, processed: 2)
         XCTAssertEqual(footerFrame(hostB, sectionID: target.id)?.minY ?? .nan, visibleTop(cvB) - 3, accuracy: 0.5,
@@ -1000,6 +1082,7 @@ final class ScrollControlTests: XCTestCase {
         let shown = KsSettingsViewController(store: fixture.store)
         present(shown)
         shown.restoreScrollAnchor(anchor)
+        markIssued()
         XCTAssertEqual(shown.processedScrollCommandCount, 0, "前提: 戻しはまだ実行されていない")
         XCTAssertEqual(shown.captureScrollAnchor(), anchor, "現在の先頭側の位置ではなく未実行の復元の控えが返る")
 
@@ -1018,6 +1101,7 @@ final class ScrollControlTests: XCTestCase {
         let handle = KsScrollController()
         host.scrollController = handle
         handle.scrollTo(id: target, animated: false)
+        markIssued()
         awaitScrollSettled(host, processed: 1)
         XCTAssertNotNil(host.captureScrollAnchor(), "前提: window 上では控えられる")
 
@@ -1176,7 +1260,8 @@ final class ScrollControlTests: XCTestCase {
         awaitCondition(
             "命令 \(count) 件の実行と Host の領域の追従",
             actual: {
-                "processed=\(host.processedScrollCommandCount) expanded=\(setup.trigger.didExpand) container=\(setup.container.view.bounds.height) content=\(setup.container.contentView.frame.height) host=\(host.view.frame.height) relayoutScheduled=\(host.isAncestorRelayoutScheduled) animating=\(host.activeScrollAnimation != nil)"
+                "expanded=\(setup.trigger.didExpand) container=\(setup.container.view.bounds.height) content=\(setup.container.contentView.frame.height) host=\(host.view.frame.height) relayoutScheduled=\(host.isAncestorRelayoutScheduled) / "
+                    + scrollCommandState(host)
             },
             file: file,
             line: line,
@@ -1201,6 +1286,7 @@ final class ScrollControlTests: XCTestCase {
         host.scrollController = handle
         host.loadViewIfNeeded()
         issue(handle)
+        markIssued()
         let setup = attachToExpandingContainer(host, file: file, line: line)
         awaitExpandedAndSettled(host, setup, processed: 1, file: file, line: line)
         return (host, setup)
@@ -1214,6 +1300,7 @@ final class ScrollControlTests: XCTestCase {
         let host = KsSettingsViewController(store: fixture.store)
         host.loadViewIfNeeded()
         host.restoreScrollAnchor(anchor)
+        markIssued()
         let setup = attachToExpandingContainer(host)
         defer { setup.trigger.invalidate() }
 
@@ -1310,10 +1397,11 @@ final class ScrollControlTests: XCTestCase {
         let offsetAtIssue = cv.contentOffset.y
         let next = fixture.sections[2]
         handle.scrollToSection(id: next.id, animated: true)
+        markIssued()
 
         awaitCondition(
             "次の命令の実行",
-            actual: { "processed=\(host.processedScrollCommandCount)" },
+            actual: { scrollCommandState(host) },
             until: { host.processedScrollCommandCount >= 2 }
         )
         let active = try XCTUnwrap(host.activeScrollAnimation, "前提: 次の命令のアニメーションが進行中")
@@ -1332,6 +1420,7 @@ final class ScrollControlTests: XCTestCase {
         host.scrollController = handle
         host.loadViewIfNeeded()
         handle.scrollToEnd(animated: true)
+        markIssued()
         let cv = host.internalCollectionView
         var samples: [CGFloat] = []
         let observation = cv.observe(\.contentOffset, options: [.new]) { _, change in

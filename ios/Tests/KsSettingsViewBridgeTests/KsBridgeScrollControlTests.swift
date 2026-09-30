@@ -102,11 +102,60 @@ final class KsBridgeScrollControlTests: XCTestCase {
         awaitCondition(
             "命令 \(count) 件の処理とアニメーションの停止",
             in: host.view,
-            actual: { "processed=\(host.processedScrollCommandCount) animating=\(host.activeScrollAnimation != nil)" },
+            actual: { scrollCommandState(host) },
             file: file,
             line: line,
             until: { host.processedScrollCommandCount >= count && host.activeScrollAnimation == nil }
         )
+    }
+
+    /// 命令を出した時点の記録。
+    @MainActor
+    private final class IssuedCommand {
+        let issuedAt = DispatchTime.now()
+        /// 命令の直後に積んだ `main.async` が回ったか。
+        var mainQueueRan = false
+    }
+
+    /// 直近に出した命令の記録。次の命令を記録するまで残る。
+    private var lastIssuedCommand: IssuedCommand?
+
+    /// 命令 (Host の作り直しで積まれる位置の戻しを含む) を出した直後に呼び、命令からの経過時間と
+    /// main キューの消化を失敗報告に載せられるようにする。
+    private func markIssued() {
+        let issued = IssuedCommand()
+        lastIssuedCommand = issued
+        DispatchQueue.main.async { issued.mainQueueRan = true }
+    }
+
+    /// 命令の処理を待つ待機が deadline を超えたときに載せる観測値。
+    ///
+    /// 命令が止まった位置を切り分けるため、Host の待ち行列・実行の条件・main キューの消化をまとめて出す。
+    private func scrollCommandState(_ host: KsSettingsViewController) -> String {
+        let cv: UICollectionView? = host.isViewLoaded ? host.collectionView : nil
+        let queue = "待ち行列: 遅延前=\(host.incomingScrollEntries.count)"
+            + " 遅延後=\(host.readyScrollEntries.count)"
+            + " 遅延の予約中=\(host.isScrollDeferralScheduled)"
+        let conditions = "実行の条件: 最初の反映済み=\(host.hasAppliedInitialSnapshot)"
+            + " 適用中の snapshot=\(host.applyingSnapshotCount)"
+            + " window=\(cv?.window != nil)"
+            + " 高さ=\(cv.map { "\($0.bounds.height)" } ?? "view 未読込")"
+        let issue: String
+        if let issued = lastIssuedCommand {
+            let seconds = Double(DispatchTime.now().uptimeNanoseconds - issued.issuedAt.uptimeNanoseconds)
+                / 1_000_000_000
+            issue = "命令から \(String(format: "%.3f", seconds)) 秒"
+                + " 命令の直後の main.async=\(issued.mainQueueRan ? "回った" : "未実行")"
+        } else {
+            issue = "命令の記録なし"
+        }
+        return [
+            "processed=\(host.processedScrollCommandCount)",
+            queue,
+            conditions,
+            "アニメーション中=\(host.activeScrollAnimation != nil)",
+            issue,
+        ].joined(separator: " / ")
     }
 
     private func visibleTop(_ cv: UICollectionView) -> CGFloat {
@@ -150,6 +199,7 @@ final class KsBridgeScrollControlTests: XCTestCase {
         let cv = host.internalCollectionView
         let processed = host.processedScrollCommandCount
         bridge.scrollToCell(cellID: cellID, position: 0, animated: false)
+        markIssued()
         awaitScrollSettled(host, processed: processed + 1)
         cv.setContentOffset(CGPoint(x: 0, y: cv.contentOffset.y + offset), animated: false)
         layoutNow(cv)
@@ -167,6 +217,7 @@ final class KsBridgeScrollControlTests: XCTestCase {
         XCTAssertGreaterThan(cellFrame(host, target)?.minY ?? 0, visibleBottom(cv), "前提: 対象は表示範囲の下方")
 
         fixture.bridge.scrollToCell(cellID: target, position: 1, animated: false)
+        markIssued()
 
         awaitScrollSettled(host, processed: 1)
         let visibleCenter = (visibleTop(cv) + visibleBottom(cv)) / 2
@@ -180,6 +231,7 @@ final class KsBridgeScrollControlTests: XCTestCase {
         let cv = present(host)
 
         fixture.bridge.scrollToSection(sectionID: fixture.sectionIDs[6], position: 0, animated: false)
+        markIssued()
 
         awaitScrollSettled(host, processed: 1)
         XCTAssertEqual(headerFrame(host, sectionID: fixture.sectionIDs[6])?.minY ?? .nan, visibleTop(cv),
@@ -192,10 +244,12 @@ final class KsBridgeScrollControlTests: XCTestCase {
         let cv = present(host)
 
         fixture.bridge.scrollToEnd(animated: false)
+        markIssued()
         awaitScrollSettled(host, processed: 1)
         XCTAssertEqual(cv.contentOffset.y, maxOffset(cv), accuracy: 0.5, "末尾へ届く")
 
         fixture.bridge.scrollToStart(animated: false)
+        markIssued()
         awaitScrollSettled(host, processed: 2)
         XCTAssertEqual(cv.contentOffset.y, minOffset(cv), accuracy: 0.5, "先頭へ戻る")
     }
@@ -216,6 +270,7 @@ final class KsBridgeScrollControlTests: XCTestCase {
         let target = fixture.cellID(section: 5, item: 1)
 
         fixture.bridge.scrollToCell(cellID: target, position: 7, animated: false)
+        markIssued()
 
         awaitScrollSettled(host, processed: 1)
         XCTAssertEqual(cellFrame(host, target)?.minY ?? .nan, visibleTop(cv), accuracy: 0.5,
@@ -283,6 +338,7 @@ final class KsBridgeScrollControlTests: XCTestCase {
         fixture.bridge.scrollToSection(sectionID: "not-a-uuid", position: 1, animated: false)
         fixture.bridge.scrollToCell(cellID: UUID().uuidString, position: 1, animated: false)
         fixture.bridge.scrollToSection(sectionID: UUID().uuidString, position: 1, animated: false)
+        markIssued()
         // 未知の ID は Host まで届いて何もしない。処理済みになった時点で位置を確かめる。
         awaitScrollSettled(host, processed: 2)
 
@@ -302,6 +358,7 @@ final class KsBridgeScrollControlTests: XCTestCase {
         fixture.bridge.releaseHost()
         dismiss(hostA)
         let hostB = makeHost(fixture.bridge)
+        markIssued()
         let cvB = present(hostB)
 
         awaitScrollSettled(hostB, processed: 1)
@@ -325,6 +382,7 @@ final class KsBridgeScrollControlTests: XCTestCase {
         layoutNow(hostA.view)
         fixture.bridge.releaseHost()
         let hostB = makeHost(fixture.bridge)
+        markIssued()
         let cvB = present(hostB)
 
         awaitScrollSettled(hostB, processed: 1)
@@ -349,6 +407,7 @@ final class KsBridgeScrollControlTests: XCTestCase {
         fixture.bridge.releaseHost()
         dismiss(hostA)
         let hostB = makeHost(fixture.bridge)
+        markIssued()
         let cvB = present(hostB)
 
         awaitScrollSettled(hostB, processed: 1)
@@ -368,6 +427,7 @@ final class KsBridgeScrollControlTests: XCTestCase {
         fixture.bridge.insertCell(KsBridgeLabelCell(title: "Inserted A"), sectionID: fixture.sectionIDs[0], at: 0)
         fixture.bridge.insertCell(KsBridgeLabelCell(title: "Inserted B"), sectionID: fixture.sectionIDs[3], at: 0)
         let hostB = makeHost(fixture.bridge)
+        markIssued()
         let cvB = present(hostB)
 
         awaitScrollSettled(hostB, processed: 1)
@@ -385,6 +445,7 @@ final class KsBridgeScrollControlTests: XCTestCase {
 
         let hostB = makeHost(fixture.bridge)
         fixture.bridge.scrollToStart(animated: false)
+        markIssued()
         let cvB = present(hostB)
 
         awaitScrollSettled(hostB, processed: 2)
@@ -401,16 +462,19 @@ final class KsBridgeScrollControlTests: XCTestCase {
         dismiss(hostA)
 
         let hostB = makeHost(fixture.bridge)
+        markIssued()
         let cvB = present(hostB)
         awaitScrollSettled(hostB, processed: 1)
         XCTAssertEqual(cellFrame(hostB, target)?.minY ?? .nan, visibleTop(cvB) - 10, accuracy: 0.5,
                        "前提: 1 回目の控えへ戻る")
         fixture.bridge.scrollToStart(animated: false)
+        markIssued()
         awaitScrollSettled(hostB, processed: 2)
         fixture.bridge.releaseHost()
         dismiss(hostB)
 
         let hostC = makeHost(fixture.bridge)
+        markIssued()
         let cvC = present(hostC)
         awaitScrollSettled(hostC, processed: 1)
 
