@@ -169,17 +169,20 @@ python3 .agents/skills/docs-refresh/scripts/concepts-coverage-check.py
 
 出力の読み方: `UNCOVERED` は未参照かつ未除外の concept (配置判断が必要)、`DELETED` は manifest にあるが実在しない concept (`targets` / `excluded` の整理が必要)。どちらも出なければ `concepts coverage OK`。
 
-#### 3d. コードを正とする機械チェック (1 種)
+#### 3d. コードを正とする機械チェック (2 種)
 
-concepts ハッシュ差分とは独立に、**コードを正**として次の 1 種を突合する。源泉が concepts ではないため manifest には載せず、この手順として持つ。差分があった項目は該当 README / Skill ファイルを要追従リストへ追加する。ただし `--readme-only` 実行時は、この突合で Skill ファイル (各 `SKILL.md` の導入節) 側に差分が出ても要追従リストへは載せず**報告のみ**とする — 「skills/ 本体は検出・更新の対象にしない」というフラグの意味を優先し、完了サマリに「次回の通常実行で処理される」旨を添える。
+concepts ハッシュ差分とは独立に、**コードを正**として次の 2 種を突合する。源泉が concepts ではないため manifest には載せず、この手順として持つ。差分があった項目は該当 README / Skill ファイルを要追従リストへ追加する。ただし `--readme-only` 実行時は、この突合で Skill ファイル (各 `SKILL.md` の導入節・aiforms-migration の `references/api-mapping.md`) 側に差分が出ても要追従リストへは載せず**報告のみ**とする — 「skills/ 本体は検出・更新の対象にしない」というフラグの意味を優先し、完了サマリに「次回の通常実行で処理される」旨を添える。
 
 | 項目 | 取得元 (コード = 正) | 抽出方法 | 突合先 |
 | --- | --- | --- | --- |
 | ツール最低バージョン | AGP・Kotlin: `android/gradle/libs.versions.toml` (`[versions]` の `agp` / `kotlin`) / Gradle: `android/gradle/wrapper/gradle-wrapper.properties` (`distributionUrl`) / minSdk・compileSdk: `android/kssettingsview/build.gradle.kts` / Swift tools・iOS Deployment Target: `ios/Package.swift` (`// swift-tools-version:` と `.iOS(.vNN)`) / .NET TFM: `maui/KsSettingsView.Maui/KsSettingsView.Maui.csproj` (`<TargetFrameworks>`) | 各ファイルの該当行を読む | ルート README 群の対応プラットフォーム表・開発環境要件、および該当記載を持つ場合は各 `SKILL.md` の導入節 |
+| MAUI の Microsoft.Maui.Controls 最低バージョン | `maui/Directory.Packages.props` (`<PackageVersion Include="Microsoft.Maui.Controls" Version="..." />`) | 該当行を読む。あわせて `samples/maui/KsSettingsView.Sample.Maui/KsSettingsView.Sample.Maui.csproj` の `<MauiVersion>` が同じ版かを照合する | ルート README 群 (対応プラットフォーム表・互換要件の本文・`<MauiVersion>` のコード例)、`kssettingsview-maui` と `kssettingsview-aiforms-migration` の `SKILL.md` 導入節、`kssettingsview-aiforms-migration/references/api-mapping.md` の platform 要件節 |
 
 > 従前の「モジュール一覧」と「Sample デモ画面一覧」の突合は**行わない**。前者の突合先だったルート README のモジュール表・`android/README.md`・`maui/README.md` と、後者の突合先だった `samples/*/README.md` がいずれも存在しなくなったため (cross/ADR-0023)。Sample の実ソースにデモ画面が増減しても、この手順は要追従リストに何も追加しない。
 
 > 取得元の注記: AGP / Kotlin の単一宣言元は version catalog (`android/gradle/libs.versions.toml`) であり、各 module の `build.gradle.kts` は `version.ref` で参照するだけなので取得元にしない。
+
+> 取得元の注記 (Microsoft.Maui.Controls): `maui/` ビルドルートの PackageReference の版は Central Package Management の `maui/Directory.Packages.props` が単一の宣言元で、`KsSettingsView.Maui.csproj` は `Version` を持たないので取得元にしない。TFM (`<TargetFrameworks>`) を見るだけでは、TFM を変えずに Controls の版だけが上がったとき (例: 10.0.70 → 10.0.71) を検出できないため、別の行として持つ。`samples/maui` は別のビルドルートで、利用者が真似する形 (`MauiVersion` の直書き) を保つため props の管理外にある。ルート README のコード例はこの Sample と同じ形を示すので、Sample の `<MauiVersion>` も照合する。props と Sample の版が食い違っていたら、README / Skill を直す前に食い違いそのものをユーザーへ報告する (どちらへ揃えるかはコード側の判断で、このスキルでは決めない)。
 
 #### 3e. API 名の網羅検査 (concepts → skills の内容突き合わせ)
 
@@ -442,7 +445,7 @@ fi
 - 更新したファイル一覧 (en/ja ペア単位で示す)
 - スキップした項目 (変更なし / 未承認 — 次回再検出される旨を添える)
 - 整合性チェック 8 種の結果 (`--readme-only` では 6-① は報告のみ・6-④ は N/A。②③⑤⑥⑦⑧ は README のみを対象とし、Skill ファイル側に出た失敗があればそれも報告のみとして挙げ、いずれも次回の通常実行で処理される旨を添える)
-- `--readme-only` で 3d (ツール最低バージョン) の Skill ファイル側 (各 `SKILL.md` 導入節) に差分を検出した場合はその報告 (更新は行わず、次回の通常実行で処理される旨を添える)
+- `--readme-only` で 3d の Skill ファイル側 (各 `SKILL.md` 導入節・aiforms-migration の `references/api-mapping.md`) に差分を検出した場合はその報告 (更新は行わず、次回の通常実行で処理される旨を添える)
 - manifest の更新状況 (`--readme-only` では concepts スナップショット非更新である旨)
 - サブエージェントから上がった drift 所見 (concepts と実装の矛盾) があればその一覧
 
