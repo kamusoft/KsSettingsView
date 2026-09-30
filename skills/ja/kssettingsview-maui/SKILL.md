@@ -1,6 +1,6 @@
 ---
 name: kssettingsview-maui
-description: KsSettingsView で .NET MAUI の設定画面 (settings screen) を作る - XAML / C# の公開 API (SettingsView, Section, CellBase) が iOS / Android の Native 設定 list を描画し、組み込みの Cell (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker) と任意の MAUI View を置ける CustomCell、ユーザー操作の双方向バインド (two-way binding)、ItemsSource / ItemTemplate、Header / Footer への View 配置、Classic / Modern の list 外観を扱う。KsSettingsView.Maui を参照する .NET MAUI アプリで設定ページを追加・変更・レビューするときに使う。
+description: KsSettingsView で .NET MAUI の設定画面 (settings screen) を作る - XAML / C# の公開 API (SettingsView, Section, CellBase) が iOS / Android の Native 設定 list を描画し、組み込みの Cell (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker) と任意の MAUI View を置ける CustomCell、ユーザー操作の双方向バインド (two-way binding)、ItemsSource / ItemTemplate、Header / Footer への View 配置、Classic / Modern の list 外観、ViewModel から Cell・Section・両端へのスクロールを扱う。KsSettingsView.Maui を参照する .NET MAUI アプリで設定ページを追加・変更・レビューするときに使う。
 license: MIT
 metadata:
   language: ja
@@ -20,6 +20,7 @@ KsSettingsView は、iOS の設定アプリのようなリスト形式の設定�
 | 選択面が閉じ切った後に Command を実行する (`PickerCell.SelectedCommand`) | [references/cells.md](references/cells.md) |
 | 表示中の画面を変える: Cell と Section の追加・削除・移動・差し替え | [references/updates.md](references/updates.md) |
 | ユーザーの操作を ViewModel で受け取る、コレクションから Cell を生成する、ページを離れて戻っても状態を保つ | [references/updates.md](references/updates.md) |
+| コードから Cell・Section・先頭・末尾へスクロールさせる (画面を開いた直後や項目を足した直後を含む) | [references/updates.md](references/updates.md) |
 | 色・フォント・Cell の高さ、list のスクロールバー、Classic / Modern の list 外観、Section の Container | [references/styling.md](references/styling.md) |
 | 端末のライト / ダーク外観に追随させる、両外観の色を自分で決める、Cell 1 つの色を外観に合わせて切り替える | [references/styling.md](references/styling.md) |
 | スタイルプロパティの一覧を引く (画面全体の既定と Cell ごとの上書き) | [references/styling.md](references/styling.md) |
@@ -67,17 +68,17 @@ public static class MauiProgram
 |---|---|
 | .NET SDK | 10.0.300 |
 | ターゲットフレームワーク | net10.0-ios, net10.0-android |
-| Microsoft.Maui.Controls | 10.0.70 |
+| Microsoft.Maui.Controls | 10.0.71 |
 | iOS | 16.0 |
 | Android | API 29 |
 
-`Microsoft.Maui.Controls` の下限は restore 時に効く: .NET 10 のプロジェクトテンプレートが `MauiVersion` に書く版は 10.0.70 より低く (SDK 10.0.300 時点で 10.0.20)、そのままだと restore が NU1605 (パッケージのダウングレード) で失敗するので、`MauiVersion` は 10.0.70 以上にする。OS の下限はビルド時に効く: パッケージが利用側プロジェクトへ持ち込む検査が、その TFM の `SupportedOSPlatformVersion` が iOS 16.0 / Android API 29 を下回ると `net10.0-ios` / `net10.0-android` のビルドをエラー `KSSV0001` で止める。Android は未設定でも SDK 既定値が下限を下回るため同じく止まるので、両方の値を明示的に宣言しておく。
+`Microsoft.Maui.Controls` の下限は restore 時に効く: .NET 10 のプロジェクトテンプレートが `MauiVersion` に書く版は 10.0.71 より低く (SDK 10.0.300 時点で 10.0.20)、そのまま、あるいは 10.0.70 にしていると restore が NU1605 (パッケージのダウングレード) で失敗するので、`MauiVersion` は 10.0.71 以上にする。NU1605 を抑止して 10.0.70 に留めてはいけない — パッケージが依存する Android の Binding が `Xamarin.AndroidX.Core` を引き上げ、その版には 10.0.70 の `Microsoft.Maui.dll` が呼ぶメンバーが無いため、TalkBack などのアクセシビリティサービスが画面を問い合わせた時点で Android アプリが `MissingMethodException` で落ちる。10.0.71 はこの呼び出しを持たない。OS の下限はビルド時に効く: パッケージが利用側プロジェクトへ持ち込む検査が、その TFM の `SupportedOSPlatformVersion` が iOS 16.0 / Android API 29 を下回ると `net10.0-ios` / `net10.0-android` のビルドをエラー `KSSV0001` で止める。Android は未設定でも SDK 既定値が下限を下回るため同じく止まるので、両方の値を明示的に宣言しておく。
 
 ターゲットフレームワークは上表の API 版なしを推奨する。この形なら platform asset と推移依存の Binding が選ばれる。TFM に API 版を固定する場合は `net10.0-android36.0` / `net10.0-ios26.0` 以上にする。`net10.0-android35.0` / `net10.0-ios18.0` など古い版を固定すると、restore が警告なく成功しても platform 中立の `lib/net10.0` asset へ静かにフォールバックし、Native Binding 2 件が依存グラフに入らない。このパッケージ選択の挙動は .NET SDK 10.0.300 で検証済み。
 
 ```xml
 <PropertyGroup>
-  <MauiVersion>10.0.70</MauiVersion>
+  <MauiVersion>10.0.71</MauiVersion>
 </PropertyGroup>
 
 <PropertyGroup Condition=" $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios' ">
@@ -127,6 +128,6 @@ Android の Cell はライブラリが同梱する Material3 テーマの中で�
 ## リファレンス
 
 - [references/cells.md](references/cells.md) - 組み込み Cell ごとのレシピと、Section・アイコン・全 Cell 共通フィールド。
-- [references/updates.md](references/updates.md) - 表示中の画面の更新、双方向バインド、`ItemsSource`、ページを離れても残るもの。
+- [references/updates.md](references/updates.md) - 表示中の画面の更新、双方向バインド、`ItemsSource`、コードからのスクロール、ページを離れても残るもの。
 - [references/styling.md](references/styling.md) - 画面全体の既定値、Cell ごとの上書き、list の外観、Section 装飾、Header / Footer、配置。
 - [references/custom-cells.md](references/custom-cells.md) - `CustomCell`、再利用のための派生クラス、CustomCell に効かないプロパティ。

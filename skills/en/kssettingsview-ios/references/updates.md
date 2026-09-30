@@ -1,6 +1,6 @@
 # Updating the screen while it is shown
 
-Recipes for changing a settings screen that is already on display, and for keeping cells identified while the declarative tree is re-evaluated. Unless a snippet carries its own imports, it assumes the imports from the minimal example in [SKILL.md](../SKILL.md).
+Recipes for changing a settings screen that is already on display, for keeping cells identified while the declarative tree is re-evaluated, and for scrolling the list from code. Unless a snippet carries its own imports, it assumes the imports from the minimal example in [SKILL.md](../SKILL.md).
 
 ## Own the settings tree with a store
 
@@ -148,7 +148,7 @@ store.applyTheme(darkTheme)
 
 In the declarative form, the `.theme(_:)` modifier goes through the same path.
 
-The new theme reaches the cells on display and the text headers and footers, which are recolored in place. Headers and footers holding a view are deliberately left alone - re-binding them would run the view factory again and lose whatever state the hosted view held - so a view accessory that should follow the theme has to be updated by you, with `store.updateAccessory(target:accessory:)`.
+The new theme reaches the cells on display and the text headers and footers, which are recolored in place. Headers and footers holding a view are deliberately left alone - re-binding them would run the view factory again and lose whatever state the hosted view held - so a view accessory that should follow the theme has to be updated by you, with `store.updateAccessory(target:accessory:)`. One exception concerns the screen header and footer: when a theme change alters the resolved section margin (`sectionMargin`), or the number of visible sections goes from zero to non-zero or back, they are rebuilt to re-apply the margin whatever their kind, and a view held there loses its internal state.
 
 `scrollIndicatorVisible` is applied to the main settings list at initial display and on a theme change without rebuilding rows or moving the scroll position. A Picker list captures that value when it opens; wheel-based picker surfaces and lists owned by `CustomCell` content are outside this setting.
 
@@ -177,7 +177,9 @@ Return exactly one element per item; returning several from one item makes them 
 
 ## Name an element explicitly
 
-For a static element that needs a meaningful identifier, use `cellID` or `sectionID`. Do not combine them with a `ForEach` key on the same element - pick one source of identity.
+For a static element that needs a meaningful identifier, use `cellID` or `sectionID`. Do not combine them with a `ForEach` key on the same element - pick one source of identity. If you do combine them, the explicit identifier wins and the key no longer tracks the item; an explicit identifier that does not change per item then resolves every item to the same identity.
+
+A section with neither an explicit identifier nor a key is identified partly by its text header, so changing that header text changes its identity. Give a section whose header text can change a `sectionID`.
 
 ```swift
 ksSection("General") {
@@ -244,6 +246,133 @@ The controller has no public setter for the settings tree: every change goes thr
 The controller converges on the Store's current root, accessories and theme when its view loads, including changes made after the controller was created but before `viewDidLoad` completes. `rootHeader` and `rootFooter` are host-owned properties rather than Store state, so reapplying them when a controller is recreated remains the caller's responsibility.
 
 For tests or hosting of your own, `KsSettingsView` (the SwiftUI view) in its store form offers `makeController()`, which builds the backing `KsSettingsViewController` outside a SwiftUI hierarchy. It is for the store form only - calling it on a DSL-built view is a `fatalError` - and a normal SwiftUI screen never needs it.
+
+## Scroll to a cell, a section, or either end
+
+A `KsScrollController` is a handle for one-off scroll commands. Hold it in `@State`, keep passing the same instance, and connect it with the `.scrollController(_:)` root modifier, which works in both the DSL and the store form. In the DSL form a command names an element by the identifier you gave it with `cellID` / `sectionID` or by its `ForEach` key; a static element identified only by its position cannot be targeted, so give the elements you want to reach one of the two. When the same value matches both, the element with the explicit identifier wins.
+
+```swift
+struct SettingsScreen: View {
+    @State private var scroll = KsScrollController()
+    @State private var topics = ["News"]
+
+    var body: some View {
+        KsSettingsView {
+            ksSection("Actions") {
+                ButtonCell(title: "Go to About", onTap: {
+                    MainActor.assumeIsolated {
+                        scroll.scrollToSection(id: "about")
+                    }
+                })
+                ButtonCell(title: "Add a topic", onTap: {
+                    MainActor.assumeIsolated {
+                        let topic = "Topic \(topics.count + 1)"
+                        topics.append(topic)
+                        scroll.scrollTo(id: topic, position: .center)
+                    }
+                })
+            }
+            ksSection("Topics") {
+                ForEach(topics, id: \.self) { topic in
+                    LabelCell(title: topic)
+                }
+            }
+            ksSection("About") {
+                LabelCell(title: "Version", valueText: "1.0.0").cellID("version")
+            }
+            .sectionID("about")
+        }
+        .scrollController(scroll)
+    }
+}
+```
+
+The command runs after the updates made in the same handler have reached the screen, so appending an item and scrolling to it in one closure lands on the new item.
+
+| Command | Target |
+|---|---|
+| `scrollTo(id:position:animated:)` | The row of a cell |
+| `scrollToSection(id:position:animated:)` | The span of a section: header, visible cells and footer |
+| `scrollToStart(animated:)` | The very top of the content, screen header included |
+| `scrollToEnd(animated:)` | The very bottom of the content, screen footer included |
+
+`position` is a `KsScrollPosition` and defaults to `.start`; `animated` defaults to `true`.
+
+| `KsScrollPosition` | Aligns |
+|---|---|
+| `.start` | The top of the target with the top of the visible area |
+| `.center` | The middle of the target with the middle of the visible area |
+| `.end` | The bottom of the target with the bottom of the visible area |
+
+The visible area excludes the safe area and the list's content insets. A position that cannot be reached stops at the edge of the scrollable range, and a target taller than the visible area is aligned at `.start` whatever you asked for. Commands issued in a row run in the order they were called, and the last one whose target exists decides where the list ends up. A command aimed at a hidden element, a section with nothing visible, or an identifier that does not exist does nothing (an unknown identifier logs a warning in debug builds). An animated command stops as soon as the user starts dragging.
+
+Cell callbacks are `@Sendable` but run on the main thread, which is why the commands above sit inside `MainActor.assumeIsolated`. A view model can hold the handle as `any KsScrollControlling`, the protocol `KsScrollController` conforms to, and swap in a recording implementation in tests; the connection points themselves take a `KsScrollController`.
+
+## Scroll the UIKit host from code
+
+Assign the handle to `scrollController` of `KsSettingsViewController`. Commands then name a cell by its `KsCellID` and a section by its `id`.
+
+```swift
+import UIKit
+import KsSettingsViewCore
+import KsSettingsViewUI
+
+final class TopicsViewController: UIViewController {
+    private let topicsSectionID = UUID()
+    private let scroll = KsScrollController()
+    private lazy var store = SettingsRootStore(
+        initialRoot: SettingsRoot(sections: [
+            Section(id: topicsSectionID, header: .text("Topics"), cells: [])
+        ]),
+        initialTheme: Theme()
+    )
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+
+        let settings = KsSettingsViewController(store: store, style: .classic)
+        settings.scrollController = scroll
+
+        addChild(settings)
+        settings.view.frame = view.bounds
+        settings.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        view.addSubview(settings.view)
+        settings.didMove(toParent: self)
+    }
+
+    func addTopic(_ title: String) {
+        let cell = LabelCell(title: title)
+        let count = store.root.sections.first?.cells.count ?? 0
+        store.insertCell(cell, in: topicsSectionID, at: count)
+        scroll.scrollTo(id: KsCellID(cell: cell), position: .end)
+    }
+
+    func backToTop() {
+        scroll.scrollToStart(animated: false)
+    }
+}
+```
+
+A command issued before the view has loaded, or while the controller is not in a window, runs after the next layout. When a controller stays alive underneath a pushed screen, the command is carried out when it comes back into view.
+
+One handle delivers to the screen it was connected to last; connecting it elsewhere cuts the earlier screen off. The handle does not keep the controller alive. Assigning `nil`, calling `disconnectStore()`, or the controller going away disconnects it, after which commands do nothing; `disconnectStore()` also resets `scrollController` to `nil`. Replacing or removing the handle discards the commands still waiting on that screen - in the SwiftUI modifier as well.
+
+## Keep the scroll position when you recreate the UIKit host
+
+The UIKit host does not carry its scroll position over when you build a new controller for the same store. Take it yourself with `captureScrollAnchor()`, which returns an opaque `KsScrollAnchor`, and hand it to the new controller with `restoreScrollAnchor(_:)`. The anchor records which element sits at the top of the visible area, not a pixel offset, so it comes back to the same element even if items were added or removed above it in between.
+
+```swift
+let anchor = oldController.captureScrollAnchor()
+oldController.disconnectStore()
+
+let newController = KsSettingsViewController(store: store, style: .classic)
+if let anchor {
+    newController.restoreScrollAnchor(anchor)
+}
+newController.scrollController = scroll
+```
+
+Capture while the old controller is still in its window: once it has been removed, `captureScrollAnchor()` returns `nil`, as it does when there is nothing to record. The restore runs after the new controller's first layout without animation, and a command issued after it runs after the restore, so it decides the final position. If the recorded element no longer exists, the restore does nothing. The SwiftUI `KsSettingsView` keeps its host for as long as the view identity lasts, so it needs none of this.
 
 ## Express a change as a SettingsRootDiff
 

@@ -29,7 +29,7 @@ KsSettingsViewは、iOS、Android、.NET MAUIでリスト形式の設定画面�
 | --- | --- | --- |
 | iOS Native | iOS 16.0 | Swift tools 5.10 |
 | Android Native | Android API 29、compileSdk 35 | Kotlin 2.4.10、AGP 8.13.2、Gradle 9.5.0、JDK 17 |
-| .NET MAUI | iOS 16.0、Android API 29 | .NET SDK 10.0.300、`net10.0-ios` / `net10.0-android`、Microsoft.Maui.Controls 10.0.70 |
+| .NET MAUI | iOS 16.0、Android API 29 | .NET SDK 10.0.300、`net10.0-ios` / `net10.0-android`、Microsoft.Maui.Controls 10.0.71 |
 
 Androidは単一のMaven artifact `jp.kamusoft:kssettingsview`として配布します。Core、UI、Composeの各層は、Kotlin package `jp.kamusoft.kssettingsview.core`、`.ui`、`.compose`で分かれています。Androidの利用側にはKotlin 2.3以上、minSdk 29、compileSdk 35が必要です。表のKotlin 2.4.10はライブラリのビルドに使用するtoolchainであり、利用側Kotlinの最低版ではありません。
 
@@ -73,11 +73,11 @@ prerelease版は、`Version`に`X.Y.Z-beta.N`のような値を指定します�
 
 公開.NET namespaceは`KsSettingsView`です。XAMLでは、後述の例のように`clr-namespace:KsSettingsView;assembly=KsSettingsView.Maui`を使用します。
 
-互換要件: Microsoft.Maui.Controls（`MauiVersion`）10.0.70以上、最低OS版はiOS 16.0 / Android API 29です。Microsoft.Maui.Controlsを10.0.70未満に固定するとpackage downgradeエラー（`NU1605`）になるため、`MauiVersion`を10.0.70以上へ更新してください。packageにはビルド時のガードが同梱されており、利用側プロジェクトの`SupportedOSPlatformVersion`がこれらの値を下回るとエラー`KSSV0001`でビルドが失敗します。次の断片はSampleアプリケーションと同じ形です。
+互換要件: Microsoft.Maui.Controls（`MauiVersion`）10.0.71以上、最低OS版はiOS 16.0 / Android API 29です。Microsoft.Maui.Controlsを10.0.71未満に固定するとpackage downgradeエラー（`NU1605`）になるため、`MauiVersion`を10.0.71以上へ更新してください。packageにはビルド時のガードが同梱されており、利用側プロジェクトの`SupportedOSPlatformVersion`がこれらの値を下回るとエラー`KSSV0001`でビルドが失敗します。次の断片はSampleアプリケーションと同じ形です。
 
 ```xml
 <PropertyGroup>
-  <MauiVersion>10.0.70</MauiVersion>
+  <MauiVersion>10.0.71</MauiVersion>
 </PropertyGroup>
 
 <PropertyGroup Condition=" $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios' ">

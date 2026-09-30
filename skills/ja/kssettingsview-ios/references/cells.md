@@ -17,6 +17,19 @@ KsSettingsView {
 }
 ```
 
+## Cell の通知から自分の状態を書き換える
+
+Cell が利用者の操作を知らせる閉包 (`onTap`・`onValueChanged`・`onSelected`・Picker の完了通知など) は型としては `@Sendable` だが、ライブラリはメインスレッドから呼ぶ。閉包の中で SwiftUI の `@State` を書き換えるときや、ほかのメインアクター隔離のコードを呼ぶときは、`MainActor.assumeIsolated { ... }` の中で行う。以降のレシピもこの形で書いてある。`Binding` を受ける initializer の書き戻しも同じ形で行われる。
+
+```swift
+@State private var lastAction = ""
+
+CommandCell(
+    title: "Profile",
+    onTap: { MainActor.assumeIsolated { lastAction = "Profile" } }
+)
+```
+
 ## 読み取り専用の値を表示する
 
 `LabelCell` はテキストを表示するだけで、タップに反応しない。
@@ -32,7 +45,7 @@ LabelCell(title: "Storage", valueText: "256 GB")
 ```swift
 CommandCell(
     title: "License",
-    onTap: { showLicense = true }
+    onTap: { MainActor.assumeIsolated { showLicense = true } }
 )
 ```
 
@@ -44,7 +57,7 @@ CommandCell(
 ButtonCell(
     title: "Sign out",
     titleColor: .systemRed,
-    onTap: { signOut() },
+    onTap: { MainActor.assumeIsolated { signOut() } },
     titleAlignment: .start
 )
 ```
@@ -59,9 +72,13 @@ ButtonCell(
 SwitchCell(
     title: "Push notifications",
     isOn: notifications,
-    onValueChanged: { notifications = $0 }
+    onValueChanged: { isOn in
+        MainActor.assumeIsolated { notifications = isOn }
+    }
 )
 ```
+
+`SwitchCell`・`CheckboxCell`・`RadioCell`・`SimpleCheckCell` は、その Cell の control の強調色だけを上書きする `accentColor` (`UIColor?`) も受ける。`nil` のままなら `CellStyle.accentColor`、次に `Theme.cellAccentColor` の順に解決する ([styling.md](styling.md) を参照)。
 
 ## 独立したチェック項目を置く
 
@@ -73,7 +90,9 @@ SwitchCell(
 CheckboxCell(
     title: "I accept the terms",
     isChecked: acceptedTerms,
-    onValueChanged: { acceptedTerms = $0 }
+    onValueChanged: { isChecked in
+        MainActor.assumeIsolated { acceptedTerms = isChecked }
+    }
 )
 ```
 
@@ -87,7 +106,9 @@ CheckboxCell(
 SimpleCheckCell(
     title: "Weekly report",
     isChecked: weeklyReport,
-    onValueChanged: { weeklyReport = $0 }
+    onValueChanged: { isChecked in
+        MainActor.assumeIsolated { weeklyReport = isChecked }
+    }
 )
 ```
 
@@ -104,14 +125,18 @@ ksSection("Appearance") {
         groupId: "appearance",
         value: "light",
         selectedValue: appearance,
-        onSelected: { appearance = $0 }
+        onSelected: { value in
+            MainActor.assumeIsolated { appearance = value }
+        }
     )
     RadioCell(
         title: "Dark",
         groupId: "appearance",
         value: "dark",
         selectedValue: appearance,
-        onSelected: { appearance = $0 }
+        onSelected: { value in
+            MainActor.assumeIsolated { appearance = value }
+        }
     )
 }
 ```
@@ -144,7 +169,9 @@ PickerCell(
     title: "Theme",
     items: ["Light", "Dark", "System"],
     selectedIndex: $themeIndex,
-    onSelectionCompleted: { _ in showThemeHelp() }
+    onSelectionCompleted: { _ in
+        MainActor.assumeIsolated { showThemeHelp() }
+    }
 )
 ```
 
@@ -162,7 +189,9 @@ PickerCell(
     items: ["News", "Sports", "Music", "Travel"],
     selectedIndices: $topics,
     maxSelectedNumber: 2,
-    onMultiSelectionCompleted: { indices in recordTopics(indices) }
+    onMultiSelectionCompleted: { indices in
+        MainActor.assumeIsolated { recordTopics(indices) }
+    }
 )
 ```
 
@@ -183,7 +212,9 @@ PickerCell(
     displayText: { $0.name },
     subText: { $0.detail },
     selectedIndex: $planIndex,
-    onItemSelected: { plan in savePlan(plan) }
+    onItemSelected: { plan in
+        MainActor.assumeIsolated { savePlan(plan) }
+    }
 )
 ```
 
@@ -254,7 +285,9 @@ DatePickerCell(
     format: "yyyy/MM/dd",
     uiStyle: .calendar,
     todayText: "Today",
-    onValueCompleted: { date in showNextStep(for: date) }
+    onValueCompleted: { date in
+        MainActor.assumeIsolated { showNextStep(for: date) }
+    }
 )
 ```
 

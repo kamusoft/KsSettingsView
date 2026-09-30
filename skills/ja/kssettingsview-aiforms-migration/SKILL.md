@@ -24,7 +24,8 @@ KsSettingsView は AiForms.SettingsView の骨格 — `SettingsView` に `Sectio
 | `TextPickerCell`・添付プロパティの `RadioCell.SelectedValue`・`EntryCell.CompletedCommand`・`IsAndroidSpinnerStyle` の代わりを探す | [references/api-mapping.md](references/api-mapping.md) |
 | 画面全体のスタイル (`Cell*` 既定値・Header / Footer・Cell の高さ・Section の Container) を移す | [references/api-mapping.md](references/api-mapping.md) |
 | 移行した画面をダーク外観でも判読可能に保つ、両外観の色を自分で決める | [references/api-mapping.md](references/api-mapping.md) |
-| 廃止された機能 (ドラッグ並べ替え・`ScrollToTop`・`UseDescriptionAsValue`・`LongCommand`) の扱いを決める | [references/api-mapping.md](references/api-mapping.md) |
+| `ScrollToTop` / `ScrollToBottom` の bool 代入を、`SettingsView.ScrollController` のスクロール命令へ書き換える | [references/api-mapping.md](references/api-mapping.md) |
+| 廃止された機能 (ドラッグ並べ替え・`UseDescriptionAsValue`・`LongCommand`) の扱いを決める | [references/api-mapping.md](references/api-mapping.md) |
 | Cell ごとの Handler / PropertyMapper のコードと `HandlerCleanUpHelper` の回避策を削除する | [references/api-mapping.md](references/api-mapping.md) |
 | 移行した C# の Cell 構築コードで出るようになった `SwitchCell` / `EntryCell` の CS0104 を直す | [references/api-mapping.md](references/api-mapping.md)、詳細は kssettingsview-maui Skill |
 | KsSettingsView 自体の API を調べる | kssettingsview-maui Skill |
@@ -50,11 +51,11 @@ KsSettingsView は AiForms.SettingsView の骨格 — `SettingsView` に `Sectio
 | .NET SDK | 9.0.314 | 10.0.300 |
 | ターゲットフレームワーク | net9.0-ios, net9.0-android, net9.0-maccatalyst | net10.0-ios, net10.0-android |
 | API 版付きターゲットフレームワーク (明示する場合) | - | net10.0-android36.0, net10.0-ios26.0 以上 |
-| Microsoft.Maui.Controls | 9.0.120 | 10.0.70 |
+| Microsoft.Maui.Controls | 9.0.120 | 10.0.71 |
 | iOS | 14.2 | 16.0 |
 | Android | API 27 | API 29 |
 
-`Microsoft.Maui.Controls` の下限は restore 時に効く: AiForms のプロジェクトが持つ `MauiVersion` は 10.0.70 より低く、そのままだと restore が NU1605 (パッケージのダウングレード) で失敗するので、`MauiVersion` を 10.0.70 以上に上げる。OS の下限はビルド時に効く: パッケージが利用側プロジェクトへ持ち込む検査が、その TFM の `SupportedOSPlatformVersion` が iOS 16.0 / Android API 29 を下回ると `net10.0-ios` / `net10.0-android` のビルドをエラー `KSSV0001` で止める。AiForms の値 (14.2 / 27) はこれに引っかかるので両方を上げる。
+`Microsoft.Maui.Controls` の下限は restore 時に効く: AiForms のプロジェクトが持つ `MauiVersion` は 10.0.71 より低く、そのまま、あるいは 10.0.70 に上げただけだと restore が NU1605 (パッケージのダウングレード) で失敗するので、`MauiVersion` を 10.0.71 以上に上げる。NU1605 を抑止して 10.0.70 に留めてはいけない — パッケージが依存する Android の Binding が `Xamarin.AndroidX.Core` を引き上げ、その版には 10.0.70 の `Microsoft.Maui.dll` が呼ぶメンバーが無いため、TalkBack などのアクセシビリティサービスが画面を問い合わせた時点で Android アプリが `MissingMethodException` で落ちる。10.0.71 はこの呼び出しを持たない。OS の下限はビルド時に効く: パッケージが利用側プロジェクトへ持ち込む検査が、その TFM の `SupportedOSPlatformVersion` が iOS 16.0 / Android API 29 を下回ると `net10.0-ios` / `net10.0-android` のビルドをエラー `KSSV0001` で止める。AiForms の値 (14.2 / 27) はこれに引っかかるので両方を上げる。
 
 表に示した API 版なしの platform TFM を優先する。この形なら正しい native binding パッケージが選ばれる。platform API 版を明示する場合は `net10.0-android36.0` / `net10.0-ios26.0` 以上にする。それより低い版では警告なく restore が成功しても platform 中立の `lib/net10.0` asset が選ばれ、iOS / Android の native binding 依存が静かに欠ける。この挙動は SDK 10.0.300 で検証済み。
 
@@ -118,4 +119,4 @@ XAML では namespace 宣言が変わり、Section の見出し文字列が `Sec
 
 ## リファレンス
 
-- [references/api-mapping.md](references/api-mapping.md) - 旧 API から新 API への対応表一式。namespace と登録、画面の骨格、Cell 共通フィールド、Cell 種別ごと、画面全体のスタイル、Header / Footer、テンプレート生成、Handler カスタマイズ、代替のないメンバー、という「移行で何をしたいか」で節立てしている。
+- [references/api-mapping.md](references/api-mapping.md) - 旧 API から新 API への対応表一式。namespace と登録、画面の骨格、Cell 共通フィールド、Cell 種別ごと、画面全体のスタイル、Header / Footer、テンプレート生成、スクロール命令、Handler カスタマイズ、代替のないメンバー、という「移行で何をしたいか」で節立てしている。

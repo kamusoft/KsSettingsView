@@ -285,7 +285,7 @@ KsSettingsView {
 
 ## 要素に明示的な名前を付ける
 
-意味上の名前で追跡したい静的要素には `cellID` / `sectionID` を chain する。同じ要素で `forEach` の key と併用しないこと — identity の入力はどちらか一方に決める。渡した文字列は安定 ID を導く hint であり、最終的な ID そのものではない。
+意味上の名前で追跡したい静的要素には `cellID` / `sectionID` を chain する。同じ要素で `forEach` の key と併用しないこと — identity の入力はどちらか一方に決める。両方を指定すると明示 ID が採用されて key による追跡が効かなくなり、`forEach` の中で項目ごとに変わらない `cellID` を付けると全項目が同じ ID に解決される。渡した文字列は安定 ID を導く hint であり、最終的な ID そのものではない。
 
 ```kotlin
 KsSettingsView {
@@ -294,6 +294,8 @@ KsSettingsView {
     }.sectionID("general")
 }
 ```
+
+明示 ID も `forEach` の key も持たない Section は、テキストの Header の文字列も材料にして ID が導かれるため、Header の文言を変えると別の要素になる。文言が変わり得る Section には `sectionID` を付ける。
 
 安定 ID は `DatePickerCell` (`uiStyle = Material`) のカレンダーダイアログでも効いてくる。ダイアログは回転後に選択状態を保ったまま再表示されるが、それは Activity 再生成の前後で Cell の ID が同じときに限られる — 一致しなければ閉じたままになり、どこにも値を書き込まない。ボトムシート系のピッカー (Picker・NumberPicker・TimePicker・Spinner 形式の日付) は ID に関わらず回転で閉じる。
 
@@ -378,7 +380,7 @@ class SettingsActivity : AppCompatActivity() {
 }
 ```
 
-`bind` は Store の現在 root と Theme を直ちに反映し、以後の変更はすべて Store を経由する。View は detach と再 attach をまたいでも (ページャのページが画面外へ出る場合など) Store の現在値を取り込み直して追従するので、detach 中に行った Store の変更も失われない。Root Header / Footer だけは state の再生ではなく、上記の直接配送により attach 前・detach 中に渡した値も保持される。スクロール位置も戻る — detach の直前にアンカーを控え、次の attach で復元する。View 自体が作り直される経路 (ホストの再生成・Activity の再生成) では先頭から始まる。`bind` の後に `view.theme` を直接代入しても、次の Store 通知が上書きするまでしか効かない。Store を bind した構成での Theme 変更は `applyTheme` の担当で、`view.theme` は Store を使わずに View を駆動する場合のもの。
+`bind` は Store の現在 root と Theme を直ちに反映し、以後の変更はすべて Store を経由する。View は detach と再 attach をまたいでも (ページャのページが画面外へ出る場合など) Store の現在値を取り込み直して追従するので、detach 中に行った Store の変更も失われない。Root Header / Footer だけは state の再生ではなく、上記の直接配送により attach 前・detach 中に渡した値も保持される。スクロール位置も戻る — detach の直前にアンカーを控え、次の attach で復元する。Activity が作り直されたときは、View が保存状態で位置を運んで元の位置へ戻る (複数の View を置いた構成の例外は後述のスクロールのレシピを参照)。利用者が自分で View を作り直す場合は、位置を運ばない限り先頭から始まる。`bind` の後に `view.theme` を直接代入しても、次の Store 通知が上書きするまでしか効かない。Store を bind した構成での Theme 変更は `applyTheme` の担当で、`view.theme` は Store を使わずに View を駆動する場合のもの。
 
 `unbind()` は Store を手放す。以後の Store 変更は View へ届かなくなり、表示中の内容はそのまま残り、View を再 attach しても購読は復活しない — 再び追従させるには `bind` を呼び直す。冪等なので、Store を持たない View で呼んでも何も起きない。
 
@@ -400,3 +402,182 @@ class SettingsActivity : AppCompatActivity() {
 | `UpdateAccessory` | Header / Footer を追加・更新・削除する |
 
 最初の描画は `view.applyDiff(SettingsRootDiff.Full(root))` で入れ、Theme はこの構成でだけ `view.theme` を直接使う。View 側にも `invalidateAccessoryMeasurement(target)` があり、Store の同名操作と同じ再計測をこの構成で要求できる。この直接駆動と `bind(store)` を同じ View で併用してはいけない — 通常のアプリ画面では Store を使う。
+
+## コードから Cell や Section へスクロールする
+
+画面を開いたときに特定の Section へ案内する、先頭へ戻す、追加した Cell を見せる、といったコードからのスクロールは、Store ではなくスクロールの命令ハンドル `KsScrollController` を通して行う。Compose では `rememberScrollController()` が再コンポジションをまたいで同じハンドルを返す。これを `scrollController` 引数に渡す。この引数は `KsSettingsView` の DSL 方式と Store 方式の両方の overload にある。
+
+```kotlin
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import jp.kamusoft.kssettingsview.compose.ButtonCell
+import jp.kamusoft.kssettingsview.compose.KsSettingsView
+import jp.kamusoft.kssettingsview.compose.LabelCell
+import jp.kamusoft.kssettingsview.compose.cellID
+import jp.kamusoft.kssettingsview.compose.rememberScrollController
+import jp.kamusoft.kssettingsview.compose.sectionID
+import jp.kamusoft.kssettingsview.ui.KsScrollPosition
+
+@Composable
+fun TopicsScreen() {
+    val scroll = rememberScrollController()
+    var topics by remember { mutableStateOf(listOf("News", "Sports")) }
+
+    KsSettingsView(scrollController = scroll) {
+        Section(header = "Actions") {
+            ButtonCell(title = "Go to topics", onTap = { scroll.scrollToSection("topics") })
+            ButtonCell(
+                title = "Center the version",
+                onTap = { scroll.scrollTo("app-version", position = KsScrollPosition.Center) },
+            )
+            ButtonCell(
+                title = "Add a topic",
+                onTap = {
+                    val name = "Topic ${topics.size + 1}"
+                    topics = topics + name
+                    scroll.scrollTo(name)
+                },
+            )
+        }
+        Section(header = "Topics") {
+            forEach(topics, key = { it }) { topic ->
+                LabelCell(title = topic)
+            }
+        }.sectionID("topics")
+        Section(header = "About") {
+            LabelCell(title = "App version", valueText = "1.0.0").cellID("app-version")
+            ButtonCell(title = "Back to top", onTap = { scroll.scrollToStart(animated = false) })
+        }
+    }
+}
+```
+
+命令は 4 つある。`scrollTo` は Cell の行、`scrollToSection` は Header と Footer を含む Section の範囲、`scrollToStart` / `scrollToEnd` は Root Header・Root Footer を含む内容の最上端・最下端へ送る。`animated` の既定は `true` で、`false` にするとアニメーションせずに最終位置へ移る。
+
+`position` (`KsScrollPosition`、既定 `Start`) は、対象を表示範囲のどこへ合わせるかを表す。
+
+| `KsScrollPosition` | 対象の合わせ方 |
+|---|---|
+| `Start` | 対象の上端を表示範囲の上端へ |
+| `Center` | 対象の中央を表示範囲の中央へ |
+| `End` | 対象の下端を表示範囲の下端へ |
+
+届かない位置はスクロールできる範囲の端で止まり、表示範囲より高い対象は、指定した位置によらず `Start` に合わせる。
+
+DSL 方式では、自分で書いた識別子で要素を指す — `cellID` / `sectionID` に渡した文字列か、`forEach` の key (`KsIdentifiable` の要素の `id` を含む)。「2 種類の識別子を区別する」で述べた導出後の ID は命令に渡すものではなく、明示 ID も key も持たない要素は指せない。同じ値が明示 ID と key の両方にあるときは、明示 ID の要素が選ばれる。Store 方式では Store 上の Cell / Section の `id` で指す。
+
+状態を変えた直後に同じ処理の中で出した命令は、変更後のツリーで解決される。上の「Add a topic」が追加したばかりの Cell へ届くのはこのためである。
+
+## XML から組み込んだ View をスクロールする
+
+View ホストでは同じ入口がプロパティになっている。`scrollController` に `KsScrollController` を代入すると、そのハンドルの命令がこの View に届く。指す ID は bind した Store の Cell / Section の `id` である。次のコード片は、以降の Activity 側のコード片と同じく「XML から画面を組み込む」の Activity の中で動かすもので、スクロール関係の型は `jp.kamusoft.kssettingsview.ui` にある。
+
+```kotlin
+val controller = KsScrollController()
+
+val settingsView = findViewById<KsSettingsView>(R.id.settings_view)
+settingsView.bind(store)
+settingsView.scrollController = controller
+
+store.insertCell(
+    cell = LabelCell(id = "license", title = "License"),
+    sectionId = "general",
+    at = 1,
+)
+controller.scrollTo("license")
+```
+
+1 つのハンドルが命令を届ける先は、最後に接続した View だけである — 別の View へ接続すると前の View には届かなくなる。`null` や別のハンドルを代入すると今の接続が外れ、まだ実行していない命令は捨てられる。`unbind()` でも接続が外れて `scrollController` は `null` に戻り、その後 `bind` し直しても自動ではつながらないので、改めて代入する。ハンドルは View を保持しないため、画面より長く生きる ViewModel が持ってもよい — View が破棄されれば、ハンドルは未接続に戻るだけである。
+
+## ViewModel からスクロール命令を出す
+
+`KsScrollController` は 4 つの命令を宣言した interface `KsScrollControlling` を実装している。スクロール先を決めるコードをこの interface に依存させれば、テストでは呼び出しを記録するだけの偽物を渡せる。
+
+```kotlin
+import jp.kamusoft.kssettingsview.ui.KsScrollControlling
+import jp.kamusoft.kssettingsview.ui.KsScrollPosition
+
+class SettingsActions(private val scroll: KsScrollControlling) {
+    fun showDiagnostics() {
+        scroll.scrollToSection("diagnostics", position = KsScrollPosition.Center)
+    }
+}
+```
+
+View に接続するのは `KsScrollController` そのものである。`scrollController` が受けるのはクラスで、interface ではない。
+
+```kotlin
+val controller = KsScrollController()
+val actions = SettingsActions(controller)
+settingsView.scrollController = controller
+```
+
+## スクロール命令が実行される時点を知る
+
+命令は呼んだその場では実行されない。View の待ち行列に積まれ、同じ処理の中で先に行った Store の更新が一覧に反映されてレイアウトが済んだ後に実行される。このため「Cell を挿入してから `scrollToEnd()`」と書けば、新しい Cell を含む末尾へ届く。画面の初回表示の前に出した命令は最初のレイアウトの後に、別の画面が上に重なっている間に出した命令は戻ってきた後に実行される。
+
+| 場面 | 結果 |
+|---|---|
+| 続けて複数の命令を出した | 呼んだ順に実行され、最終位置は対象が見つかった最後の命令のものになる |
+| 実行前に対象が消えた | その命令だけを飛ばし、後続の命令は実行する |
+| ハンドルがどの View にも接続されていない | 何もせず、例外も出ない |
+| 対象が非表示、表示される要素の無い Section、存在しない ID | 何もせず、位置も変わらない。存在しない ID は `KsCellRegistry.strictMode` が `true` のとき警告ログを出す |
+
+命令はメインスレッドから出す。`KsCellRegistry.strictMode` が `true` の間 (既定値で、ビルド種別には自動で追従しない) は、接続中のハンドルへメインスレッド以外から命令すると `IllegalStateException` を送出する。`false` ならメインスレッドへ回して実行する。フラグはビルド種別に結び付けておく。
+
+```kotlin
+KsCellRegistry.strictMode = BuildConfig.DEBUG
+```
+
+## Activity の作り直しをまたいでスクロール位置を保つ
+
+回転や夜間モードの切り替えで Activity が作り直されたときは、View が保存状態に位置を載せ、新しい View のレイアウト後にその位置へ戻す。利用者側のコードは要らない。位置は要素の ID で控えるので、その間に Cell が増減しても別の場所へは戻らない。`KsSettingsView` の Composable も同じで、Navigation Compose の `NavHost` で別の画面へ進んで戻ったときも、離れる前の位置へ戻る。
+
+作り直された Activity の `onCreate` の中で出した命令はこの復元に上書きされ、それより後に出した命令は復元の後に実行される。初回に開いたときだけどこかへ送りたいなら、`savedInstanceState` で分ける。
+
+```kotlin
+override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    setContentView(R.layout.activity_settings)
+
+    val settingsView = findViewById<KsSettingsView>(R.id.settings_view)
+    settingsView.bind(store)
+    settingsView.scrollController = controller
+    if (savedInstanceState == null) {
+        controller.scrollToSection("diagnostics")
+    }
+}
+```
+
+保存状態は View の id で区別される。同じ View 階層の複数の `KsSettingsView` がライブラリ既定の id のまま — 1 画面に `KsSettingsView` の Composable を 2 つ置いた場合や、`android:id` を付けていない XML の View — だと、どれも位置を保存も復元もしない。XML の View にはそれぞれ固有の `android:id` を付ける。
+
+## 自分で作り直す View へスクロール位置を引き継ぐ
+
+利用者が自分で作り直した View は先頭から始まる。古い View がまだ画面に取り付けられているうちに `captureScrollAnchor()` で位置を控え、新しい View の `restoreScrollAnchor(anchor)` へ渡す。
+
+```kotlin
+import android.widget.FrameLayout
+import jp.kamusoft.kssettingsview.ui.KsSettingsView
+import jp.kamusoft.kssettingsview.ui.SettingsRootStore
+
+fun replaceSettingsView(
+    container: FrameLayout,
+    old: KsSettingsView,
+    store: SettingsRootStore,
+): KsSettingsView {
+    val anchor = old.captureScrollAnchor()
+    old.unbind()
+    container.removeView(old)
+
+    val replacement = KsSettingsView(container.context)
+    container.addView(replacement)
+    replacement.bind(store)
+    anchor?.let { replacement.restoreScrollAnchor(it) }
+    return replacement
+}
+```
+
+`captureScrollAnchor()` は、画面に行が無いとき (まだ取り付けられていない・既に外れた・内容が空) は `null` を返す。返る `KsScrollAnchor` は表示範囲の上端にかかる要素とそのずれを控えた値で、中身は読めない。`Parcelable` なので `Bundle` に入れて運べる。戻しは命令と同じ待ち行列を通り、その後に出した命令は戻しの後に実行される。控えた要素がもう無ければ戻しは何もせず、View はその位置のままになる。

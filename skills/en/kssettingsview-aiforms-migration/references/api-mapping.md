@@ -349,6 +349,90 @@ Working code, including the `DynamicResource` form alongside it, is in the ksset
 
 An observable source mirrors add, remove, replace and move. A reset, or setting the source to null, removes only the generated part and leaves hand-written sections and cells in place.
 
+## Scroll from code (ScrollToTop / ScrollToBottom)
+
+AiForms' `ScrollToTop` / `ScrollToBottom` were `bool` properties: setting the view model value to true scrolled to the top or bottom once. KsSettingsView issues scrolling as commands rather than properties. `SettingsView` creates one command handle, an `IScrollController`, and hands it to your view model through a binding on `SettingsView.ScrollController` (whose default binding direction is `OneWayToSource`); the view model then calls its methods. There is no flag left for anyone to reset, and cells and sections can be targeted too.
+
+| AiForms | KsSettingsView | Notes |
+|---|---|---|
+| `SettingsView.ScrollToTop` (`bool`) | `IScrollController.ScrollToStart(bool animated = true)` | Goes to the very top of the content, root header included. Delete the view model `bool` property and its binding |
+| `SettingsView.ScrollToBottom` (`bool`) | `IScrollController.ScrollToEnd(bool animated = true)` | Goes to the very bottom of the content, root footer included |
+| (new) | `SettingsView.ScrollController` (`IScrollController`) | `SettingsView` creates the handle itself; assigning another value does not replace it. The view model holds it as `IScrollController`, so a test can substitute an implementation that only records the calls |
+| (new) | `SettingsView.ScrollControllerReadyCommand` (`ICommand?`) | The signal that commands now work. Each time the native list is created and attached to the screen, `Execute(null)` is called if `CanExecute(null)` is true |
+| (new) | `IScrollController.ScrollTo(object target, ScrollPosition position = ScrollPosition.Start, bool animated = true)` | Goes to a cell's row. `target` is a `CellBase.CellId` string or an item of a section's `ItemsSource` |
+| (new) | `IScrollController.ScrollToSection(object target, ScrollPosition position = ScrollPosition.Start, bool animated = true)` | Brings a section into view together with its header. `target` is a `Section.SectionId` string or an item of `SettingsView.ItemsSource` |
+| (new) | `CellBase.CellId` / `Section.SectionId` (`string?`) | Explicit IDs for pointing a command at hand-written cells and sections. They change nothing on screen |
+| (new) | `ScrollPosition` (`Start` / `Center` / `End`, default `Start`) | Where the target lines up in the visible area: top, center, or bottom. It is the library's own enum, not MAUI's `ScrollToPosition`, which is not used because its `MakeVisible` has no native counterpart |
+
+Before, in AiForms:
+
+```xml
+<sv:SettingsView ScrollToTop="{Binding ScrollToTop}"
+                 ScrollToBottom="{Binding ScrollToBottom}">
+  <sv:Section Title="General">
+    <sv:LabelCell Title="Version" ValueText="1.0.0" />
+  </sv:Section>
+</sv:SettingsView>
+```
+
+After, in KsSettingsView:
+
+```xml
+<ks:SettingsView ScrollController="{Binding Scroll}"
+                 ScrollControllerReadyCommand="{Binding ScrollReadyCommand}">
+  <ks:Section HeaderText="General">
+    <ks:LabelCell Title="Version" ValueText="1.0.0" />
+  </ks:Section>
+  <ks:Section HeaderText="Notifications" SectionId="notifications">
+    <ks:SwitchCell Title="Push notifications" CellId="push" On="{Binding NotificationsEnabled}" />
+  </ks:Section>
+</ks:SettingsView>
+```
+
+```csharp
+using System.Windows.Input;
+using KsSettingsView;
+
+public class SettingsViewModel
+{
+    private bool _scrolledOnOpen;
+
+    public SettingsViewModel()
+    {
+        ScrollReadyCommand = new Command(() =>
+        {
+            if (_scrolledOnOpen)
+            {
+                return;
+            }
+
+            _scrolledOnOpen = true;
+            Scroll?.ScrollToSection("notifications");
+        });
+    }
+
+    public IScrollController? Scroll { get; set; }
+
+    public ICommand ScrollReadyCommand { get; }
+
+    public bool NotificationsEnabled { get; set; }
+
+    public void GoToTop() => Scroll?.ScrollToStart();
+
+    public void GoToBottom() => Scroll?.ScrollToEnd();
+
+    public void ShowPush() => Scroll?.ScrollTo("push", ScrollPosition.Center);
+}
+```
+
+The differences to watch for while migrating:
+
+- A command issued before the native list has been created does nothing and is not replayed later. Where AiForms set `ScrollToTop` to true as the page appeared, issue the command inside `ScrollControllerReadyCommand` instead.
+- `ScrollControllerReadyCommand` runs again whenever the list is recreated - when a popped page is pushed again, or when Android recreates the activity. Keep a flag, as in the example above, if you want to scroll only on the first opening. On recreation the previous scroll position is restored first, and commands issued inside this command run after that, so they decide the final position.
+- A command runs after the tree changes made earlier in the same pass have reached the screen, so `ScrollToEnd` right after adding an item lands on the end that includes the new item. Commands issued one after another run in order, and the final position is set by the last one whose target was found.
+- A command whose target is not found (no matching ID or item) and a command aimed at a hidden element do nothing. An element whose explicit ID matches wins over one generated from an `ItemsSource` item, and when several match, the first in display order is used.
+- Call the commands from the UI thread.
+
 ## Delete the Handler and PropertyMapper customizations
 
 AiForms exposed a handler per cell type, which was the seam for customizing rendering. KsSettingsView draws cells natively from cell data, so none of this survives and none of it is needed.
@@ -382,7 +466,6 @@ Collected here so a search finds them, with the reason and whatever you can do i
 | AiForms | Reason | What to do instead |
 |---|---|---|
 | `SettingsView.ItemDroppedCommand`, the `ItemDropped` event and its `DropEventArgs`, `Section.UseDragSort` | Drag-and-drop reordering is not offered yet | Offer reordering outside the settings list, or leave that one screen on the old library until it lands |
-| `SettingsView.ScrollToTop` / `ScrollToBottom` | Scroll control is not exposed yet | - |
 | `SettingsView.VisibleContentHeight` | The content height is not reported back | Give the control a size the layout decides |
 | `SettingsView.UseDescriptionAsValue` | Description and value are always distinct | Set `ValueText` explicitly on the cells that need it |
 | `SettingsView.ClearCache()` | No library-level icon cache to clear | - |
@@ -411,13 +494,13 @@ Collected here so a search finds them, with the reason and whatever you can do i
 | Target frameworks | net9.0-ios, net9.0-android, net9.0-maccatalyst | net10.0-ios, net10.0-android |
 | API-versioned target frameworks, if specified | - | net10.0-android36.0, net10.0-ios26.0 or later |
 | .NET SDK | 9.0.314 | 10.0.300 |
-| Microsoft.Maui.Controls | 9.0.120 | 10.0.70 |
+| Microsoft.Maui.Controls | 9.0.120 | 10.0.71 |
 | iOS | 14.2 | 16.0 |
 | Android | API 27 | API 29 |
 | Android host theme | any | any - the library ships its own Material3 theme and draws its UI inside it |
 | Placement | any layout | a layout that decides the size: a page, a `*` grid row, or an explicit size |
 
-The `Microsoft.Maui.Controls` floor is enforced at restore: a `MauiVersion` below 10.0.70 fails the restore with NU1605 (package downgrade). The OS floors are enforced at build: the package brings a check into your project that stops the `net10.0-ios` / `net10.0-android` build with error `KSSV0001` when that target framework's `SupportedOSPlatformVersion` is below the floor. On Android the check also fires when the value is unset, because the SDK default lies below API 29.
+The `Microsoft.Maui.Controls` floor is enforced at restore: a `MauiVersion` below 10.0.71 (10.0.70 included) fails the restore with NU1605 (package downgrade). Suppressing NU1605 to stay on 10.0.70 leaves the Android app with a `Xamarin.AndroidX.Core`, raised by the Android bindings the package depends on, that lacks a member the 10.0.70 `Microsoft.Maui.dll` calls, so the app crashes with `MissingMethodException` as soon as an accessibility service such as TalkBack queries the screen. Raise it to 10.0.71 or later instead of suppressing the error. The OS floors are enforced at build: the package brings a check into your project that stops the `net10.0-ios` / `net10.0-android` build with error `KSSV0001` when that target framework's `SupportedOSPlatformVersion` is below the floor. On Android the check also fires when the value is unset, because the SDK default lies below API 29.
 
 Prefer `net10.0-android` / `net10.0-ios` without an API version; they select the correct native binding packages. If you explicitly pin the API versions, use `net10.0-android36.0` / `net10.0-ios26.0` or later. Lower versions can restore without a warning while falling back to the platform-neutral `lib/net10.0` asset, silently omitting the iOS and Android native binding dependencies. This behavior was verified with SDK 10.0.300.
 

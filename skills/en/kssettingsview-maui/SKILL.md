@@ -1,6 +1,6 @@
 ---
 name: kssettingsview-maui
-description: Build .NET MAUI settings screens with KsSettingsView - a public XAML / C# API (SettingsView, Section, CellBase) over the native iOS and Android settings list, with built-in cells (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker) plus CustomCell holding any MAUI view, two-way bindings for user edits, ItemsSource / ItemTemplate, header and footer views, and Classic / Modern list styling. Use when adding, changing, or reviewing a settings page in a .NET MAUI app that references KsSettingsView.Maui.
+description: Build .NET MAUI settings screens with KsSettingsView - a public XAML / C# API (SettingsView, Section, CellBase) over the native iOS and Android settings list, with built-in cells (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker) plus CustomCell holding any MAUI view, two-way bindings for user edits, ItemsSource / ItemTemplate, header and footer views, Classic / Modern list styling, and scrolling to a cell, a section, or either end from a view model. Use when adding, changing, or reviewing a settings page in a .NET MAUI app that references KsSettingsView.Maui.
 license: MIT
 metadata:
   language: en
@@ -20,6 +20,7 @@ KsSettingsView is a UI library for building settings screens - the list-style sc
 | Run a command after a list selection surface has finished closing (`PickerCell.SelectedCommand`) | [references/cells.md](references/cells.md) |
 | Change the screen after it is on display: add, remove, move, replace cells and sections | [references/updates.md](references/updates.md) |
 | Receive user edits in a view model, generate cells from a collection, keep state across page visits | [references/updates.md](references/updates.md) |
+| Scroll to a cell, a section, the top, or the end from code, including right after the screen opens or after adding an item | [references/updates.md](references/updates.md) |
 | Colors, fonts, cell height, the list scrollbar, Classic / Modern list appearance, section boxes | [references/styling.md](references/styling.md) |
 | Follow the light and dark appearance of the device, decide the colors of both yourself, or switch the colors of one cell with the appearance | [references/styling.md](references/styling.md) |
 | Look up the style property list (screen-wide defaults and per-cell overrides) | [references/styling.md](references/styling.md) |
@@ -67,17 +68,17 @@ public static class MauiProgram
 |---|---|
 | .NET SDK | 10.0.300 |
 | Target frameworks | net10.0-ios, net10.0-android |
-| Microsoft.Maui.Controls | 10.0.70 |
+| Microsoft.Maui.Controls | 10.0.71 |
 | iOS | 16.0 |
 | Android | API 29 |
 
-The `Microsoft.Maui.Controls` floor is enforced at restore time: the version the .NET 10 project template writes into `MauiVersion` is lower than 10.0.70 (10.0.20 at SDK 10.0.300), and leaving it there fails the restore with NU1605 (package downgrade), so set `MauiVersion` to 10.0.70 or later. The OS floors are enforced at build time: the package carries a check into your project that stops the `net10.0-ios` / `net10.0-android` build with error `KSSV0001` when the `SupportedOSPlatformVersion` of that target framework is below iOS 16.0 / Android API 29. On Android the check also fires when the value is unset, because the SDK default lies below the floor, so declare both values explicitly.
+The `Microsoft.Maui.Controls` floor is enforced at restore time: the version the .NET 10 project template writes into `MauiVersion` is lower than 10.0.71 (10.0.20 at SDK 10.0.300), and leaving it there - or at 10.0.70 - fails the restore with NU1605 (package downgrade), so set `MauiVersion` to 10.0.71 or later. Do not suppress NU1605 to stay on 10.0.70: the Android bindings the package depends on raise `Xamarin.AndroidX.Core` to a version that no longer has a member the 10.0.70 `Microsoft.Maui.dll` calls, so the Android app crashes with `MissingMethodException` as soon as an accessibility service such as TalkBack queries the screen. 10.0.71 no longer makes that call. The OS floors are enforced at build time: the package carries a check into your project that stops the `net10.0-ios` / `net10.0-android` build with error `KSSV0001` when the `SupportedOSPlatformVersion` of that target framework is below iOS 16.0 / Android API 29. On Android the check also fires when the value is unset, because the SDK default lies below the floor, so declare both values explicitly.
 
 Prefer the API-versionless target frameworks shown above. They select the platform asset and its transitive binding. If you pin an API version in the TFM, use `net10.0-android36.0` / `net10.0-ios26.0` or later. Older pins such as `net10.0-android35.0` / `net10.0-ios18.0` can restore without a warning but silently fall back to the platform-neutral `lib/net10.0` asset, so neither native binding enters the dependency graph. This package selection behavior was verified with .NET SDK 10.0.300.
 
 ```xml
 <PropertyGroup>
-  <MauiVersion>10.0.70</MauiVersion>
+  <MauiVersion>10.0.71</MauiVersion>
 </PropertyGroup>
 
 <PropertyGroup Condition=" $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios' ">
@@ -127,6 +128,6 @@ On Android the cells are drawn inside a Material3 theme the library ships with, 
 ## Reference files
 
 - [references/cells.md](references/cells.md) - one recipe per built-in cell, plus sections, icons, and the fields every cell shares.
-- [references/updates.md](references/updates.md) - changing a screen that is already on display, two-way bindings, `ItemsSource`, and what survives leaving the page.
+- [references/updates.md](references/updates.md) - changing a screen that is already on display, two-way bindings, `ItemsSource`, scrolling from code, and what survives leaving the page.
 - [references/styling.md](references/styling.md) - screen-wide defaults, per-cell overrides, list style, section decoration, headers and footers, placement.
 - [references/custom-cells.md](references/custom-cells.md) - `CustomCell`, reusable cell subclasses, and the properties that do not apply to it.

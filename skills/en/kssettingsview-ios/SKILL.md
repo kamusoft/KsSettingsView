@@ -1,6 +1,6 @@
 ---
 name: kssettingsview-ios
-description: Build iOS settings screens with KsSettingsView - a SwiftUI declarative DSL (KsSettingsView) or a UIKit host (KsSettingsViewController) over the built-in cells (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker), CustomCell holding any SwiftUI view, live updates through SettingsRootStore, Theme / CellStyle styling, and container safe-area placement through respectsSafeArea(_:). Use when adding, changing, or reviewing a settings screen in a Swift app that depends on KsSettingsViewCore, KsSettingsViewUI, or KsSettingsViewSwiftUI.
+description: Build iOS settings screens with KsSettingsView - a SwiftUI declarative DSL (KsSettingsView) or a UIKit host (KsSettingsViewController) over the built-in cells (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker), CustomCell holding any SwiftUI view, live updates through SettingsRootStore, programmatic scrolling through KsScrollController, Theme / CellStyle styling, and container safe-area placement through respectsSafeArea(_:). Use when adding, changing, or reviewing a settings screen in a Swift app that depends on KsSettingsViewCore, KsSettingsViewUI, or KsSettingsViewSwiftUI.
 license: MIT
 metadata:
   language: en
@@ -20,6 +20,7 @@ KsSettingsView is a UI library for building settings screens - the list-style sc
 | Change the screen after it is on display: insert, remove, move, replace cells, batch updates | [references/updates.md](references/updates.md) |
 | Keep cells identified across re-evaluations, drive visibility from state, host the screen from UIKit | [references/updates.md](references/updates.md) |
 | Express a change as a `SettingsRootDiff`, apply a diff or theme to the controller directly | [references/updates.md](references/updates.md) |
+| Scroll to a cell, a section, or either end from code; keep the scroll position when you recreate the UIKit host | [references/updates.md](references/updates.md) |
 | Colors, fonts, cell height, Classic / Modern list appearance, section boxes | [references/styling.md](references/styling.md) |
 | Follow the light and dark appearance, with the built-in defaults, your own theme, or a color set on one cell | [references/styling.md](references/styling.md) |
 | Place the SwiftUI wrapper full-bleed or inside the parent container's safe area | [references/styling.md](references/styling.md) |
@@ -80,7 +81,9 @@ struct SettingsScreen: View {
                 SwitchCell(
                     title: "Push notifications",
                     isOn: notifications,
-                    onValueChanged: { notifications = $0 }
+                    onValueChanged: { isOn in
+                        MainActor.assumeIsolated { notifications = isOn }
+                    }
                 )
             }
         }
@@ -90,9 +93,11 @@ struct SettingsScreen: View {
 
 `ksSection` is used instead of `Section` so the cell builder never collides with `SwiftUI.Section`; `KsSection` is the matching typealias when you need to name a section value directly.
 
+Cell callbacks are typed `@Sendable` but are called on the main thread, which is why the `@State` write sits inside `MainActor.assumeIsolated` (see [references/cells.md](references/cells.md)).
+
 ## Reference files
 
 - [references/cells.md](references/cells.md) - one recipe per built-in cell, plus sections, icons, and the fields every cell shares.
-- [references/updates.md](references/updates.md) - changing a screen that is already on display, cell identity, visibility, and UIKit hosting.
+- [references/updates.md](references/updates.md) - changing a screen that is already on display, cell identity, visibility, UIKit hosting, and scrolling from code.
 - [references/styling.md](references/styling.md) - `Theme`, `CellStyle`, style modifiers, list appearance, headers and footers.
 - [references/custom-cells.md](references/custom-cells.md) - `CustomCell`, reusable wrappers, and your own cell type with a renderer.

@@ -349,6 +349,90 @@ Cell 側の色プロパティ (`TitleColor` などの `CellBase` の色と、`Ac
 
 observable なソースの Add / Remove / Replace / Move はミラーされる。Reset と null 化はテンプレート生成分だけを取り除き、手で書いた Section と Cell は残す。
 
+## プログラムからスクロールさせる (ScrollToTop / ScrollToBottom)
+
+AiForms の `ScrollToTop` / `ScrollToBottom` は `bool` のプロパティで、ViewModel 側の値を true にすると先頭 / 末尾へ一度スクロールする仕掛けだった。KsSettingsView ではスクロールをプロパティではなく命令で出す。`SettingsView` が命令ハンドル `IScrollController` を 1 つ作り、`SettingsView.ScrollController` (既定のバインド方向は `OneWayToSource`) のバインドで ViewModel へ渡すので、ViewModel はそのメソッドを呼ぶ。true に立てた値を誰が戻すかを気にする必要は無くなり、Cell や Section も狙えるようになった。
+
+| AiForms | KsSettingsView | 備考 |
+|---|---|---|
+| `SettingsView.ScrollToTop` (`bool`) | `IScrollController.ScrollToStart(bool animated = true)` | Root Header を含む内容の最上端へ送る。ViewModel の `bool` プロパティとバインドは削除する |
+| `SettingsView.ScrollToBottom` (`bool`) | `IScrollController.ScrollToEnd(bool animated = true)` | Root Footer を含む内容の最下端へ送る |
+| (新規) | `SettingsView.ScrollController` (`IScrollController`) | ハンドルは `SettingsView` 自身が作る。別の値を代入しても差し替わらない。ViewModel は `IScrollController` 型で受けるので、テストでは呼び出しを記録するだけの実装に差し替えられる |
+| (新規) | `SettingsView.ScrollControllerReadyCommand` (`ICommand?`) | 命令が効くようになった合図。Native の一覧が作られて画面に取り付けられるたびに、`CanExecute(null)` が真なら `Execute(null)` が呼ばれる |
+| (新規) | `IScrollController.ScrollTo(object target, ScrollPosition position = ScrollPosition.Start, bool animated = true)` | Cell の行へ送る。`target` は `CellBase.CellId` の文字列、または Section の `ItemsSource` の項目 |
+| (新規) | `IScrollController.ScrollToSection(object target, ScrollPosition position = ScrollPosition.Start, bool animated = true)` | Section を見出しごと表示範囲へ入れる。`target` は `Section.SectionId` の文字列、または `SettingsView.ItemsSource` の項目 |
+| (新規) | `CellBase.CellId` / `Section.SectionId` (`string?`) | 手で並べた Cell / Section を命令で指すための明示 ID。表示は何も変わらない |
+| (新規) | `ScrollPosition` (`Start` / `Center` / `End`、既定 `Start`) | 対象を表示範囲の上端・中央・下端のどこへ合わせるか。ライブラリ独自の enum で、MAUI 標準の `ScrollToPosition` ではない (その `MakeVisible` に Native の対応が無いため使わない) |
+
+移行前 (AiForms):
+
+```xml
+<sv:SettingsView ScrollToTop="{Binding ScrollToTop}"
+                 ScrollToBottom="{Binding ScrollToBottom}">
+  <sv:Section Title="General">
+    <sv:LabelCell Title="Version" ValueText="1.0.0" />
+  </sv:Section>
+</sv:SettingsView>
+```
+
+移行後 (KsSettingsView):
+
+```xml
+<ks:SettingsView ScrollController="{Binding Scroll}"
+                 ScrollControllerReadyCommand="{Binding ScrollReadyCommand}">
+  <ks:Section HeaderText="General">
+    <ks:LabelCell Title="Version" ValueText="1.0.0" />
+  </ks:Section>
+  <ks:Section HeaderText="Notifications" SectionId="notifications">
+    <ks:SwitchCell Title="Push notifications" CellId="push" On="{Binding NotificationsEnabled}" />
+  </ks:Section>
+</ks:SettingsView>
+```
+
+```csharp
+using System.Windows.Input;
+using KsSettingsView;
+
+public class SettingsViewModel
+{
+    private bool _scrolledOnOpen;
+
+    public SettingsViewModel()
+    {
+        ScrollReadyCommand = new Command(() =>
+        {
+            if (_scrolledOnOpen)
+            {
+                return;
+            }
+
+            _scrolledOnOpen = true;
+            Scroll?.ScrollToSection("notifications");
+        });
+    }
+
+    public IScrollController? Scroll { get; set; }
+
+    public ICommand ScrollReadyCommand { get; }
+
+    public bool NotificationsEnabled { get; set; }
+
+    public void GoToTop() => Scroll?.ScrollToStart();
+
+    public void GoToBottom() => Scroll?.ScrollToEnd();
+
+    public void ShowPush() => Scroll?.ScrollTo("push", ScrollPosition.Center);
+}
+```
+
+移行で気をつける差は次のとおり。
+
+- Native の一覧が作られる前に出した命令は何もせず、後から実行し直されることもない。AiForms でページ表示時に `ScrollToTop` を true にしていたような「開いたらスクロール」は、`ScrollControllerReadyCommand` の中で命令する。
+- `ScrollControllerReadyCommand` は一覧が作り直されるたび — Pop したページをもう一度 Push したとき、Android が Activity を作り直したとき — にも呼ばれる。最初に開いたときだけスクロールしたいなら、上の例のように自分でフラグを持つ。作り直しでは直前のスクロール位置が先に戻され、この Command の中で出した命令はその後に実行されて最終位置を決める。
+- 命令は、同じ処理の中で先に行ったツリーの変更が表示に反映された後に実行される。項目を足した直後に `ScrollToEnd` を呼べば、足した項目を含む末尾へ届く。続けて出した命令は呼んだ順に処理され、最終位置は対象が見つかった最後の命令のものになる。
+- 対象が見つからない命令 (該当する ID も項目も無い) と非表示の要素への命令は何もしない。明示 ID が等しい要素は `ItemsSource` の項目から生成した要素より優先され、複数当たるときは表示順で最初のものを採る。
+- 命令は UI スレッドから呼ぶ。
+
 ## Handler と PropertyMapper のカスタマイズを削除する
 
 AiForms は Cell 種別ごとに Handler を公開しており、そこが描画をカスタマイズする継ぎ目だった。KsSettingsView は Cell のデータから Native 側が Cell を描くため、この層は残らず、必要でもない。
@@ -382,7 +466,6 @@ AiForms は Cell 種別ごとに Handler を公開しており、そこが描画
 | AiForms | 理由 | 代わりにできること |
 |---|---|---|
 | `SettingsView.ItemDroppedCommand`、`ItemDropped` イベントとその `DropEventArgs`、`Section.UseDragSort` | ドラッグによる並べ替えはまだ提供していない | 並べ替えは設定 list の外で提供する。提供までその画面だけ旧ライブラリに残す判断もあり得る |
-| `SettingsView.ScrollToTop` / `ScrollToBottom` | スクロール制御はまだ公開していない | - |
 | `SettingsView.VisibleContentHeight` | 内容の高さを返す経路が無い | 大きさがレイアウト側で決まる配置にする |
 | `SettingsView.UseDescriptionAsValue` | Description と値表示は常に別物 | 必要な Cell に `ValueText` を明示的に設定する |
 | `SettingsView.ClearCache()` | 消すべきライブラリ側のアイコンキャッシュが無い | - |
@@ -411,13 +494,13 @@ AiForms は Cell 種別ごとに Handler を公開しており、そこが描画
 | ターゲットフレームワーク | net9.0-ios, net9.0-android, net9.0-maccatalyst | net10.0-ios, net10.0-android |
 | API 版付きターゲットフレームワーク (明示する場合) | - | net10.0-android36.0, net10.0-ios26.0 以上 |
 | .NET SDK | 9.0.314 | 10.0.300 |
-| Microsoft.Maui.Controls | 9.0.120 | 10.0.70 |
+| Microsoft.Maui.Controls | 9.0.120 | 10.0.71 |
 | iOS | 14.2 | 16.0 |
 | Android | API 27 | API 29 |
 | Android のホストテーマ | 任意 | 任意 — ライブラリが自前の Material3 テーマを同梱し、その中で UI を描く |
 | 配置 | 任意のレイアウト | 大きさが決まる配置 (ページ直下・Grid の `*` 行・明示サイズ) |
 
-`Microsoft.Maui.Controls` の下限は restore 時に効く: `MauiVersion` が 10.0.70 より低いと restore が NU1605 (パッケージのダウングレード) で失敗する。OS の下限はビルド時に効く: パッケージが利用側プロジェクトへ持ち込む検査が、その TFM の `SupportedOSPlatformVersion` が下限を下回ると `net10.0-ios` / `net10.0-android` のビルドをエラー `KSSV0001` で止める。Android は未設定でも SDK 既定値が API 29 を下回るため同じく止まる。
+`Microsoft.Maui.Controls` の下限は restore 時に効く: `MauiVersion` が 10.0.71 より低いと (10.0.70 でも) restore が NU1605 (パッケージのダウングレード) で失敗する。NU1605 を抑止して 10.0.70 に留めると、パッケージが依存する Android の Binding が引き上げた `Xamarin.AndroidX.Core` に 10.0.70 の `Microsoft.Maui.dll` が呼ぶメンバーが無いため、TalkBack などのアクセシビリティサービスが画面を問い合わせた時点で Android アプリが `MissingMethodException` で落ちる。抑止せずに 10.0.71 以上へ上げる。OS の下限はビルド時に効く: パッケージが利用側プロジェクトへ持ち込む検査が、その TFM の `SupportedOSPlatformVersion` が下限を下回ると `net10.0-ios` / `net10.0-android` のビルドをエラー `KSSV0001` で止める。Android は未設定でも SDK 既定値が API 29 を下回るため同じく止まる。
 
 API 版なしの `net10.0-android` / `net10.0-ios` を優先する。この形なら正しい native binding パッケージが選ばれる。API 版を明示する場合は `net10.0-android36.0` / `net10.0-ios26.0` 以上にする。それより低い版では警告なく restore が成功しても platform 中立の `lib/net10.0` asset へフォールバックし、iOS / Android の native binding 依存が静かに欠ける。この挙動は SDK 10.0.300 で検証済み。
 

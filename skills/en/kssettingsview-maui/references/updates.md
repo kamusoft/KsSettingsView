@@ -1,6 +1,6 @@
 # Updating the screen while it is shown
 
-Recipes for changing a settings screen that is already on display, for getting user edits back into a view model, and for generating cells from data. XAML fragments assume the `ks` namespace declaration from the minimal example in [SKILL.md](../SKILL.md); C# snippets assume `using KsSettingsView;` and a `SettingsView` named `Settings` in the page. Changes are made on the UI thread; the native host restores the current tree when it reconnects.
+Recipes for changing a settings screen that is already on display, for getting user edits back into a view model, for generating cells from data, and for scrolling from code. XAML fragments assume the `ks` namespace declaration from the minimal example in [SKILL.md](../SKILL.md); C# snippets assume `using KsSettingsView;` and a `SettingsView` named `Settings` in the page. Changes are made on the UI thread; the native host restores the current tree when it reconnects.
 
 ## Receive what the user changed
 
@@ -157,13 +157,105 @@ public class CellTemplateSelector : DataTemplateSelector
 }
 ```
 
+## Scroll to a cell or a section from code
+
+`SettingsView.ScrollController` holds a scroll handle of type `IScrollController`. The `SettingsView` creates the handle itself, and the property binds `OneWayToSource` by default, so binding it to a view model property is how the handle reaches the view model; assigning another value does not replace it. Give the targets an explicit ID with `CellId` on a cell and `SectionId` on a section. The IDs only name the target - they change nothing on screen.
+
+```xml
+<ks:SettingsView ScrollController="{Binding Scroll}">
+  <ks:Section HeaderText="Notifications" SectionId="notifications">
+    <ks:SwitchCell Title="Push notifications" CellId="push" />
+    <ks:SwitchCell Title="Sound" CellId="sound" />
+  </ks:Section>
+</ks:SettingsView>
+```
+
+```csharp
+public class SettingsViewModel
+{
+    public IScrollController? Scroll { get; set; }
+
+    public void ShowSound() => Scroll?.ScrollTo("sound", ScrollPosition.Center);
+
+    public void ShowNotifications() => Scroll?.ScrollToSection("notifications");
+
+    public void BackToTop() => Scroll?.ScrollToStart(animated: false);
+}
+```
+
+The handle has four commands. `ScrollTo` brings a cell row into view, `ScrollToSection` brings a section in with its header, and `ScrollToStart` / `ScrollToEnd` go to the top and bottom of the content, root header and root footer included. `position` is the library's own `ScrollPosition` enum - `Start` (the default), `Center`, or `End` - and says where in the visible area the target lines up; `animated` defaults to `true`. MAUI's own `ScrollToPosition` is not used here, because its `MakeVisible` has no native counterpart. A target near the end of the content stops at the scroll limit instead of overshooting, and a target taller than the visible area is aligned at its start whatever position you pass.
+
+In code-behind the same handle is available as `Settings.ScrollController`. A view model that only depends on `IScrollController` can be tested with an implementation that records the calls.
+
+## Scroll to a generated cell or section
+
+`target` also accepts an item of `ItemsSource`: `ScrollTo` finds the cell a section generated from that item, and `ScrollToSection` finds the section `SettingsView.ItemsSource` generated from it. An element whose explicit ID equals the target is preferred over a generated one, and among several matches the first in display order is taken. The link to the item survives moves and replacements in the source and a changed `BindingContext` on the generated cell.
+
+```csharp
+public void ShowDevice(Device device) => Scroll?.ScrollTo(device);
+```
+
+## Scroll as soon as the screen opens
+
+A command issued before the native list has been created does nothing and is not replayed later. `ScrollControllerReadyCommand` tells you when commands start to work: it runs each time the native list is created and attached, calling `Execute(null)` when `CanExecute(null)` is true. It runs again whenever the list is recreated - for example when a page that was popped is pushed again, or when Android recreates the activity - so keep a flag if you want to scroll only on the first opening.
+
+```xml
+<ks:SettingsView ScrollController="{Binding Scroll}"
+                 ScrollControllerReadyCommand="{Binding ScrollReadyCommand}">
+  <ks:Section HeaderText="Notifications" SectionId="notifications">
+    <ks:SwitchCell Title="Push notifications" />
+  </ks:Section>
+</ks:SettingsView>
+```
+
+```csharp
+public class SettingsViewModel
+{
+    private bool _scrolledOnOpen;
+
+    public SettingsViewModel()
+    {
+        ScrollReadyCommand = new Command(() =>
+        {
+            if (_scrolledOnOpen)
+            {
+                return;
+            }
+
+            _scrolledOnOpen = true;
+            Scroll?.ScrollToSection("notifications");
+        });
+    }
+
+    public IScrollController? Scroll { get; set; }
+
+    public ICommand ScrollReadyCommand { get; }
+}
+```
+
+## Add an item and show the end
+
+A command runs after the tree changes made earlier in the same UI cycle have reached the screen, so `ScrollToEnd` right after adding an item lands on the end that includes the new item. Commands issued one after another run in order, and the final position is set by the last one whose target was found.
+
+```csharp
+public ObservableCollection<string> AddedItems { get; } = [];
+
+public void AddAndShow(string name)
+{
+    AddedItems.Add(name);
+    Scroll?.ScrollToEnd();
+}
+```
+
 ## Keep the screen across page visits
 
-Leaving the page keeps the settings tree you handed to the `SettingsView` - the sections and cells, their values, and the header and footer views - exactly as it was. Coming back to the page shows that kept content as it is, with accessory views and `CustomCell.Content` included in the first rendered screen rather than inserted later. Changes applied while the page was away are shown too, so there is nothing to save and restore by hand. So do not rebuild the tree on every visit: rebuilding throws away the live sections and cells, and the values the user changed in them go with them.
+Leaving the page keeps the settings tree you handed to the `SettingsView` - the sections and cells, their values, and the header and footer views - exactly as it was. Coming back to the page shows that kept content as it is, with accessory views and `CustomCell.Content` included in the first rendered screen rather than inserted later. Changes applied while the page was away are shown too, so there is nothing to save and restore by hand. The scroll position comes back as well: when the native list is recreated, it returns to the element that was at the top of the visible area, with the same offset, so rows added or removed above it in the meantime do not shift where it lands. A command issued in `ScrollControllerReadyCommand` runs after that restore and sets the final position. So do not rebuild the tree on every visit: rebuilding throws away the live sections and cells, and the values the user changed in them go with them.
 
 ## Rules the updates follow
 
-- Change the tree from the UI thread. The library does not marshal calls for you.
+- Change the tree and issue scroll commands from the UI thread. The library does not marshal calls for you.
 - A `Section`, a `CellBase`, or a view used as a header, footer, or `CustomCell.Content` belongs to one place at a time. Placing the same instance twice throws `InvalidOperationException`: an instance another section or `SettingsView` still owns throws as you add it, and a duplicate inside one collection throws when the placement is drawn. The check runs before anything is applied, so the placement that was already there is untouched and the visible screen never ends up half updated. Recovery is to rebuild `Root`.
 - A collection that is not observable (a plain `List<T>`) is drawn once at the moment it is connected; later edits to it are not shown. Joining and leaving such a collection also counts at that moment, so an element you removed from it can be placed elsewhere only after a new collection is assigned to `Root` or `Cells`.
 - When a host reconnects, the views used by section headers, footers, and `CustomCell.Content` are materialized and delivered before the first screen is shown. Replacing a view instance creates a new content instance; changing the existing view through bindings keeps that instance live.
+- A scroll command whose target is hidden does nothing, and so does one whose target matches no explicit ID or item; the latter writes a warning to the Debug output. Neither throws. While another page is pushed on top of the settings page, its native list stays alive, and a command issued meanwhile is carried out when you come back.
+- The handle refers to its `SettingsView` weakly. A view model that keeps the handle longer than the page does not keep the `SettingsView` and its native list alive; once they are collected, commands on the handle do nothing.

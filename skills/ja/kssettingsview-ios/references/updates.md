@@ -1,6 +1,6 @@
 # 表示中の画面の更新
 
-表示中の設定画面を変えるためのレシピと、宣言ツリーの再評価をまたいで Cell を追跡するためのレシピ。import を自分で書いていないコードは [SKILL.md](../SKILL.md) の最小動作コードと同じ import を前提とする。
+表示中の設定画面を変えるためのレシピと、宣言ツリーの再評価をまたいで Cell を追跡するためのレシピ、コードから list をスクロールさせるためのレシピ。import を自分で書いていないコードは [SKILL.md](../SKILL.md) の最小動作コードと同じ import を前提とする。
 
 ## Store で設定ツリーを所有する
 
@@ -148,7 +148,7 @@ store.applyTheme(darkTheme)
 
 宣言的な書き方では `.theme(_:)` modifier が同じ経路を通る。
 
-新しい Theme は表示中の Cell と、text 形式の Header / Footer へ届き、その場で色が塗り直される。View 形式の Header / Footer は意図的に対象外である — 再 bind すると View の factory が再実行され、hosted view が持っていた状態が失われるため。Theme に追随させたい View 形式の accessory は、`store.updateAccessory(target:accessory:)` で自分で差し替える。
+新しい Theme は表示中の Cell と、text 形式の Header / Footer へ届き、その場で色が塗り直される。View 形式の Header / Footer は意図的に対象外である — 再 bind すると View の factory が再実行され、hosted view が持っていた状態が失われるため。Theme に追随させたい View 形式の accessory は、`store.updateAccessory(target:accessory:)` で自分で差し替える。例外は画面全体の Header / Footer で、Theme の変更で Section の余白 (`sectionMargin`) の解決値が変わったときと、表示中の Section が 0 件と 1 件以上の間で切り替わったときは、余白を付け直すために種別を問わず作り直され、View 形式なら内部状態を失う。
 
 `scrollIndicatorVisible` は初期表示時と Theme 変更時の両方で設定 list へ適用される。行を作り直さず、スクロール位置も変えない。Picker の候補 list は開いた時点の値を使い、ホイール型の選択面と `CustomCell` content が所有する list はこの設定の対象外である。
 
@@ -177,7 +177,9 @@ KsSettingsView {
 
 ## 要素に明示的な名前を付ける
 
-意味のある識別子が要る静的な要素には `cellID` / `sectionID` を使う。同じ要素で `ForEach` の key と併用しない — identity の入力はどちらか一方にする。
+意味のある識別子が要る静的な要素には `cellID` / `sectionID` を使う。同じ要素で `ForEach` の key と併用しない — identity の入力はどちらか一方にする。併用すると明示 ID が採用されて key による追跡が効かなくなり、item ごとに変わらない明示 ID を付けた場合は全 item が同じ identity に解決される。
+
+明示 ID も key も持たない Section は、テキストの Header が identity の入力に含まれるため、Header の文言を変えると identity も変わる。文言が変わり得る Section には `sectionID` を付ける。
 
 ```swift
 ksSection("General") {
@@ -244,6 +246,133 @@ Controller は設定ツリーの公開 setter を持たない。変更はすべ�
 Controller は view load 時に Store の現在の root、accessory、Theme へ収束するため、Controller 作成後から `viewDidLoad` 完了前までに加えた変更も初期表示へ反映される。`rootHeader` / `rootFooter` は Store の状態ではなく Host 所有のプロパティなので、Controller を作り直したときの再適用は呼び出し側の責務である。
 
 テストや独自ホスティング向けには、Store 方式の `KsSettingsView` (SwiftUI View) が `makeController()` を持ち、SwiftUI 階層の外で背後の `KsSettingsViewController` を生成できる。Store 方式専用で、DSL で組んだ View に対して呼ぶと `fatalError` になる。通常の SwiftUI 画面で必要になることはない。
+
+## Cell・Section・先頭・末尾へスクロールさせる
+
+`KsScrollController` は、一度きりのスクロール命令を出すためのハンドルである。`@State` に持って同じインスタンスを渡し続け、Root modifier の `.scrollController(_:)` でつなぐ。DSL 方式・Store 方式のどちらでも使える。DSL 方式では、命令は `cellID` / `sectionID` で付けた明示 ID か `ForEach` の key で要素を指す。位置だけで identity が決まる静的な要素は指せないため、命令で指したい要素にはどちらかを付ける。同じ値が両方に当たるときは明示 ID の要素が採られる。
+
+```swift
+struct SettingsScreen: View {
+    @State private var scroll = KsScrollController()
+    @State private var topics = ["News"]
+
+    var body: some View {
+        KsSettingsView {
+            ksSection("Actions") {
+                ButtonCell(title: "Go to About", onTap: {
+                    MainActor.assumeIsolated {
+                        scroll.scrollToSection(id: "about")
+                    }
+                })
+                ButtonCell(title: "Add a topic", onTap: {
+                    MainActor.assumeIsolated {
+                        let topic = "Topic \(topics.count + 1)"
+                        topics.append(topic)
+                        scroll.scrollTo(id: topic, position: .center)
+                    }
+                })
+            }
+            ksSection("Topics") {
+                ForEach(topics, id: \.self) { topic in
+                    LabelCell(title: topic)
+                }
+            }
+            ksSection("About") {
+                LabelCell(title: "Version", valueText: "1.0.0").cellID("version")
+            }
+            .sectionID("about")
+        }
+        .scrollController(scroll)
+    }
+}
+```
+
+命令は、同じ処理の中で行った更新が画面に反映された後に実行される。そのため 1 つの閉包の中で項目を足してそこへスクロールさせても、足した項目へ届く。
+
+| 命令 | 対象 |
+|---|---|
+| `scrollTo(id:position:animated:)` | Cell の行 |
+| `scrollToSection(id:position:animated:)` | Section の範囲 (Header・表示中の Cell・Footer) |
+| `scrollToStart(animated:)` | 内容の最上端 (画面全体の Header を含む) |
+| `scrollToEnd(animated:)` | 内容の最下端 (画面全体の Footer を含む) |
+
+`position` は `KsScrollPosition` で既定は `.start`、`animated` の既定は `true`。
+
+| `KsScrollPosition` | 合わせ方 |
+|---|---|
+| `.start` | 対象の上端を表示範囲の上端へ |
+| `.center` | 対象の中央を表示範囲の中央へ |
+| `.end` | 対象の下端を表示範囲の下端へ |
+
+表示範囲は、セーフエリアと list の内容の余白を除いた領域である。届かない位置はスクロール可能範囲の端で止まり、表示範囲より高い対象は指定によらず `.start` に合わせる。続けて出した命令は呼んだ順に実行され、対象が見つかった最後の命令が最終位置を決める。非表示の要素、表示される要素が無い Section、存在しない ID への命令は何もしない (存在しない ID は debug ビルドで警告ログを出す)。アニメーション付きの命令は、利用者がドラッグを始めた時点で止まる。
+
+Cell の通知の閉包は `@Sendable` だがメインスレッドで呼ばれるため、上の命令は `MainActor.assumeIsolated` の中で出している。ViewModel はハンドルを `KsScrollController` が準拠する protocol `any KsScrollControlling` として持てば、テストで命令を記録するだけの実装に差し替えられる。接続口が受けるのは `KsScrollController` そのものである。
+
+## UIKit ホストをコードからスクロールさせる
+
+`KsSettingsViewController` の `scrollController` にハンドルを代入する。命令は Cell を `KsCellID`、Section を `id` で指す。
+
+```swift
+import UIKit
+import KsSettingsViewCore
+import KsSettingsViewUI
+
+final class TopicsViewController: UIViewController {
+    private let topicsSectionID = UUID()
+    private let scroll = KsScrollController()
+    private lazy var store = SettingsRootStore(
+        initialRoot: SettingsRoot(sections: [
+            Section(id: topicsSectionID, header: .text("Topics"), cells: [])
+        ]),
+        initialTheme: Theme()
+    )
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+
+        let settings = KsSettingsViewController(store: store, style: .classic)
+        settings.scrollController = scroll
+
+        addChild(settings)
+        settings.view.frame = view.bounds
+        settings.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        view.addSubview(settings.view)
+        settings.didMove(toParent: self)
+    }
+
+    func addTopic(_ title: String) {
+        let cell = LabelCell(title: title)
+        let count = store.root.sections.first?.cells.count ?? 0
+        store.insertCell(cell, in: topicsSectionID, at: count)
+        scroll.scrollTo(id: KsCellID(cell: cell), position: .end)
+    }
+
+    func backToTop() {
+        scroll.scrollToStart(animated: false)
+    }
+}
+```
+
+view の読み込み前や、Controller が window に取り付けられていない間に出した命令は、次のレイアウトの後に実行される。上に別の画面を push して Controller が生きたまま隠れている場合は、戻って表示されたときに命令の位置になっている。
+
+1 つのハンドルが命令を届けるのは、最後につないだ画面だけで、別の画面へつなぐと前の画面には届かなくなる。ハンドルは Controller を保持しない。`nil` の代入・`disconnectStore()`・Controller の破棄で接続が外れ、以後の命令は何もしない。`disconnectStore()` では `scrollController` も `nil` に戻る。ハンドルを差し替えた・外したときは、その画面でまだ実行されていない命令を捨てる (SwiftUI の modifier で差し替えた場合も同じ)。
+
+## UIKit ホストを作り直すときにスクロール位置を引き継ぐ
+
+同じ Store から Controller を作り直しても、UIKit ホストはスクロール位置を自動では引き継がない。`captureScrollAnchor()` で中身を公開しない `KsScrollAnchor` として控え、新しい Controller の `restoreScrollAnchor(_:)` へ渡す。控えは座標ではなく表示範囲の上端にかかる要素を記録するため、その間に上側で項目が増減しても同じ要素の位置へ戻る。
+
+```swift
+let anchor = oldController.captureScrollAnchor()
+oldController.disconnectStore()
+
+let newController = KsSettingsViewController(store: store, style: .classic)
+if let anchor {
+    newController.restoreScrollAnchor(anchor)
+}
+newController.scrollController = scroll
+```
+
+控えるのは古い Controller が window にある間に行う。外れた後の `captureScrollAnchor()` は、控える内容が無いときと同じく `nil` を返す。戻しは新しい Controller の最初のレイアウトの後にアニメーションなしで行われ、その後に出した命令は戻しの後に実行されるので、命令が最終位置を決める。控えた要素が無くなっていれば戻しは何もしない。SwiftUI の `KsSettingsView` は View identity が続く間ホストを作り直さないため、この操作は要らない。
 
 ## 変更を SettingsRootDiff として表す
 

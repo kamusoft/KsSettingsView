@@ -17,6 +17,19 @@ KsSettingsView {
 }
 ```
 
+## Update your state from a cell callback
+
+The closures through which a cell reports user interaction (`onTap`, `onValueChanged`, `onSelected`, the picker completion callbacks, and so on) are typed `@Sendable`, but the library calls them on the main thread. To write a SwiftUI `@State` or call anything else isolated to the main actor from one of them, do it inside `MainActor.assumeIsolated { ... }`. The recipes below follow this pattern. The initializers that take a `Binding` write back for you in the same way.
+
+```swift
+@State private var lastAction = ""
+
+CommandCell(
+    title: "Profile",
+    onTap: { MainActor.assumeIsolated { lastAction = "Profile" } }
+)
+```
+
 ## Show a read-only value
 
 `LabelCell` displays text and never reacts to taps.
@@ -32,7 +45,7 @@ LabelCell(title: "Storage", valueText: "256 GB")
 ```swift
 CommandCell(
     title: "License",
-    onTap: { showLicense = true }
+    onTap: { MainActor.assumeIsolated { showLicense = true } }
 )
 ```
 
@@ -44,7 +57,7 @@ CommandCell(
 ButtonCell(
     title: "Sign out",
     titleColor: .systemRed,
-    onTap: { signOut() },
+    onTap: { MainActor.assumeIsolated { signOut() } },
     titleAlignment: .start
 )
 ```
@@ -59,9 +72,13 @@ ButtonCell(
 SwitchCell(
     title: "Push notifications",
     isOn: notifications,
-    onValueChanged: { notifications = $0 }
+    onValueChanged: { isOn in
+        MainActor.assumeIsolated { notifications = isOn }
+    }
 )
 ```
+
+`SwitchCell`, `CheckboxCell`, `RadioCell` and `SimpleCheckCell` also take an `accentColor` (`UIColor?`) that overrides the tint of their control for that one cell. Left `nil`, it resolves through `CellStyle.accentColor` and then `Theme.cellAccentColor` (see [styling.md](styling.md)).
 
 ## Check an independent option
 
@@ -73,7 +90,9 @@ SwitchCell(
 CheckboxCell(
     title: "I accept the terms",
     isChecked: acceptedTerms,
-    onValueChanged: { acceptedTerms = $0 }
+    onValueChanged: { isChecked in
+        MainActor.assumeIsolated { acceptedTerms = isChecked }
+    }
 )
 ```
 
@@ -87,7 +106,9 @@ CheckboxCell(
 SimpleCheckCell(
     title: "Weekly report",
     isChecked: weeklyReport,
-    onValueChanged: { weeklyReport = $0 }
+    onValueChanged: { isChecked in
+        MainActor.assumeIsolated { weeklyReport = isChecked }
+    }
 )
 ```
 
@@ -104,14 +125,18 @@ ksSection("Appearance") {
         groupId: "appearance",
         value: "light",
         selectedValue: appearance,
-        onSelected: { appearance = $0 }
+        onSelected: { value in
+            MainActor.assumeIsolated { appearance = value }
+        }
     )
     RadioCell(
         title: "Dark",
         groupId: "appearance",
         value: "dark",
         selectedValue: appearance,
-        onSelected: { appearance = $0 }
+        onSelected: { value in
+            MainActor.assumeIsolated { appearance = value }
+        }
     )
 }
 ```
@@ -144,7 +169,9 @@ PickerCell(
     title: "Theme",
     items: ["Light", "Dark", "System"],
     selectedIndex: $themeIndex,
-    onSelectionCompleted: { _ in showThemeHelp() }
+    onSelectionCompleted: { _ in
+        MainActor.assumeIsolated { showThemeHelp() }
+    }
 )
 ```
 
@@ -162,7 +189,9 @@ PickerCell(
     items: ["News", "Sports", "Music", "Travel"],
     selectedIndices: $topics,
     maxSelectedNumber: 2,
-    onMultiSelectionCompleted: { indices in recordTopics(indices) }
+    onMultiSelectionCompleted: { indices in
+        MainActor.assumeIsolated { recordTopics(indices) }
+    }
 )
 ```
 
@@ -183,7 +212,9 @@ PickerCell(
     displayText: { $0.name },
     subText: { $0.detail },
     selectedIndex: $planIndex,
-    onItemSelected: { plan in savePlan(plan) }
+    onItemSelected: { plan in
+        MainActor.assumeIsolated { savePlan(plan) }
+    }
 )
 ```
 
@@ -254,7 +285,9 @@ DatePickerCell(
     format: "yyyy/MM/dd",
     uiStyle: .calendar,
     todayText: "Today",
-    onValueCompleted: { date in showNextStep(for: date) }
+    onValueCompleted: { date in
+        MainActor.assumeIsolated { showNextStep(for: date) }
+    }
 )
 ```
 
