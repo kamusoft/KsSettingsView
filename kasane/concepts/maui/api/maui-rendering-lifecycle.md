@@ -1,9 +1,9 @@
 ---
 type: concept
 title: 表示への反映と Host の寿命 (KsSettingsView.Maui)
-description: facade への変更がいつどう表示へ届き (構造は即時・内容はバッチ・IconSource は非同期・View は参照が正で内容は live)、Section / Cell と View の論理所有と多重配置の例外、Host の解放と再生成をまたいで何が保たれるか、Android の measure 契約による配置の制約
+description: facade への変更がいつどう表示へ届き (構造は即時・内容はバッチ・IconSource は非同期・View は参照が正で内容は live)、Section / Cell と View の論理所有と多重配置の例外、Host の解放と再生成をまたいで何が保たれるか (スクロール位置を含む)、Android の measure 契約による配置の制約
 tags: [maui, facade, lifecycle, handler]
-timestamp: 2026-09-18
+timestamp: 2026-09-30
 ---
 
 # 表示への反映と Host の寿命 (KsSettingsView.Maui)
@@ -69,6 +69,7 @@ Handler が切られるのは、ページがナビゲーションスタックか
 | 設定ツリーと Theme | Bridge の内部所有 Store | Store へ流れ続ける | Store 現在状態から表示を復元 |
 | `RootHeaderText` / `RootFooterText` | facade (Store の復元対象外 — core/ADR-0019) | facade が値を保持 | Host 生成の直後に再適用 (取り付け前でも失われない — core/ADR-0033) |
 | accessory View と `CustomCell.Content` | facade が所有する VisualElement (platform 実体 (wrapper) は Host 世代ごとに作り直される — maui/ADR-0016・0020) | View 差し替え・内容変化とも保持 | Host 生成前に実体化して届け、最初の表示に含まれる (maui/ADR-0027) |
+| スクロール位置 | Bridge (Store の状態ではない — core/ADR-0037。maui/ADR-0030) | Host が無いため命令は何もしない。位置は Host を手放す直前の控えのまま | Host を返す前に控えた位置への戻しを要求する。準備完了の合図 (`ScrollControllerReadyCommand`) の中で出した命令は戻しの後に実行され、最終位置を決める ([native-bridge.md](native-bridge.md) の「Host の作り直しをまたぐスクロール位置」) |
 | ユーザー操作通知の購読 | — | Host が無いため操作は発生し得ない | Handler の接続で開始・切断で解除 (取りこぼしはない) |
 
 iOS の Host は ViewController であり、facade が親 Page への子 VC embed (containment) を管理する。利用者側の作業はない。
@@ -91,7 +92,7 @@ iOS の handler は measure を override しない。大きさが決まる配置
 - [MAUI facade の公開契約](maui-facade.md) — 公開面の骨格と禁止事項
 - [Cell の MAUI 表現](maui-cells.md) — CustomCell の更新規律の利用者向け要約
 - [Store の状態と更新通知](../../core/architecture/store-and-update-streams.md) — 内容更新のバッチ契約と Host 接続時の復元
-- [MAUI Native Bridge の interop 境界](native-bridge.md) — `releaseHost()` / `makeHost*` と root accessory の再適用順序
+- [MAUI Native Bridge の interop 境界](native-bridge.md) — `releaseHost()` / `makeHost*` と root accessory の再適用順序、スクロール位置の控えと戻し
 - [MauiView の native 実体化機構](../architecture/view-materialization.md) — accessory View と `CustomCell.Content` の platform 実体の寿命と退役順序
 
-決定の経緯: maui/ADR-0007 (releaseHost)、core/ADR-0019 (attach 時復元)、maui/ADR-0014 (Android measure 契約)、maui/ADR-0015 (IconSource 実体化)、maui/ADR-0016〜0018 (accessory View)、maui/ADR-0020 (content の live view)、maui/ADR-0022 (View 配置の検査)、maui/ADR-0026 (iOS icon 後片付けの所有権分類)、maui/ADR-0027 (Host 生成前の実体化と配信)、core/ADR-0033 (取り付け前の Root の header / footer の保持)
+決定の経緯: maui/ADR-0007 (releaseHost)、core/ADR-0019 (attach 時復元)、maui/ADR-0014 (Android measure 契約)、maui/ADR-0015 (IconSource 実体化)、maui/ADR-0016〜0018 (accessory View)、maui/ADR-0020 (content の live view)、maui/ADR-0022 (View 配置の検査)、maui/ADR-0026 (iOS icon 後片付けの所有権分類)、maui/ADR-0027 (Host 生成前の実体化と配信)、core/ADR-0033 (取り付け前の Root の header / footer の保持)、maui/ADR-0030 (Host の作り直しをまたぐスクロール位置)

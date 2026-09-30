@@ -6,7 +6,7 @@ applies-when:
   tasks: [binding / facade の end-to-end 疎通確認]
 title: MAUI 検証ホストの実行規約
 description: IntegrationHost と MauiHost を起動して binding 層と facade 層の end-to-end 疎通を確認する手順
-timestamp: 2026-09-16
+timestamp: 2026-09-30
 ---
 
 # MAUI 検証ホストの実行規約
@@ -19,7 +19,7 @@ timestamp: 2026-09-16
 
 | host | 対象 | 主な確認 |
 |---|---|---|
-| `KsSettingsView.IntegrationHost.iOS` / `.Android` | binding 層 | Builder、Host 生成・解放、root 設定、更新 API、Theme が C# から Native へ届くこと |
+| `KsSettingsView.IntegrationHost.iOS` / `.Android` | binding 層 | Builder、Host 生成・解放、root 設定、更新 API、Theme、スクロール命令が C# から Native へ届くこと |
 | `KsSettingsView.MauiHost` | facade 層 | XAML の Section / Cell、内容更新、ページ再訪問後の復元が両 OS で成立すること |
 
 検証ホストは回帰確認用の資産であり、使い捨てのサンプルではない。binding の生成構成は [MAUI binding の Native artifact 統合](../../concepts/maui/architecture/binding-build-integration.md)、facade の公開契約は [MAUI facade の公開契約](../../concepts/maui/api/maui-facade.md) を参照する。
@@ -66,9 +66,10 @@ dotnet build maui/tests/KsSettingsView.IntegrationHost.Android/KsSettingsView.In
 | Section 1 | 「一般」、テーマ=`ダーク`、言語=`English`、footer「アプリ全体の設定」 |
 | Section 2 | 「通知設定」、プッシュ通知=`オン` |
 | Section 3 | 「ストレージ」、バージョン=`0.1.0`、キャッシュ=`0 MB`、同期=`無効`、footer「端末内に保存されたデータ」 |
+| Section 4 | 「スクロール確認」、「項目 1」〜「項目 20」(値と footer なし)。スクロール命令の確認用に画面より長くしてあり、下へスクロールすると見える |
 | root footer | 「C# から Native Bridge を操作しています」 |
 
-Section header は Theme で指定した緑色になる。両 OS で表の内容が一致することを確認する。
+Section header は Theme で指定した緑色になる (Section 4 も同じ)。両 OS で表の内容が一致することを確認する。
 
 画面上の「解放 → 再生成」を操作すると、Host の解放中に別の固定更新シナリオを適用してから、新しい Host を **Store (Bridge 側が保持する設定ツリーの状態。詳細は [Native Bridge の interop 境界](../../concepts/maui/api/native-bridge.md)) の現在状態**で作り直す。再生成後の表示は次のとおり。
 
@@ -77,10 +78,19 @@ Section header は Theme で指定した緑色になる。両 OS で表の内容
 | root header | 表示されない (Store の復元対象ではないため) |
 | Section 1 | テーマ=「解放中に更新」、言語=`Français` |
 | Section 2 | 「通知設定 (解放中に更新)」 |
+| Section 4 | 変わらない (「項目 1」〜「項目 20」) |
 | Section header の色 | オレンジ |
 | root footer | 表示されない (同上) |
 
 root header / footer が消えるのは正常である。
+
+### スクロール命令の確認
+
+画面上の「末尾へ」「先頭へ」は、C# から Bridge のスクロール命令 (`ScrollToEnd(false)` / `ScrollToStart(true)`) を呼ぶ。iOS はナビゲーションバーの左、Android は画面上部のボタン列 (「解放 → 再生成」の右) にある。命令は Store を経由せず Native の Host に届き、Host を作り直しても位置は Bridge が控えて戻す ([Native Bridge の interop 境界](../../concepts/maui/api/native-bridge.md) の「スクロール命令」)。次の手順を両 OS で確認する。
+
+1. 起動直後 (先頭が表示されている状態) で「末尾へ」を操作し、アニメーションなしで「項目 20」と root footer「C# から Native Bridge を操作しています」が見える末尾へ移ることを確認する。
+2. 「先頭へ」を操作し、アニメーションしながら root header「KsSettingsView Bridge」が見える先頭へ戻ることを確認する。
+3. もう一度「末尾へ」を操作してから「解放 → 再生成」を操作し、再生成した Host が先頭へ戻らず、「項目 20」が見える末尾付近で表示されることを確認する。表示内容は上の「再生成後の内容」の表のとおりで、root footer は表示されない。
 
 ## MauiHost
 
@@ -121,6 +131,7 @@ dotnet build maui/tests/KsSettingsView.MauiHost/KsSettingsView.MauiHost.csproj \
 
 - host application が対象 Simulator / Emulator で起動する。
 - IntegrationHost の固定シナリオが期待される内容を表示し、両 OS で一致する。
+- IntegrationHost の「末尾へ」「先頭へ」で Native の Host がスクロールし、末尾へ送ってからの「解放 → 再生成」の後も末尾付近で表示されることが両 OS で成立する。
 - MauiHost の内容更新とページ再訪問後の復元が両 OS で成立する。
 - MauiHost の設定画面を表示したまま OS の外観を切り替えると、「外観追随ボタン」の title 色が両 OS で切り替わる。
 

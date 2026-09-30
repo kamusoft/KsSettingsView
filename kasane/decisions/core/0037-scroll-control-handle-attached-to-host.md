@@ -1,7 +1,7 @@
 ---
 id: 0037
 title: スクロール制御は KsCollectionView と同形の命令ハンドルを Host につないで提供し、Store を経由しない
-status: proposed
+status: accepted
 date: 2026-09-29
 ---
 

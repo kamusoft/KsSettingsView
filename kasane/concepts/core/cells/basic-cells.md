@@ -3,7 +3,7 @@ type: reference
 title: 基本 Cell
 description: 表示・操作・二値・単一選択を担う基本7種の Cell と状態所有の公開契約
 tags: [cells, public-api, ui]
-timestamp: 2026-09-26
+timestamp: 2026-09-30
 ---
 
 この文書は、`LabelCell`、`CommandCell`、`ButtonCell`、`SwitchCell`、`CheckboxCell`、`RadioCell`、`SimpleCheckCell` の用途と公開契約を説明する。読むと、各 Cell の選び方、状態と callback の責務、iOS / Android の宣言 DSL での使い方が分かる。
@@ -48,11 +48,14 @@ iOS では `KsCell`、Android では `Cell` を実装する。直接構築時の
 
 `RadioCell` のグループ状態も利用者が所有する。`groupId` は所属を表し、`selectedValue` を自動更新する Store を Cell 自身は持たない。Android の `SwitchCell` DSL だけは `MutableState<Boolean>` overload を持つため、利用例では callback の代わりに TwoWay 経路を使っている。
 
+iOS の Cell が利用者の操作を知らせる閉包 (`onTap`・`onValueChanged`・`onSelected` など。入力 Cell・`CustomCell` を含む全種) は、常にメインスレッドから呼ばれる。閉包の型は `@Sendable` だが、中で SwiftUI の `@State` などメインアクターに隔離された値を書き換えるときは `MainActor.assumeIsolated { ... }` の中で書き換えられる (`KsCell` の公開 doc「通知のクロージャが呼ばれるスレッド」)。本体の入力 Cell の Binding initializer が行う書き戻しも同じ形である。
+
 ## 保証すること
 
 - `isEnabled = false` では操作 callback を発火せず、control も操作不能になる。
 - `isVisible = false` では Cell 値を model に保持したまま visible projection から除外する。
 - `CheckboxCell` と `SimpleCheckCell` は反転した二値を通知する。
+- iOS の操作 callback は常にメインスレッドから呼ばれる。
 - Android の `RadioCell` は選択済み行の再タップで `onSelected` を再通知しない。iOS は選択済みでも `onSelected(value)` を通知するため、共通ロジックは再通知の有無へ依存しない。
 - `KsCellRegistry.shared.registerBasicCells()`（iOS。Registry インスタンスのメソッド）/ `KsCellRegistry.registerBasicCells(context)`（Android）で7種を一括登録できる。
 

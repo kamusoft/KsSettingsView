@@ -1,7 +1,7 @@
 ---
 id: 0029
 title: MAUI のスクロール命令は、インターフェース型のハンドルを SettingsView が作って ViewModel へ渡して提供する
-status: proposed
+status: accepted
 date: 2026-09-29
 ---
 

@@ -4,5 +4,5 @@ iOS 系統 (ios/ ビルドルート) 固有の知識。カテゴリ定義と配�
 
 ## api/
 
-- [api/ios-native-host.md](api/ios-native-host.md) — SettingsRootStore と UIKit Host の構築・更新・Renderer 拡張境界
-- [api/ios-swiftui.md](api/ios-swiftui.md) — SwiftUI の Store / DSL 方式、identity、modifier、Theme 伝播
+- [api/ios-native-host.md](api/ios-native-host.md) — SettingsRootStore と UIKit Host の構築・更新・Renderer 拡張境界、スクロール命令の接続口と位置を控える／戻す窓口
+- [api/ios-swiftui.md](api/ios-swiftui.md) — SwiftUI の Store / DSL 方式、identity、modifier、Theme 伝播、スクロール命令の修飾子と DSL での指し方

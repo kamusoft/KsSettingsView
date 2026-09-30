@@ -3,10 +3,10 @@ type: reference
 title: iOS SwiftUI Bridge と宣言 DSL
 description: KsSettingsView の Store 方式・DSL 方式、identity、modifier、Theme 伝播の利用契約
 tags: [ios, swiftui, dsl, public-api]
-timestamp: 2026-09-19
+timestamp: 2026-09-30
 ---
 
-この文書は、SwiftUI から KsSettingsView を使うための公開 API 利用契約と責務境界を整理した reference である。読むと、Store 方式と DSL 方式の選び方、動的要素の identity、Root・Section・Cell modifier、Theme の更新経路が分かる。UIKit Host を直接使う場合は [iOS Native Host の利用と更新境界](ios-native-host.md) を参照する。
+この文書は、SwiftUI から KsSettingsView を使うための公開 API 利用契約と責務境界を整理した reference である。読むと、Store 方式と DSL 方式の選び方、動的要素の identity、Root・Section・Cell modifier、Theme の更新経路、スクロール命令ハンドルのつなぎ方と指し方が分かる。UIKit Host を直接使う場合は [iOS Native Host の利用と更新境界](ios-native-host.md) を参照する。
 
 ## 目的
 
@@ -168,6 +168,47 @@ DSL 方式では、初回に指定 Theme、未指定なら `Theme()` から内�
 
 `.style(_:)` と `.rootHeader(_:)` / `.rootFooter(_:)` は Theme とは別の画面状態として Controller へ渡る。
 
+## スクロール制御
+
+`.scrollController(_:)` は `KsScrollController` を内部の Host へつなぐ Root modifier で、Store 方式・DSL 方式のどちらでも使える。ハンドルは View 側で `@State` などに持ち、同じものを渡し続ける。命令の意味・位置・実行の時点は [スクロール制御](../../core/architecture/scroll-control.md) の共通契約に従う。
+
+| 方式 | 命令で指す ID | ハンドルの接続先 |
+|---|---|---|
+| Store | Store の Cell の `KsCellID` と Section の `id` | Host (`KsSettingsViewController`) に直接 |
+| DSL | `.cellID(_:)` / `.sectionID(_:)` で付けた明示 ID、または DSL 専用 `ForEach` の key | ID を最終 ID へ引き直す内部の受け口 (`DSLScrollCommandResolver`) を経て Host |
+
+DSL 方式の受け口は、命令の ID を明示 ID の形と `ForEach` の key の形の両方で最終 ID (`DSLIdentityUUID.uuid(from:)`) に直し、いまの宣言ツリーに在るほうを採る。両方に在れば明示 ID の要素を採り ([core/ADR-0036](../../../decisions/core/0036-explicit-id-wins-over-collection-key.md))、どちらにも無ければ何もしない (debug で警告ログ)。位置 fallback で ID が決まる静的要素は指せないため、命令で指したい要素には明示 ID か key を付ける。
+
+引き直しは `DispatchQueue.main.async` で 1 回遅らせた時点の宣言ツリーで行う。SwiftUI は状態の変更を現在の実行ループの終わりで反映するため、Button の処理で `@State` に項目を足し、同じ処理で続けてその項目への命令を出しても、追加後のツリーで解決される。
+
+```swift
+struct SettingsScreen: View {
+    @State private var scroll = KsScrollController()
+    @State private var names = ["通知"]
+
+    var body: some View {
+        KsSettingsView {
+            ksSection("項目") {
+                ForEach(names, id: \.self) { name in
+                    LabelCell(title: name)
+                }
+            }
+            ksSection("操作") {
+                ButtonCell(title: "追加して表示", onTap: {
+                    MainActor.assumeIsolated {
+                        names.append("新しい項目")
+                        scroll.scrollTo(id: "新しい項目", position: .center)   // ForEach の key で指す
+                    }
+                })
+            }
+        }
+        .scrollController(scroll)
+    }
+}
+```
+
+modifier に渡すハンドルを差し替えた・外したときは、まだ引き直していない命令と、Host へ渡したまま未実行の命令を捨てる (UIKit Host の `scrollController` の差し替えと同じ扱い)。
+
 ## 配置とセーフエリア
 
 `KsSettingsView` は Store 方式・DSL 方式のどちらでも、既定で container のセーフエリアを全辺で無視し、置かれた親の全面に広がる。ナビゲーションバー・タブバーに覆われる領域の inset は UIKit ホストの自動調整が付けるため、`NavigationStack` の中身として置けば `List` と同じく一覧が bar の後ろまで回り込み、iOS 26 の大タイトルもスクロールで畳まれる ([ios/ADR-0006](../../../decisions/ios/0006-swiftui-wrapper-ignores-container-safe-area.md))。keyboard 領域は無視しないため、EntryCell の編集中はラッパがキーボードの外側に縮む。
@@ -184,6 +225,7 @@ DSL 方式では、初回に指定 Theme、未指定なら `Theme()` から内�
 - Root / Section / Cell の modifier は元の値を変更せず copy を返す。
 - 既定の配置は親の全面 (container のセーフエリアを無視) で、`respectsSafeArea` の切替は View identity を変えない。
 - Theme 更新は Section / Cell の ID と構造を変えない。
+- DSL 方式のスクロール命令は、同じ処理で行った状態の変更を反映した宣言ツリーで解決される。
 
 ## してはいけないこと
 
@@ -215,3 +257,4 @@ DSL 方式では、初回に指定 Theme、未指定なら `Theme()` から内�
 - [基本 Cell](../../core/cells/basic-cells.md)
 - [入力 Cell](../../core/cells/input-cells.md)
 - [KsImage](../../core/cells/ks-image.md)
+- [スクロール制御](../../core/architecture/scroll-control.md)

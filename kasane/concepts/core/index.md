@@ -8,8 +8,9 @@
 - [architecture/store-and-update-streams.md](architecture/store-and-update-streams.md) — 復元可能な現在状態と一過性の更新通知を分離する SettingsRootStore の共通契約
 - [architecture/display-state-synchronization.md](architecture/display-state-synchronization.md) — 構造・同一 ID の内容・可視性・Theme を異なる更新経路へ分ける共通原則
 - [architecture/cell-renderer-registry.md](architecture/cell-renderer-registry.md) — Cell model 型と Native 描画型を分離し、利用者定義 Cell を追加する拡張境界
-- [architecture/declarative-ui-bridge.md](architecture/declarative-ui-bridge.md) — SwiftUI・Compose の宣言状態を Store と Native Host の共通更新経路へ接続する境界
+- [architecture/declarative-ui-bridge.md](architecture/declarative-ui-bridge.md) — SwiftUI・Compose の宣言状態を Store と Native Host の共通更新経路へ接続する境界 (宣言の差分が出す追加・削除・最小移動を含む)
 - [architecture/declarative-tree-identity.md](architecture/declarative-tree-identity.md) — 宣言 UI の再評価をまたいで Section と Cell を継続追跡する識別契約
+- [architecture/scroll-control.md](architecture/scroll-control.md) — Store を経由せず Host につなぐスクロール命令ハンドルの共通契約 (命令と位置・実行する時点・位置を控える／戻す窓口・Host の作り直しをまたぐ保持)
 
 ## core-model/
 

@@ -3,10 +3,10 @@ type: concept
 title: 宣言 UI と Native Host の Bridge
 description: SwiftUI・Compose の宣言状態を Store と Native Host の共通更新経路へ接続する境界
 tags: [architecture, declarative-ui, swiftui, compose]
-timestamp: 2026-09-26
+timestamp: 2026-09-30
 ---
 
-この文書は、SwiftUI / Compose Bridge に共通する Store 方式と DSL 方式の収束を説明する。読むと、状態の所有者、宣言ツリー再評価、値と callback の橋渡し、Native Host との責務分担、そして両方式の観測結果対称性の契約が分かる。
+この文書は、SwiftUI / Compose Bridge に共通する Store 方式と DSL 方式の収束を説明する。読むと、状態の所有者、宣言ツリー再評価、値と callback の橋渡し、Native Host との責務分担、両方式の観測結果対称性の契約、そして宣言の差分が追加・削除・移動をどう出すかが分かる。
 
 ## 二つの利用方式
 
@@ -49,6 +49,18 @@ Store 方式は利用者が「何が変わったか」を公開操作として�
 
 この契約が検出した欠落の実例: Section header の固定高さはかつて DSL 経由で差分が生成されない無音の取りこぼしとして記録され、のちに両 platform の `DSLDiffCalculator` が可視性と同型の preflight で headerHeight 差を検出し full 更新のみを発行する形で解消された ([表示状態同期](display-state-synchronization.md) の「Section header の固定高さ」節)。
 
+## 宣言の差分が出す追加・削除・移動
+
+`DSLDiffCalculator` (iOS・Android で同じ形) は、前回と今回の resolved tree の Section 列と、各 Section の Cell 列を ID で突き合わせ、削除 → 追加 → 移動の順に `SettingsRootDiff` を出す (内容更新の扱いは platform で経路が異なる — [表示状態同期](display-state-synchronization.md))。各操作の index は、先行する操作を適用した時点の並びの位置で表す。これは Store が insert / `moveSection` / `moveCell` を受けたときの解釈 ([SettingsRootDiff による構造変更](../core-model/structural-changes.md)) と同じで、出した列を順に Store へ適用すると新しい宣言の並びと一致する。
+
+| 並びの変化 | 出す操作 |
+|---|---|
+| 途中への挿入・削除だけ | 追加・削除だけを出す。挿入・削除でずれただけの項目には移動を出さず、追加の位置は新しい並びでの位置そのものになる |
+| 相対順序が変わった | 両方にある項目のうち、新しい並びで相対順序を保てる最大の集合 (最長増加部分列) は動かさず、残りの項目だけを新しい並びで直前にある項目の直後へ移す (最小移動) |
+| Section の順序 | Cell と同じ最小移動の計算で出し、`from` / `to` とも適用時点の並びの位置で表す |
+
+最小移動は、`forEach` の途中への 1 項目の挿入で後ろの全項目へ移動を出していた形を両 platform で改めたものである。Section の `from` を旧の並びの位置で出していた頃は、Section の追加・削除と同時に位置がずれると宣言と違う並びに着地した (先頭への追加で、追加した Section が末尾へ運ばれる)。
+
 ## 状態の橋渡し
 
 宣言 UI が所有する state は、評価時点の値として不変な Cell へ写す。ユーザー操作は Cell の callback から宣言 UI 側の state へ戻す。Cell 自身は `Binding` / `MutableState` を永続状態として所有しない。
@@ -67,6 +79,7 @@ state 値の変化は同じ ID の内容更新であり、宣言ツリーの ide
 - Store 経由で表示へ反映される観測可能な変化を、DSL 経由でも同じ表示結果へ到達させる (非対応は明示的に文書化する — core/ADR-0018)。
 - 宣言 UI の identity が続く間、内部 Store と前回 tree を維持する。
 - 同じ ID の内容変更を構造上の remove + insert にしない。
+- 宣言の差分は相対順序が変わった項目だけに移動を出し、出した列を順に適用した結果は新しい宣言の並びと一致する。
 - Theme 更新を構造 Diff へ混ぜない。
 
 ## してはいけないこと

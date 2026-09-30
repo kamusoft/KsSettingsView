@@ -80,5 +80,15 @@
 
 - [x] 論点の解消
 - [x] ADR 起票 (proposed、昇格は蒸留時): core/ADR-0037 (Host につなぐ命令ハンドル)、maui/ADR-0029 (SettingsView が作るインターフェース型のハンドル)、maui/ADR-0030 (Bridge が位置を控えて戻す)
-- [ ] KsCollectionView への申し送りメモ: KsSettingsView の Native はハンドルのインターフェースを足した (論点6)。KsCollectionView 側にも足すかは向こうのリポジトリで判断する (config の relations に KsCollectionView は無い)
+- [x] KsCollectionView への申し送りメモ: KsSettingsView の Native はハンドルのインターフェースを足した (論点6)。KsCollectionView 側にも足すかは向こうのリポジトリで判断する (config の relations に KsCollectionView は無い) → 見送り (2026-09-30 オーナー判断。KsCollectionView は形の手本にした先で、こちらに合わせる義務は無い。必要になったら向こうのリポジトリで判断する)
 - [x] ksn-propose で変更提案を起こす (kasane/changes/add-scroll-control、L 級)
+
+## 実装結果 (2026-09-30 反映)
+
+- [add-scroll-control](../../../../changes/archive/2026-09-30-add-scroll-control/proposal.md) として実装完了 (verify-003 VALID / review-005・second-opinion-code-005 APPROVED)。core/ADR-0037・maui/ADR-0029・maui/ADR-0030 は accepted へ昇格 (maui/ADR-0030 は Decision の「Host を手放すときに控える」を「手放す前の位置を控える」に改めた)
+- 決定事項どおりに実装した。実機検証で見つけた不具合 4 件 (Navigation Compose 配下で Activity の作り直しの位置が保存し直しで消える、MAUI の Handler 切断が window から外れた後に届き位置を控えられない、iOS の末尾への命令がスクロール中の内容・表示範囲の変化で行き過ぎる、iOS の控えが window から外れた後に違う位置を返す) を同じ change で直した
+- オーナー合意の乖離: Navigation Compose の画面を離れて戻ったときも位置を保つ (保存の経路が Activity の作り直しと同じため)
+- オーナー指示で追加したスコープ 5 件を同じ change に含めた: MAUI の最低版を 10.0.71 に上げて Android のアクセシビリティ経由のクラッシュを解消 (KsDialogs へ知らせ済み)、iOS の再接続後に祖先の再レイアウトが追従しない問題、宣言の差分の最小移動 (両 OS、Section の移動の位置も修正)、Compose の文字列の Root Header / Footer、iOS Sample の Swift 6 警告
+- 申し送り:
+  - skills/ と README の追随 (MAUI の最低版 10.0.71、iOS / Android の Root Footer と通知の閉包の例) → ロードマップ外。docs-refresh はユーザーの依頼でだけ動かす規約のため、オーナーの依頼を待つ (kasane/changes/archive/2026-09-30-add-scroll-control/deviation.md の蒸留送りの行)
+  - KsCollectionView への申し送りメモ → 見送り (上の TODO に理由)
