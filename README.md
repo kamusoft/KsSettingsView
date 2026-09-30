@@ -29,7 +29,7 @@ The public API may introduce breaking changes while the project remains on `0.x`
 | --- | --- | --- |
 | iOS Native | iOS 16.0 | Swift tools 5.10 |
 | Android Native | Android API 29; compileSdk 35 | Kotlin 2.4.10; AGP 8.13.2; Gradle 9.5.0; JDK 17 |
-| .NET MAUI | iOS 16.0; Android API 29 | .NET SDK 10.0.300; `net10.0-ios` / `net10.0-android`; Microsoft.Maui.Controls 10.0.70 |
+| .NET MAUI | iOS 16.0; Android API 29 | .NET SDK 10.0.300; `net10.0-ios` / `net10.0-android`; Microsoft.Maui.Controls 10.0.71 |
 
 Android is distributed as the single Maven artifact `jp.kamusoft:kssettingsview`. Its Core, UI, and Compose layers remain separated by the Kotlin packages `jp.kamusoft.kssettingsview.core`, `.ui`, and `.compose`. Android consumers need Kotlin 2.3 or later, minSdk 29, and compileSdk 35. Kotlin 2.4.10 in the table is the toolchain used to build the library, not the minimum consumer Kotlin version.
 
@@ -73,11 +73,11 @@ To select a prerelease, set `Version` to a value such as `X.Y.Z-beta.N`. When se
 
 The public .NET namespace is `KsSettingsView`; in XAML, use `clr-namespace:KsSettingsView;assembly=KsSettingsView.Maui` as shown below.
 
-Compatibility requirements: Microsoft.Maui.Controls (`MauiVersion`) 10.0.70 or later, and a minimum OS version of iOS 16.0 / Android API 29. Pinning Microsoft.Maui.Controls below 10.0.70 causes a package downgrade error (`NU1605`); update `MauiVersion` to 10.0.70 or later. The package ships a build-time guard; if the consuming project's `SupportedOSPlatformVersion` is lower than these values, the build fails with error `KSSV0001`. The following fragment shows the same form used by the Sample application.
+Compatibility requirements: Microsoft.Maui.Controls (`MauiVersion`) 10.0.71 or later, and a minimum OS version of iOS 16.0 / Android API 29. Pinning Microsoft.Maui.Controls below 10.0.71 causes a package downgrade error (`NU1605`); update `MauiVersion` to 10.0.71 or later. The package ships a build-time guard; if the consuming project's `SupportedOSPlatformVersion` is lower than these values, the build fails with error `KSSV0001`. The following fragment shows the same form used by the Sample application.
 
 ```xml
 <PropertyGroup>
-  <MauiVersion>10.0.70</MauiVersion>
+  <MauiVersion>10.0.71</MauiVersion>
 </PropertyGroup>
 
 <PropertyGroup Condition=" $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios' ">

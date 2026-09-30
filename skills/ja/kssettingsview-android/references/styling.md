@@ -343,6 +343,21 @@ KsSettingsView(
 }
 ```
 
+素の文字列を出すだけなら `rootHeaderText` / `rootFooterText` を渡す。文字列は一覧が持つ画面全体の Header / Footer の描き方 (View ホストに文字列の Root Header を渡したときと同じ文字の大きさ・色・余白) で描かれるので、自前の Composable は要らない。この 2 つの引数は `KsSettingsView` の DSL 方式と Store 方式の両方の overload にある。
+
+```kotlin
+KsSettingsView(
+    rootHeaderText = "Signed in as a guest",
+    rootFooterText = "Version 1.0.0",
+) {
+    Section(header = "General") {
+        LabelCell(title = "Version", valueText = "1.0.0")
+    }
+}
+```
+
+どちらの引数も既定は `null` で、Composable も文字列も無い位置には何も表示されない。同じ位置に Composable と文字列の両方を渡すと Composable が表示され、文字列は使われない。前述の Section の Header / Footer と違い、例外にはならない。
+
 文字列の Header / Footer には `headerBackgroundColor` / `footerBackgroundColor` が対応する領域の背景として適用される。ライブラリの既定は両外観とも透明なので list の下地が見える。View として渡した Header / Footer はホスト Context で作られるその View の所有物で、ライブラリの背景塗りは適用されない。
 
 ## 内容を消さずに Section の Header を隠す

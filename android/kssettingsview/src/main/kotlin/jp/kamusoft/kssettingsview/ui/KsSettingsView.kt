@@ -227,6 +227,26 @@ public class KsSettingsView @JvmOverloads constructor(
      */
     private var pendingScrollPosition: Parcelable? = null
 
+    /**
+     * window から外れる直前に控えた、保存状態に載せるスクロール位置の控え。
+     *
+     * 外れた後に保存状態を求められたときに使う。Compose の `SaveableStateHolder` (Navigation Compose の
+     * `NavHost` が画面ごとに使う) は、Activity の保存の後、画面の Composition を破棄するときにも
+     * 同じ画面の状態を保存し直し、先の保存を上書きする。その時点の Host は window から外れて行を
+     * 持たないため、ここで控えた値を使わないと位置の無い状態で上書きされる。`onAttachedToWindow` で捨てる。
+     */
+    private var scrollAnchorAtDetach: KsScrollAnchor? = null
+
+    /**
+     * window に取り付けられている間に、ライブラリ既定の ID を持つ Host が同一階層に複数あったか。
+     *
+     * 外れた後は親をたどれず数え直せないため、この判定を外れた後の保存状態の要否に使う（android/ADR-0021）。
+     * 外れる時点だけで数えると足りない。window から外れるときは Host が 1 つずつ外れ、Compose の
+     * `AndroidView` では外れた Host から順に階層を離れるため、後に外れる Host には先の Host が数えられない。
+     * そこで、同じ階層の Host がそろっているレイアウトの時点でも数えておく。
+     */
+    private var wasAmbiguousWhileAttached: Boolean = false
+
     /** `SettingsRoot` が一度でも反映されたか（復元走査の駆動条件のひとつ）。 */
     private var isRootApplied: Boolean = false
 
@@ -262,6 +282,55 @@ public class KsSettingsView @JvmOverloads constructor(
      * ここへ預けておき、条件が揃った時点で1回だけ消化する。
      */
     private var pendingCalendarRestore: Pair<String, DateCalendarDisplayState>? = null
+
+    /** スクロール命令の待ち行列・位置の解決と、表示位置を控える窓口の実体。 */
+    private val scrollControl: KsSettingsViewScrollControl = KsSettingsViewScrollControl(
+        recyclerView = recyclerView,
+        headerAdapter = headerAdapter,
+        mainListAdapter = mainListAdapter,
+        footerAdapter = footerAdapter,
+        handler = mainHandler,
+        modelRoot = { internalRoot },
+        isAttachedToWindow = { isAttachedToHostWindow },
+    )
+
+    /**
+     * ハンドルへ登録するスクロール命令の受け口。
+     *
+     * この View 自身を受け口にすると、モジュール内部の配送路が利用者から呼べる入口になるため、
+     * 非公開のオブジェクトに持たせてこの View へ委譲する。ハンドルは受け口を弱参照で持ち、この View は
+     * 受け口を強参照で持つので、View が回収されれば受け口もまとめて回収され、ハンドルは未接続に戻る。
+     */
+    private val scrollCommandReceiver: KsScrollCommandReceiver = object : KsScrollCommandReceiver {
+        override fun receive(command: KsScrollCommand) {
+            scrollControl.enqueue(KsScrollQueueEntry.Command(command))
+        }
+    }
+
+    /**
+     * スクロール命令を受け取るハンドル。
+     *
+     * 代入するとハンドルがこの View へ接続され、ハンドルの命令 (`scrollTo`・`scrollToSection`・
+     * `scrollToStart`・`scrollToEnd`) がこの View に届きます。`null` を代入したときと [unbind] を
+     * 呼んだときは接続が外れ、以後の命令は何もしません。[unbind] ではこのプロパティも `null` に戻り、
+     * 再び [bind] しても自動ではつなぎ直さないため、改めて代入します。
+     *
+     * 1 つのハンドルが命令を届ける先は、最後に接続した View だけです。ハンドルはこの View を保持
+     * しないため、ハンドルを View より長く持っても View (とそれが持つ Activity) の寿命は延びません。
+     *
+     * 命令で指す ID は Cell の `id` と Section の `id` です。
+     */
+    public var scrollController: KsScrollController? = null
+        set(value) {
+            val old = field
+            if (old === value) return
+            field = value
+            old?.detach(scrollCommandReceiver)
+            // 外した接続から届いていた未実行の命令は捨てる。控えた位置の復元はこの View 自身への
+            // 要求なので残す。
+            scrollControl.dropPendingCommands()
+            value?.attach(scrollCommandReceiver)
+        }
 
     /**
      * 見た目スタイル。
@@ -337,6 +406,8 @@ public class KsSettingsView @JvmOverloads constructor(
 
         addView(recyclerView)
         recyclerView.adapter = concatAdapter
+        // 一覧の commit で、反映を待っていたスクロール命令の実行を再開する。
+        mainListAdapter.onListCommitted = { scrollControl.flushIfPossible() }
 
         // 基本 Cell 7 種を自動登録する。
         if (!KsCellRegistry.isRegistered(LabelCell::class)) {
@@ -449,6 +520,9 @@ public class KsSettingsView @JvmOverloads constructor(
         rebindCellsIfLocaleChanged()
 
         isAttachedToHostWindow = true
+        // window に戻れば行から位置を控え直せるため、外れる直前の控えは捨てる。複数あるかは戻った先で数え直す。
+        scrollAnchorAtDetach = null
+        wasAmbiguousWhileAttached = false
         scheduleRestoreScanIfReady()
     }
 
@@ -479,6 +553,9 @@ public class KsSettingsView @JvmOverloads constructor(
         // スクロール位置は adapter を切る前に控える。`setAdapter(null)` は LayoutManager から
         // 全 View を取り上げ、アンカーの根拠になる子 View が無くなるため、後から控えても先頭を指す。
         savePendingScrollPosition()
+        // 外れた後に求められる保存状態のため、保存状態に載せる位置と保存の要否もここで控える。
+        wasAmbiguousWhileAttached = wasAmbiguousWhileAttached || hasAmbiguousLibraryDefaultId()
+        scrollAnchorAtDetach = if (wasAmbiguousWhileAttached) null else captureScrollAnchor()
         // RecyclerView の adapter 参照を切る。切った参照は `onAttachedToWindow` で戻す。
         recyclerView.adapter = null
         super.onDetachedFromWindow()
@@ -509,6 +586,41 @@ public class KsSettingsView @JvmOverloads constructor(
         val saved = pendingScrollPosition ?: return
         pendingScrollPosition = null
         recyclerView.layoutManager?.onRestoreInstanceState(saved)
+    }
+
+    override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+        super.onLayout(changed, left, top, right, bottom)
+        // 外れた後の保存状態の要否のため、同じ階層の Host がそろっているこの時点で複数あるかを数えておく。
+        if (isAttachedToHostWindow) wasAmbiguousWhileAttached = hasAmbiguousLibraryDefaultId()
+        // 内部 RecyclerView の行の配置が済んだこの時点で、反映とレイアウトを待っていたスクロール命令と
+        // 位置の復元を実行する（取り付け前・画面外で受けたものを含む）。
+        scrollControl.onHostLayout()
+    }
+
+    // MARK: - 位置を控える・戻す
+
+    /**
+     * 現在の表示位置を控えます。
+     *
+     * 表示範囲の上端にかかる最初の要素 (Cell の行・Section の見出しと Footer・Root Header と
+     * Root Footer) と、上端からのずれを控えます。控えた値を同じ内容を表示する `KsSettingsView` の
+     * [restoreScrollAnchor] へ渡すと、その位置へ戻ります。
+     *
+     * @return 控えた位置。行が表示されていない (window に取り付けられていない・内容が空など) ときは `null`
+     */
+    public fun captureScrollAnchor(): KsScrollAnchor? = scrollControl.captureAnchor()
+
+    /**
+     * 控えた表示位置へ戻します。
+     *
+     * スクロール命令と同じく、データの反映と画面のレイアウトの後に、控えた要素が控えたときと同じ
+     * ずれで表示範囲の上端にかかる位置へ戻します。これより後に出したスクロール命令は、戻した後に
+     * 実行されます。控えた要素が見つからなければ何もしません。
+     *
+     * @param anchor [captureScrollAnchor] で控えた位置
+     */
+    public fun restoreScrollAnchor(anchor: KsScrollAnchor) {
+        scrollControl.enqueue(KsScrollQueueEntry.Restore(anchor))
     }
 
     // MARK: - 公開 API
@@ -573,8 +685,12 @@ public class KsSettingsView @JvmOverloads constructor(
      * 再 attach しても購読は復活しない。再び追従させたい場合は [bind] を呼び直す。
      *
      * 冪等であり、Store 未バインドおよび解除済みの状態で呼んでも何も起きない。
+     *
+     * [scrollController] の接続も外して `null` に戻す。再び [bind] した後にハンドルをつなぐときは、
+     * [scrollController] へ改めて代入する。
      */
     public fun unbind() {
+        scrollController = null
         storeCollectJob?.cancel()
         storeCollectJob = null
         pendingStore?.unregisterRootAccessoryReceiver(rootAccessoryReceiver)
@@ -1213,8 +1329,8 @@ public class KsSettingsView @JvmOverloads constructor(
     }
 
     /**
-     * View 階層のインスタンス状態として、表示中のカレンダー選択面の状態を保存する
-     * （android/ADR-0021）。
+     * View 階層のインスタンス状態として、表示中のカレンダー選択面の状態とスクロール位置の控えを
+     * 保存する（android/ADR-0021）。
      *
      * ここでは状態を控えるだけで選択面は畳まない。状態保存はホストが実際に破棄されるときだけで
      * なく、ホーム画面や他アプリへ移るたびに起こる。畳んでしまうと、そのまま戻ってきただけの
@@ -1223,15 +1339,24 @@ public class KsSettingsView @JvmOverloads constructor(
      *
      * ライブラリ既定の ID を持つインスタンスが同一階層に複数あるときは、保存先が互いに衝突して
      * 状態が混ざるため保存しない。ホストが個別の ID を与えていれば衝突しない。
+     *
+     * window から外れた後に求められたとき (Compose の `SaveableStateHolder` が画面の破棄時に保存し直す
+     * 場合) は、外れる直前に控えた位置と保存の要否を使う。
      */
     override fun onSaveInstanceState(): Parcelable {
         val saved = SavedState(super.onSaveInstanceState())
+        if (hasAmbiguousLibraryDefaultId()) return saved
+        if (!isAttachedToHostWindow && wasAmbiguousWhileAttached) return saved
         val dialog = activeCalendarDialog
         val cellId = activeCalendarCellId
-        if (dialog != null && cellId != null && dialog.isShowing && !hasAmbiguousLibraryDefaultId()) {
+        if (dialog != null && cellId != null && dialog.isShowing) {
             saved.calendarCellId = cellId
             saved.calendarDisplayState = dialog.displayState()
         }
+        // スクロール位置は要素の ID で控える。内部の RecyclerView は ID を持たず LayoutManager の状態が
+        // 保存されないうえ、行番号で戻すと作り直しの間の項目の増減で別の場所へ戻るため。
+        // 外れた後は行が無く控えられないため、外れる直前の控えを使う。未実行の復元があればそちらを優先する。
+        saved.scrollAnchor = captureScrollAnchor() ?: scrollAnchorAtDetach.takeUnless { isAttachedToHostWindow }
         return saved
     }
 
@@ -1241,12 +1366,15 @@ public class KsSettingsView @JvmOverloads constructor(
             return
         }
         super.onRestoreInstanceState(state.superState)
+        if (hasAmbiguousLibraryDefaultId()) return
         val cellId = state.calendarCellId
         val display = state.calendarDisplayState
-        if (cellId != null && display != null && !hasAmbiguousLibraryDefaultId()) {
+        if (cellId != null && display != null) {
             pendingCalendarRestore = cellId to display
             scheduleRestoreScanIfReady()
         }
+        // 位置の復元は待ち行列を通すので、attach と root の反映・レイアウトがそろってから実行される。
+        state.scrollAnchor?.let { restoreScrollAnchor(it) }
     }
 
     /**
@@ -1388,6 +1516,23 @@ public class KsSettingsView @JvmOverloads constructor(
 
     internal fun internalFooterAdapter(): RootHeaderFooterAdapter = footerAdapter
 
+    /** 処理し終えたスクロール命令と位置の復元の数（対象が見つからなかったものを含む）。 */
+    internal fun internalProcessedScrollEntryCount(): Int = scrollControl.processedEntryCount
+
+    /**
+     * この View のスクロール命令の受け口。宣言 UI のラッパーが、手がかりを最終 ID に引き直した命令を
+     * 渡す先として使う（ハンドルはラッパー側の受け口に接続し、この View には直接つながない）。
+     */
+    internal fun internalScrollCommandReceiver(): KsScrollCommandReceiver = scrollCommandReceiver
+
+    /**
+     * 受け口から届いた未実行のスクロール命令を捨てる。控えた位置の復元は残す。宣言 UI のラッパーが、
+     * 自分の受け口に接続したハンドルを差し替えた・外したときに使う。
+     */
+    internal fun internalDropPendingScrollCommands() {
+        scrollControl.dropPendingCommands()
+    }
+
     internal fun internalDetachForTest() {
         onDetachedFromWindow()
     }
@@ -1401,9 +1546,9 @@ public class KsSettingsView @JvmOverloads constructor(
     /**
      * [KsSettingsView] が View 階層のインスタンス状態として保存する内容。
      *
-     * 表示中だったカレンダー選択面の対象 Cell と表示状態だけを持つ。ボトムシート系の選択面は
-     * 保存対象に含めない（構成変更で閉じ、値も書き込まない）。日付は端末タイムゾーンに依存しない
-     * epoch day で持つ。
+     * 表示中だったカレンダー選択面の対象 Cell と表示状態、およびスクロール位置の控えを持つ。
+     * ボトムシート系の選択面は保存対象に含めない（構成変更で閉じ、値も書き込まない）。日付は端末
+     * タイムゾーンに依存しない epoch day で持つ。
      */
     internal class SavedState : BaseSavedState {
 
@@ -1413,21 +1558,28 @@ public class KsSettingsView @JvmOverloads constructor(
         /** 表示中だったカレンダー選択面の表示状態（保存対象が無ければ `null`）。 */
         var calendarDisplayState: DateCalendarDisplayState? = null
 
+        /** スクロール位置の控え（控えられる内容が無ければ `null`）。 */
+        var scrollAnchor: KsScrollAnchor? = null
+
         constructor(superState: Parcelable?) : super(superState)
 
         private constructor(source: Parcel) : super(source) {
             calendarCellId = source.readString()
-            if (calendarCellId == null) return
-            val selectedEpochDay = source.readLong()
-            calendarDisplayState = DateCalendarDisplayState(
-                selectedDate = if (selectedEpochDay == NO_SELECTED_DATE) {
-                    null
-                } else {
-                    LocalDate.ofEpochDay(selectedEpochDay)
-                },
-                displayedMonth = LocalDate.ofEpochDay(source.readLong()),
-                isTextInput = source.readInt() != 0,
-            )
+            if (calendarCellId != null) {
+                val selectedEpochDay = source.readLong()
+                calendarDisplayState = DateCalendarDisplayState(
+                    selectedDate = if (selectedEpochDay == NO_SELECTED_DATE) {
+                        null
+                    } else {
+                        LocalDate.ofEpochDay(selectedEpochDay)
+                    },
+                    displayedMonth = LocalDate.ofEpochDay(source.readLong()),
+                    isTextInput = source.readInt() != 0,
+                )
+            }
+            if (source.readInt() != 0) {
+                scrollAnchor = KsScrollAnchor.CREATOR.createFromParcel(source)
+            }
         }
 
         override fun writeToParcel(out: Parcel, flags: Int) {
@@ -1435,12 +1587,19 @@ public class KsSettingsView @JvmOverloads constructor(
             val display = calendarDisplayState
             if (display == null) {
                 out.writeString(null)
-                return
+            } else {
+                out.writeString(calendarCellId)
+                out.writeLong(display.selectedDate?.toEpochDay() ?: NO_SELECTED_DATE)
+                out.writeLong(display.displayedMonth.toEpochDay())
+                out.writeInt(if (display.isTextInput) 1 else 0)
             }
-            out.writeString(calendarCellId)
-            out.writeLong(display.selectedDate?.toEpochDay() ?: NO_SELECTED_DATE)
-            out.writeLong(display.displayedMonth.toEpochDay())
-            out.writeInt(if (display.isTextInput) 1 else 0)
+            val anchor = scrollAnchor
+            if (anchor == null) {
+                out.writeInt(0)
+            } else {
+                out.writeInt(1)
+                anchor.writeToParcel(out, flags)
+            }
         }
 
         companion object {

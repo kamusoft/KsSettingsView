@@ -3,6 +3,7 @@ id: 0008
 title: 宣言ツリーの安定同一性
 status: accepted
 date: 2026-05-18
+amended-by: 0036
 ---
 
 ## Context
@@ -48,3 +49,4 @@ Cell ID は次の優先順で解決する。
 - 負: SwiftUI / Compose の標準 API とは別に、DSL 専用の `ForEach` / `forEach` と ID 再束縛規約を保守する必要がある。
 
 出典: openspec/changes/archive/2026-05-18-add-declarative-dsl/design.md
+現行照合: 2026-09-26 確認。Section / Cell の位置 fallback と DSL 専用 ForEach / forEach・ID 再束縛は ios/Sources/KsSettingsViewSwiftUI/ と android/kssettingsview/src/main/kotlin/jp/kamusoft/kssettingsview/compose/ の実装と一致。collection key と明示 ID の併用時は両 platform とも明示 ID を採用しており、Decision の優先順 (key 優先) と一致しない (core/ADR-0036 が amends)。判定: 乖離あり

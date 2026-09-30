@@ -30,6 +30,14 @@ import Foundation
 /// `reconfigureItems`（iOS 15+、同一セルを破棄せず再構成）で反映する。構造同期・内容同期・
 /// 可視性の三経路を分離する原則は core/ADR-0010 を参照。iOS UI 層での具体的な適用は
 /// `KsSettingsViewController.applyReplaceCell` を参照。
+///
+/// # 通知のクロージャが呼ばれるスレッド
+///
+/// 具象 Cell が利用者の操作を知らせるクロージャ (`CommandCell.onTap`・`SwitchCell.onValueChanged`・
+/// `EntryCell.onTextChanged`・`PickerCell.onSelectionChanged` など。`PickerCell` の初期化で渡す
+/// `onItemSelected` なども含む) は、常にメインスレッドから呼ばれる。クロージャの型は `@Sendable` だが、
+/// 呼ばれるのはメインスレッドなので、中で SwiftUI の `@State` などメインアクターに隔離された値を
+/// 書き換えるときは、`MainActor.assumeIsolated { ... }` の中で書き換えられる。
 public protocol KsCell: Hashable, Identifiable, Sendable where ID == UUID {
     /// 一意な ID
     var id: UUID { get }

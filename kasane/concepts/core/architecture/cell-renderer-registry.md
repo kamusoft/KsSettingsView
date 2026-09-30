@@ -3,7 +3,7 @@ type: concept
 title: Cell Renderer Registry
 description: Cell model 型と Native 描画型を分離し、利用者定義 Cell を追加する拡張境界
 tags: [architecture, cell, renderer, extensibility]
-timestamp: 2026-07-19
+timestamp: 2026-09-26
 ---
 
 この文書は、iOS / Android の `KsCellRegistry` に共通する拡張境界を説明する。読むと、Cell model と Renderer / ViewHolder の分離、標準 Cell の登録、利用者定義 Cell、未登録時と再利用時の契約が分かる。
@@ -23,7 +23,7 @@ Registry は具象 Cell 型と Native 描画型の対応を Host 本体から分
 
 ## 登録と解決
 
-標準登録対象の Cell 集合は通常の Host で自動登録される。現在の集合は [基本 Cell](../cells/basic-cells.md) 7種と [入力 Cell](../cells/input-cells.md) 5種である。利用者定義 Cell は表示前に対応する Renderer / ViewHolder factory を登録する。
+標準登録対象の Cell 集合は通常の Host で自動登録される。現在の集合は [基本 Cell](../cells/basic-cells.md) 7種、[入力 Cell](../cells/input-cells.md) 5種、[CustomCell](../cells/custom-cell.md) の計13種である。利用者定義 Cell は表示前に対応する Renderer / ViewHolder factory を登録する。
 
 iOS は Controller へ独立 Registry を注入できる。独立 Registry を使う場合、必要な標準 Cell もその Registry へ明示登録する。Android は `KsCellRegistry` singleton を使い、利用者 `viewType` は Root / Section Accessory の予約域を避けて `CELL_VIEW_TYPE_MIN` 以上にする。
 
@@ -31,13 +31,15 @@ iOS は Controller へ独立 Registry を注入できる。独立 Registry を�
 let registry = KsCellRegistry()
 registry.registerBasicCells()
 registry.registerInputCells()
+registry.registerCustomCell()
 registry.register(cellType: MyCell.self, rendererType: MyCellView.self)
 
 let controller = KsSettingsViewController(
     store: store,
     registry: registry,
     autoRegisterBasicCells: false,
-    autoRegisterInputCells: false
+    autoRegisterInputCells: false,
+    autoRegisterCustomCell: false
 )
 ```
 
@@ -84,3 +86,4 @@ SwiftUI / Compose の任意 View を内包する Accessory は、Native cell / V
 - [Android Native Host の Cell Renderer Registry](../../android/api/android-native-host.md#cell-renderer-registry)
 - [基本 Cell](../cells/basic-cells.md)
 - [入力 Cell](../cells/input-cells.md)
+- [CustomCell](../cells/custom-cell.md)

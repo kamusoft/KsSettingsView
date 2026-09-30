@@ -1068,6 +1068,8 @@ interface KsSettingsBridge
     /// <summary>
     /// 内部 Store に接続済みの Native Host を返す。生きている Host があればそれを返し、未生成または
     /// ReleaseHost で解放済みなら Store 現在状態から表示を復元した新しい Host を返す。
+    /// 新しい Host はスクロール命令を受け、ReleaseHost で控えた表示位置があればその位置へ戻る
+    /// (戻しは Host 生成後に出したスクロール命令より先に処理される)。
     /// 破棄済みの Bridge では null を返す。
     /// </summary>
     [Export("makeHostViewController")]
@@ -1077,6 +1079,7 @@ interface KsSettingsBridge
     /// <summary>
     /// Native Host だけを解放し、Store (設定ツリーと Theme) は維持する (maui/ADR-0007)。解放時に
     /// 旧 Host の Store 購読を解除するため、解放後の Store 更新は旧 Host の表示に反映されない。
+    /// 解放の前に旧 Host の表示位置を控え、次に生成する Host で戻す。
     /// 冪等であり、Host 不在時および破棄済みの Bridge では no-op になる。
     /// </summary>
     [Export("releaseHost")]
@@ -1179,6 +1182,35 @@ interface KsSettingsBridge
     /// </summary>
     [Export("setStyle:")]
     void SetStyle(nint style);
+
+    /// <summary>
+    /// 指定 ID の Cell の行へスクロールする。位置は整数 (Start = 0 / Center = 1 / End = 2) で、
+    /// 定義域外は Start として扱われる。命令は同じ処理の中で行った更新が表示に反映された後に実行される。
+    /// 非表示の Cell・未知の ID、Host が無いとき、および破棄済みの Bridge では何もしない。
+    /// </summary>
+    [Export("scrollToCellWithCellID:position:animated:")]
+    void ScrollToCell(string cellID, nint position, bool animated);
+
+    /// <summary>
+    /// 指定 ID の Section へ、見出しごと見えるようにスクロールする。位置と何もしない条件は
+    /// ScrollToCell と同じ。
+    /// </summary>
+    [Export("scrollToSectionWithSectionID:position:animated:")]
+    void ScrollToSection(string sectionID, nint position, bool animated);
+
+    /// <summary>
+    /// 内容の最上端 (Root Header を含む) へスクロールする。Host が無いときと破棄済みの Bridge では
+    /// 何もしない。
+    /// </summary>
+    [Export("scrollToStartWithAnimated:")]
+    void ScrollToStart(bool animated);
+
+    /// <summary>
+    /// 内容の最下端 (Root Footer を含む) へスクロールする。Host が無いときと破棄済みの Bridge では
+    /// 何もしない。
+    /// </summary>
+    [Export("scrollToEndWithAnimated:")]
+    void ScrollToEnd(bool animated);
 
     /// <summary>
     /// ユーザー操作の通知先 (弱参照)。managed 側の実体は呼び出し側が強参照で保持する。

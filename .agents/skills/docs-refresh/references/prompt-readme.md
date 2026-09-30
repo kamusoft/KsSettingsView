@@ -33,7 +33,9 @@ KsSettingsView プロジェクトの README を、実装コードを正として
 
 ## README 種別ごとの確認事項
 - ルート README.md / README_ja.md: 対応プラットフォーム表の開発環境要件
-  (ツール最低バージョン) が取得元と一致すること。**モジュール一覧・ビルド手順・
+  (ツール最低バージョン) と、.NET MAUI の Microsoft.Maui.Controls 最低バージョン
+  (対応プラットフォーム表・互換要件の本文・`<MauiVersion>` のコード例) が取得元と
+  一致すること。**モジュール一覧・ビルド手順・
   環境セットアップ手順は README に置かない** — 利用者の入口に純化する
   (cross/ADR-0023)。取得元に無いこれらの節を新設しないこと
 - skills/README.md / skills/README_ja.md: Skill 一覧が skills/ の実構成と一致すること

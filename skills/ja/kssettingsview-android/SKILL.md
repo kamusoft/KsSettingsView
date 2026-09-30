@@ -1,6 +1,6 @@
 ---
 name: kssettingsview-android
-description: KsSettingsView で Android の設定画面 (settings screen) を作る - Jetpack Compose の宣言的 DSL または XML の View ホスト (KsSettingsView という View) で、組み込みの Cell (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker) に加えて任意の Composable を Cell として表示する CustomCell、選択面の閉じ切り後 callback、SettingsRootStore による表示中の更新、Theme / CellStyle のスタイル指定を扱う。jp.kamusoft:kssettingsview に依存する、または jp.kamusoft.kssettingsview.core / .ui / .compose を import する Kotlin アプリで設定画面を追加・変更・レビューするときに使う。
+description: KsSettingsView で Android の設定画面 (settings screen) を作る - Jetpack Compose の宣言的 DSL または XML の View ホスト (KsSettingsView という View) で、組み込みの Cell (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker) に加えて任意の Composable を Cell として表示する CustomCell、選択面の閉じ切り後 callback、SettingsRootStore による表示中の更新、KsScrollController によるプログラムからのスクロール、Theme / CellStyle のスタイル指定を扱う。jp.kamusoft:kssettingsview に依存する、または jp.kamusoft.kssettingsview.core / .ui / .compose を import する Kotlin アプリで設定画面を追加・変更・レビューするときに使う。
 license: MIT
 metadata:
   language: ja
@@ -20,6 +20,7 @@ KsSettingsView は、iOS の設定アプリのようなリスト形式の設定�
 | PickerCell / DatePickerCell の選択面が閉じ切った後に処理する | [references/cells.md](references/cells.md) |
 | 表示中の画面を変える: Cell の挿入・削除・移動・差し替え、複数 Cell のバッチ更新、`SettingsRootDiff` での直接駆動 | [references/updates.md](references/updates.md) |
 | 再評価をまたいで Cell を追跡する、状態から表示・非表示を切り替える、XML から画面を組み込む | [references/updates.md](references/updates.md) |
+| `KsScrollController` でコードから Cell・Section・先頭・末尾へスクロールする、Activity や View の作り直しをまたいでスクロール位置を保つ | [references/updates.md](references/updates.md) |
 | 色・フォント・Cell の高さ、Classic / Modern の list 外観、Section の Container、`KsSettingsViewDefaults` のライト / ダーク既定色、明示色に外観ごとの値を与える | [references/styling.md](references/styling.md) |
 | Section と画面全体の Header / Footer (任意の Composable も置ける) | [references/styling.md](references/styling.md) |
 | 任意の Composable を Cell として表示する、独自の Cell 型と ViewHolder を定義する | [references/custom-cells.md](references/custom-cells.md) |
@@ -102,6 +103,6 @@ fun SettingsScreen() {
 ## リファレンス
 
 - [references/cells.md](references/cells.md) - 組み込み Cell ごとのレシピと、Section・アイコン・全 Cell 共通フィールド。
-- [references/updates.md](references/updates.md) - 表示中の画面の更新、Cell の同一性、可視性、XML からの利用。
+- [references/updates.md](references/updates.md) - 表示中の画面の更新、Cell の同一性、可視性、XML からの利用、スクロール制御。
 - [references/styling.md](references/styling.md) - `Theme`、`CellStyle`、style modifier、list 外観、Header / Footer。
 - [references/custom-cells.md](references/custom-cells.md) - `CustomCell`、再利用のためのラップ関数、独自 Cell 型と ViewHolder。

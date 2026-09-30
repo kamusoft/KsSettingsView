@@ -7,11 +7,18 @@
 // list の下地は実描画した画素で観測する。Cell 背景・Header / Footer の文字色・separator の色は、
 // 表示中の実体へ実際に適用された値（`UICollectionViewListCell.backgroundConfiguration`、
 // supplementary の `UILabel.textColor`、`separatorConfiguration(for:base:)` が返す構成）を、
-// その実体の trait で解決して観測する。Cell の背景は `UIBackgroundConfiguration` が描く領域で、
-// `CALayer.render(in:)` による画像化には現れないため画素では観測しない。
+// その実体の trait で解決して観測する。
+//
+// Cell の背景をこの形で観測する根拠: 行の背景には外観で値の変わる色（dynamic な `UIColor`）を
+// 設定し、外観切替後の解決は UIKit に任せている（core/ADR-0030）。UIKit が描画時に行う解決も、
+// 行自身の trait で同じ色を解決する計算なので、この観測は「色を設定の時点で固定値へ解決して
+// しまう」「行に外観が伝わらない」「別の色を設定する」の壊れ方を検出する。
+// 検出しないのは、行の背景の上に別の不透明な色が塗られて隠れる場合と、UIKit が保持中の色を
+// 描き直さない場合の 2 つで、これらは描画結果を見なければ分からない。
 
 #if canImport(UIKit)
 import XCTest
+import SwiftUI
 import UIKit
 import KsSettingsViewTestSupport
 @testable import KsSettingsViewUI
@@ -227,6 +234,36 @@ final class ThemeDarkAppearanceRenderingTests: XCTestCase {
         XCTAssertTrue(
             cellBefore === cv.cellForItem(at: IndexPath(item: 0, section: 0)),
             "外観切替で Cell の identity は維持される"
+        )
+    }
+
+    /// CustomCell の行も、表示中の外観切替で未指定の背景がその行の trait で dark 既定の値に解決される。
+    func test_表示中に外観をダークへ切り替えるとCustomCellの行背景がdark既定になる() {
+        let section = KsSettingsViewCore.Section(
+            cells: [CustomCell(content: "x") { value in Text(value) }]
+        )
+        let (controller, cv, window) = host(
+            root: SettingsRoot(sections: [section]),
+            userInterfaceStyle: .light
+        )
+        defer { window.isHidden = true }
+
+        let cellBefore = cv.cellForItem(at: IndexPath(item: 0, section: 0))
+        XCTAssertTrue(cellBefore is CustomCellView, "先頭行が CustomCell の行として実体化している")
+        assertColor(
+            appliedCellBackgroundColor(cv),
+            equalsHex: 0xFFFFFF, "切替前の CustomCell の行背景"
+        )
+
+        switchAppearance(window, to: .dark, controller: controller)
+
+        assertColor(
+            appliedCellBackgroundColor(cv),
+            equalsHex: 0x1C1C1E, "切替後の CustomCell の行背景"
+        )
+        XCTAssertTrue(
+            cellBefore === cv.cellForItem(at: IndexPath(item: 0, section: 0)),
+            "外観切替で CustomCell の行の identity は維持される"
         )
     }
 

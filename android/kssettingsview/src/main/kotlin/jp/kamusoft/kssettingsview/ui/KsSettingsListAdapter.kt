@@ -6,6 +6,7 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import jp.kamusoft.kssettingsview.core.Cell
 import jp.kamusoft.kssettingsview.core.SectionAccessory
+import kotlin.math.max
 
 /**
  * Section H/F + Cell の平坦リストを描画する `ListAdapter`。
@@ -32,6 +33,25 @@ internal class KsSettingsListAdapter :
      * `submitList` 前後で外部から `theme = ...` で更新する。
      */
     var theme: Theme = Theme()
+
+    /**
+     * 提出した一覧の世代。`submitList` の全経路 (部分 Diff・full 更新・内容更新) で 1 ずつ進む。
+     *
+     * 反映の完了はこの世代の commit で判定する。`AsyncListDiffer` は先行世代の commit callback を
+     * 「最新世代ではない」として呼ばずに捨てるため、callback の数は数えず、最新世代の callback が
+     * 来たかだけを見る。
+     */
+    private var submittedGeneration: Int = 0
+
+    /** commit が済んだ最新の世代。 */
+    private var committedGeneration: Int = 0
+
+    /** 最後に提出した一覧の commit が済んでいるか。一度も提出していなければ `false`。 */
+    val hasCommittedLatestSubmission: Boolean
+        get() = submittedGeneration > 0 && committedGeneration == submittedGeneration
+
+    /** 提出した一覧の commit が済むたびに呼ばれる (commit を待つ処理の再開に使う)。 */
+    var onListCommitted: (() -> Unit)? = null
 
     init {
         // ConcatAdapter 内で stable ids を有効化するため、各 Adapter 側で setHasStableIds(true) を有効化する。
@@ -113,6 +133,26 @@ internal class KsSettingsListAdapter :
                     notifyItemChanged(position, KsSettingsView.PAYLOAD_CONTENT)
                 }
             }
+        }
+    }
+
+    override fun submitList(list: List<CellListItem>?) {
+        submitList(list, null)
+    }
+
+    /**
+     * 一覧を提出する共通の入口。`submitList` の全経路はここを通る。
+     *
+     * 提出のたびに世代を進め、commit callback で commit 済みの世代を記録する。呼び出し元の callback を
+     * 先に走らせてから記録するので、commit を待つ処理は呼び出し元の後処理 (内容更新の通知) の後に
+     * 再開する。提出そのものと反映の順序は変えない。
+     */
+    override fun submitList(list: List<CellListItem>?, commitCallback: Runnable?) {
+        val generation = ++submittedGeneration
+        super.submitList(list) {
+            commitCallback?.run()
+            committedGeneration = max(committedGeneration, generation)
+            onListCommitted?.invoke()
         }
     }
 

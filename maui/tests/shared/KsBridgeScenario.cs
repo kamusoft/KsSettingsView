@@ -6,7 +6,7 @@ namespace KsSettingsView.IntegrationHost;
 /// 検証ホストが実行する Bridge 操作シナリオ。iOS / Android の両ホストから同じソースを参照する。
 /// </summary>
 /// <remarks>
-/// Bridge の公開 API (Builder・setRoot・更新 API 10 種・setTheme・破棄) を一通り呼び、
+/// Bridge の公開 API (Builder・setRoot・更新 API 10 種・setTheme・スクロール命令・破棄) を一通り呼び、
 /// 呼び出し後に残る表示内容を目視で確認できる状態にする。Native Host の生成と解放後の付け替えは
 /// platform ごとに異なるため、ホスト側に残してある。
 ///
@@ -105,6 +105,15 @@ public static class KsBridgeScenario
         // setTheme: 輸送 DTO の Theme を適用する
         bridge.SetTheme(MakeTheme());
 
+        // スクロール命令の確認用に、画面に収まらない長さの Section を末尾へ足す
+        var scrollCheck = new KsBridgeSection("スクロール確認", null);
+        for (var i = 1; i <= ScrollCheckCellCount; i++)
+        {
+            scrollCheck.AddCell(MakeCell($"項目 {i}"));
+        }
+
+        bridge.InsertSection(scrollCheck, 3);
+
         // 「一般」の 2 Cell は ReplaceSection の対象外なので、ここで採番された ID が
         // 解放後の更新でもそのまま使える (ReplaceSection / ReplaceCell は identity を維持する)。
         return new KsBridgeScenarioHandles(
@@ -167,6 +176,26 @@ public static class KsBridgeScenario
         bridge.UpdateAccessory(RootFooter, null, "C# から Native Bridge を操作しています");
     }
 
+    /// <summary>内容の最下端 (root footer を含む) へアニメーションなしでスクロールさせる。</summary>
+    /// <remarks>
+    /// Store を経由しないスクロール命令の API を C# から呼び、Native の Host が末尾まで動くことを
+    /// 目視で確認する。Host を解放している間に呼んだときは何も起こらない。
+    /// </remarks>
+    /// <param name="bridge">操作対象の Bridge</param>
+    public static void ScrollToEnd(KsSettingsBridge bridge)
+    {
+        ArgumentNullException.ThrowIfNull(bridge);
+        bridge.ScrollToEnd(false);
+    }
+
+    /// <summary>内容の最上端 (root header を含む) へアニメーションしながらスクロールさせる。</summary>
+    /// <param name="bridge">操作対象の Bridge</param>
+    public static void ScrollToStart(KsSettingsBridge bridge)
+    {
+        ArgumentNullException.ThrowIfNull(bridge);
+        bridge.ScrollToStart(true);
+    }
+
     /// <summary>Bridge を破棄する。破棄後の操作 API は no-op になる。</summary>
     /// <param name="bridge">操作対象の Bridge</param>
     public static void Shutdown(KsSettingsBridge bridge)
@@ -174,6 +203,9 @@ public static class KsBridgeScenario
         ArgumentNullException.ThrowIfNull(bridge);
         bridge.DisposeBridge();
     }
+
+    /// <summary>「スクロール確認」Section に並べる Cell の数。画面より十分に長くする。</summary>
+    private const int ScrollCheckCellCount = 20;
 
     // Accessory の更新対象。Android では Java の列挙が静的プロパティとして束縛され nullable に
     // なるため、両 platform で同じ書き方ができるようここで非 null の値へ解決しておく。

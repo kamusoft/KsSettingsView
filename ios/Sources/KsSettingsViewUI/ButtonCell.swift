@@ -44,7 +44,7 @@ public struct ButtonCell: KsCell, DSLReidentifiable, DSLStyleModifiable, DSLIcon
     public let hintText: String?
     /// ボタンテキストの色（任意、`CellStyle.titleColor` を上書き）
     public let titleColor: UIColor?
-    /// タップ時に発火するクロージャ
+    /// タップ時に発火するクロージャ。メインスレッドから呼ばれる (`KsCell` の「通知のクロージャが呼ばれるスレッド」を参照)。
     public let onTap: (@Sendable () -> Void)?
     /// タイトルの水平方向の揃え位置（既定 `.center`）
     public let titleAlignment: CellTitleAlignment

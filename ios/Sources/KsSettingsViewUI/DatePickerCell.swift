@@ -39,8 +39,9 @@ public struct DatePickerCell: KsCell, DSLReidentifiable, DSLStyleModifiable, DSL
     public let uiStyle: DatePickerUIStyle
     /// Today ボタンの表示文字列（`nil` / 空で非表示）。AiForms `TodayText` 互換。
     public let todayText: String?
+    /// 日付を確定したときに呼ばれるクロージャ。メインスレッドから呼ばれる (`KsCell` の「通知のクロージャが呼ばれるスレッド」を参照)。
     public let onValueChanged: (@Sendable (Date) -> Void)?
-    /// 確定した選択面が閉じ切った後に確定した日付を届ける callback
+    /// 確定した選択面が閉じ切った後に確定した日付を届ける callback。メインスレッドから呼ばれる (`KsCell` の「通知のクロージャが呼ばれるスレッド」を参照)。
     public let onValueCompleted: (@Sendable (Date) -> Void)?
     public let isEnabled: Bool
     public let isVisible: Bool

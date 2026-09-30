@@ -41,6 +41,13 @@ public abstract class CellBase : Element
         typeof(CellBase),
         default(string));
 
+    /// <summary><see cref="CellId"/> のバッキングプロパティ。</summary>
+    public static readonly BindableProperty CellIdProperty = BindableProperty.Create(
+        nameof(CellId),
+        typeof(string),
+        typeof(CellBase),
+        default(string));
+
     /// <summary><see cref="IsEnabled"/> のバッキングプロパティ。</summary>
     public static readonly BindableProperty IsEnabledProperty = BindableProperty.Create(
         nameof(IsEnabled),
@@ -221,6 +228,18 @@ public abstract class CellBase : Element
     {
         get => (string?)GetValue(HintTextProperty);
         set => SetValue(HintTextProperty, value);
+    }
+
+    /// <summary>スクロール命令でこの Cell を指すための ID。null で ID なし。</summary>
+    /// <remarks>
+    /// <see cref="IScrollController.ScrollTo"/> に同じ値を渡すと、この Cell を対象にする。
+    /// 同じ ID を持つ Cell が複数あるときは表示順で最初のものが対象になる。表示と値の書き戻しには
+    /// 影響しない。
+    /// </remarks>
+    public string? CellId
+    {
+        get => (string?)GetValue(CellIdProperty);
+        set => SetValue(CellIdProperty, value);
     }
 
     /// <summary>行が有効かどうか。false の行は無効表示になる。</summary>

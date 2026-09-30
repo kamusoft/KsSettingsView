@@ -51,7 +51,7 @@ public struct EntryCell: KsCell, DSLReidentifiable, DSLStyleModifiable, DSLIconM
     /// 最大文字数（`nil` で無制限、既定 `nil`）。
     /// AiForms.Maui.SettingsView の `MaxLength: int` 互換。
     public let maxLength: Int?
-    /// テキスト変更時に呼ばれるクロージャ。
+    /// テキスト変更時に呼ばれるクロージャ。メインスレッドから呼ばれる (`KsCell` の「通知のクロージャが呼ばれるスレッド」を参照)。
     /// DSL 経路では `Binding<String>` の setter を wrap して内部設定される。
     public let onTextChanged: (@Sendable (String) -> Void)?
     /// 有効／無効フラグ（既定 `true`）

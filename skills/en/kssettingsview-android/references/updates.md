@@ -285,7 +285,7 @@ Return exactly one element per item; returning several from one item makes them 
 
 ## Name an element explicitly
 
-For a static element that needs a meaningful identifier, chain `cellID` or `sectionID`. Do not combine them with a `forEach` key on the same element - pick one source of identity. The string you pass is a hint that drives a stable id, not the final id itself.
+For a static element that needs a meaningful identifier, chain `cellID` or `sectionID`. Do not combine them with a `forEach` key on the same element - pick one source of identity. When both are given, the explicit one wins and the key no longer tracks the element, so a fixed `cellID` inside `forEach` resolves every item to the same id. The string you pass is a hint that drives a stable id, not the final id itself.
 
 ```kotlin
 KsSettingsView {
@@ -294,6 +294,8 @@ KsSettingsView {
     }.sectionID("general")
 }
 ```
+
+A section with neither an explicit id nor a `forEach` key gets an id derived partly from its text header, so rewording the header changes its identity. Give a section whose header text can change a `sectionID`.
 
 A stable id also matters for the calendar dialog of `DatePickerCell` (`uiStyle = Material`): it comes back after a rotation with its selection intact, but only when the cell keeps the same id across the activity being recreated - otherwise it stays closed and writes nothing. The bottom-sheet pickers (Picker, NumberPicker, TimePicker, the Spinner date picker) close on rotation regardless.
 
@@ -378,7 +380,7 @@ class SettingsActivity : AppCompatActivity() {
 }
 ```
 
-`bind` applies the current root and theme immediately, and every later change goes through the store. The view keeps up with the store across detach and reattach - a pager page scrolling off screen, for instance - by re-reading the current state, so store changes made while it was detached are not lost. Root header and footer updates are the exception to state replay: the direct root-target delivery described above keeps values sent before attach or during detach. The scroll position comes back too: the view takes an anchor just before it detaches and restores it on the next attach. A view that is itself rebuilt - a recreated host, a recreated activity - starts at the top instead. Assigning `view.theme` directly after `bind` only changes the view until the next store notification overwrites it, so once a store is bound the theme belongs to `applyTheme`; `view.theme` is for a view you drive without one.
+`bind` applies the current root and theme immediately, and every later change goes through the store. The view keeps up with the store across detach and reattach - a pager page scrolling off screen, for instance - by re-reading the current state, so store changes made while it was detached are not lost. Root header and footer updates are the exception to state replay: the direct root-target delivery described above keeps values sent before attach or during detach. The scroll position comes back too: the view takes an anchor just before it detaches and restores it on the next attach. When the activity is recreated, the view carries the position through its saved state and returns to it, apart from one setup with several views that the scroll recipes below describe; a host you rebuild yourself starts at the top unless you carry the position over. Assigning `view.theme` directly after `bind` only changes the view until the next store notification overwrites it, so once a store is bound the theme belongs to `applyTheme`; `view.theme` is for a view you drive without one.
 
 `unbind()` releases the store: later store changes no longer reach the view, what is displayed stays as it is, and re-attaching the view does not resume the subscription - call `bind` again to follow a store. It is idempotent, so calling it on a view that has no store does nothing.
 
@@ -400,3 +402,182 @@ Where you do not want to bring in a store - an external binding, a preview - the
 | `UpdateAccessory` | add, update or remove a header / footer |
 
 Feed the first frame with `view.applyDiff(SettingsRootDiff.Full(root))`, and use `view.theme` directly only in this setup. The view also has its own `invalidateAccessoryMeasurement(target)`, which requests the same remeasurement as the store operation of the same name in this setup. Do not combine this direct driving with `bind(store)` on the same view - a normal app screen uses a store.
+
+## Scroll to a cell or a section from code
+
+Scrolling from code - taking the user to a section when the screen opens, going back to the top, showing a cell that was just added - goes through a scroll handle, `KsScrollController`, rather than through the store. In Compose, `rememberScrollController()` returns a handle that stays the same across recompositions; pass it as the `scrollController` argument, which both the DSL and the store overload of `KsSettingsView` accept.
+
+```kotlin
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import jp.kamusoft.kssettingsview.compose.ButtonCell
+import jp.kamusoft.kssettingsview.compose.KsSettingsView
+import jp.kamusoft.kssettingsview.compose.LabelCell
+import jp.kamusoft.kssettingsview.compose.cellID
+import jp.kamusoft.kssettingsview.compose.rememberScrollController
+import jp.kamusoft.kssettingsview.compose.sectionID
+import jp.kamusoft.kssettingsview.ui.KsScrollPosition
+
+@Composable
+fun TopicsScreen() {
+    val scroll = rememberScrollController()
+    var topics by remember { mutableStateOf(listOf("News", "Sports")) }
+
+    KsSettingsView(scrollController = scroll) {
+        Section(header = "Actions") {
+            ButtonCell(title = "Go to topics", onTap = { scroll.scrollToSection("topics") })
+            ButtonCell(
+                title = "Center the version",
+                onTap = { scroll.scrollTo("app-version", position = KsScrollPosition.Center) },
+            )
+            ButtonCell(
+                title = "Add a topic",
+                onTap = {
+                    val name = "Topic ${topics.size + 1}"
+                    topics = topics + name
+                    scroll.scrollTo(name)
+                },
+            )
+        }
+        Section(header = "Topics") {
+            forEach(topics, key = { it }) { topic ->
+                LabelCell(title = topic)
+            }
+        }.sectionID("topics")
+        Section(header = "About") {
+            LabelCell(title = "App version", valueText = "1.0.0").cellID("app-version")
+            ButtonCell(title = "Back to top", onTap = { scroll.scrollToStart(animated = false) })
+        }
+    }
+}
+```
+
+The handle has four commands. `scrollTo` targets the row of a cell, `scrollToSection` the range of a section including its header and footer, and `scrollToStart` / `scrollToEnd` the very top and bottom of the content, root header and root footer included. `animated` defaults to `true`; with `false` the list jumps straight to the final position.
+
+`position` (a `KsScrollPosition`, `Start` by default) says where in the visible area the target lands.
+
+| `KsScrollPosition` | Where the target lands |
+|---|---|
+| `Start` | its top edge at the top of the visible area |
+| `Center` | its middle at the middle of the visible area |
+| `End` | its bottom edge at the bottom of the visible area |
+
+A position the list cannot reach stops at the end of the scrollable range, and a target taller than the visible area is aligned with `Start` whatever position you pass.
+
+In the DSL overload you point at an element with an identifier you wrote yourself: the string given to `cellID` / `sectionID`, or a `forEach` key (the `id` of a `KsIdentifiable` element included). The derived ids described under "Tell the two kinds of identifier apart" are not what the command takes, and an element that has neither an explicit id nor a key cannot be targeted. When the same value is both an explicit id and a key, the element with the explicit id is chosen. In the store overload you point at the `id` of a cell or section in the store.
+
+A command issued in the same handler right after a state change is resolved against the tree after that change, which is why "Add a topic" above reaches the cell it has just added.
+
+## Scroll a view hosted from XML
+
+The view host has the same entry point as a property. Assign a `KsScrollController` to `scrollController` and the commands of that handle reach the view; the ids are the `id`s of the cells and sections in the bound store. The snippet below runs inside the activity of "Host the screen from XML", as do the activity snippets further down, and the scroll types live in `jp.kamusoft.kssettingsview.ui`.
+
+```kotlin
+val controller = KsScrollController()
+
+val settingsView = findViewById<KsSettingsView>(R.id.settings_view)
+settingsView.bind(store)
+settingsView.scrollController = controller
+
+store.insertCell(
+    cell = LabelCell(id = "license", title = "License"),
+    sectionId = "general",
+    at = 1,
+)
+controller.scrollTo("license")
+```
+
+One handle delivers to the view it was connected to last - connecting it to another view disconnects the previous one. Assigning `null` or another handle disconnects the current one, and commands that have not run yet are dropped. `unbind()` also disconnects and sets `scrollController` back to `null`; a later `bind` does not reconnect it, so assign the handle again. The handle does not keep the view alive, so a view model may hold it for longer than the screen lives: once the view is gone, the handle is simply disconnected.
+
+## Issue scroll commands from a view model
+
+`KsScrollController` implements the interface `KsScrollControlling`, which declares the four commands. Let the code that decides where to scroll depend on the interface, and a test can pass a fake that only records the calls.
+
+```kotlin
+import jp.kamusoft.kssettingsview.ui.KsScrollControlling
+import jp.kamusoft.kssettingsview.ui.KsScrollPosition
+
+class SettingsActions(private val scroll: KsScrollControlling) {
+    fun showDiagnostics() {
+        scroll.scrollToSection("diagnostics", position = KsScrollPosition.Center)
+    }
+}
+```
+
+What you connect to the view is the `KsScrollController` itself; `scrollController` takes the class, not the interface.
+
+```kotlin
+val controller = KsScrollController()
+val actions = SettingsActions(controller)
+settingsView.scrollController = controller
+```
+
+## Know when a scroll command runs
+
+A command does not run inside the call. It is queued on the view and runs after the store updates made earlier in the same handler have reached the list and the list has been laid out, so "insert a cell, then `scrollToEnd()`" lands on the end that includes the new cell. A command issued before the screen is first shown runs after the first layout, and one issued while the screen is covered by another screen runs after it comes back.
+
+| Situation | What happens |
+|---|---|
+| Several commands in a row | They run in order; the final position is that of the last command whose target was found |
+| The target disappeared before the command ran | That command is skipped and the next ones still run |
+| The handle is not connected to any view | Nothing happens, and nothing is thrown |
+| The target is hidden, a section has nothing visible, or the id does not exist | Nothing happens, and the position does not change. An unknown id logs a warning while `KsCellRegistry.strictMode` is `true` |
+
+Issue commands from the main thread. While `KsCellRegistry.strictMode` is `true` - its default, which does not follow your build type on its own - a command sent to a connected handle from another thread throws `IllegalStateException`; with `false` it is posted to the main thread instead. Tie the flag to your build type.
+
+```kotlin
+KsCellRegistry.strictMode = BuildConfig.DEBUG
+```
+
+## Keep the scroll position when the activity is recreated
+
+When the activity is recreated - a rotation, a night-mode change - the view saves the position in its saved state and returns to it after the new view is laid out, with no code on your side. The position is kept by element id, so cells added or removed in between do not send it to a different place. The same applies to the `KsSettingsView` Composable, and returning to a screen inside a Navigation Compose `NavHost` brings back the position it had when you left.
+
+A command issued in `onCreate` of the recreated activity is overridden by that restore, while a command issued later runs after it. To jump somewhere only on the first open, check `savedInstanceState`.
+
+```kotlin
+override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    setContentView(R.layout.activity_settings)
+
+    val settingsView = findViewById<KsSettingsView>(R.id.settings_view)
+    settingsView.bind(store)
+    settingsView.scrollController = controller
+    if (savedInstanceState == null) {
+        controller.scrollToSection("diagnostics")
+    }
+}
+```
+
+The saved state is keyed by the view id. When several `KsSettingsView`s in one view hierarchy keep the library's default id - two `KsSettingsView` Composables on one screen, or XML views without an `android:id` - none of them saves or restores the position. Give each XML view an `android:id` of its own.
+
+## Carry the scroll position into a view you rebuild yourself
+
+A view you create again yourself starts at the top. Take the position from the old view with `captureScrollAnchor()` while it is still attached and on screen, and hand it to the new view with `restoreScrollAnchor(anchor)`.
+
+```kotlin
+import android.widget.FrameLayout
+import jp.kamusoft.kssettingsview.ui.KsSettingsView
+import jp.kamusoft.kssettingsview.ui.SettingsRootStore
+
+fun replaceSettingsView(
+    container: FrameLayout,
+    old: KsSettingsView,
+    store: SettingsRootStore,
+): KsSettingsView {
+    val anchor = old.captureScrollAnchor()
+    old.unbind()
+    container.removeView(old)
+
+    val replacement = KsSettingsView(container.context)
+    container.addView(replacement)
+    replacement.bind(store)
+    anchor?.let { replacement.restoreScrollAnchor(it) }
+    return replacement
+}
+```
+
+`captureScrollAnchor()` returns `null` when the view has no rows on screen - not attached yet, already detached, or empty. The returned `KsScrollAnchor` names the element at the top of the visible area and its offset; its contents are not readable, and it is `Parcelable`, so it can be put into a `Bundle`. The restore goes through the same queue as the commands, and commands issued after it run after it. If the element is no longer there, the restore does nothing and the view stays where it is.

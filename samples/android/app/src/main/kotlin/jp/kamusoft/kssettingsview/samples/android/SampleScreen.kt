@@ -23,6 +23,7 @@ enum class SampleScreen(val route: String, val title: String) {
     UnifyCommonFields("unify_common_fields", "共通フィールド統合デモ"),
     Visibility("visibility", "isVisible デモ（条件付き非表示）"),
     SectionDecoration("section_decoration", "Section 装飾デモ（style 切替）"),
+    ScrollControl("scroll_control", "スクロール制御デモ"),
     ;
 
     companion object {
@@ -48,5 +49,6 @@ fun SampleScreen.Content() {
         SampleScreen.UnifyCommonFields -> UnifyCellCommonFieldsDemoScreen()
         SampleScreen.Visibility -> VisibilityDemoScreen()
         SampleScreen.SectionDecoration -> SectionDecorationDemoScreen()
+        SampleScreen.ScrollControl -> ScrollControlDemoScreen()
     }
 }

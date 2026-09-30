@@ -13,8 +13,18 @@
       MAUI 本体。ファイル画像解決 (ImageSourceExtensions.GetPlatformImage) の照合キーの形が
       10.0.30 以前と 10.0.60 以降で異なり、iOS の icon 所有権分類が依存する不変条件は
       10.0.60 以降でしか成立しない。10.0.70 はその形を実測で確認した版 (maui/ADR-0026)。
+
+      下限は 10.0.71 にする。下の Compose / AppCompat / RecyclerView などの参照は
+      Xamarin.AndroidX.Core を 1.19 系へ引き上げる。AndroidX.Core 1.17 以降の binding では
+      AccessibilityNodeInfoCompat.Checked が bool から int のプロパティに変わり、
+      MAUI 10.0.70 の Microsoft.Maui.dll が呼ぶ set_Checked(bool) が実行時に存在しない。
+      アクセシビリティの問い合わせ (TalkBack・uiautomator) が MAUI の
+      MauiAccessibilityDelegateCompat を通った時点で MissingMethodException になり、
+      アプリが落ちる。10.0.71 の Microsoft.Maui.dll はこの呼び出しを持たない。
+      版を上げる際は、MAUI の Android 向け assembly が参照する AndroidX のメンバーが
+      解決後の AndroidX の版に実在するかを確かめること。
     -->
-    <PackageVersion Include="Microsoft.Maui.Controls" Version="10.0.70" />
+    <PackageVersion Include="Microsoft.Maui.Controls" Version="10.0.71" />
   </ItemGroup>
 
   <ItemGroup>

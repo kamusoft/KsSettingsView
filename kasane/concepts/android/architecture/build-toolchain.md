@@ -17,9 +17,16 @@ timestamp: 2026-09-04
 - `android/` と `samples/android/` (Sample app) は独立した Gradle build で、それぞれ Gradle wrapper (`gradle/wrapper/` と `gradlew`) を持つ。2 つの wrapper は同じ Gradle 版と `distributionSha256Sum` を指す
 - module は公開本体 `kssettingsview` と非公開 interop の `kssettingsview-bridge` の 2 つ ([ADR-0016](../../../decisions/android/0016-single-module-single-maven-artifact.md))
 - 層 (core / ui / compose) は module 境界ではなく Kotlin パッケージ `.core` / `.ui` / `.compose` で表す
-- **Gradle plugin の版 (AGP / Kotlin / Compose Compiler)・Compose BOM・ライブラリ自身の version** の宣言の単一元は `android/gradle/libs.versions.toml` (バージョンカタログ)。`samples/android/settings.gradle.kts` は `versionCatalogs { create("libs") { from(files("../../android/gradle/libs.versions.toml")) } }` で同じファイルを読む。composite build (`includeBuild`) はソース参照を接続するだけで plugin 版を継承しないため、共有は catalog で明示する。これ以外のライブラリ依存 (AndroidX 各種・coroutines・テスト依存) は各 module の `build.gradle.kts` に直書きしてよい
-- Android SDK の場所は各 build root の `local.properties` (`sdk.dir`、git 管理外) で解決する。`compileSdk` / `minSdk` は catalog ではなく各 module の `build.gradle.kts` の `android { }` ブロックで宣言する (配布物の互換性を決める値であり、ツールチェーン更新の対象ではない)
-- toml の `[versions]` の現行値はこの文書に転記しない (正は toml と、組み合わせの根拠 URL を記したそのコメント)。ただし互換上の既知制約 (「ツールチェーンを更新するとき」の節) は版を伴って記し、timestamp で鮮度を管理する
+
+### ビルド関連バージョンの宣言の単一元
+
+**Gradle plugin の版 (AGP / Kotlin / Compose Compiler)・Compose BOM・ライブラリ自身の version** の宣言の単一元は `android/gradle/libs.versions.toml` (バージョンカタログ)。`samples/android/settings.gradle.kts` は `versionCatalogs { create("libs") { from(files("../../android/gradle/libs.versions.toml")) } }` で同じファイルを読む。composite build (`includeBuild`) はソース参照を接続するだけで plugin 版を継承しないため、共有は catalog で明示する。これ以外のライブラリ依存 (AndroidX 各種・coroutines・テスト依存) は各 module の `build.gradle.kts` に直書きしてよい。
+
+toml の `[versions]` の現行値はこの文書に転記しない (正は toml と、組み合わせの根拠 URL を記したそのコメント)。ただし互換上の既知制約 (「ツールチェーンを更新するとき」の節) は版を伴って記し、timestamp で鮮度を管理する。
+
+### SDK の場所と互換値の宣言場所
+
+Android SDK の場所は各 build root の `local.properties` (`sdk.dir`、git 管理外) で解決する。`compileSdk` / `minSdk` は catalog ではなく各 module の `build.gradle.kts` の `android { }` ブロックで宣言する (配布物の互換性を決める値であり、ツールチェーン更新の対象ではない)。
 
 ## 2 つの JDK の役割
 
@@ -58,9 +65,15 @@ mavenLocal 経由の解決と Release ビルドは `verification/android` の消
 
 ## 消費側が依存する前提
 
-- **MAUI binding** (`maui/android/KsSettingsView.Binding.Android/KsSettingsView.Binding.Android.csproj`) は `android/gradlew … assembleRelease` を Exec で直接呼んで aar を作る ([maui/ADR-0006](../../../decisions/maui/0006-android-binding-gradlew-exec.md))。対象は aar 2 本 — `kssettingsview-bridge` を束縛 (Bind=true) し、本体 `kssettingsview` は同梱のみ (Bind=false)。統合により `.compose` 層のクラスも本体 aar に同梱されるが、MAUI は Bridge 経由で Android View の Host を使うため実行時依存は増えない。Exec の `JAVA_HOME` は .NET Android SDK が解決する `JavaSdkDirectory` (現状 JDK 21) で、その JDK が Gradle JVM の要件を満たし、かつ前節のとおり JDK 17 の実体も別途ある必要がある
-- binding csproj 内の MSBuild Target `_BuildKsSettingsViewAars` は Item `KsAndroidModuleSource` を Inputs として aar を作り直すかを判定する。Inputs には module ソースと `build.gradle.kts` のほか `android/gradle/libs.versions.toml`・`android/gradle/wrapper/gradle-wrapper.properties`・`android/gradle.properties` が入っている。catalog だけを変える更新でも aar が作り直されるのはこのため
-- **Android Studio** は `samples/android` を開く (composite build で `android/` の 4 module も同じ sync に含まれる)。Gradle JDK は Studio 同梱 JBR のままでよく、別の JDK へ手動固定する必要はない。`android/gradle.properties` と `samples/android/gradle.properties` の `org.gradle.tooling.parallel=true` は IDE sync のモデル取得を並列化する設定で、CLI ビルドには影響しない
+### MAUI binding
+
+MAUI binding (`maui/android/KsSettingsView.Binding.Android/KsSettingsView.Binding.Android.csproj`) は `android/gradlew … assembleRelease` を Exec で直接呼んで aar を作る ([maui/ADR-0006](../../../decisions/maui/0006-android-binding-gradlew-exec.md))。対象は aar 2 本 — `kssettingsview-bridge` を束縛 (Bind=true) し、本体 `kssettingsview` は同梱のみ (Bind=false)。統合により `.compose` 層のクラスも本体 aar に同梱されるが、MAUI は Bridge 経由で Android View の Host を使うため実行時依存は増えない。Exec の `JAVA_HOME` は .NET Android SDK が解決する `JavaSdkDirectory` (現状 JDK 21) で、その JDK が Gradle JVM の要件を満たし、かつ「2 つの JDK の役割」節のとおり JDK 17 の実体も別途ある必要がある。
+
+binding csproj 内の MSBuild Target `_BuildKsSettingsViewAars` は Item `KsAndroidModuleSource` を Inputs として aar を作り直すかを判定する。Inputs には module ソースと `build.gradle.kts` のほか `android/gradle/libs.versions.toml`・`android/gradle/wrapper/gradle-wrapper.properties`・`android/gradle.properties` が入っている。catalog だけを変える更新でも aar が作り直されるのはこのためである。
+
+### Android Studio
+
+Android Studio は `samples/android` を開く (composite build で `android/` の 4 module も同じ sync に含まれる)。Gradle JDK は Studio 同梱 JBR のままでよく、別の JDK へ手動固定する必要はない。`android/gradle.properties` と `samples/android/gradle.properties` の `org.gradle.tooling.parallel=true` は IDE sync のモデル取得を並列化する設定で、CLI ビルドには影響しない。
 
 ## ツールチェーンを更新するとき
 
@@ -70,16 +83,18 @@ mavenLocal 経由の解決と Release ビルドは `verification/android` の消
 
 完了条件: `android/` の `./gradlew test` が全件実行で失敗 0 ([テスト実行規約](../../../handbook/cross/test-execution.md) の件数確認を含む)、`samples/android` の `:app:assembleDebug`、MAUI binding の `dotnet build`、Android Studio の sync がすべて通ること。Gradle JVM の JDK 版を変える更新では、新しい JDK と従来の JDK の両方でこれを確認する (後方互換を壊さないため)。
 
-既知の制約 (2026-08-21 時点):
+### 既知の制約 (2026-08-21 時点)
 
 - AGP 8.13 系は Gradle 10 で削除予定の API (multi-string dependency notation) を内部で使っており、Gradle 10 系へ上げるには AGP の更新が先に要る
 - Kotlin 版を上げると生成物が要求する `kotlin-stdlib` の下限も上がり、ライブラリ利用側の Kotlin 要件が変わる。配布時の互換情報に反映する
 
-Compose 版の整合 (2026-08-28 時点):
+### Compose 版の整合 (2026-08-28 時点)
 
-- ui module は Compose (CustomCell ホスティング・カレンダーダイアログ) に依存するため、MAUI binding は Xamarin.AndroidX.Compose.* (Runtime / UI / Foundation / Material3 等) を配達する。**Gradle 側の Compose BOM 版と Xamarin.AndroidX.Compose.* の実行時版は整合させる** — 整合が崩れると D8 二重定義や実行時のメソッド欠落クラッシュになる
-- 整合の方向は「Gradle の BOM を NuGet 実行時版へ上げる」: MAUI 本体の依存連鎖 (Essentials → AndroidX.Activity → Compose.Runtime 系) が NuGet 側の下限を押し上げるため、NuGet を Gradle コンパイル版へ下げる方向は物理的に成立しない (relax-android-host-prerequisites で実測確定。BOM 2024.10.01 → 2025.11.01 への引き上げ例)。帰結として aar 利用者の Compose 推移依存の下限も BOM に追随して上がる (利用者可視の影響)
-- Compose Material3 `DatePicker` は experimental API のため、BOM 更新時はカレンダーダイアログのシグネチャ・描画の追随確認を行う ([DatePickerCell の選択面](../../core/cells/date-picker-selection-surface.md))
+ui module は Compose (CustomCell ホスティング・カレンダーダイアログ) に依存するため、MAUI binding は Xamarin.AndroidX.Compose.* (Runtime / UI / Foundation / Material3 等) を配達する。**Gradle 側の Compose BOM 版と Xamarin.AndroidX.Compose.* の実行時版は整合させる** — 整合が崩れると D8 二重定義や実行時のメソッド欠落クラッシュになる。
+
+整合の方向は「Gradle の BOM を NuGet 実行時版へ上げる」: MAUI 本体の依存連鎖 (Essentials → AndroidX.Activity → Compose.Runtime 系) が NuGet 側の下限を押し上げるため、NuGet を Gradle コンパイル版へ下げる方向は物理的に成立しない (relax-android-host-prerequisites で実測確定。BOM 2024.10.01 → 2025.11.01 への引き上げ例)。帰結として aar 利用者の Compose 推移依存の下限も BOM に追随して上がる (利用者可視の影響)。
+
+Compose Material3 `DatePicker` は experimental API のため、BOM 更新時はカレンダーダイアログのシグネチャ・描画の追随確認を行う ([DatePickerCell の選択面](../../core/cells/date-picker-selection-surface.md))。
 
 ## してはいけないこと
 

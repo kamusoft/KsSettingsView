@@ -37,7 +37,8 @@ public struct RadioCell: KsCell, DSLReidentifiable, DSLStyleModifiable, DSLIconM
     public let selectedValue: String
     /// チェックマーク色（任意、`Theme.cellAccentColor` の代替）
     public let accentColor: UIColor?
-    /// 選択時に呼ばれるクロージャ。引数はこの Cell の `value`
+    /// 選択時に呼ばれるクロージャ。引数はこの Cell の `value`。
+    /// メインスレッドから呼ばれる (`KsCell` の「通知のクロージャが呼ばれるスレッド」を参照)。
     public let onSelected: (@Sendable (String) -> Void)?
     /// 有効／無効フラグ（既定 `true`）。`false` のときはタップを受け付けず、
     /// テキスト色を `Theme.disabledTextColor` に置換する。

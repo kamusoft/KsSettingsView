@@ -290,6 +290,7 @@ def describe(found: list[tuple[str, str, int, int]]) -> str:
 def lint(root: str, paths: list[str] | None) -> int:
     import subprocess
     settings = Settings(root)
+    untracked = LP.untracked_files(root)
     if paths is None:
         out = subprocess.run(["git", "grep", "--untracked", "-n", "-I", "-E", GREP_PATTERN, "--"] + settings.scope,
                              cwd=root, capture_output=True, text=True).stdout
@@ -317,6 +318,8 @@ def lint(root: str, paths: list[str] | None) -> int:
         rel, lineno, text = parts
         rel = LP.normalize_rel(rel, root)
         if _is_self_file(rel) or not settings.in_scope(rel):
+            continue
+        if rel in untracked and LP.is_build_artifact(rel):  # 未追跡のビルド出力 (local-path-lint と同じ規則)
             continue
         found = find_identities(text, settings, is_changes_scope(rel))
         if found:
@@ -388,6 +391,9 @@ def selftest() -> int:
             f.write("server=192.168.10.21\n")
         with open(os.path.join(changes_dir, SELF_BASENAME), "w", encoding="utf-8") as f:
             f.write("MAC: aa:bb:cc:dd:ee:01\n")
+        os.makedirs(os.path.join(changes_dir, "build"))
+        with open(os.path.join(changes_dir, "build", "out.log"), "w", encoding="utf-8") as f:
+            f.write("MAC: aa:bb:cc:dd:ee:01\n")
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
             code = lint(tmp, None)
@@ -401,6 +407,7 @@ def selftest() -> int:
             actual = [p.split(":", 1)[0] for p in reported.get(i, "").split(", ") if p]
             check(actual == expected, name, f"期待 {expected or 'なし'} / 実際 {actual or 'なし'}")
         check(code == 1, "違反ありで exit 1")
+        check("selftest/build/out.log" not in out, "未追跡のビルド出力 (build/) は検査しない")
         check("concepts/note.md" not in out, "changes/ 限定 kind は concepts/ で報告しない")
         check(SELF_BASENAME not in out, "自分自身 (同名ファイル) は検査しない")
 

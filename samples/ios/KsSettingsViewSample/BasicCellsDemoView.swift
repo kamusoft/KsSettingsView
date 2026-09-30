@@ -23,6 +23,9 @@ import KsSettingsViewSwiftUI
 ///
 /// MAUI 原典 `Sample/Views/MainPage.xaml` に倣い、MAUI 互換 Theme を `.theme(...)` で明示渡しする。
 /// セクション名は Cell タイプ名そのもの。
+///
+/// Cell の通知 (`onTap` / `onValueChanged` 等) は `@Sendable` の閉包で受け取るが、呼ばれるのは
+/// 常にメインスレッドなので、`MainActor.assumeIsolated` の中で `@State` を書き換える。
 struct BasicCellsDemoView: View {
 
     // SwitchCell / CheckboxCell / RadioCell / SimpleCheckCell の状態
@@ -57,16 +60,16 @@ struct BasicCellsDemoView: View {
                         title: "Tanaka Taro",
                         description: "tanaka.taro@example.com",
                         icon: KsImage.systemName("person.crop.circle"),
-                        onTap: { lastTappedTitle = "Tanaka Taro" }
+                        onTap: { MainActor.assumeIsolated { lastTappedTitle = "Tanaka Taro" } }
                     )
                     CommandCell(
                         title: "プロフィール",
-                        onTap: { lastTappedTitle = "プロフィール" }
+                        onTap: { MainActor.assumeIsolated { lastTappedTitle = "プロフィール" } }
                     )
                     CommandCell(
                         title: "通知設定",
                         valueText: "オン",
-                        onTap: { lastTappedTitle = "通知設定" }
+                        onTap: { MainActor.assumeIsolated { lastTappedTitle = "通知設定" } }
                     )
                 }
 
@@ -91,8 +94,10 @@ struct BasicCellsDemoView: View {
                         description: "This is description. you can write detail explanation of the item here. long text wrap automatically.",
                         isOn: notifEnabled,
                         onValueChanged: { newValue in
-                            notifEnabled = newValue
-                            lastTappedTitle = "Notification → \(newValue)"
+                            MainActor.assumeIsolated {
+                                notifEnabled = newValue
+                                lastTappedTitle = "Notification → \(newValue)"
+                            }
                         }
                     )
                 }
@@ -103,8 +108,10 @@ struct BasicCellsDemoView: View {
                         title: "Agree to Terms",
                         isChecked: agreedTerms,
                         onValueChanged: { newValue in
-                            agreedTerms = newValue
-                            lastTappedTitle = "Agree → \(newValue)"
+                            MainActor.assumeIsolated {
+                                agreedTerms = newValue
+                                lastTappedTitle = "Agree → \(newValue)"
+                            }
                         }
                     )
                 }
@@ -117,8 +124,10 @@ struct BasicCellsDemoView: View {
                         value: "TypeA",
                         selectedValue: selectedType,
                         onSelected: { v in
-                            selectedType = v
-                            lastTappedTitle = "Type → \(v)"
+                            MainActor.assumeIsolated {
+                                selectedType = v
+                                lastTappedTitle = "Type → \(v)"
+                            }
                         }
                     )
                     RadioCell(
@@ -127,8 +136,10 @@ struct BasicCellsDemoView: View {
                         value: "TypeB",
                         selectedValue: selectedType,
                         onSelected: { v in
-                            selectedType = v
-                            lastTappedTitle = "Type → \(v)"
+                            MainActor.assumeIsolated {
+                                selectedType = v
+                                lastTappedTitle = "Type → \(v)"
+                            }
                         }
                     )
                 }
@@ -139,24 +150,30 @@ struct BasicCellsDemoView: View {
                         title: "Item 1",
                         isChecked: simpleCheck1,
                         onValueChanged: { newValue in
-                            simpleCheck1 = newValue
-                            lastTappedTitle = "Item 1 → \(newValue)"
+                            MainActor.assumeIsolated {
+                                simpleCheck1 = newValue
+                                lastTappedTitle = "Item 1 → \(newValue)"
+                            }
                         }
                     )
                     SimpleCheckCell(
                         title: "Item 2",
                         isChecked: simpleCheck2,
                         onValueChanged: { newValue in
-                            simpleCheck2 = newValue
-                            lastTappedTitle = "Item 2 → \(newValue)"
+                            MainActor.assumeIsolated {
+                                simpleCheck2 = newValue
+                                lastTappedTitle = "Item 2 → \(newValue)"
+                            }
                         }
                     )
                     SimpleCheckCell(
                         title: "Item 3",
                         isChecked: simpleCheck3,
                         onValueChanged: { newValue in
-                            simpleCheck3 = newValue
-                            lastTappedTitle = "Item 3 → \(newValue)"
+                            MainActor.assumeIsolated {
+                                simpleCheck3 = newValue
+                                lastTappedTitle = "Item 3 → \(newValue)"
+                            }
                         }
                     )
                 }
@@ -166,7 +183,7 @@ struct BasicCellsDemoView: View {
                     ButtonCell(
                         style: CellStyle(titleColor: SampleTheme.mauiTitleText(dark: colorScheme == .dark)),
                         title: "ログアウト",
-                        onTap: { lastTappedTitle = "ログアウト" },
+                        onTap: { MainActor.assumeIsolated { lastTappedTitle = "ログアウト" } },
                         titleAlignment: .center
                     )
                 }

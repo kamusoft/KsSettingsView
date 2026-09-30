@@ -3,10 +3,10 @@ type: reference
 title: iOS Native Host の利用と更新境界
 description: SettingsRootStore と KsSettingsViewController を使って UIKit の設定画面を構築・更新・拡張する方法
 tags: [ios, uikit, host, public-api]
-timestamp: 2026-09-18
+timestamp: 2026-09-30
 ---
 
-この文書は、iOS の Native API で設定画面を組み込むための公開 API 利用契約と責務境界を整理した reference である。読むと、`SettingsRootStore` と `KsSettingsViewController` の役割、表示後の更新方法、独自 Cell の登録方法、既定色が外観 (ライト / ダーク) に追随する仕組みが分かる。SwiftUI から使う場合は [iOS SwiftUI Bridge と宣言 DSL](ios-swiftui.md) を参照する。設定ツリーと差分の型自体は [SettingsRoot・Section・Cell の設定ツリー](../../core/core-model/settings-tree.md) と [SettingsRootDiff による構造変更](../../core/core-model/structural-changes.md) を先に読む。
+この文書は、iOS の Native API で設定画面を組み込むための公開 API 利用契約と責務境界を整理した reference である。読むと、`SettingsRootStore` と `KsSettingsViewController` の役割、表示後の更新方法、独自 Cell の登録方法、スクロール命令の接続口と表示位置を控えて戻す窓口、既定色が外観 (ライト / ダーク) に追随する仕組みが分かる。SwiftUI から使う場合は [iOS SwiftUI Bridge と宣言 DSL](ios-swiftui.md) を参照する。設定ツリーと差分の型自体は [SettingsRoot・Section・Cell の設定ツリー](../../core/core-model/settings-tree.md) と [SettingsRootDiff による構造変更](../../core/core-model/structural-changes.md) を先に読む。
 
 ## 目的
 
@@ -92,23 +92,62 @@ snapshot の Cell identity は `KsCell.id` だけを包む `KsCellID` である�
 
 hidden な Section / Cell は model から削除しない。hidden 対象への更新は model に保持され、再表示時に更新済みの値が現れる。部分操作の index を visible projection の位置として渡してはならない。
 
+## スクロール制御
+
+共通契約 (命令と位置・実行の時点・位置の控えと戻し) は [スクロール制御](../../core/architecture/scroll-control.md) にあり、ここでは UIKit Host 固有の部分を扱う。
+
+### 接続口
+
+`KsScrollController` を `scrollController` に代入すると、その Controller へ命令が届く。`nil` の代入・`disconnectStore()`・Controller の破棄で接続が外れ、`disconnectStore()` ではプロパティも `nil` に戻る。同じ Store から Controller を作り直したときは、新しい Controller へ改めて代入する。命令で指す ID は Cell の `KsCellID` (中の `UUID` でもよい) と Section の `id` である。
+
+```swift
+let scroll = KsScrollController()
+controller.scrollController = scroll
+
+store.insertCell(LabelCell(title: "新しい項目"), in: section.id, at: section.cells.count)
+scroll.scrollToEnd()   // 同じ処理で追加した Cell を含む末尾へ届く
+```
+
+### 送り方
+
+命令は `DispatchQueue.main.async` で 1 回遅らせたうえで、進行中の snapshot の apply がすべて完了し、view が window に取り付けられて寸法が決まってから実行する。view の読み込み前や画面外で受けた命令は、次の `viewDidLayoutSubviews` で実行する。
+
+アニメーション付きの命令は UIKit の `setContentOffset(_:animated: true)` に任せず、`CADisplayLink` で画面の更新ごとに行き先を最新のレイアウトで求め直し、出発点からその時点の行き先までを進み具合で補間した位置へ送る。進む向きにだけ動かして行き先を越えないため、推定高さの行が実測で確定して内容が縮んでも、末尾を越えて止まらない。UIKit のアニメーションを途中で出し直す形は、出し直すたびに動き出しからやり直して止まりかけるため採っていない。終了時はアニメーションなしの命令と同じく、確定した位置へ送り直して詰める。利用者がドラッグを始めると (`scrollViewWillBeginDragging`)、命令のスクロールはその場で止まる。
+
+共通契約の「祖先の寸法が変わったときの合わせ直し」を持つのはこの Host である。
+
+### 位置を控える・戻す窓口と Host の作り直し
+
+`captureScrollAnchor()` は表示位置を `KsScrollAnchor` として控え、`restoreScrollAnchor(_:)` は控えた位置へ戻す。UIKit Host には Android の保存状態に当たる仕組みが無く、利用者が Controller を作り直すときに位置は自動では保たれない。作り直す場合は、古い Controller が window から外れる前に控え、新しい Controller へ渡す (外れた後の `captureScrollAnchor()` は `nil` を返す)。SwiftUI の `KsSettingsView` は View identity が続く間 Host を作り直さないため、この操作は要らない。
+
+```swift
+// 古い Controller を画面から外す前に控える
+let anchor = oldController.captureScrollAnchor()
+
+let newController = KsSettingsViewController(store: store)
+if let anchor { newController.restoreScrollAnchor(anchor) }
+newController.scrollController = scroll   // 戻しの後に出した命令は、戻した後に実行される
+```
+
 ## Cell Renderer Registry
 
 `KsCellRegistry` は具象 `KsCell` 型と `UICollectionViewCell & KsCellRenderer` 型の対応を保持する。Host は Registry から型を解決して `render(cell:theme:)` を呼ぶため、独自 Cell を追加しても Controller に型分岐を加えない。
 
-標準 Cell 12 種は、既定の `KsCellRegistry.shared` を使う Controller で自動登録できる。独立 Registry を注入する場合、自動登録 flag が `true` でも shared Registry にはならないため、必要な標準 Cell と独自 Cell をその Registry へ登録する。
+標準 Cell 13 種 (基本 7・入力 5・CustomCell) は、既定の `KsCellRegistry.shared` を使う Controller で自動登録できる。独立 Registry を注入する場合、自動登録 flag が `true` でも shared Registry にはならないため、必要な標準 Cell と独自 Cell をその Registry へ登録する。
 
 ```swift
 let registry = KsCellRegistry()
 registry.registerBasicCells()
 registry.registerInputCells()
+registry.registerCustomCell()
 registry.register(cellType: MyCell.self, rendererType: MyCellView.self)
 
 let controller = KsSettingsViewController(
     store: store,
     registry: registry,
     autoRegisterBasicCells: false,
-    autoRegisterInputCells: false
+    autoRegisterInputCells: false,
+    autoRegisterCustomCell: false
 )
 ```
 
@@ -170,6 +209,7 @@ let versionCell = LabelCell(title: "バージョン", valueText: "1.0.0", style:
 - Root / Section Accessory が空または `nil` なら、意味のない supplementary 領域を生成しない。
 - Theme を渡さない list はダーク外観で dark セットの既定色で描かれ、表示中の外観切替でも既定色と利用者の dynamic 色 (Theme・CellStyle・Cell 固有値のいずれも) が描き直される。固定色で明示した値は変わらない。
 - Store が Controller より長命でも、Store 購読と UIKit の DataSource / Delegate が Controller を延命しない。
+- `scrollController` 経由の命令は、同じ処理で行った Store の更新が表示に反映された後に実行される。ハンドルは Controller を保持しない。
 - Registry の登録・解決は排他制御され、同じ Cell 型を再登録した場合は後の Renderer が使われる。
 - Cell の再利用時は前の内容を除去し、編集中の text field は不必要な再生成で first responder を失わない。
 
@@ -214,3 +254,4 @@ store.insertCell(
 - [SettingsRootDiff による構造変更](../../core/core-model/structural-changes.md)
 - [基本 Cell](../../core/cells/basic-cells.md)
 - [入力 Cell](../../core/cells/input-cells.md)
+- [スクロール制御](../../core/architecture/scroll-control.md)

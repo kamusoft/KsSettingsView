@@ -5,7 +5,7 @@ applies-when:
   tasks: [テスト実行, テスト結果の報告]
 title: テスト実行規約
 description: iOS / Android / MAUI のテストの正しい実行コマンドと、黙って検証にならない範囲 (macOS 上の swift test で失われるテスト・Robolectric の描画検証限界・MAUI facade テストが触らない platform TFM)。収束を待つアサーションの書き方は platform 共通
-timestamp: 2026-09-07
+timestamp: 2026-09-26
 ---
 
 # テスト実行規約
@@ -35,11 +35,19 @@ iOS / Android / MAUI の 3 platform を記載する。いずれも実際に実�
 
 迷ったら「この値が変わる時期を決めているのは誰か」を問う。自分のコードが決めているなら条件に使える。framework が決めているなら、その値ではなく framework が表現している意味のほう (位置・寸法・可視性・値そのもの) を条件にする。
 
-行が画面外へ出たことを `UICollectionView.cellForItem(at:)` が `nil` を返すことで判定するのは代理にあたる。UIKit は可視矩形の外の行を hidden のまま返し続けることがあり、手放す時期は実行機の速さで変わる。行の frame が可視矩形と交わらないことを条件にすれば、UIKit が行を保持し続けても判定の意味は変わらない (出典: fix-ios-cell-recycle-test-flaky)。
+行や header / footer が画面外へ出たことを `UICollectionView.cellForItem(at:)` / `supplementaryView(forElementKind:at:)` が `nil` を返すことで判定するのは代理にあたる。UIKit は可視矩形の外へ出た行や supplementary をしばらく返し続けることがあり、手放す時期は実行機の速さで変わる。行は frame、supplementary はレイアウト上の frame (`layoutAttributesForSupplementaryElement(ofKind:at:)`) が可視矩形と交わらないことを条件にすれば、UIKit が保持し続けても判定の意味は変わらない (出典: fix-ios-cell-recycle-test-flaky / ios26-5-supplementary-recycle-test-timeout)。
 
 条件や検査対象を絞り込みで狭めたときは、**絞り込んだ結果が空でないこと**もあわせて確かめる。対象が 0 件のループは、何も検証しないまま成功する。
 
 この節は、同じ誤りが 3 つの変更で platform をまたいで再発したことを受けて platform 共通へ引き上げた (出典: clarify-host-attach-order-contract / fix-compose-dsl-double-update-flaky-test / add-verification-ci)。当初は Android の `AsyncListDiffer` を入口に書かれており、iOS のテストを書くときに読まれなかった。
+
+#### 代理をやめたときに通らなくなる経路
+
+代理の待機を意味の条件へ置き換えると、条件が操作の直後に成立し、待機がすぐ抜けるようになることがある。旧い待機が待つ間に起きていた出来事 (RunLoop の周回に伴う UIKit の回収・再利用) にテストの後段が頼っていた場合、置き換えた途端に後段はその経路を通らなくなる。全件は緑のまま、検出力だけが失われる。
+
+後段が通るはずの経路 (再利用・作り直しの後の再設定など) は、テスト自身の操作で起こして確定させる。置き換えた後は、その経路を壊す改変 (ミューテーション) でテストが落ちることを実測する。
+
+スクロール前と別の実体になったことを遷移の証拠に使うときは、再利用プールから同じ実体が戻る可能性を考える。入れ替えを起こす時点で旧い実体が保持されていることを前提として確かめておけば、UIKit の保持方針が変わったときに原因の読みにくい timeout ではなく前提の失敗として落ちる (出典: ios26-5-supplementary-recycle-test-timeout)。
 
 ## iOS
 

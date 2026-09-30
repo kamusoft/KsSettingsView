@@ -47,13 +47,15 @@ public struct PickerCell: KsCell, DSLReidentifiable, DSLStyleModifiable, DSLIcon
     public let pageTitle: String?
     /// 選択強調色（任意）
     public let accentColor: UIColor?
-    /// 単一選択モードの選択変更 callback
+    /// 単一選択モードの選択変更 callback。メインスレッドから呼ばれる (`KsCell` の「通知のクロージャが呼ばれるスレッド」を参照)。
     public let onSelectionChanged: (@Sendable (Int) -> Void)?
-    /// 複数選択モードの選択変更 callback
+    /// 複数選択モードの選択変更 callback。メインスレッドから呼ばれる (`KsCell` の「通知のクロージャが呼ばれるスレッド」を参照)。
     public let onMultiSelectionChanged: (@Sendable (Set<Int>) -> Void)?
-    /// 単一選択モードで、確定した選択面が閉じ切った後に確定 index を届ける callback
+    /// 単一選択モードで、確定した選択面が閉じ切った後に確定 index を届ける callback。
+    /// メインスレッドから呼ばれる (`KsCell` の「通知のクロージャが呼ばれるスレッド」を参照)。
     public let onSelectionCompleted: (@Sendable (Int) -> Void)?
-    /// 複数選択モードで、確定した選択面が閉じ切った後に確定 index 集合を届ける callback
+    /// 複数選択モードで、確定した選択面が閉じ切った後に確定 index 集合を届ける callback。
+    /// メインスレッドから呼ばれる (`KsCell` の「通知のクロージャが呼ばれるスレッド」を参照)。
     public let onMultiSelectionCompleted: (@Sendable (Set<Int>) -> Void)?
     public let isEnabled: Bool
     public let isVisible: Bool

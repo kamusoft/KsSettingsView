@@ -218,7 +218,6 @@ public enum DSLDiffCalculator {
     ) -> [SettingsRootDiff] {
         var diffs: [SettingsRootDiff] = []
 
-        let oldIDs = Set(old.map { $0.id })
         let newIDs = Set(new.map { $0.id })
 
         // 1) 削除（旧にあって新にない）
@@ -226,22 +225,109 @@ public enum DSLDiffCalculator {
             diffs.append(.removeSection(sectionID: section.id))
         }
 
-        // 2) 追加（新にあって旧にない）
-        for (newIdx, section) in new.enumerated() where !oldIDs.contains(section.id) {
-            diffs.append(.insertSection(at: newIdx, section: section))
+        // 2) 追加と 3) 移動（相対順序が変わった Section だけを移し、追加・削除でずれただけの Section
+        // は動かさない）。index / from / to は適用時点の並び（削除 → 追加 → 移動の順に適用）で表す。
+        let plan = planReorder(old: old.map(\.id), new: new.map(\.id))
+        let sectionsByID = Dictionary(new.map { ($0.id, $0) }, uniquingKeysWith: { _, last in last })
+        for insert in plan.inserts {
+            guard let section = sectionsByID[insert.id] else { continue }
+            diffs.append(.insertSection(at: insert.index, section: section))
         }
-
-        // 3) 移動（両方にあって位置が違う）
-        // 削除済 Section / 追加済 Section を除いた両者で位置比較する。
-        let remainingNew = new.enumerated().filter { oldIDs.contains($0.element.id) }
-        for (newIdx, section) in remainingNew {
-            // 旧の中での位置と新の中での位置が違うか
-            if let oldIdx = old.firstIndex(where: { $0.id == section.id }), oldIdx != newIdx {
-                diffs.append(.moveSection(from: oldIdx, to: newIdx))
-            }
+        for move in plan.moves {
+            diffs.append(.moveSection(from: move.from, to: move.to))
         }
 
         return diffs
+    }
+
+    // MARK: - 追加位置と最小移動の算出
+
+    /// 並びへの 1 回の追加。適用時点の並びの `index` へ `id` を挿入する。
+    struct Insert: Equatable {
+        let id: UUID
+        let index: Int
+    }
+
+    /// 並びの中の 1 回の移動。適用時点の並びで `from` から取り除き、取り除いた後の並びの `to` へ
+    /// 挿入する（Store の `moveSection` / `moveCell` と同じ解釈）。
+    struct Move: Equatable {
+        let id: UUID
+        let from: Int
+        let to: Int
+    }
+
+    /// 旧の並びを新の並びへそろえる追加と移動の列。削除（新に無い ID）はこれより先に適用する前提。
+    struct ReorderPlan: Equatable {
+        let inserts: [Insert]
+        let moves: [Move]
+    }
+
+    /// 旧の並び `old` を新の並び `new` へそろえる追加と移動を、移動が最小になるように求める。
+    ///
+    /// 両方にある ID のうち、新の順で見た最長増加部分列（相対順序を保てる最大の集合）に入るものは
+    /// 動かさない。追加する ID は新の順で直前にある「動かさない ID か先に追加した ID」の直後へ
+    /// 入れるため、動かさない ID と追加した ID は最初から新の相対順序に並ぶ。残りの ID だけを新の順に、
+    /// 直前の ID の直後へ移す。直前の ID はいずれも配置済みなので、すべて適用すると `new` と一致する。
+    /// 途中への追加や削除でずれただけの並びは移動 0 件になり、追加の位置は新の位置そのものになる。
+    static func planReorder(old: [UUID], new: [UUID]) -> ReorderPlan {
+        let oldIDs = Set(old)
+        var newIndex: [UUID: Int] = [:]
+        for (idx, id) in new.enumerated() {
+            newIndex[id] = idx
+        }
+        // 削除を適用した後の並び
+        var current = old.filter { newIndex[$0] != nil }
+        var stable = Set(
+            longestIncreasingSubsequence(current.map { newIndex[$0] ?? 0 }).map { current[$0] }
+        )
+
+        var inserts: [Insert] = []
+        var lastPlaced: UUID?
+        for id in new {
+            if !oldIDs.contains(id) {
+                let index = lastPlaced.flatMap { current.firstIndex(of: $0) }.map { $0 + 1 } ?? 0
+                current.insert(id, at: index)
+                inserts.append(Insert(id: id, index: index))
+                stable.insert(id)
+            }
+            if stable.contains(id) { lastPlaced = id }
+        }
+
+        var moves: [Move] = []
+        for (idx, id) in new.enumerated() where !stable.contains(id) {
+            guard let from = current.firstIndex(of: id) else { continue }
+            current.remove(at: from)
+            let to = idx == 0 ? 0 : (current.firstIndex(of: new[idx - 1]) ?? -1) + 1
+            current.insert(id, at: to)
+            moves.append(Move(id: id, from: from, to: to))
+        }
+        return ReorderPlan(inserts: inserts, moves: moves)
+    }
+
+    /// `sequence` の狭義の最長増加部分列を、`sequence` 上の位置の昇順で返す (O(n log n))。
+    private static func longestIncreasingSubsequence(_ sequence: [Int]) -> [Int] {
+        guard !sequence.isEmpty else { return [] }
+        // tails[k]: 長さ k + 1 の増加部分列の末尾のうち値が最小のものの位置
+        var tails: [Int] = []
+        // previous[i]: 位置 i を末尾とする増加部分列の 1 つ前の位置（無ければ -1）
+        var previous = [Int](repeating: -1, count: sequence.count)
+        for (i, value) in sequence.enumerated() {
+            var lo = 0
+            var hi = tails.count
+            while lo < hi {
+                let mid = (lo + hi) / 2
+                if sequence[tails[mid]] < value { lo = mid + 1 } else { hi = mid }
+            }
+            if lo > 0 { previous[i] = tails[lo - 1] }
+            if lo == tails.count { tails.append(i) } else { tails[lo] = i }
+        }
+        var result = [Int](repeating: 0, count: tails.count)
+        var cursor = tails[tails.count - 1]
+        for k in stride(from: tails.count - 1, through: 0, by: -1) {
+            result[k] = cursor
+            cursor = previous[cursor]
+        }
+        return result
     }
 
     // MARK: - Cell レベル突合
@@ -295,12 +381,19 @@ public enum DSLDiffCalculator {
         }
 
         // 2) 追加（新にあって旧にない）
-        for (newIdx, cell) in new.enumerated() where !oldIDs.contains(cell.id) {
-            diffs.append(.insertCell(sectionID: sectionID, at: newIdx, cell: cell))
+        // 移動が最小になる追加位置を求める。index は適用時点の並び（削除を適用した後）で表す。
+        let plan = planReorder(old: old.map(\.id), new: new.map(\.id))
+        let cellsByID = Dictionary(new.map { ($0.id, $0) }, uniquingKeysWith: { _, last in last })
+        for insert in plan.inserts {
+            guard let cell = cellsByID[insert.id] else { continue }
+            diffs.append(.insertCell(sectionID: sectionID, at: insert.index, cell: cell))
         }
 
         // 3) 移動 / 置換（両方に id 存在）
-        for (newIdx, cell) in new.enumerated() {
+        // 移動は相対順序が変わった Cell だけに出し、追加・削除でずれただけの Cell は動かさない。
+        // `moveCell` の to は適用時点の並び（削除と追加を適用した後）で取り除いた後の位置。
+        let movesByID = Dictionary(plan.moves.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        for cell in new {
             guard oldIDs.contains(cell.id) else { continue }
             guard let oldIdx = old.firstIndex(where: { $0.id == cell.id }) else { continue }
             let oldCell = old[oldIdx]
@@ -311,8 +404,8 @@ public enum DSLDiffCalculator {
             // この `.replaceCell` は構造同期（item 集合・順序）を変えず、`applyReplaceCell` が
             // `reconfigureItems` で同一セルを破棄せず再構成して反映する（セル破棄・ちらつきなし）。
             let contentsChanged = AnyHashable(oldCell) != AnyHashable(cell)
-            if oldIdx != newIdx {
-                diffs.append(.moveCell(cellID: KsCellID(cell: oldCell), to: newIdx))
+            if let move = movesByID[cell.id] {
+                diffs.append(.moveCell(cellID: KsCellID(cell: oldCell), to: move.to))
                 if contentsChanged {
                     // 移動（構造同期）とは別に内容更新（reconfigure 経路）も発行
                     diffs.append(.replaceCell(cellID: KsCellID(cell: oldCell), new: cell))

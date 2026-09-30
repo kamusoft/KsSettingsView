@@ -23,7 +23,7 @@
     <ApplicationTitle>KsSettingsView Verification</ApplicationTitle>
     <ApplicationVersion>1</ApplicationVersion>
     <ApplicationDisplayVersion>0.1.0</ApplicationDisplayVersion>
-    <MauiVersion>10.0.70</MauiVersion>
+    <MauiVersion>10.0.71</MauiVersion>
     <KsSettingsViewVersion Condition=" '$(KsSettingsViewVersion)' == '' ">0.0.0-dev</KsSettingsViewVersion>
   </PropertyGroup>
 

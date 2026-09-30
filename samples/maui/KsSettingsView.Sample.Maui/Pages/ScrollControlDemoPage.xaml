@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+  スクロール命令ハンドル (IScrollController) の使い方を示すデモ画面。
+  一覧の中の ButtonCell から Cell・Section・先頭・末尾への命令を出し、
+  項目を足した直後の末尾への命令が追加した項目まで届くことを確かめる。
+  命令ハンドルは SettingsView.ScrollController から OneWayToSource で ViewModel へ渡し、
+  命令が効くようになった時点は ScrollControllerReadyCommand で ViewModel に控える。
+  命令で指す Section / Cell には SectionId / CellId で明示 ID を付ける。
+  開いたときに自動でスクロールはしない。
+  iOS / Android の同デモ画面と文言・構成を揃えてある。
+  タイトルは SampleScreen の一元定義から与えられるため、ここでは設定しない。
+-->
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:ks="clr-namespace:KsSettingsView;assembly=KsSettingsView.Maui"
+             xmlns:vm="clr-namespace:KsSettingsView.Sample.Maui.ViewModels"
+             x:Class="KsSettingsView.Sample.Maui.Pages.ScrollControlDemoPage"
+             x:DataType="vm:ScrollControlDemoViewModel">
+  <ks:SettingsView ScrollController="{Binding Scroll}"
+                   ScrollControllerReadyCommand="{Binding ScrollReadyCommand}"
+                   RootFooterText="ここが内容の末尾です（Root Footer）">
+
+    <ks:Section HeaderText="操作"
+                FooterText="「Section へ」は Section 4 の見出しを上端へ、「Cell を中央へ」は項目 3-3 を表示範囲の中央へ移します。「追加して末尾へ」は Section 5 に項目を足して末尾へ移ります。">
+      <ks:ButtonCell Title="末尾へ" Command="{Binding ScrollToEndCommand}" />
+      <ks:ButtonCell Title="Section へ" Command="{Binding ScrollToSectionCommand}" />
+      <ks:ButtonCell Title="Cell を中央へ" Command="{Binding ScrollToCellCommand}" />
+      <ks:ButtonCell Title="追加して末尾へ" Command="{Binding AddAndScrollToEndCommand}" />
+    </ks:Section>
+
+    <ks:Section HeaderText="Section 1"
+                FooterText="Section 1 の Footer"
+                SectionId="section-1">
+      <ks:LabelCell Title="項目 1-1" CellId="cell-1-1" />
+      <ks:LabelCell Title="項目 1-2" CellId="cell-1-2" />
+      <ks:LabelCell Title="項目 1-3" CellId="cell-1-3" />
+      <ks:LabelCell Title="項目 1-4" CellId="cell-1-4" />
+      <ks:LabelCell Title="項目 1-5" CellId="cell-1-5" />
+    </ks:Section>
+
+    <ks:Section HeaderText="Section 2"
+                FooterText="Section 2 の Footer"
+                SectionId="section-2">
+      <ks:LabelCell Title="項目 2-1" CellId="cell-2-1" />
+      <ks:LabelCell Title="項目 2-2" CellId="cell-2-2" />
+      <ks:LabelCell Title="項目 2-3" CellId="cell-2-3" />
+      <ks:LabelCell Title="項目 2-4" CellId="cell-2-4" />
+      <ks:LabelCell Title="項目 2-5" CellId="cell-2-5" />
+    </ks:Section>
+
+    <ks:Section HeaderText="Section 3"
+                FooterText="Section 3 の Footer"
+                SectionId="section-3">
+      <ks:LabelCell Title="項目 3-1" CellId="cell-3-1" />
+      <ks:LabelCell Title="項目 3-2" CellId="cell-3-2" />
+      <ks:LabelCell Title="項目 3-3" CellId="cell-3-3" />
+      <ks:LabelCell Title="項目 3-4" CellId="cell-3-4" />
+      <ks:LabelCell Title="項目 3-5" CellId="cell-3-5" />
+    </ks:Section>
+
+    <ks:Section HeaderText="Section 4"
+                FooterText="Section 4 の Footer"
+                SectionId="section-4">
+      <ks:LabelCell Title="項目 4-1" CellId="cell-4-1" />
+      <ks:LabelCell Title="項目 4-2" CellId="cell-4-2" />
+      <ks:LabelCell Title="項目 4-3" CellId="cell-4-3" />
+      <ks:LabelCell Title="項目 4-4" CellId="cell-4-4" />
+      <ks:LabelCell Title="項目 4-5" CellId="cell-4-5" />
+    </ks:Section>
+
+    <!-- 最後の番号付き Section。「追加して末尾へ」で足した項目を固定の 5 行の後ろへ並べる。 -->
+    <ks:Section HeaderText="Section 5"
+                FooterText="Section 5 の Footer"
+                SectionId="section-5"
+                TemplateStartIndex="5"
+                ItemsSource="{Binding AddedItems}">
+      <ks:LabelCell Title="項目 5-1" CellId="cell-5-1" />
+      <ks:LabelCell Title="項目 5-2" CellId="cell-5-2" />
+      <ks:LabelCell Title="項目 5-3" CellId="cell-5-3" />
+      <ks:LabelCell Title="項目 5-4" CellId="cell-5-4" />
+      <ks:LabelCell Title="項目 5-5" CellId="cell-5-5" />
+      <ks:Section.ItemTemplate>
+        <DataTemplate x:DataType="x:String">
+          <ks:LabelCell Title="{Binding .}" />
+        </DataTemplate>
+      </ks:Section.ItemTemplate>
+    </ks:Section>
+
+    <ks:Section HeaderText="先頭へ戻る"
+                FooterText="「先頭へ」はアニメーションなしで移ります。">
+      <ks:ButtonCell Title="先頭へ" Command="{Binding ScrollToStartCommand}" />
+    </ks:Section>
+
+  </ks:SettingsView>
+</ContentPage>

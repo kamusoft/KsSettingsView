@@ -1,9 +1,9 @@
 ---
 type: concept
 title: MAUI Native Bridge の interop 境界
-description: C# から Native SettingsView を操作する Bridge 層の公開契約 — 内部所有 Store・更新 API と DTO の輸送規約・ID 採番・lifecycle・操作通知
+description: C# から Native SettingsView を操作する Bridge 層の公開契約 — 内部所有 Store・更新 API と DTO の輸送規約・スクロール命令・ID 採番・lifecycle (Host の作り直しをまたぐスクロール位置を含む)・操作通知
 tags: [maui, bridge, interop, binding]
-timestamp: 2026-09-19
+timestamp: 2026-09-30
 ---
 
 # MAUI Native Bridge の interop 境界
@@ -33,7 +33,7 @@ C# (Binding assembly) → Bridge → 内部所有 SettingsRootStore → Native H
 
 ### 更新 API
 
-更新 API は Store 公開操作と 1:1 の 12 メソッド (maui/ADR-0002) + accessory view 系 2 メソッド (1:1 原則からの意図的な逸脱 — maui/ADR-0017・0018) + Store 外の `setStyle`。union DTO や独自の diff 表現は持たない。
+更新 API は Store 公開操作と 1:1 の 12 メソッド (maui/ADR-0002) + accessory view 系 2 メソッド (1:1 原則からの意図的な逸脱 — maui/ADR-0017・0018) + Store 外の `setStyle` とスクロール命令 4 種。union DTO や独自の diff 表現は持たない。
 
 | メソッド | 対象 | 意味 |
 |---|---|---|
@@ -46,10 +46,23 @@ C# (Binding assembly) → Bridge → 内部所有 SettingsRootStore → Native H
 | `invalidateAccessoryMeasurement` | accessory (一過性) | accessory 内容のサイズ変化を native の行/領域高さ再計算へ届ける一過性通知。Store の復元可能状態は変えない (maui/ADR-0018) |
 | `setTheme` | Theme | Theme DTO の適用 |
 | `setStyle` | Host の style | 設定 list の style (Classic / Modern) の設定 (下記) |
+| `scrollToCell` / `scrollToSection` / `scrollToStart` / `scrollToEnd` | Host のスクロール | Cell・Section・内容の両端へのスクロール命令 (下記「スクロール命令」) |
 
-`setStyle` は **Store 公開操作 1:1 の枠外にある唯一の更新 API** — Native 側でも style は Store ではなく Host (View / Controller) の可変プロパティが所有するため、Bridge も Store を経由せず Host の style プロパティを直接叩く (Native の Theme / style 分離との対称性。maui/ADR-0023)。輸送は enum 序数 int で、定義域外の序数は Classic へ正規化する。Bridge は style を Host 外のフィールドで保持し、`makeHost*` 生成時に適用・生きた Host には即時適用する — `releaseHost()` 後の再生成でも style は維持される。
+Store 公開操作 1:1 の枠外にある更新 API は `setStyle` とスクロール命令の 2 系統で、どちらも Store の状態ではないものを Host へ届ける。`setStyle` については、Native 側でも style は Store ではなく Host (View / Controller) の可変プロパティが所有するため、Bridge も Store を経由せず Host の style プロパティを直接叩く (Native の Theme / style 分離との対称性。maui/ADR-0023)。輸送は enum 序数 int で、定義域外の序数は Classic へ正規化する。Bridge は style を Host 外のフィールドで保持し、`makeHost*` 生成時に適用・生きた Host には即時適用する — `releaseHost()` 後の再生成でも style は維持される。
 
 Native Host は Bridge が生成・公開する — iOS `makeHostViewController()` が返す ViewController を子 VC として embed し、Android `makeHostView(context)` が返す View を view 階層へ追加して表示する。
+
+### スクロール命令
+
+スクロール命令 4 種は Store を経由しない — スクロール位置は Store の状態ではないため ([core/ADR-0037](../../../decisions/core/0037-scroll-control-handle-attached-to-host.md))。Bridge は Native の命令ハンドル `KsScrollController` を 1 つ持ち、`makeHost*` で Host を作るたびにそのハンドルを Host へつなぎ直す。命令はハンドル経由で生きている Host に届くので、Host が無い間の命令は Native のハンドルの「未接続なら何もしない」にそのまま落ち、Bridge が Host の有無を判定し直すことはない (maui/ADR-0030)。
+
+| 引数 | 輸送 |
+|---|---|
+| 対象 (`cellID` / `sectionID`) | 他の更新 API と同じ Bridge の ID 文字列。canonical UUID として解釈できない・未知・非表示の要素は何もしない |
+| `position` | 整数 (0 = start / 1 = center / 2 = end)。範囲外は start として扱う (`setStyle` の序数輸送と同じ形) |
+| `animated` | Bool を素通し |
+
+命令の実行時期 (同じ処理の中の更新が表示に反映された後) と位置の合わせ方は Native の Host の契約そのままで、[スクロール制御](../../core/architecture/scroll-control.md) が持つ。Host が無いとき・`dispose()` の後の命令は何もしない。MAUI の facade はこの API を gateway 経由で呼ぶ ([MAUI facade の公開契約](maui-facade.md) の「スクロール命令」)。
 
 ### Root の構築と Cell DTO
 
@@ -96,6 +109,17 @@ Bridge は同時に 1 つの Host をサポートする。生きている Host �
 解放後の `makeHost*` は Store 現在状態から表示を復元した**新しい** handle を返す。Host 不在中の更新は Store にだけ適用され、次の Host 生成時の表示復元で反映される — MAUI Handler の切断 (`releaseHost()`) / 再接続 (`makeHost*`) をまたいで Store 内容が保持されるのはこの機構による。
 
 ただし root の header / footer は Store 現在状態に含まれない Host 単位のプロパティで、解放 → 再生成には引き継がれない (core/ADR-0005 / core/ADR-0019)。所有者が値を保持し、Host 生成のたびに `updateAccessory` で再適用する。再適用は Host の view 階層への取り付けを待たなくてよい — 生成済みの Host に対して取り付け前に渡した root 対象の値は両 OS とも失われず、Host の最初の表示に含まれる (core/ADR-0033)。MAUI facade はこれを前提に、Host を作った直後・取り付け前に root を適用する (maui/ADR-0027)。
+
+### Host の作り直しをまたぐスクロール位置
+
+Bridge は `releaseHost()` で Host を手放すとき、その Host の表示位置 (表示範囲の上端にかかる要素と、そこからのずれ) を Native の `captureScrollAnchor()` で控える。次の `makeHost*` は、控えがあれば Host を返す前に `restoreScrollAnchor` で戻しを要求する。戻しは命令と同じ待ち行列の先頭に入るため、Host を作った後に出した命令 (MAUI の準備完了の合図の中で出した命令を含む) は戻しの後に実行され、最終位置を決める (maui/ADR-0030)。控えは戻しに一度使ったら捨てる。控えられる内容が無い Host (表示前など) を手放したときは控えを持たず、次の Host は内容の先頭から表示する。`dispose()` は控えを捨て、保持し続けている Host からもハンドルを外す (その Host に積まれた未実行の命令は Native の規則どおり捨てられる)。
+
+MAUI の Handler の切断 (Pop で消えるページ自身の切断) は、ページの view が window から外れた**後**に届く。外れた後の Host からは利用者が見ていた位置を控えられない — Android の Host は行を持たず `captureScrollAnchor()` が null を返し、iOS の Host は window の寸法と安全領域を失ったレイアウトになる (iOS の `captureScrollAnchor()` も外れた後は nil を返す)。そこで Bridge は Host を作るときに `KsBridgeHostAnchorTracker` を付け、外れる直前の位置を控え続ける。`releaseHost()` の時点で Host が window から外れていればその控えを使い、取り付けられたままならその時点の位置を控える。
+
+| OS | 外れる直前の位置を控える時点 |
+|---|---|
+| iOS | Host の view の子に置いた見えない view が、祖先が window から外れる直前 (`willMove(toWindow:)`) に控える。この view を置くため、`makeHostViewController()` は Host の view を読み込んでから返す |
+| Android | Host が window に取り付けられている間、描画の直前 (`OnPreDrawListener`) ごとに控え直す |
 
 ### 破棄
 
@@ -148,5 +172,6 @@ binding (iOS xcframework / Android aar の生成と取り込み、SDK 標準ア�
 - [MauiView の native 実体化機構](../architecture/view-materialization.md) — 輸送する platform view を作る側の機構と、native への埋め込みの継ぎ目
 - [MAUI binding の Native artifact 統合](../architecture/binding-build-integration.md) — binding の生成経路・既知の制約・SDK 更新時の再検証箇所
 - [MAUI 検証ホストの実行規約](../../../handbook/maui/integration-host-verification.md) — binding / facade の end-to-end 疎通手順
+- [スクロール制御](../../core/architecture/scroll-control.md) — 3 platform 共通の命令・位置・実行順の契約と、位置を控える・戻す窓口
 
-決定の経緯: [maui ドメインの ADR 一覧](../../../decisions/maui/index.md) (基盤は maui/ADR-0001〜0007、輸送と操作通知は maui/ADR-0011〜0012・0015、view の輸送は maui/ADR-0017・0020、style と Section 装飾の輸送は maui/ADR-0023・0024)。Host の view load / attach 時の復元契約は core/ADR-0019、取り付け前に渡した root の header / footer の保持は core/ADR-0033
+決定の経緯: [maui ドメインの ADR 一覧](../../../decisions/maui/index.md) (基盤は maui/ADR-0001〜0007、輸送と操作通知は maui/ADR-0011〜0012・0015、view の輸送は maui/ADR-0017・0020、style と Section 装飾の輸送は maui/ADR-0023・0024、スクロール命令のハンドルと Host の作り直しをまたぐ位置は maui/ADR-0029・0030 と core/ADR-0037)。Host の view load / attach 時の復元契約は core/ADR-0019、取り付け前に渡した root の header / footer の保持は core/ADR-0033

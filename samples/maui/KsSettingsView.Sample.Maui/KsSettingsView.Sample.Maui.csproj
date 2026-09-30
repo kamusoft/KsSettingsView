@@ -18,7 +18,7 @@
     <ApplicationTitle>KsSettingsView Sample</ApplicationTitle>
     <ApplicationVersion>1</ApplicationVersion>
     <ApplicationDisplayVersion>0.1.0</ApplicationDisplayVersion>
-    <MauiVersion>10.0.70</MauiVersion>
+    <MauiVersion>10.0.71</MauiVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition=" $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios' ">

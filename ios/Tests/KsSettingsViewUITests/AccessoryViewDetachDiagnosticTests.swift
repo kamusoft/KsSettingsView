@@ -28,12 +28,52 @@ final class AccessoryViewDetachDiagnosticTests: XCTestCase {
         return listCell.contentView.subviews.compactMap { $0 as? UILabel }.first?.text
     }
 
-    /// 先頭 Section の header supplementary が表示されているかを返す。
-    private func isHeaderSupplementaryVisible(_ cv: UICollectionView) -> Bool {
+    /// 先頭 Section の header として UIKit が保持している supplementary を返す。
+    private func headerSupplementary(_ cv: UICollectionView) -> UICollectionReusableView? {
         return cv.supplementaryView(
             forElementKind: UICollectionView.elementKindSectionHeader,
             at: IndexPath(item: 0, section: 0)
-        ) != nil
+        )
+    }
+
+    /// 先頭 Section の header のレイアウト上の位置が可視矩形の外にあるかを返す。
+    ///
+    /// `supplementaryView(forElementKind:at:)` が nil を返すことを画面外の判定に使わない —
+    /// UICollectionView は可視矩形の外へ出た supplementary をしばらく返し続け、手放す時期は
+    /// 実行機の速さで変わる。位置で判定すれば、UIKit が supplementary を保持し続けても判定の
+    /// 意味は変わらない。
+    private func isHeaderOffscreen(_ cv: UICollectionView) -> Bool {
+        guard let frame = headerLayoutFrame(cv) else { return false }
+        return !frame.intersects(cv.bounds)
+    }
+
+    private func headerLayoutFrame(_ cv: UICollectionView) -> CGRect? {
+        return cv.layoutAttributesForSupplementaryElement(
+            ofKind: UICollectionView.elementKindSectionHeader,
+            at: IndexPath(item: 0, section: 0)
+        )?.frame
+    }
+
+    /// view を失敗メッセージ用に、型と実体の識別子で表す。
+    private func describeIdentity(_ view: UIView?) -> String {
+        guard let view else { return "nil" }
+        return "\(type(of: view))(\(UInt(bitPattern: ObjectIdentifier(view).hashValue)))"
+    }
+
+    /// 失敗時に止まった理由を切り分けられるよう、header の位置・可視矩形・UIKit が保持している
+    /// supplementary の状態と、比較の基準にした supplementary の実体を返す。
+    private func describeHeaderPlacement(
+        _ cv: UICollectionView,
+        before: UICollectionReusableView
+    ) -> String {
+        let retained = headerSupplementary(cv)
+        return """
+            先頭 header frame \(headerLayoutFrame(cv).map { "\($0)" } ?? "なし") / \
+            可視矩形 \(cv.bounds) / \
+            保持中の supplementary \(describeIdentity(retained)) \
+            hidden \(retained.map { "\($0.isHidden)" } ?? "なし") / \
+            スクロール前の supplementary \(describeIdentity(before))
+            """
     }
 
     private func host(
@@ -137,22 +177,46 @@ final class AccessoryViewDetachDiagnosticTests: XCTestCase {
         )
         XCTAssertNotNil(old.superview, "旧 view が自動で剥がれるようになった (所有側の剥がし手順の要否が変わる)")
 
-        // スクロールで再利用を経由しても解消しない
+        // 画面外にある間に作り直された supplementary を経由して戻しても解消しない。
+        // 画面外へ出た supplementary を UIKit がいつ手放すかは実行機の速さで決まるため、画面外に
+        // ある間に同じ new を指定し直して header を作り直させ、戻したときにスクロール前と別の
+        // 実体へ new が載ることを待つ。
+        let supplementaryBeforeScroll = try XCTUnwrap(
+            headerSupplementary(cv),
+            "前提: 先頭 Section header の supplementary が表示されていない"
+        )
         cv.setContentOffset(CGPoint(x: 0, y: 400), animated: false)
         awaitCondition(
-            "画面外へ送った header supplementary が回収される",
+            "画面外へ送った header が可視矩形から外れる",
             in: cv,
-            actual: { "header supplementary 表示中 = \(isHeaderSupplementaryVisible(cv))" },
-            until: { !isHeaderSupplementaryVisible(cv) }
+            actual: { describeHeaderPlacement(cv, before: supplementaryBeforeScroll) },
+            until: { isHeaderOffscreen(cv) }
+        )
+        // Section が 1 つだけのため、作り直しより前に UIKit が header を手放していると、戻したときに
+        // 再利用プールから同じ実体が取り出され「別の実体」を遷移の証拠に使えない。作り直しの時点で
+        // UIKit がスクロール前の実体を保持していることを前提として確かめる。
+        XCTAssertTrue(
+            headerSupplementary(cv) === supplementaryBeforeScroll,
+            "前提: 作り直しの前に UIKit が header を手放している (\(describeHeaderPlacement(cv, before: supplementaryBeforeScroll)))"
+        )
+        store.updateAccessory(
+            target: .sectionHeader(sectionID: sectionID),
+            accessory: .section(.view(KsAnyView.uiKit { new }))
         )
         cv.setContentOffset(.zero, animated: false)
         awaitCondition(
-            "先頭へ戻した header supplementary が再表示される",
+            "先頭へ戻した header が別の supplementary 実体で new を載せて再表示される",
             in: cv,
-            actual: { "header supplementary 表示中 = \(isHeaderSupplementaryVisible(cv))" },
-            until: { isHeaderSupplementaryVisible(cv) }
+            actual: {
+                "\(describeHeaderPlacement(cv, before: supplementaryBeforeScroll)) / " +
+                    "new を載せた supplementary \(describeIdentity(new.superview?.superview))"
+            },
+            until: {
+                guard let current = headerSupplementary(cv) else { return false }
+                return current !== supplementaryBeforeScroll && new.superview?.superview === current
+            }
         )
-        XCTAssertNotNil(old.superview, "スクロール往復で旧 view が剥がれるようになった")
+        XCTAssertNotNil(old.superview, "作り直された supplementary を経由した往復で旧 view が剥がれるようになった")
 
         // 所有側が明示的に剥がせば解消し、表示中の view は影響を受けない
         old.removeFromSuperview()

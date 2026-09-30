@@ -1,0 +1,71 @@
+# iOS MAUI: Handler の再接続の後に SettingsView の領域が下端まで届かず白い帯が残る (A/B)
+# 端末: この change 専用の iOS Simulator (iPhone 17 / iOS 26.5)。Sample・facade・iOS binding の bin/obj を捨てたフルビルド
+# 操作: Sample の「Header / Footer への View 配置デモ」を開き、末尾へ送る (ScrollToEnd) → 「離れて戻る (Handler 切断 → 再接続)」
+#       と同じ処理 (Pop → 同じページインスタンスを Push) を、計測用の一時コード (scratch のみ・リポジトリには入れていない) から
+#       6 回繰り返し、各回の前後で view 階層の寸法と一覧の位置を記録した。静止画 *-1-* は window の描画を取り出したもの、
+#       *-6-B-after-reconnect-screen.png は 6 回目の後の Simulator の画面そのもの。
+# 階層: ParentingViewController.View (ナビゲーションバーの下の表示領域) > PageViewController.View > MAUI の ContentView > Host の view
+
+## 見立て (観測による)
+- 再接続で作り直した Host は、Bridge が控えた位置の戻しを、取り付け後の最初のレイアウト (Host の viewDidLayoutSubviews) の中で実行する
+- 戻しで一覧が先頭から動くと、大きいタイトルのナビゲーションバーが 106pt → 54pt に縮み、表示領域 (ParentingViewController.View /
+  PageViewController.View) が 706pt → 758pt に伸びる。この変化はレイアウトの途中で起き、PageViewController の再レイアウト
+  (MAUI の ContainerViewController.ViewDidLayoutSubviews が ContentView を自分の bounds に合わせる) が行われず、
+  ContentView と Host が 706pt のまま残る (その後 PageViewController.View の layer は needsLayout=false のまま、
+  外から setNeedsLayout + layoutIfNeeded を掛けると 758pt に追従することを確認)
+- 先頭のまま (位置 0) で再接続した回は大きいタイトルが縮まず、帯は出ない (2 回中 0 回)。少し (80pt) 下げてから再接続した回は毎回出る (2 回中 2 回)
+
+## 修正前 (6 回すべてで帯が残る: ContentView 706 < 表示領域 758)
+# 表示領域 (PageViewController.View) は iter1-before 以降すべて 758。2 回目以降は前回の帯が残ったまま末尾へ送っている (帯は操作しても消えない)
+== initial	 ContentView frame=(0,0 402x706)	 scroll offset=0 contentH=1297.7 inset.bottom=34 top=0
+== iter1-before	 ContentView frame=(0,0 402x758)	 scroll offset=675.3 contentH=1399.3 inset.bottom=34 top=0
+== iter1-after	 ContentView frame=(0,0 402x706)	 scroll offset=675.3 contentH=1413.7 inset.bottom=0 top=0
+== iter2-before	 ContentView frame=(0,0 402x706)	 scroll offset=707.7 contentH=1413.7 inset.bottom=0 top=0
+== iter2-after	 ContentView frame=(0,0 402x706)	 scroll offset=707.7 contentH=1413.7 inset.bottom=0 top=0
+== iter3-before	 ContentView frame=(0,0 402x706)	 scroll offset=707.7 contentH=1413.7 inset.bottom=0 top=0
+== iter3-after	 ContentView frame=(0,0 402x706)	 scroll offset=707.7 contentH=1413.7 inset.bottom=0 top=0
+== iter4-before	 ContentView frame=(0,0 402x706)	 scroll offset=707.7 contentH=1413.7 inset.bottom=0 top=0
+== iter4-after	 ContentView frame=(0,0 402x706)	 scroll offset=707.7 contentH=1413.7 inset.bottom=0 top=0
+== iter5-before	 ContentView frame=(0,0 402x706)	 scroll offset=707.7 contentH=1413.7 inset.bottom=0 top=0
+== iter5-after	 ContentView frame=(0,0 402x706)	 scroll offset=707.7 contentH=1413.7 inset.bottom=0 top=0
+== iter6-before	 ContentView frame=(0,0 402x706)	 scroll offset=707.7 contentH=1413.7 inset.bottom=0 top=0
+== iter6-after	 ContentView frame=(0,0 402x706)	 scroll offset=707.7 contentH=1413.7 inset.bottom=0 top=0
+
+## 修正後 (6 回すべてで ContentView が表示領域 758 に合い、位置も再接続の前と同じ)
+== initial	 ContentView frame=(0,0 402x706)	 scroll offset=0 contentH=1297.7 inset.bottom=34 top=0
+== iter1-before	 ContentView frame=(0,0 402x758)	 scroll offset=675.3 contentH=1399.3 inset.bottom=34 top=0
+== iter1-after	 ContentView frame=(0,0 402x758)	 scroll offset=675.3 contentH=1413.7 inset.bottom=34 top=0
+== iter2-before	 ContentView frame=(0,0 402x758)	 scroll offset=689.7 contentH=1413.7 inset.bottom=34 top=0
+== iter2-after	 ContentView frame=(0,0 402x758)	 scroll offset=689.7 contentH=1413.7 inset.bottom=34 top=0
+== iter3-before	 ContentView frame=(0,0 402x758)	 scroll offset=689.7 contentH=1413.7 inset.bottom=34 top=0
+== iter3-after	 ContentView frame=(0,0 402x758)	 scroll offset=689.7 contentH=1413.7 inset.bottom=34 top=0
+== iter4-before	 ContentView frame=(0,0 402x758)	 scroll offset=689.7 contentH=1413.7 inset.bottom=34 top=0
+== iter4-after	 ContentView frame=(0,0 402x758)	 scroll offset=689.7 contentH=1413.7 inset.bottom=34 top=0
+== iter5-before	 ContentView frame=(0,0 402x758)	 scroll offset=689.7 contentH=1413.7 inset.bottom=34 top=0
+== iter5-after	 ContentView frame=(0,0 402x758)	 scroll offset=689.7 contentH=1413.7 inset.bottom=34 top=0
+== iter6-before	 ContentView frame=(0,0 402x758)	 scroll offset=689.7 contentH=1413.7 inset.bottom=34 top=0
+== iter6-after	 ContentView frame=(0,0 402x758)	 scroll offset=689.7 contentH=1413.7 inset.bottom=34 top=0
+
+## 修正後、途中の位置 (80pt) からの再接続 3 回 (位置 80 を保ち、帯なし)
+== initial	 ContentView frame=(0,0 402x706)	 scroll offset=0 contentH=1297.7 inset.bottom=34 top=0
+== iter1-before	 ContentView frame=(0,0 402x758)	 scroll offset=80 contentH=1341 inset.bottom=34 top=0
+== iter1-after	 ContentView frame=(0,0 402x758)	 scroll offset=80 contentH=1335 inset.bottom=34 top=0
+== iter2-before	 ContentView frame=(0,0 402x758)	 scroll offset=80 contentH=1335 inset.bottom=34 top=0
+== iter2-after	 ContentView frame=(0,0 402x758)	 scroll offset=80 contentH=1335 inset.bottom=34 top=0
+== iter3-before	 ContentView frame=(0,0 402x758)	 scroll offset=80 contentH=1335 inset.bottom=34 top=0
+== iter3-after	 ContentView frame=(0,0 402x758)	 scroll offset=80 contentH=1335 inset.bottom=34 top=0
+
+## 補足
+- 祖先の再レイアウトだけを入れ、位置の戻し直しを入れない版では、再レイアウトで Host が 758pt に伸びた時点で一覧が位置を
+  自分で動かし、再接続の前の位置からずれた (例: 689.7 → 655.7、675.3 → 655.7)。再レイアウトの前に控えた位置へ戻し直す処理を足して
+  上の「修正後」の結果 (位置が再接続の前と一致) になった
+- 単体テスト: KsSettingsViewUITests の ScrollControlTests
+  test_戻しに連動して祖先の表示領域が伸びてもHostの領域が追従し戻した位置を保つ が、修正を外した版 (viewDidLayoutSubviews から
+  祖先の再レイアウトを要求しない) で「親の子の view が 500 のまま、伸びた領域 552 に合わない」で失敗し、修正版で成功することを確認した。
+  位置の戻し直しを外した版はこのテストでは検出されない (テストの構成では再レイアウトで一覧の位置が動かないため)。位置の戻し直しは上の Simulator の計測で担保する
+
+## 静止画
+- maui-ios-reconnect-band-before-1-A-scrolled-to-end.png / -before-1-B-after-reconnect.png: 修正前、1 回目の再接続の前後 (後は下端に白い帯)
+- maui-ios-reconnect-band-before-6-B-after-reconnect-screen.png: 修正前、6 回目の再接続の後の画面 (下端に白い帯)
+- maui-ios-reconnect-band-after-1-A-scrolled-to-end.png / -after-1-B-after-reconnect.png: 修正後、1 回目の再接続の前後 (帯なし・同じ位置)
+- maui-ios-reconnect-band-after-6-B-after-reconnect-screen.png: 修正後、6 回目の再接続の後の画面 (帯なし)

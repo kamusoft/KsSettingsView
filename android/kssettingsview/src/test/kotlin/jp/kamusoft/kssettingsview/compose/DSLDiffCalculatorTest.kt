@@ -9,7 +9,9 @@ import jp.kamusoft.kssettingsview.core.RootAccessory
 import jp.kamusoft.kssettingsview.core.Section
 import jp.kamusoft.kssettingsview.core.SectionAccessory
 import jp.kamusoft.kssettingsview.core.SettingsAccessory
+import jp.kamusoft.kssettingsview.core.SettingsRoot
 import jp.kamusoft.kssettingsview.core.SettingsRootDiff
+import jp.kamusoft.kssettingsview.ui.SettingsRootStore
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -337,5 +339,179 @@ class DSLDiffCalculatorTest {
     fun `containsHeaderHeightChange は同一 headerHeight で false`() {
         val (old, new) = headerHeightTrees(oldHeight = 40.0, newHeight = 40.0)
         assertEquals(false, DSLDiffCalculator.containsHeaderHeightChange(old, new))
+    }
+
+    // MARK: - 移動の最小化（追加・削除でずれただけの項目には移動を出さない）
+
+    /** [ids] の順に LabelCell を並べた 1 Section のツリーを作る。 */
+    private fun singleSection(ids: List<String>, sid: String = "s1") =
+        tree(listOf(Section(id = sid, cells = ids.map { cell(it) })))
+
+    /**
+     * 差分列を実際の Store に順に適用し、適用後の Section / Cell の ID の並びを返す。
+     *
+     * Store の各操作が差分をどう解釈するか（移動は取り除いた後の位置へ挿入）まで含めて、
+     * 宣言どおりの並びに着地するかを確かめるために使う。
+     */
+    private fun applyToStore(
+        from: DSLDiffCalculator.ResolvedTree,
+        diffs: List<SettingsRootDiff>,
+    ): List<Pair<String, List<String>>> {
+        val store = SettingsRootStore(SettingsRoot(sections = from.sections))
+        for (diff in diffs) {
+            when (diff) {
+                is SettingsRootDiff.Full -> store.replaceAll(diff.root)
+                is SettingsRootDiff.InsertSection -> store.insertSection(diff.section, at = diff.index)
+                is SettingsRootDiff.RemoveSection -> store.removeSection(diff.sectionId)
+                is SettingsRootDiff.MoveSection -> store.moveSection(from = diff.from, to = diff.to)
+                is SettingsRootDiff.ReplaceSection -> store.replaceSection(diff.sectionId, diff.newSection)
+                is SettingsRootDiff.InsertCell -> store.insertCell(diff.cell, diff.sectionId, at = diff.index)
+                is SettingsRootDiff.RemoveCell -> store.removeCell(diff.cellId)
+                is SettingsRootDiff.ReplaceCell -> store.replaceCell(diff.cellId, diff.newCell)
+                is SettingsRootDiff.MoveCell -> store.moveCell(diff.cellId, to = diff.toIndex)
+                is SettingsRootDiff.UpdateAccessory -> store.updateAccessory(diff.target, diff.accessory)
+            }
+        }
+        return store.state.value.sections.map { section -> section.id to section.cells.map { it.id } }
+    }
+
+    private fun layoutOf(t: DSLDiffCalculator.ResolvedTree): List<Pair<String, List<String>>> =
+        t.sections.map { section -> section.id to section.cells.map { it.id } }
+
+    private fun moveCells(diffs: List<SettingsRootDiff>) = diffs.filterIsInstance<SettingsRootDiff.MoveCell>()
+
+    @Test
+    fun `途中への1項目の挿入ではInsertCellだけを出し後ろの項目へ移動を出さない`() {
+        val before = (0 until 30).map { "item-$it" }
+        val after = before.toMutableList().apply { add(12, "inserted") }
+        val old = singleSection(before)
+        val new = singleSection(after)
+
+        val diffs = DSLDiffCalculator.compute(old, new)
+
+        assertEquals(1, diffs.size)
+        val ins = diffs[0] as SettingsRootDiff.InsertCell
+        assertEquals(12, ins.index)
+        assertEquals("inserted", ins.cell.id)
+        assertEquals(layoutOf(new), applyToStore(old, diffs))
+    }
+
+    @Test
+    fun `途中の1項目の削除ではRemoveCellだけを出し後ろの項目へ移動を出さない`() {
+        val before = (0 until 30).map { "item-$it" }
+        val after = before.filter { it != "item-5" }
+        val old = singleSection(before)
+        val new = singleSection(after)
+
+        val diffs = DSLDiffCalculator.compute(old, new)
+
+        assertEquals(listOf<SettingsRootDiff>(SettingsRootDiff.RemoveCell(cellId = "item-5")), diffs)
+        assertEquals(layoutOf(new), applyToStore(old, diffs))
+    }
+
+    @Test
+    fun `先頭の項目を末尾へ送る並べ替えでは移動を1件だけ出す`() {
+        val old = singleSection(listOf("a", "b", "c", "d", "e"))
+        val new = singleSection(listOf("b", "c", "d", "e", "a"))
+
+        val diffs = DSLDiffCalculator.compute(old, new)
+
+        assertEquals(listOf(SettingsRootDiff.MoveCell(cellId = "a", toIndex = 4)), diffs)
+        assertEquals(layoutOf(new), applyToStore(old, diffs))
+    }
+
+    @Test
+    fun `逆順への並べ替えでは必要な移動を出し宣言の並びに着地する`() {
+        val old = singleSection(listOf("a", "b", "c", "d"))
+        val new = singleSection(listOf("d", "c", "b", "a"))
+
+        val diffs = DSLDiffCalculator.compute(old, new)
+
+        // 相対順序を保てるのは 1 項目だけなので、残りの 3 項目に移動が要る
+        assertEquals(3, moveCells(diffs).size)
+        assertEquals(layoutOf(new), applyToStore(old, diffs))
+    }
+
+    @Test
+    fun `挿入と削除と並べ替えの組み合わせでも宣言の並びに着地する`() {
+        val old = singleSection(listOf("a", "b", "c", "d", "e", "f", "g"))
+        // b を削除、x と y を挿入、f を先頭側へ、a を後ろへ
+        val new = singleSection(listOf("x", "f", "c", "d", "a", "y", "e", "g"))
+
+        val diffs = DSLDiffCalculator.compute(old, new)
+
+        // 相対順序が変わったのは f と a の 2 項目だけ（c・d・e・g は並びを保つ）
+        assertEquals(setOf("f", "a"), moveCells(diffs).map { it.cellId }.toSet())
+        assertEquals(layoutOf(new), applyToStore(old, diffs))
+    }
+
+    @Test
+    fun `並べ替えの組み合わせを網羅しても常に宣言の並びに着地し移動は最小になる`() {
+        // 5 項目の全順列 × 追加・削除の有無で、Store に適用した結果が宣言と一致し、
+        // 移動の件数が「項目数 - 相対順序を保てる最大の項目数」に等しいことを確かめる。
+        val base = listOf("a", "b", "c", "d", "e")
+        for (perm in permutations(base)) {
+            for (variant in 0 until 3) {
+                val target = when (variant) {
+                    0 -> perm
+                    1 -> perm.toMutableList().apply { add(2, "new") }
+                    else -> perm.filter { it != "c" }
+                }
+                val old = singleSection(base)
+                val new = singleSection(target)
+                val diffs = DSLDiffCalculator.compute(old, new)
+                assertEquals("perm=$perm variant=$variant", layoutOf(new), applyToStore(old, diffs))
+
+                val kept = target.filter { it in base }
+                val keptOld = base.filter { it in kept }
+                val expectedMoves = kept.size - lisLength(kept.map { keptOld.indexOf(it) })
+                assertEquals("perm=$perm variant=$variant", expectedMoves, moveCells(diffs).size)
+            }
+        }
+    }
+
+    @Test
+    fun `Section の途中への挿入では後ろの Section へ移動を出さず宣言の並びに着地する`() {
+        val s = (0 until 5).map { Section(id = "s$it", cells = listOf(cell("c$it"))) }
+        val inserted = Section(id = "new", cells = listOf(cell("cn")))
+        val old = tree(s)
+        val new = tree(s.toMutableList().apply { add(0, inserted) })
+
+        val diffs = DSLDiffCalculator.compute(old, new)
+
+        assertEquals(1, diffs.size)
+        assertTrue(diffs[0] is SettingsRootDiff.InsertSection)
+        assertEquals(layoutOf(new), applyToStore(old, diffs))
+    }
+
+    @Test
+    fun `Section の挿入と並べ替えの組み合わせでも宣言の並びに着地する`() {
+        val s = (0 until 5).associate { "s$it" to Section(id = "s$it", cells = listOf(cell("c$it"))) }
+        val inserted = Section(id = "new", cells = listOf(cell("cn")))
+        val old = tree(listOf("s0", "s1", "s2", "s3", "s4").map { s.getValue(it) })
+        val new = tree(listOf("s4", "s0", "new", "s2", "s1").map { if (it == "new") inserted else s.getValue(it) })
+
+        val diffs = DSLDiffCalculator.compute(old, new)
+
+        // s3 の削除、new の挿入に加え、相対順序が変わった s4 と s1（または等価な 2 件）だけを移す
+        assertEquals(2, diffs.filterIsInstance<SettingsRootDiff.MoveSection>().size)
+        assertEquals(layoutOf(new), applyToStore(old, diffs))
+    }
+
+    private fun permutations(items: List<String>): List<List<String>> {
+        if (items.size <= 1) return listOf(items)
+        return items.flatMap { head -> permutations(items - head).map { listOf(head) + it } }
+    }
+
+    /** 狭義の最長増加部分列の長さ（期待値の算出用。O(n^2) の素朴な実装）。 */
+    private fun lisLength(values: List<Int>): Int {
+        if (values.isEmpty()) return 0
+        val best = IntArray(values.size) { 1 }
+        for (i in values.indices) {
+            for (j in 0 until i) {
+                if (values[j] < values[i]) best[i] = maxOf(best[i], best[j] + 1)
+            }
+        }
+        return best.max()
     }
 }

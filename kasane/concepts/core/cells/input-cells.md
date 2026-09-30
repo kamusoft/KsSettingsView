@@ -103,7 +103,7 @@ Android の `EntryCell` はフォーカス中の入力欄を値の SSoT とし�
 - TimePicker / DatePicker の自動 `valueText` と選択面は、同じ OS 選択の言語・地域を反映する。Locale は時制を決めず、TimePicker の 12 / 24 時間制は `is24Hour` だけで決まる。
 - キーボード回避 (フォーカスした入力 Cell がソフトウェアキーボードに隠れない) はライブラリに明示実装を持たず、各 platform の標準機構で成立する。見え方は OS で異なる — iOS はコンテンツのスクロール調整 (画面上部の行は残る)、Android / MAUI Android は window ごと押し上げる pan 系。
 - どの環境でもフォーカスした Cell はキーボード直上に収まる (iOS / Android / MAUI iOS / MAUI Android の4環境で実測確認 2026-08-24。MAUI Android は `WindowSoftInputMode` 未指定の構成のまま動作する)。
-- `KsCellRegistry.registerInputCells()`（iOS）/ `KsCellRegistry.registerInputCells(context)`（Android）で5種を一括登録できる。
+- `KsCellRegistry.shared.registerInputCells()`（iOS。Registry インスタンスのメソッド）/ `KsCellRegistry.registerInputCells(context)`（Android）で5種を一括登録できる。
 - 呼び出し側は `NumberPickerCell.min <= max`、`EntryCell.maxLength` は `nil` / `null` または0以上を指定する。それ以外の範囲外値に対する platform fallback は公開契約として依存しない。
 
 ## してはいけないこと

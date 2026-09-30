@@ -19,7 +19,8 @@ namespace KsSettingsView.IntegrationHost;
 /// 「Host 生成 → 操作 → view 階層へ取り付け」の順序で組み立て、取り付け前の操作が attach 時に
 /// Store の現在状態から復元されることを確認する (core/ADR-0019)。画面上部の「解放 → 再生成」
 /// ボタンは Host だけを解放し、解放中に Store を更新してから Host を作り直す経路
-/// (maui/ADR-0007) を通す。
+/// (maui/ADR-0007) を通す。「末尾へ」「先頭へ」ボタンは C# から Bridge のスクロール命令を呼ぶ。
+/// 末尾へ送ってから「解放 → 再生成」すると、作り直した Host が同じ位置で表示される。
 /// </remarks>
 [Activity(
     Label = "KsBridge Host",
@@ -43,12 +44,24 @@ public sealed class MainActivity : ComponentActivity
         var releaseButton = new Button(this) { Text = "解放 → 再生成" };
         releaseButton.Click += (_, _) => ReleaseAndRecreateHost();
 
+        var endButton = new Button(this) { Text = "末尾へ" };
+        endButton.Click += (_, _) => ScrollBridge(KsBridgeScenario.ScrollToEnd);
+        var startButton = new Button(this) { Text = "先頭へ" };
+        startButton.Click += (_, _) => ScrollBridge(KsBridgeScenario.ScrollToStart);
+        var buttonRow = new LinearLayout(this) { Orientation = Orientation.Horizontal };
+        foreach (var button in new[] { releaseButton, endButton, startButton })
+        {
+            buttonRow.AddView(
+                button,
+                new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WrapContent, 1.0f));
+        }
+
         var container = new LinearLayout(this) { Orientation = Orientation.Vertical };
         // SDK 35 の edge-to-edge 既定ではコンテンツがシステムバーの下へ潜るため、
         // ルートにシステムバー inset を padding として適用する (先頭のボタンが操作不能になる)。
         container.SetFitsSystemWindows(true);
         container.AddView(
-            releaseButton,
+            buttonRow,
             new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MatchParent,
                 ViewGroup.LayoutParams.WrapContent));
@@ -108,6 +121,16 @@ public sealed class MainActivity : ComponentActivity
         var host = bridge.MakeHostView(this)
             ?? throw new InvalidOperationException("解放後の Native Host を再生成できませんでした。");
         AttachHost(host);
+    }
+
+    /// <summary>Bridge が生きていればスクロール命令を送る。</summary>
+    /// <param name="command">Bridge へ送る命令</param>
+    private void ScrollBridge(Action<KsSettingsBridge> command)
+    {
+        if (_bridge is { } bridge)
+        {
+            command(bridge);
+        }
     }
 
     /// <summary>Host を残りの領域いっぱいに広げてコンテナへ追加する。</summary>

@@ -1,6 +1,6 @@
 # 表示中の画面の更新
 
-表示中の設定画面を変える、ユーザーの操作を ViewModel へ戻す、データから Cell を生成する、ためのレシピ。XAML の断片は [SKILL.md](../SKILL.md) の最小動作コードにある `ks` 名前空間宣言を前提とし、C# の断片は `using KsSettingsView;` と、ページ内に `Settings` という名前の `SettingsView` があることを前提とする。操作は UI スレッドから行い、Native Host が再接続すると現在のツリーから表示が復元される。
+表示中の設定画面を変える、ユーザーの操作を ViewModel へ戻す、データから Cell を生成する、コードからスクロールさせる、ためのレシピ。XAML の断片は [SKILL.md](../SKILL.md) の最小動作コードにある `ks` 名前空間宣言を前提とし、C# の断片は `using KsSettingsView;` と、ページ内に `Settings` という名前の `SettingsView` があることを前提とする。操作は UI スレッドから行い、Native Host が再接続すると現在のツリーから表示が復元される。
 
 ## ユーザーが変えた値を受け取る
 
@@ -157,13 +157,105 @@ public class CellTemplateSelector : DataTemplateSelector
 }
 ```
 
+## コードから Cell や Section へスクロールする
+
+`SettingsView.ScrollController` はスクロール命令のハンドル (`IScrollController` 型) を持つ。ハンドルは `SettingsView` 自身が作り、このプロパティの既定のバインド方向は `OneWayToSource` なので、ViewModel のプロパティへバインドすればハンドルが ViewModel に渡る。別の値を代入してもハンドルは差し替わらない。命令の対象には、Cell なら `CellId`、Section なら `SectionId` で明示 ID を付ける。ID は対象を指すためだけのもので、表示は何も変わらない。
+
+```xml
+<ks:SettingsView ScrollController="{Binding Scroll}">
+  <ks:Section HeaderText="Notifications" SectionId="notifications">
+    <ks:SwitchCell Title="Push notifications" CellId="push" />
+    <ks:SwitchCell Title="Sound" CellId="sound" />
+  </ks:Section>
+</ks:SettingsView>
+```
+
+```csharp
+public class SettingsViewModel
+{
+    public IScrollController? Scroll { get; set; }
+
+    public void ShowSound() => Scroll?.ScrollTo("sound", ScrollPosition.Center);
+
+    public void ShowNotifications() => Scroll?.ScrollToSection("notifications");
+
+    public void BackToTop() => Scroll?.ScrollToStart(animated: false);
+}
+```
+
+命令は 4 種ある。`ScrollTo` は Cell の行を、`ScrollToSection` は Section を見出しごと表示範囲へ入れ、`ScrollToStart` / `ScrollToEnd` は Root Header / Root Footer を含む内容の先頭・末尾へ送る。`position` はライブラリ独自の enum `ScrollPosition` — `Start` (既定)・`Center`・`End` — で、対象を表示範囲のどこへ合わせるかを表す。`animated` の既定は `true`。MAUI 標準の `ScrollToPosition` は、その `MakeVisible` に Native の対応が無いため使わない。内容の末尾付近の対象は行き過ぎずにスクロールの端で止まり、表示範囲より高い対象は指定した位置によらず上端で合わせる。
+
+コードビハインドからは同じハンドルを `Settings.ScrollController` で使える。ViewModel が `IScrollController` だけに依存していれば、テストでは呼び出しを記録するだけの実装に差し替えられる。
+
+## 生成した Cell や Section へスクロールする
+
+`target` には `ItemsSource` の項目も渡せる。`ScrollTo` は Section がその項目から生成した Cell を、`ScrollToSection` は `SettingsView.ItemsSource` がその項目から生成した Section を探す。明示 ID が対象と等しい要素は生成物より優先され、複数当たる場合は表示順で最初のものを採る。項目との対応は、ItemsSource 内での移動・置換や、生成された Cell の `BindingContext` の差し替えの後も保たれる。
+
+```csharp
+public void ShowDevice(Device device) => Scroll?.ScrollTo(device);
+```
+
+## 画面を開いた直後にスクロールする
+
+Native の一覧が作られる前に出した命令は何もせず、後から実行し直されることもない。命令が効くようになった時点は `ScrollControllerReadyCommand` で分かる。Native の一覧が作られて画面に取り付けられるたびに、`CanExecute(null)` が真なら `Execute(null)` が呼ばれる。一覧が作り直されるたび — たとえば Pop したページをもう一度 Push したときや、Android が Activity を作り直したとき — にも改めて呼ばれるので、最初に開いたときだけスクロールしたいなら自分でフラグを持つ。
+
+```xml
+<ks:SettingsView ScrollController="{Binding Scroll}"
+                 ScrollControllerReadyCommand="{Binding ScrollReadyCommand}">
+  <ks:Section HeaderText="Notifications" SectionId="notifications">
+    <ks:SwitchCell Title="Push notifications" />
+  </ks:Section>
+</ks:SettingsView>
+```
+
+```csharp
+public class SettingsViewModel
+{
+    private bool _scrolledOnOpen;
+
+    public SettingsViewModel()
+    {
+        ScrollReadyCommand = new Command(() =>
+        {
+            if (_scrolledOnOpen)
+            {
+                return;
+            }
+
+            _scrolledOnOpen = true;
+            Scroll?.ScrollToSection("notifications");
+        });
+    }
+
+    public IScrollController? Scroll { get; set; }
+
+    public ICommand ScrollReadyCommand { get; }
+}
+```
+
+## 項目を足して末尾を見せる
+
+命令は、同じ UI サイクルの中で先に行ったツリーの変更が表示に反映された後に実行される。そのため項目を足した直後に `ScrollToEnd` を呼べば、足した項目を含む末尾へ届く。続けて出した命令は呼んだ順に処理され、最終位置は対象が見つかった最後の命令のものになる。
+
+```csharp
+public ObservableCollection<string> AddedItems { get; } = [];
+
+public void AddAndShow(string name)
+{
+    AddedItems.Add(name);
+    Scroll?.ScrollToEnd();
+}
+```
+
 ## ページを離れて戻っても画面を保つ
 
-ページを離れても、`SettingsView` に渡した設定ツリー — Section と Cell、その値、Header / Footer の View — はそのまま保持される。ページに戻ると、保持された内容がそのまま表示され、accessory View と `CustomCell.Content` も最初の表示から含まれる。離れている間に加えた変更も反映されるので、自前で保存・復元する処理は要らない。したがって、再訪のたびにツリーを作り直してはいけない。作り直すと、生きている Section と Cell を捨てることになり、ユーザーがそこで変更した値も一緒に失われる。
+ページを離れても、`SettingsView` に渡した設定ツリー — Section と Cell、その値、Header / Footer の View — はそのまま保持される。ページに戻ると、保持された内容がそのまま表示され、accessory View と `CustomCell.Content` も最初の表示から含まれる。離れている間に加えた変更も反映されるので、自前で保存・復元する処理は要らない。スクロール位置も戻る。Native の一覧が作り直されたときは、表示範囲の上端にあった要素が同じずれで上端に来る位置へ戻るので、離れている間にその上で行が増減しても戻り先はずれない。`ScrollControllerReadyCommand` の中で出した命令はこの復元の後に実行され、最終位置を決める。したがって、再訪のたびにツリーを作り直してはいけない。作り直すと、生きている Section と Cell を捨てることになり、ユーザーがそこで変更した値も一緒に失われる。
 
 ## 更新にかかる決まり
 
-- ツリーの操作は UI スレッドから行う。ライブラリ側でスレッドの marshal は行わない。
+- ツリーの操作とスクロール命令は UI スレッドから行う。ライブラリ側でスレッドの marshal は行わない。
 - `Section` / `CellBase` / Header・Footer・`CustomCell.Content` に置く View は、同時に 1 箇所にしか置けない。同じインスタンスを 2 箇所へ置くと `InvalidOperationException` になる — 他の Section / `SettingsView` が所有したままのインスタンスは追加した時点で、同じコレクションへの二重の追加は表示へ反映する時点で送出される。検査は反映前に行われるので、先に置かれていた方は動かず、画面が中途半端に更新されることもない。復旧は `Root` の組み直しで行う。
 - observable でないコレクション (素の `List<T>`) は接続時点の内容が描かれるだけで、以後の編集は表示に出ない。所属の始まりと終わりもその時点で数えられるので、そこから取り除いた要素を別の場所へ置き直せるのは、`Root` / `Cells` へ新しいコレクションを代入した後になる。
 - Host が再接続すると、Section の Header / Footer と `CustomCell.Content` に置いた View は最初の表示前に実体化されて届く。View インスタンスを差し替えると内容も差し替わり、既存 View のバインド値を変えると同じインスタンスのまま追従する。
+- 非表示の要素への命令は何もしない。明示 ID にも項目にも当たらない対象への命令も何もせず、こちらは Debug 出力に警告を書く。どちらも例外にはならない。設定ページの上に別のページを Push している間も Native の一覧は生きており、その間に出した命令は戻ってきたときに実行される。
+- ハンドルは持ち主の `SettingsView` を弱参照で持つ。ViewModel がハンドルをページより長く保持しても、`SettingsView` と Native の一覧は生かし続けない。それらが回収された後のハンドルへの命令は何もしない。

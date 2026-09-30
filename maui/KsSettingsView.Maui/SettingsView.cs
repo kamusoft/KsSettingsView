@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Windows.Input;
 using KsSettingsView.Internals;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
@@ -483,7 +484,29 @@ public class SettingsView : View
         default(Color),
         propertyChanged: static (bindable, _, _) => ((SettingsView)bindable).ApplyTheme());
 
+    /// <summary><see cref="ScrollController"/> のバッキングプロパティ。</summary>
+    /// <remarks>
+    /// 値は SettingsView ごとに 1 つ、自身が作った実体に固定する。既定の向きを OneWayToSource に
+    /// して、Binding で ViewModel へ渡す。外から別の値を代入されても自身の実体へ戻す。
+    /// </remarks>
+    public static readonly BindableProperty ScrollControllerProperty = BindableProperty.Create(
+        nameof(ScrollController),
+        typeof(IScrollController),
+        typeof(SettingsView),
+        defaultBindingMode: BindingMode.OneWayToSource,
+        // 実体を公開せず差し替えも受けない形は maui/ADR-0029。
+        coerceValue: static (bindable, _) => ((SettingsView)bindable).OwnScrollController,
+        defaultValueCreator: static bindable => ((SettingsView)bindable).OwnScrollController);
+
+    /// <summary><see cref="ScrollControllerReadyCommand"/> のバッキングプロパティ。</summary>
+    public static readonly BindableProperty ScrollControllerReadyCommandProperty = BindableProperty.Create(
+        nameof(ScrollControllerReadyCommand),
+        typeof(ICommand),
+        typeof(SettingsView),
+        default(ICommand));
+
     private KsSettingsController? _controller;
+    private KsSettingsScrollController? _scrollController;
     private KsItemsSourceBinder<Section>? _sectionBinder;
     private KsLogicalChildOwnership<Section>? _sectionOwnership;
 
@@ -899,6 +922,42 @@ public class SettingsView : View
         set => SetValue(SectionBorderColorProperty, value);
     }
 
+    /// <summary>
+    /// この SettingsView へスクロール命令を送るハンドル。
+    /// </summary>
+    /// <remarks>
+    /// 値は SettingsView ごとに 1 つ、SettingsView 自身が作ったもので、外から別の値を代入しても
+    /// 変わらない。既定の Binding の向きは OneWayToSource であり、XAML で
+    /// <c>ScrollController="{Binding Scroll}"</c> と書くと ViewModel の <c>Scroll</c> プロパティに
+    /// ハンドルが渡る。命令が効くのは画面が表示されている間で、表示された時点は
+    /// <see cref="ScrollControllerReadyCommand"/> で知らせる。
+    /// </remarks>
+    public IScrollController ScrollController
+    {
+        get => (IScrollController)GetValue(ScrollControllerProperty);
+        set => SetValue(ScrollControllerProperty, value);
+    }
+
+    /// <summary>
+    /// <see cref="ScrollController"/> の命令が効くようになったことを知らせるコマンド。
+    /// </summary>
+    /// <remarks>
+    /// 画面の表示を受け持つ Native の一覧が作られて画面に取り付けられるたびに、
+    /// <c>CanExecute(null)</c> が true なら <c>Execute(null)</c> を呼ぶ。ページへ戻ってきたときなど、
+    /// 一覧が作り直された場合にも改めて呼ばれる。作り直しでは直前のスクロール位置が戻され、
+    /// このコマンドの中で出したスクロール命令はその後に実行されるため、最終位置はこのコマンドの中の
+    /// 命令が決める。
+    /// </remarks>
+    public ICommand? ScrollControllerReadyCommand
+    {
+        get => (ICommand?)GetValue(ScrollControllerReadyCommandProperty);
+        set => SetValue(ScrollControllerReadyCommandProperty, value);
+    }
+
+    /// <summary>この SettingsView が作ったスクロール命令ハンドル。初めて必要になった時点で作る。</summary>
+    /// <remarks>生成時期の扱いは <see cref="Controller"/> と同じ。</remarks>
+    private KsSettingsScrollController OwnScrollController => _scrollController ??= new KsSettingsScrollController(this);
+
     /// <summary>変換経路。テストから内部状態を確かめるために公開する。</summary>
     /// <remarks>
     /// 初めて必要になった時点で作る。基底コンストラクタは暗黙 Style の Setter を適用するため、
@@ -1012,6 +1071,26 @@ public class SettingsView : View
 
     /// <summary>Native Host だけを解放する。設定ツリーの状態と購読は維持される。</summary>
     internal void ReleaseHost() => Controller.ReleaseHost();
+
+    /// <summary>
+    /// Native Host が作られて取り付けが済んだことを <see cref="ScrollControllerReadyCommand"/> へ知らせる。
+    /// </summary>
+    /// <remarks>Handler が Host の世代ごとに 1 回呼ぶ。</remarks>
+    internal void NotifyScrollControllerReady()
+    {
+        if (ScrollControllerReadyCommand is { } command && command.CanExecute(null))
+        {
+            command.Execute(null);
+        }
+    }
+
+    /// <summary>
+    /// <see cref="ItemsSource"/> の項目のうち <paramref name="item"/> と等しいものから生成した Section を、
+    /// 項目の並び順に返す。
+    /// </summary>
+    /// <param name="item">探す項目</param>
+    internal IEnumerable<Section> FindGeneratedSections(object item)
+        => _sectionBinder?.FindGenerated(item) ?? [];
 
     /// <summary>現在の既定スタイルを写し取って表示へ反映する。</summary>
     /// <remarks>未接続の間は写しを持つだけで、接続時にまとめて適用される。</remarks>

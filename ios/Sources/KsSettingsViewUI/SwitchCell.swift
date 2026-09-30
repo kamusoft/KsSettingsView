@@ -33,7 +33,7 @@ public struct SwitchCell: KsCell, DSLReidentifiable, DSLStyleModifiable, DSLIcon
     public let isOn: Bool
     /// スイッチ ON 時の色（任意）
     public let accentColor: UIColor?
-    /// 値変更時に呼ばれるクロージャ
+    /// 値変更時に呼ばれるクロージャ。メインスレッドから呼ばれる (`KsCell` の「通知のクロージャが呼ばれるスレッド」を参照)。
     public let onValueChanged: (@Sendable (Bool) -> Void)?
     /// 有効／無効フラグ（既定 `true`）。`false` のときはスイッチ操作を受け付けず、
     /// テキスト色を `Theme.disabledTextColor` に置換する。

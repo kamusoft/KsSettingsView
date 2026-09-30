@@ -29,6 +29,8 @@ namespace KsSettingsView.Handlers;
 /// 成立の確定を <see cref="VisualElement.Loaded"/> で受け取る取り付け後に行う。
 /// Host の生成から root の適用・親子関係の登録までは 1 つの失敗単位として扱い、途中で失敗したら
 /// その世代ごと手放してから失敗を伝える。
+/// Host が作られて取り付けが済むたびに、スクロール命令が効くようになったことを
+/// <see cref="SettingsView.ScrollControllerReadyCommand"/> で知らせる。
 /// </remarks>
 public partial class SettingsViewHandler : ViewHandler<SettingsView, PlatformView>
 {
@@ -64,6 +66,15 @@ public partial class SettingsViewHandler : ViewHandler<SettingsView, PlatformVie
     /// </remarks>
     internal IKsHostContainment? Containment { get; set; }
 
+    /// <summary>
+    /// 作った Host の取り付けを、まだ準備完了として知らせていないかどうか。
+    /// </summary>
+    /// <remarks>
+    /// 取り付けの通知は同じ Host に対して何度も届きうる (view 階層から外れて戻るたびに Loaded が
+    /// 来る) ため、Host の世代ごとに 1 回だけ知らせる。
+    /// </remarks>
+    private bool _readyPending;
+
     /// <inheritdoc/>
     protected override PlatformView CreatePlatformView()
     {
@@ -79,6 +90,7 @@ public partial class SettingsViewHandler : ViewHandler<SettingsView, PlatformVie
             // 親子関係の登録は、Host の view が view 階層へ入る前に済ませる。
             Containment?.AddToParent();
 
+            _readyPending = true;
             return platformView;
         }
         catch (Exception failure)
@@ -107,6 +119,7 @@ public partial class SettingsViewHandler : ViewHandler<SettingsView, PlatformVie
     {
         SettingsView view = VirtualView;
         view.Loaded -= OnVirtualViewLoaded;
+        _readyPending = false;
 
         Containment?.Remove();
         Containment = null;
@@ -162,17 +175,25 @@ public partial class SettingsViewHandler : ViewHandler<SettingsView, PlatformVie
 
     /// <summary>Native Host が view 階層へ取り付けられたことを受けて後始末を進める。</summary>
     /// <remarks>
-    /// ここで行うのは親子関係の成立の確定だけで、表示内容は Host を作る時点までに適用済みになる。
+    /// 親子関係の成立を確定させ、この Host の世代で初めてなら準備完了を知らせる。表示内容は
+    /// Host を作る時点までに適用済みになる。Host を作り直したときに Bridge が戻すスクロール位置は
+    /// Host を作る時点で要求済みのため、準備完了の中で出した命令はその後に実行される (maui/ADR-0030)。
     /// </remarks>
     internal void OnHostAttached()
     {
         IElementHandler handler = this;
-        if (handler.VirtualView is not SettingsView || handler.PlatformView is null)
+        if (handler.VirtualView is not SettingsView view || handler.PlatformView is null)
         {
             return;
         }
 
         Containment?.ConfirmAdded();
+
+        if (_readyPending)
+        {
+            _readyPending = false;
+            view.NotifyScrollControllerReady();
+        }
     }
 
     private void OnVirtualViewLoaded(object? sender, EventArgs e) => OnHostAttached();

@@ -3,10 +3,10 @@ type: reference
 title: Android Native Host の利用と更新境界
 description: SettingsRootStore と KsSettingsView を使って Android View の設定画面を構築・更新・拡張する方法
 tags: [android, views, host, public-api]
-timestamp: 2026-09-18
+timestamp: 2026-09-30
 ---
 
-この文書は、Android View から KsSettingsView を使うための公開 API 利用契約と責務境界を整理した reference である。読むと、`SettingsRootStore` と `KsSettingsView` の役割、表示後の更新方法、独自 Cell の登録方法、ライブラリ既定色 (`KsSettingsViewDefaults`) と夜間モードへの追随、ホスト側に前提が無いこと (テーマ・Activity 型) が分かる。Jetpack Compose から使う場合は [Android Compose Bridge と宣言 DSL](android-compose.md) を参照する。設定ツリーと差分の型自体は [SettingsRoot・Section・Cell の設定ツリー](../../core/core-model/settings-tree.md) と [SettingsRootDiff による構造変更](../../core/core-model/structural-changes.md) を先に読む。
+この文書は、Android View から KsSettingsView を使うための公開 API 利用契約と責務境界を整理した reference である。読むと、`SettingsRootStore` と `KsSettingsView` の役割、表示後の更新方法、独自 Cell の登録方法、スクロール命令の接続口と Activity の作り直しをまたぐ位置の保持、ライブラリ既定色 (`KsSettingsViewDefaults`) と夜間モードへの追随、ホスト側に前提が無いこと (テーマ・Activity 型) が分かる。Jetpack Compose から使う場合は [Android Compose Bridge と宣言 DSL](android-compose.md) を参照する。設定ツリーと差分の型自体は [SettingsRoot・Section・Cell の設定ツリー](../../core/core-model/settings-tree.md) と [SettingsRootDiff による構造変更](../../core/core-model/structural-changes.md) を先に読む。
 
 ## 目的
 
@@ -53,7 +53,7 @@ XML またはコードで `KsSettingsView` を生成し、`bind(store)` で Stor
 
 公開 `view.theme` は、外部バインディングや Preview が Store を使わず `view.applyDiff(SettingsRootDiff.Full(root))` から Host を直接駆動する場合の入口である。この高度な方式と `bind(store)` を同じ View で併用しない。
 
-空の `SettingsRoot` も有効で、空の `RecyclerView` として表示できる。detach 時は Store 購読を停止し、内部 RecyclerView から Adapter 参照を切る (メモリリーク防止)。再 attach 時は Adapter を戻し、Store の現在状態を取り込み直してから購読を再確立する。ViewPager2 のオフスクリーンページや Compose `AndroidView` の付け外しのように View を作り直さず detach / attach するホストでも、detach 中の Store 更新を含む最新内容で復帰する。detach 中の更新が Diff として再送されるわけではない — Store の更新通知は replay を持たないため、購読停止中に発行された Diff は消え、復帰は `store.state` / `store.theme` の現在値から行われる (Store に値を持たない Root Header / Footer だけは、通知とは別の同期の受け口で detach 中も届く — 次段落)。スクロール位置は detach 直前のアンカー (先頭可視行と行内オフセット) を控え、再 attach 時に同じ View 内で復元する。View 自体が作り直される経路 (Host の再生成・Activity 再生成) では復元しない。
+空の `SettingsRoot` も有効で、空の `RecyclerView` として表示できる。detach 時は Store 購読を停止し、内部 RecyclerView から Adapter 参照を切る (メモリリーク防止)。再 attach 時は Adapter を戻し、Store の現在状態を取り込み直してから購読を再確立する。ViewPager2 のオフスクリーンページや Compose `AndroidView` の付け外しのように View を作り直さず detach / attach するホストでも、detach 中の Store 更新を含む最新内容で復帰する。detach 中の更新が Diff として再送されるわけではない — Store の更新通知は replay を持たないため、購読停止中に発行された Diff は消え、復帰は `store.state` / `store.theme` の現在値から行われる (Store に値を持たない Root Header / Footer だけは、通知とは別の同期の受け口で detach 中も届く — 次段落)。スクロール位置は detach 直前のアンカー (先頭可視行と行内オフセット) を控え、再 attach 時に同じ View 内で復元する。View 自体が作り直される経路のうち、Activity の再生成では保存状態から位置を戻す (下記「スクロール制御」の「Activity の作り直しと保存状態」)。利用者が Host を作り直す経路では自動では戻らず、`captureScrollAnchor()` / `restoreScrollAnchor(anchor)` で位置を運ぶ。
 
 初回の attach でも同じ復元が働く — `bind(store)` 後・attach 前に Store へ適用した更新 (構造・Cell 内容・Section accessory・theme) は、attach 後に表示へ反映される。Host 生成・Store 操作・view 階層への取り付けの順序を利用側が意識する必要はない ([core/ADR-0019](../../../decisions/core/0019-host-restores-from-store-on-attach.md))。収束の観測境界は「attach 後、メインスレッドのキューが空になった時点」である (theme の collect 開始と `submitList` が非同期のため、`onAttachedToWindow` 完了時点の同期一致は保証しない)。`rootHeader` / `rootFooter` は Store の現在状態に含まれないため復元の対象ではないが、`bind` から `unbind` までの間に `store.updateAccessory` の Root 対象で渡した値は、attach 前・detach 中でも失われず次の表示に反映される ([core/ADR-0033](../../../decisions/core/0033-root-accessory-survives-pre-attach-delivery.md))。Store は Root 対象の更新を結び付いている Host へ同期に直接知らせ、Host はその場で値を控える (通知の購読とは別の経路で、Root 対象の反映はこの経路だけが行う)。更新口はどのスレッドから呼んでもよく、表示への反映はメインスレッドで行う。別の Store へ `bind` し直した後は以前の Store からの Root 対象は反映されない。Host を作り直したときの再適用は所有者 (呼び出し側) の責務のままである。
 
@@ -77,7 +77,7 @@ hidden な Section / Cell は model から削除しない。hidden 対象への�
 
 `KsCellRegistry` は具象 `Cell` 型を `viewType` と `CellViewHolder` factory へ対応付ける。Host は Registry から型を解決して `bind(cell, theme)` を呼ぶため、独自 Cell を追加しても Host に型分岐を加えない。
 
-標準 Cell 12 種は Host の構築時に自動登録される。利用者定義 Cell は表示前に登録し、Root / Section Accessory の予約値を避けるため `KsCellRegistry.CELL_VIEW_TYPE_MIN` 以上の `viewType` を使う。
+標準 Cell 13 種 (基本 7・入力 5・CustomCell) は Host の構築時に自動登録される。利用者定義 Cell は表示前に登録し、Root / Section Accessory の予約値を避けるため `KsCellRegistry.CELL_VIEW_TYPE_MIN` 以上の `viewType` を使う。
 
 ```kotlin
 KsCellRegistry.strictMode = BuildConfig.DEBUG
@@ -151,6 +151,74 @@ override fun onConfigurationChanged(newConfig: Configuration) {
 
 条件を満たさない場合は再表示せず、別の Cell へ確定値が書き込まれることはない — 復元できないときは常に閉じる側へ倒れる。構成変更を in-place で処理するホスト (MAUI テンプレート既定等) では Activity 再生成自体が起きず、ダイアログは開いたまま生存する。ボトムシート系の選択 UI (PickerCell / NumberPickerCell / DatePickerCell (Spinner) / TimePickerCell) は回転で閉じる挙動のままで、この復元の対象外である。挙動契約の全体は [DatePickerCell の選択面](../../core/cells/date-picker-selection-surface.md) を正とする。
 
+## スクロール制御
+
+命令ハンドル `KsScrollController` (interface `KsScrollControlling`、位置 `KsScrollPosition`) の 4 命令、位置の定義、データの反映の後に実行する順序保証、何もしない条件、一方向の着地、位置を控える・戻す窓口の意味は platform 共通で、[スクロール制御](../../core/architecture/scroll-control.md) が正である。命令は Store を経由せず、ハンドルを Host につないで届ける ([core/ADR-0037](../../../decisions/core/0037-scroll-control-handle-attached-to-host.md))。この節は View Host 固有の事柄だけを扱う。Compose から渡す方法は [Android Compose Bridge と宣言 DSL](android-compose.md) の「スクロール制御」にある。
+
+### 接続口
+
+`KsSettingsView.scrollController` に `KsScrollController` を代入すると、そのハンドルの命令がこの Host に届く。命令で指す ID は Store の Cell の `id` と Section の `id` である。
+
+| 操作 | 接続 | その Host に積まれた未実行の命令 |
+|---|---|---|
+| `scrollController` への代入 | 接続する。1 つのハンドルが命令を届ける先は最後に接続した Host だけで、別の Host に移ると前の Host には届かない | — |
+| 別のハンドルへの差し替え・`null` の代入 | 外す | 捨てる。控えた位置の復元は Host 自身への要求なので残す |
+| `unbind()` | 外し、`scrollController` も `null` に戻す。再び `bind()` しても自動ではつなぎ直さず、改めて代入する | 同上 |
+| Host の破棄 | ハンドルは Host を弱参照で持つため、Host が回収されると未接続 (命令は何もしない) に戻る | — |
+
+弱参照にしているのは、ハンドルを ViewModel が持って画面より長く生きても、Host とそれが持つ Activity を保持し続けないためである。
+
+```kotlin
+val controller = KsScrollController() // 画面より長く生きる ViewModel が持ってもよい
+settingsView.bind(store)
+settingsView.scrollController = controller
+
+store.insertCell(cell = LabelCell(title = "新しい項目"), sectionId = "general", at = count)
+controller.scrollToEnd() // 同じ処理の中の追加が反映された後に、追加した行を含む末尾へ届く
+```
+
+### スレッドと debug 相当の判定
+
+Android ライブラリは `BuildConfig` を持たないため、共通契約が「debug ビルドで」と書く検出は、既存の debug 相当の切り替え `KsCellRegistry.strictMode` (既定 `true`、ビルド種別には自動で追従しない) で判定する。既定のままのリリースビルドでもメインスレッド以外からの命令は例外になるので、`KsCellRegistry.strictMode = BuildConfig.DEBUG` を代入しておく (「Cell Renderer Registry」の例と同じ)。
+
+| 状況 | `strictMode == true` | `strictMode == false` |
+|---|---|---|
+| 接続中のハンドルへメインスレッド以外から命令した | `IllegalStateException` を送出する | 捨てずにメインスレッドへ回して実行する。回す間に接続を外した・別の Host へつなぎ替えたときは、外した接続の未実行の命令として届けない |
+| 存在しない ID を指した・ハンドルが別の Host へ移った | 警告ログを出す | ログを出さない |
+
+未接続のハンドルへの命令は、呼んだスレッドを確かめずに何もしない。
+
+### 位置を控える・戻す
+
+`captureScrollAnchor()` は表示範囲の上端にかかる最初の要素とずれを `KsScrollAnchor` で返し、`restoreScrollAnchor(anchor)` はその位置へ戻す。`KsScrollAnchor` は中身を公開しない `Parcelable` で、`Bundle` に入れて運べる。要素の ID で控えるので、離れている間に項目が増減しても同じ要素へ戻る。
+
+行が配置されていない (window に取り付けられていない・内容が空) ときは `null` を返す。まだ実行していない復元が待ち行列にあるときは、その控えを返す — 戻し切る前に再び控えても位置を失わないため。戻しは命令と同じ待ち行列を通り、データの反映とレイアウトの後に実行され、後から出した命令はその後に実行される。
+
+### Activity の作り直しと保存状態
+
+View Host は保存状態 (`SavedState`。カレンダー選択面の状態と同じもの) に `KsScrollAnchor` を載せ、Activity を作り直した後、attach と root の反映・レイアウトがそろった時点でその位置へ戻す。内部の `RecyclerView` は id を持たず `LayoutManager` の状態は保存されないうえ、行番号で戻すと作り直しの間の項目の増減で別の場所へ戻るため、要素の ID で控える形を使う。Compose の `KsSettingsView(...)` の中の View Host も同じ経路で戻る。
+
+既定 id の View Host が同じ階層に複数あるときは、カレンダー選択面と同じく保存も復元もしない (保存先が衝突するため — [android/ADR-0021](../../../decisions/android/0021-calendar-dialog-restore-via-view-instance-state.md))。ホストが個別の id を与えれば成立する。
+
+| 命令を出した時点 | 最終位置 |
+|---|---|
+| 作り直した Activity の `onCreate` の中 | 復元した位置 (命令は復元より先に待ち行列に積まれ、復元が後から位置を決める) |
+| `onCreate` より後 | 命令の位置 (復元の後に実行される) |
+
+Host は window から外れる直前に、保存状態に載せる控えを取っておき、外れた後に保存を求められたときはそれを使う。Navigation Compose の `NavHost` が画面ごとに使う `SaveableStateHolder` は、画面の Composition を破棄するときに同じ画面の状態を保存し直し、その時点の Host は window から外れて行を持たないためである。この結果、`NavHost` で別の画面へ進んで戻ったときも、離れる前の位置へ戻る (Android 標準の一覧と iOS の戻る操作での位置の保持にそろう挙動で、オーナー合意済み)。
+
+### 送り方
+
+命令は受けた処理の中では実行せず、メインスレッドへ 1 回 post して遅らせる。Store の更新は Flow の collect と `submitList` の差分計算・commit の 2 段で非同期に表示へ届くため、1 回遅らせる間に collect を先に通し、最後に提出した一覧の commit とそれに続くレイアウトを待ってから実行する。window から外れている間に受けた命令は、取り付け直した後のレイアウトで実行する。
+
+| 状況 | 送り方 |
+|---|---|
+| アニメーションあり・行き先に要る行が配置済み | 最終位置をその場で求め、`RecyclerView.smoothScrollBy` で一度に送る |
+| アニメーションあり・要る行が未配置 | `LinearSmoothScroller` の派生で対象へ向かい、必要な行が配置されるたびに最終位置を解き直して減速して止まる。行き先が進行方向と逆にあると分かっても戻らない |
+| アニメーションなし | 行き先の行を `scrollToPositionWithOffset` で配置させ、次のレイアウトの後に配置済みの行から求めた最終位置へ詰める |
+
+`LinearSmoothScroller` の snap (Start / Center / End の合わせ) は使わない。Section の範囲 (複数行) の中央・下端合わせと「表示範囲より高い範囲は上端に合わせる」規則を、1 行の snap では表せないためである。
+
 ## 保証すること
 
 ### 更新経路と描画
@@ -165,10 +233,17 @@ override fun onConfigurationChanged(newConfig: Configuration) {
 - カレンダー選択面は Activity 再生成後、復元条件を満たせば選択状態を保って再提示され、満たさなければ再表示せず他の Cell へ値を書き込まない (上記「カレンダー選択面の回転復元」、[android/ADR-0021](../../../decisions/android/0021-calendar-dialog-restore-via-view-instance-state.md))。
 ### 取り付け・付け外しをまたぐ復元
 
-- detach → 再 attach をまたいでも表示は Store の現在値と一致して復帰する。detach 中に発行された Store 更新も、再 attach 時の Store 現在状態の取り込み直しにより失われない。スクロール位置も同じ View 内の付け外しでは保たれる (View の作り直しをまたぐ保持は対象外)。
+- detach → 再 attach をまたいでも表示は Store の現在値と一致して復帰する。detach 中に発行された Store 更新も、再 attach 時の Store 現在状態の取り込み直しにより失われない。スクロール位置も同じ View 内の付け外しでは保たれる。
+- Activity の再生成と `NavHost` の画面の破棄・作り直しでは、スクロール位置が保存状態から戻る (既定 id の Host が同じ階層に複数ある構成を除く。上記「Activity の作り直しと保存状態」)。
 - `bind` から attach までの間の Store 更新も、attach 後にメインスレッドのキューが空になった時点までに表示へ収束する (取り付け順序に依存しない。[core/ADR-0019](../../../decisions/core/0019-host-restores-from-store-on-attach.md))。
 - `bind` 中に `store.updateAccessory` の Root 対象で渡した値は、attach 前・detach 中でも失われず次の表示に反映される ([core/ADR-0033](../../../decisions/core/0033-root-accessory-survives-pre-attach-delivery.md))。
 - 同じ Store に bind した複数の Host は Root 対象の更新をすべて受け取り、一方の `unbind` は他方を妨げない。
+
+### スクロール命令
+
+- ハンドルは Host を弱参照で持ち、Host とそれが持つ Activity の解放を妨げない。
+- 接続を外した (差し替え・`null`・`unbind()`) 時点で Host に積まれていた未実行の命令は実行されない。控えた位置の復元は残る。
+- Store の更新と同じ処理から出した命令は、その更新が一覧に反映された後の表示で解決される。
 
 ### EntryCell 入力欄の SSoT
 
@@ -185,6 +260,8 @@ override fun onConfigurationChanged(newConfig: Configuration) {
 - Diff の index を visible projection 上の位置として渡さない。
 - Cell の内容値を stable item ID に含めない。
 - 利用者定義 Cell の `viewType` に100未満の予約領域を使わない。
+- スクロール命令をメインスレッド以外から呼ばない (`strictMode` が `true` なら例外になる)。
+- `unbind()` から `bind()` し直した Host に、ハンドルが自動でつながると期待しない。
 
 ## 利用例
 
@@ -225,6 +302,7 @@ store.applyTheme(updatedTheme)
 ## 関連
 
 - [Android Compose Bridge と宣言 DSL](android-compose.md)
+- [スクロール制御](../../core/architecture/scroll-control.md)
 - [SettingsRoot・Section・Cell の設定ツリー](../../core/core-model/settings-tree.md)
 - [SettingsRootDiff による構造変更](../../core/core-model/structural-changes.md)
 - [基本 Cell](../../core/cells/basic-cells.md)

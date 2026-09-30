@@ -3,7 +3,7 @@ type: reference
 title: 基本 Cell
 description: 表示・操作・二値・単一選択を担う基本7種の Cell と状態所有の公開契約
 tags: [cells, public-api, ui]
-timestamp: 2026-08-24
+timestamp: 2026-09-30
 ---
 
 この文書は、`LabelCell`、`CommandCell`、`ButtonCell`、`SwitchCell`、`CheckboxCell`、`RadioCell`、`SimpleCheckCell` の用途と公開契約を説明する。読むと、各 Cell の選び方、状態と callback の責務、iOS / Android の宣言 DSL での使い方が分かる。
@@ -17,7 +17,8 @@ iOS では `KsCell`、Android では `Cell` を実装する。直接構築時の
 ## Cell 共通契約
 
 - 値 + callback 経路では、利用者または Store が状態値を保持し、callback を受けて新しい Cell 値を供給する。
-- 宣言 DSL は、対象 Cell に TwoWay overload がある場合だけ Binding / MutableState から現在値を読み、操作 callback で同じ状態所有者へ書き戻す。基本7種では Android `SwitchCell` の `MutableState<Boolean>` overload だけが該当し、iOS の基本 Cell と Android の他6種は値 + callback を使う。
+- 宣言 DSL は、対象 Cell に TwoWay overload がある場合だけ Binding / MutableState から現在値を読み、操作 callback で同じ状態所有者へ書き戻す。
+- 基本7種で TwoWay overload を持つのは Android `SwitchCell` の `MutableState<Boolean>` overload だけで、iOS の基本 Cell と Android の他6種は値 + callback を使う。
 - `style` は Cell 単位の視覚上書きで、UI 層が Theme と合成する。
 - `isEnabled = false` は操作を無効にし、`isVisible = false` は [設定ツリー](../core-model/settings-tree.md) で定義する visible projection から Cell を除外する。
 
@@ -35,6 +36,8 @@ iOS では `KsCell`、Android では `Cell` を実装する。直接構築時の
 
 全7種が `style`、`title`、`valueText`、`icon`、`hintText`、`isEnabled`（既定 `true`）、`isVisible`（既定 `true`）を持つ。`ButtonCell` だけは `description` を公開しない。
 
+選択系の `SwitchCell` / `CheckboxCell` / `RadioCell` / `SimpleCheckCell` は、control の強調色を Cell 単位で上書きする `accentColor` を持つ。未指定は iOS が `nil`、Android が `Color.Unspecified` で、`CellStyle.accentColor` → `Theme.cellAccentColor` の順に解決する ([スタイルの所有と実効値解決](../styling/style-resolution.md))。
+
 `ButtonCell.titleAlignment` の既定は center で、Swift は `.start` / `.center` / `.end`、Kotlin は `START` / `CENTER` / `END` を使う。alignment が視覚に出るのは title が主行の全幅を使える行 — つまり `valueText` (行内 trailing) を持たない行に限る。`valueText` がある行では title 領域はコンテンツ幅になり、配る余白がないため CENTER / END は視覚に出ない ([Cell 共通行のレイアウト](../styling/cell-row-layout.md) の主行の幅配分、core/ADR-0026)。`icon` / `hintText` は主行の幅配分に参加しないため、これらだけを持つ行では alignment は従来どおり働く。補助フィールドの有無にかかわらず Disclosure Indicator は表示しない。
 
 画像の case と fallback は [KsImage](ks-image.md) を参照する。
@@ -45,13 +48,16 @@ iOS では `KsCell`、Android では `Cell` を実装する。直接構築時の
 
 `RadioCell` のグループ状態も利用者が所有する。`groupId` は所属を表し、`selectedValue` を自動更新する Store を Cell 自身は持たない。Android の `SwitchCell` DSL だけは `MutableState<Boolean>` overload を持つため、利用例では callback の代わりに TwoWay 経路を使っている。
 
+iOS の Cell が利用者の操作を知らせる閉包 (`onTap`・`onValueChanged`・`onSelected` など。入力 Cell・`CustomCell` を含む全種) は、常にメインスレッドから呼ばれる。閉包の型は `@Sendable` だが、中で SwiftUI の `@State` などメインアクターに隔離された値を書き換えるときは `MainActor.assumeIsolated { ... }` の中で書き換えられる (`KsCell` の公開 doc「通知のクロージャが呼ばれるスレッド」)。本体の入力 Cell の Binding initializer が行う書き戻しも同じ形である。
+
 ## 保証すること
 
 - `isEnabled = false` では操作 callback を発火せず、control も操作不能になる。
 - `isVisible = false` では Cell 値を model に保持したまま visible projection から除外する。
 - `CheckboxCell` と `SimpleCheckCell` は反転した二値を通知する。
+- iOS の操作 callback は常にメインスレッドから呼ばれる。
 - Android の `RadioCell` は選択済み行の再タップで `onSelected` を再通知しない。iOS は選択済みでも `onSelected(value)` を通知するため、共通ロジックは再通知の有無へ依存しない。
-- `KsCellRegistry.registerBasicCells()`（iOS）/ `KsCellRegistry.registerBasicCells(context)`（Android）で7種を一括登録できる。
+- `KsCellRegistry.shared.registerBasicCells()`（iOS。Registry インスタンスのメソッド）/ `KsCellRegistry.registerBasicCells(context)`（Android）で7種を一括登録できる。
 
 ## してはいけないこと
 

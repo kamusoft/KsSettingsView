@@ -3,7 +3,7 @@ type: reference
 title: CustomCell
 description: 事前登録なしで任意の宣言 UI を1行にする CustomCell の公開契約とカスタムセル3層の使い分け
 tags: [cells, public-api, custom, declarative-ui]
-timestamp: 2026-08-16
+timestamp: 2026-09-26
 ---
 
 # CustomCell
@@ -28,10 +28,14 @@ timestamp: 2026-08-16
 
 ## 挙動プロパティ
 
-- **`onTap`** (既定 nil = 行タップ非対応): 非 nil かつ有効時、行のタップで発火する。content 内の操作可能要素がタップを消費した場合は発火しない (二重発火は起きない)。nil のときは content 内部の操作 (ボタン・スライダー等) を妨げない。
-- **`showArrow`** (既定 false): true で [基本 Cell](basic-cells.md) の CommandCell と同一の Disclosure Indicator (chevron) を trailing に表示し、content の占有領域は indicator 領域を除いた範囲になる。`onTap` と独立に指定できる。
-- **`isEnabled`** (既定 true): false のとき行タップと content 内部の操作の両方を抑止し、**content 全体を淡色化する** (alpha 0.38)。標準 Cell は text 色を無効時用の色 (`Theme.disabledTextColor`) へ差し替えて無効を表すが、任意ビューにはその差し替え先が特定できないための代替表現 ([Cell の視覚状態](../styling/cell-visual-states.md) の例外)。追加の描き分けは利用者の自由。無効時、Android は content が TalkBack の読み上げ対象から外れる (iOS の VoiceOver は読み上げが残る。意図的な非対称 — [core/ADR-0017](../../../decisions/core/0017-customcell-disabled-suppression-over-a11y-symmetry.md))。
-- **`isVisible`** (既定 true): false のとき、表示対象として列挙される Cell 集合 (visible projection — [設定ツリー](../core-model/settings-tree.md) で定義) から除外され、行として出力されない。Cell 値は model に保持されたまま残る。
+| プロパティ | 既定 | 挙動 |
+|---|---|---|
+| `onTap` | nil (行タップ非対応) | 非 nil かつ有効時、行のタップで発火する。content 内の操作可能要素がタップを消費した場合は発火しない (二重発火は起きない)。nil のときは content 内部の操作 (ボタン・スライダー等) を妨げない |
+| `showArrow` | false | true で [基本 Cell](basic-cells.md) の CommandCell と同一の Disclosure Indicator (chevron) を trailing に表示し、content の占有領域は indicator 領域を除いた範囲になる。`onTap` と独立に指定できる |
+| `isEnabled` | true | false のとき行タップと content 内部の操作の両方を抑止し、**content 全体を淡色化する** (alpha 0.38) |
+| `isVisible` | true | false のとき、表示対象として列挙される Cell 集合 (visible projection — [設定ツリー](../core-model/settings-tree.md) で定義) から除外され、行として出力されない。Cell 値は model に保持されたまま残る |
+
+無効時の淡色化は [Cell の視覚状態](../styling/cell-visual-states.md) の例外である。標準 Cell は text 色を無効時用の色 (`Theme.disabledTextColor`) へ差し替えて無効を表すが、任意ビューにはその差し替え先が特定できないため、content 全体の淡色化を代替表現にしている。追加の描き分けは利用者の自由。無効時、Android は content が TalkBack の読み上げ対象から外れる (iOS の VoiceOver は読み上げが残る。意図的な非対称 — [core/ADR-0017](../../../decisions/core/0017-customcell-disabled-suppression-over-a11y-symmetry.md))。
 
 ## 高さと style
 
@@ -40,9 +44,13 @@ timestamp: 2026-08-16
 - cellHeight の意味は既存の高さ解決契約 ([Cell 共通行のレイアウト](../styling/cell-row-layout.md)) に従う: `Theme.hasUnevenRows == true` なら最低高として働き内容に応じて伸び、`false` のときだけ固定される。
 - content が行の高さに収まらないとき (固定高等) の縦位置は、両プラットフォームとも「収まるときは縦中央、収まらないときは上端揃え」。
 
+## 再表示と content 内部の一時状態
+
+行が画面外へ出て戻る再表示をまたいだとき、content 内部の一時状態 (`remember` / `@State` 等) が残るかどうかはプラットフォームで異なり、どちらの結果にも依存できない。Android はリサイクル機構の都合で維持されることがあり ([android/ADR-0015](../../../decisions/android/0015-customcell-pool-aware-composition-disposal.md))、iOS はリサイクル毎に hosting 階層を再生成する ([ios/ADR-0002](../../../decisions/ios/0002-customcell-hosting-recreation-accepted.md))。再表示後も残したい状態は content 値へ持ち上げる。
+
 ## DSL による配置
 
-Android は `DSLSectionScope` の拡張関数 (content あり / なしの 2 形)、iOS は SectionBuilder への struct 直書き。戻り値・準拠により `.cellHeight(...)` / `.cellID(...)` 等の既存 modifier チェーンが機能する。**icon modifier は型として非対応** (アイコン領域が存在しない)。
+Android は `DSLSectionScope` の拡張関数 (content あり / なしの 2 形)、iOS は SectionBuilder への struct 直書き。戻り値・準拠により `.cellHeight(...)` / `.cellID(...)` 等の既存 modifier チェーンが機能する。**icon modifier は効かない** — CustomCell は icon modifier の対象型に準拠しないため、`.icon(...)` を書いてもコンパイルは通り、実行時に何もしない (アイコン領域が存在しない)。
 
 ## カスタムセル3層の使い分け
 
@@ -67,7 +75,7 @@ Android は `DSLSectionScope` の拡張関数 (content あり / なしの 2 形)
 - 見た目や動作を左右する値を builder のキャプチャだけに置かない (再バインドされず画面が古いまま残る)。
 - content に値等価を持たない型 (参照同一性のみのクラス等) や Optional を使わない。
 - テキスト系 CellStyle 項目が content に効くと仮定しない。
-- 行が画面外へ出て戻る再表示をまたいで、content 内部の一時状態 (`remember` / `@State` 等) が保持されると仮定しない。逆に「必ず初期化される」とも仮定しない — Android はリサイクル機構の都合で維持されることがあり ([android/ADR-0015](../../../decisions/android/0015-customcell-pool-aware-composition-disposal.md))、iOS はリサイクル毎に hosting 階層を再生成する ([ios/ADR-0002](../../../decisions/ios/0002-customcell-hosting-recreation-accepted.md))。再表示後も残したい状態は content 値へ持ち上げる。
+- 再表示をまたいで content 内部の一時状態 (`remember` / `@State` 等) が保持されるとも、必ず初期化されるとも仮定しない (「再表示と content 内部の一時状態」節)。
 - 無効時の Android で content が TalkBack に読み上げられると仮定しない。
 - Section / Root の Header・Footer 装飾領域用の型消去ラッパ `KsAnyView` を Cell 本体の代替として使わない (`KsAnyView` は意図的に等価性へ参加しないため、ツリー再構築のたびに「変更あり」と判定され再バインドが無駄打ちされる)。
 
@@ -97,7 +105,7 @@ KsSettingsView {
                 Icon(Icons.Default.VolumeUp, contentDescription = null)
                 Slider(value = v, onValueChange = { volume = it })
             }
-        }.cellHeight(72)
+        }.cellHeight(72.dp)
     }
 }
 ```

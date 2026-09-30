@@ -43,6 +43,8 @@ public struct KsSettingsView: View {
     /// bar に覆われる領域の inset は `KsSettingsViewController` が載せる UIScrollView の
     /// automatic な contentInset 調整に委ね、ラッパ側では加算しない（ios/ADR-0006）。
     internal var _respectsSafeArea: Bool
+    /// `.scrollController(_:)` modifier 由来のスクロール命令ハンドル（`nil` なら接続しない）
+    internal var _scrollController: KsScrollController?
 
     /// バック実装の種別を内部で保持する。
     /// - `.store(store)`：Store 方式（外部 Store を参照）
@@ -66,6 +68,7 @@ public struct KsSettingsView: View {
         self._rootFooter = nil
         self._theme = nil
         self._respectsSafeArea = false
+        self._scrollController = nil
     }
 
     /// DSL 方式 init（一般用途向け）。
@@ -82,6 +85,7 @@ public struct KsSettingsView: View {
         self._rootFooter = nil
         self._theme = nil
         self._respectsSafeArea = false
+        self._scrollController = nil
     }
 
     public var body: some View {
@@ -108,7 +112,8 @@ public struct KsSettingsView: View {
                 style: _style,
                 rootHeader: _rootHeader,
                 rootFooter: _rootFooter,
-                theme: _theme
+                theme: _theme,
+                scrollController: _scrollController
             )
         case .dsl(let builder):
             // DSL 方式は内部に `@StateObject` の Bookkeeper を持つ Representable をラップ。
@@ -117,7 +122,8 @@ public struct KsSettingsView: View {
                 style: _style,
                 rootHeader: _rootHeader,
                 rootFooter: _rootFooter,
-                theme: _theme
+                theme: _theme,
+                scrollController: _scrollController
             )
         }
     }
@@ -183,6 +189,24 @@ public struct KsSettingsView: View {
         return copy
     }
 
+    /// スクロール命令ハンドルを接続する。
+    ///
+    /// 渡したハンドルの命令 (`scrollTo(id:)`・`scrollToSection(id:)`・`scrollToStart()`・
+    /// `scrollToEnd()`) がこの設定画面に届く。命令は、同じ処理の中で行ったデータや状態の変更が
+    /// 表示に反映された後に実行される。
+    ///
+    /// 命令で指す ID は書き方によって異なる。
+    /// - Store 方式: Store の Cell の `KsCellID` と Section の `id`
+    /// - DSL 方式: `.cellID(_:)` / `.sectionID(_:)` で付けた ID、または `ForEach` の key。
+    ///   同じ値が両方にあるときは `.cellID(_:)` / `.sectionID(_:)` で付けた要素を指す
+    ///
+    /// - Parameter controller: 接続するハンドル。1 つのハンドルは最後に接続した画面にだけ命令を届ける
+    public func scrollController(_ controller: KsScrollController) -> KsSettingsView {
+        var copy = self
+        copy._scrollController = controller
+        return copy
+    }
+
     // MARK: - テスト容易化 API（Store 方式専用）
 
     /// テスト・ホスティング両用に `KsSettingsViewController` を生成する（Store 方式専用）。
@@ -194,6 +218,7 @@ public struct KsSettingsView: View {
         let controller = KsSettingsViewController(store: store, style: _style)
         controller.rootHeader = _rootHeader
         controller.rootFooter = _rootFooter
+        controller.scrollController = _scrollController
         if let theme = _theme {
             // Theme は Store 経由で applyTheme し、Store の `$theme` 経由で Controller に伝播する。
             store.applyTheme(theme)
@@ -214,6 +239,9 @@ public struct KsSettingsView: View {
         }
         if uiViewController.rootFooter != _rootFooter {
             uiViewController.rootFooter = _rootFooter
+        }
+        if uiViewController.scrollController !== _scrollController {
+            uiViewController.scrollController = _scrollController
         }
     }
 
@@ -236,11 +264,13 @@ internal struct StoreBackedRepresentable: UIViewControllerRepresentable {
     let rootHeader: RootAccessory?
     let rootFooter: RootAccessory?
     let theme: Theme?
+    let scrollController: KsScrollController?
 
     func makeUIViewController(context: Context) -> KsSettingsViewController {
         let controller = KsSettingsViewController(store: store, style: style)
         controller.rootHeader = rootHeader
         controller.rootFooter = rootFooter
+        controller.scrollController = scrollController
         if let theme = theme {
             store.applyTheme(theme)
         }
@@ -259,6 +289,9 @@ internal struct StoreBackedRepresentable: UIViewControllerRepresentable {
         }
         if let theme = theme, store.theme != theme {
             store.applyTheme(theme)
+        }
+        if uiViewController.scrollController !== scrollController {
+            uiViewController.scrollController = scrollController
         }
     }
 }
@@ -280,6 +313,7 @@ internal struct DSLBackedRepresentableView: View {
     let rootHeader: RootAccessory?
     let rootFooter: RootAccessory?
     let theme: Theme?
+    let scrollController: KsScrollController?
 
     @StateObject private var bookkeeper: DSLBookkeeper
 
@@ -288,13 +322,15 @@ internal struct DSLBackedRepresentableView: View {
         style: KsSettingsViewStyle,
         rootHeader: RootAccessory?,
         rootFooter: RootAccessory?,
-        theme: Theme?
+        theme: Theme?,
+        scrollController: KsScrollController?
     ) {
         self.builder = builder
         self.style = style
         self.rootHeader = rootHeader
         self.rootFooter = rootFooter
         self.theme = theme
+        self.scrollController = scrollController
 
         // `StateObject(wrappedValue:)` は autoclosure で初回のみ評価される。
         // SwiftUI が親 View 再評価で本 View の `init` を何度も呼んでも、`builder()` 評価と
@@ -348,7 +384,8 @@ internal struct DSLBackedRepresentableView: View {
             style: style,
             rootHeader: rootHeader,
             rootFooter: rootFooter,
-            theme: theme
+            theme: theme,
+            scrollController: scrollController
         )
     }
 }
@@ -366,6 +403,7 @@ internal struct DSLBackedRepresentable: UIViewControllerRepresentable {
     let rootHeader: RootAccessory?
     let rootFooter: RootAccessory?
     let theme: Theme?
+    let scrollController: KsScrollController?
 
     func makeUIViewController(context: Context) -> KsSettingsViewController {
         let controller = KsSettingsViewController(store: bookkeeper.store, style: style)
@@ -374,6 +412,10 @@ internal struct DSLBackedRepresentable: UIViewControllerRepresentable {
         if let theme = theme, bookkeeper.store.theme != theme {
             bookkeeper.store.applyTheme(theme)
         }
+        // DSL 方式のハンドルは Host ではなく引き直しの受け口へ接続し、受け口が最終 ID に直して
+        // Host へ渡す（利用者の手がかりは明示 ID / ForEach の key で、最終 ID を知らないため）。
+        bookkeeper.scrollResolver.host = controller
+        bookkeeper.scrollResolver.connect(scrollController)
         return controller
     }
 
@@ -392,6 +434,10 @@ internal struct DSLBackedRepresentable: UIViewControllerRepresentable {
         // 2. DSL を再評価して Diff 列を算出し、内部 Store に流す。
         //    Store の Diff Publisher 経由で Controller の applyDiff が走る。
         evaluateAndApplyDiff()
+
+        // 3. スクロール命令ハンドルの接続先を最新の Host と受け口に揃える。
+        bookkeeper.scrollResolver.host = uiViewController
+        bookkeeper.scrollResolver.connect(scrollController)
     }
 
     /// 新ツリーを評価し、前回ツリーと比較して Diff 列を内部 Store に流す。
@@ -427,6 +473,8 @@ internal struct DSLBackedRepresentable: UIViewControllerRepresentable {
             bookkeeper.store.applyTheme(newTheme)
         }
         bookkeeper.lastTree = newResolved
+        // 引き直しの受け口に、内部 Store へ流した宣言ツリーを知らせる（世代を進める）。
+        bookkeeper.scrollResolver.treeDidUpdate(newSections)
     }
 
     /// `SettingsRootDiff` を内部 Store の対応メソッドに変換して呼ぶ。
@@ -464,10 +512,13 @@ internal struct DSLBackedRepresentable: UIViewControllerRepresentable {
 internal final class DSLBookkeeper: ObservableObject {
     let store: SettingsRootStore
     var lastTree: DSLDiffCalculator.ResolvedTree
+    /// スクロール命令の ID を宣言ツリーの最終 ID へ引き直す受け口。
+    let scrollResolver: DSLScrollCommandResolver
 
     init(store: SettingsRootStore, initialTree: DSLDiffCalculator.ResolvedTree) {
         self.store = store
         self.lastTree = initialTree
+        self.scrollResolver = DSLScrollCommandResolver(sections: initialTree.sections)
     }
 }
 

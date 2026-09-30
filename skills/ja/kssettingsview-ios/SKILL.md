@@ -1,6 +1,6 @@
 ---
 name: kssettingsview-ios
-description: KsSettingsView で iOS の設定画面 (settings screen) を作る - SwiftUI の宣言的 DSL (KsSettingsView) または UIKit ホスト (KsSettingsViewController) で、組み込みの Cell (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker)、任意の SwiftUI View を Cell として表示する CustomCell、SettingsRootStore による表示中の更新、Theme / CellStyle のスタイル指定、respectsSafeArea(_:) による親のセーフエリア配置切替を扱う。KsSettingsViewCore / KsSettingsViewUI / KsSettingsViewSwiftUI に依存する Swift アプリで設定画面を追加・変更・レビューするときに使う。
+description: KsSettingsView で iOS の設定画面 (settings screen) を作る - SwiftUI の宣言的 DSL (KsSettingsView) または UIKit ホスト (KsSettingsViewController) で、組み込みの Cell (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker)、任意の SwiftUI View を Cell として表示する CustomCell、SettingsRootStore による表示中の更新、KsScrollController によるプログラムからのスクロール、Theme / CellStyle のスタイル指定、respectsSafeArea(_:) による親のセーフエリア配置切替を扱う。KsSettingsViewCore / KsSettingsViewUI / KsSettingsViewSwiftUI に依存する Swift アプリで設定画面を追加・変更・レビューするときに使う。
 license: MIT
 metadata:
   language: ja
@@ -20,6 +20,7 @@ KsSettingsView は、iOS の設定アプリのようなリスト形式の設定�
 | 表示中の画面を変える: Cell の挿入・削除・移動・差し替え、複数 Cell のバッチ更新 | [references/updates.md](references/updates.md) |
 | 再評価をまたいで Cell を追跡する、状態から表示・非表示を切り替える、UIKit から画面を組み込む | [references/updates.md](references/updates.md) |
 | 変更を `SettingsRootDiff` として表す、Diff や Theme を Controller へ直接適用する | [references/updates.md](references/updates.md) |
+| コードから Cell・Section・先頭・末尾へスクロールさせる、UIKit ホストを作り直すときにスクロール位置を引き継ぐ | [references/updates.md](references/updates.md) |
 | 色・フォント・Cell の高さ、Classic / Modern の list 外観、Section の Container | [references/styling.md](references/styling.md) |
 | ライブラリ既定色・自分の Theme・Cell 1 つに指定した色をライト / ダーク外観に追随させる | [references/styling.md](references/styling.md) |
 | SwiftUI ラッパを親の全面に広げるか、親の container セーフエリア内へ収める | [references/styling.md](references/styling.md) |
@@ -80,7 +81,9 @@ struct SettingsScreen: View {
                 SwitchCell(
                     title: "Push notifications",
                     isOn: notifications,
-                    onValueChanged: { notifications = $0 }
+                    onValueChanged: { isOn in
+                        MainActor.assumeIsolated { notifications = isOn }
+                    }
                 )
             }
         }
@@ -90,9 +93,11 @@ struct SettingsScreen: View {
 
 `Section` ではなく `ksSection` を使うのは、Cell の builder が `SwiftUI.Section` と衝突しないようにするため。Section の値を直接名前付けするときは対応する `KsSection` typealias を使う。
 
+Cell の通知の閉包は型としては `@Sendable` だがメインスレッドから呼ばれるため、`@State` の書き換えを `MainActor.assumeIsolated` の中に置いている ([references/cells.md](references/cells.md) を参照)。
+
 ## リファレンス
 
 - [references/cells.md](references/cells.md) - 組み込み Cell ごとのレシピと、Section・アイコン・全 Cell 共通フィールド。
-- [references/updates.md](references/updates.md) - 表示中の画面の更新、Cell の同一性、可視性、UIKit からの利用。
+- [references/updates.md](references/updates.md) - 表示中の画面の更新、Cell の同一性、可視性、UIKit からの利用、コードからのスクロール。
 - [references/styling.md](references/styling.md) - `Theme`、`CellStyle`、style modifier、list 外観、Header / Footer。
 - [references/custom-cells.md](references/custom-cells.md) - `CustomCell`、再利用のためのラップ関数、独自 Cell 型と Renderer。

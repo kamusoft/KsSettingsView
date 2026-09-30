@@ -26,6 +26,9 @@ import KsSettingsViewSwiftUI
 /// SwiftUI `@State` を `Binding` 経由で各 Cell に渡し（TwoWay binding 経路）、
 /// 値が実際に変わったときだけ画面上部の直近イベント表示を更新する。
 /// 一部 Cell は「Store 経路（callback 形式）」も併載し、両 API の挙動を比較できる。
+///
+/// Cell の通知 (`onTextChanged` / `onItemsSelected` 等) は `@Sendable` の閉包で受け取るが、呼ばれるのは
+/// 常にメインスレッドなので、`MainActor.assumeIsolated` の中で `@State` を書き換える。
 struct InputCellsDemoView: View {
 
     // MARK: - EntryCell TwoWay binding 用
@@ -164,9 +167,11 @@ struct InputCellsDemoView: View {
                         text: nickname,
                         placeholder: "callback 経路で更新",
                         onTextChanged: { newValue in
-                            guard newValue != nickname else { return }
-                            nickname = newValue
-                            lastEvent = "ニックネーム (callback) → \(newValue)"
+                            MainActor.assumeIsolated {
+                                guard newValue != nickname else { return }
+                                nickname = newValue
+                                lastEvent = "ニックネーム (callback) → \(newValue)"
+                            }
                         }
                     )
                     // placeholder 色を Cell 個別に指定する経路（未指定の行は OS 既定色）
@@ -245,9 +250,11 @@ struct InputCellsDemoView: View {
                         selectedIndices: $memberSelection,
                         pageTitle: "通知先メンバー",
                         onItemsSelected: { picked in
-                            let labels = picked.map(\.name)
-                            lastEvent = "通知先メンバー → "
-                                + (labels.isEmpty ? "(未選択)" : labels.joined(separator: ", "))
+                            MainActor.assumeIsolated {
+                                let labels = picked.map(\.name)
+                                lastEvent = "通知先メンバー → "
+                                    + (labels.isEmpty ? "(未選択)" : labels.joined(separator: ", "))
+                            }
                         }
                     )
                 }

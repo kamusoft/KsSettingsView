@@ -22,7 +22,7 @@ timestamp: 2026-08-02
 | ヘッダー | ドラッグハンドル + 「キャンセル (テキストボタン) / タイトル / OK (強調色で塗ったボタン)」(ラベル文言は OS リソース — 後述)。意匠は `PickerSelectionSheet` ([android/ADR-0005](../../../decisions/android/0005-pickercell-selection-ui-bottom-sheet.md)) と共有 | 入力ツールバー (Cancel / タイトル / Done) |
 | 非確定の閉じ方 | キャンセル・外側タップ・Back・ハンドル / ヘッダー起点の下スワイプ (候補領域 = ホイール面からの下スワイプでは閉じず候補が遷移する) | Cancel とキーボード標準の dismiss 操作 |
 
-Android のホイール (`KsWheelView`) は RecyclerView + LinearSnapHelper による自作部品で、**internal に留める** (公開 API ではない)。将来の DatePicker ホイール版展開の内部土台であり、部品の詳細は android/ADR-0007 とコード・テストを正とする。
+Android のホイール (`KsWheelView`) は RecyclerView + LinearSnapHelper による自作部品で、**internal に留める** (公開 API ではない)。NumberPicker のほか、DatePicker の `Spinner` 3連ホイール ([android/ADR-0009](../../../decisions/android/0009-datepicker-spinner-bottom-sheet-triple-wheel.md)) と TimePicker の時・分ホイール ([android/ADR-0018](../../../decisions/android/0018-timepickercell-bottom-sheet-wheel-unification.md)) でも共用する内部部品であり、部品の詳細は android/ADR-0007 とコード・テストを正とする。
 
 ## 共通の挙動契約
 
@@ -37,9 +37,11 @@ Android のホイール (`KsWheelView`) は RecyclerView + LinearSnapHelper に�
 
 体験の同質性より OS 慣習・部品特性を優先した差で、解消対象ではない:
 
-- **操作ラベル**: Android は OS の公開文字列リソース (`android.R.string.ok` / `android.R.string.cancel`) を使い OS ローカライズに追従する (自前文字列を同梱しない)。iOS の Cancel / Done とは文言が揃わない
-- **スナップ静止の意味論 (Android)**: 論理上の選択中候補の更新は、ホイールが候補位置に静止 (スナップ) した時点でのみ行う。ドラッグ・慣性移動・SnapHelper の補正スクロール中は直前の選択中候補を維持し、移動中に確定した場合は直前にスナップ静止した候補を採用する (視覚上の中央行が移動中に流れても、確定が採用するのは論理上の選択中)。iOS は `UIPickerView` 標準の選択遷移に従う
-- **アクセシビリティ (Android)**: ホイールはスピナー相当のコントロールとして、選択中候補の表示文字列 (unit 適用後) を公開し、前候補・次候補へのアクセシビリティアクションで選択中を変更できる (端の候補ではその方向のアクションを提供しない)。iOS は `UIPickerView` 標準の公開に従う
+| 観点 | Android | iOS |
+|---|---|---|
+| 操作ラベル | OS の公開文字列リソース (`android.R.string.ok` / `android.R.string.cancel`) を使い OS ローカライズに追従する (自前文字列を同梱しない) | Cancel / Done。Android とは文言が揃わない |
+| 選択中候補の更新 (スナップ静止の意味論) | 論理上の選択中候補の更新は、ホイールが候補位置に静止 (スナップ) した時点でのみ行う。ドラッグ・慣性移動・SnapHelper の補正スクロール中は直前の選択中候補を維持し、移動中に確定した場合は直前にスナップ静止した候補を採用する (視覚上の中央行が移動中に流れても、確定が採用するのは論理上の選択中) | `UIPickerView` 標準の選択遷移に従う |
+| アクセシビリティ | ホイールはスピナー相当のコントロールとして、選択中候補の表示文字列 (unit 適用後) を公開し、前候補・次候補へのアクセシビリティアクションで選択中を変更できる (端の候補ではその方向のアクションを提供しない) | `UIPickerView` 標準の公開に従う |
 
 ## 契約外の防御挙動
 

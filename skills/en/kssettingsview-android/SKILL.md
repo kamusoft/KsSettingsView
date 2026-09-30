@@ -1,6 +1,6 @@
 ---
 name: kssettingsview-android
-description: Build Android settings screens with KsSettingsView - a Jetpack Compose declarative DSL or an XML View host (the KsSettingsView view), with built-in cells (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker) plus CustomCell holding any Composable, post-dismiss selection callbacks, live updates through SettingsRootStore, and Theme / CellStyle styling. Use when adding, changing, or reviewing a settings screen in a Kotlin app that depends on jp.kamusoft:kssettingsview or imports jp.kamusoft.kssettingsview.core, .ui, or .compose.
+description: Build Android settings screens with KsSettingsView - a Jetpack Compose declarative DSL or an XML View host (the KsSettingsView view), with built-in cells (Label, Command, Button, Switch, Checkbox, Radio, SimpleCheck, Entry, Picker, NumberPicker, TimePicker, DatePicker) plus CustomCell holding any Composable, post-dismiss selection callbacks, live updates through SettingsRootStore, programmatic scrolling with KsScrollController, and Theme / CellStyle styling. Use when adding, changing, or reviewing a settings screen in a Kotlin app that depends on jp.kamusoft:kssettingsview or imports jp.kamusoft.kssettingsview.core, .ui, or .compose.
 license: MIT
 metadata:
   language: en
@@ -20,6 +20,7 @@ KsSettingsView is a UI library for building settings screens - the list-style sc
 | React after a PickerCell or DatePickerCell selection surface has fully closed | [references/cells.md](references/cells.md) |
 | Change the screen after it is on display: insert, remove, move, replace cells, batch updates, direct driving with `SettingsRootDiff` | [references/updates.md](references/updates.md) |
 | Keep cells identified across re-evaluations, drive visibility from state, host the screen from XML | [references/updates.md](references/updates.md) |
+| Scroll to a cell, a section, or either end from code with `KsScrollController`; keep the scroll position when the activity or the view is recreated | [references/updates.md](references/updates.md) |
 | Colors, fonts, cell height, Classic / Modern list appearance, section boxes, the light / dark default colors of `KsSettingsViewDefaults`, giving an explicit color a value per appearance | [references/styling.md](references/styling.md) |
 | Section and screen headers / footers, including arbitrary Composables in them | [references/styling.md](references/styling.md) |
 | Put any Composable into a cell of the list, or define your own cell type with its own view holder | [references/custom-cells.md](references/custom-cells.md) |
@@ -102,6 +103,6 @@ In this re-evaluating `KsSettingsView { ... }` DSL, the cell functions return a 
 ## Reference files
 
 - [references/cells.md](references/cells.md) - one recipe per built-in cell, plus sections, icons, and the fields every cell shares.
-- [references/updates.md](references/updates.md) - changing a screen that is already on display, cell identity, visibility, and hosting from XML.
+- [references/updates.md](references/updates.md) - changing a screen that is already on display, cell identity, visibility, hosting from XML, and scroll control.
 - [references/styling.md](references/styling.md) - `Theme`, `CellStyle`, style modifiers, list appearance, headers and footers.
 - [references/custom-cells.md](references/custom-cells.md) - `CustomCell`, reusable wrappers, and your own cell type with a view holder.

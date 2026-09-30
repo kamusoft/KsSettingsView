@@ -1,0 +1,6 @@
+# Android Native Sample の Activity 作り直しの記録 (logcat 抜粋、sanitize 済み)
+# 夜間モード切替 (cmd uimode night yes / no) で MainActivity が relaunch されたことを示す行だけを抜粋
+09-30 01:48:20.833   736  1245 I ActivityTaskManager: Config changes=200 {1.0 310mcc260mnc [en_US] ldltr sw411dp w411dp h914dp 420dpi nrml long port night finger -keyb/v/h -nav/h winConfig={ mBounds=R
+09-30 01:48:21.081   736  1245 I WindowManager: finishDrawing of relaunch: Window{5891bcf u0 jp.kamusoft.kssettingsview.samples.android/jp.kamusoft.kssettingsview.samples.android.MainActivity} 212ms
+09-30 01:48:27.707   736  1245 I ActivityTaskManager: Config changes=200 {1.0 310mcc260mnc [en_US] ldltr sw411dp w411dp h914dp 420dpi nrml long port finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0,
+09-30 01:48:28.019   736  1874 I WindowManager: finishDrawing of relaunch: Window{27ea469 u0 jp.kamusoft.kssettingsview.samples.android/jp.kamusoft.kssettingsview.samples.android.MainActivity} 259ms

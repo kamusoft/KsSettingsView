@@ -343,6 +343,21 @@ KsSettingsView(
 }
 ```
 
+To show plain text instead, pass `rootHeaderText` / `rootFooterText`. The text is drawn in the list's own style for a screen-level header or footer - the same text size, color and spacing as a text root header set on the view host - so it needs no Composable of your own. Both the DSL and the store overload of `KsSettingsView` take these arguments.
+
+```kotlin
+KsSettingsView(
+    rootHeaderText = "Signed in as a guest",
+    rootFooterText = "Version 1.0.0",
+) {
+    Section(header = "General") {
+        LabelCell(title = "Version", valueText = "1.0.0")
+    }
+}
+```
+
+Each argument defaults to `null`, and a position with neither a Composable nor a string shows nothing. When a Composable and a string are both given for the same position, the Composable is shown and the string is ignored; nothing is thrown, unlike the section header and footer above.
+
 For text headers and footers, `headerBackgroundColor` and `footerBackgroundColor` paint the corresponding area. Their library defaults are transparent in both appearances, so the list background shows through. A header or footer supplied as a view is owned by that view, is built with the host context, and does not receive the library background paint.
 
 ## Hide a section header without clearing it

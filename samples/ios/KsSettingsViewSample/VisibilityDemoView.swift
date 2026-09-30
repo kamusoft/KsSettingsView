@@ -12,6 +12,9 @@ import KsSettingsViewUI
 import KsSettingsViewSwiftUI
 
 /// 末尾 / 中間 × Cell / Section の 4 パターンと、Header / Footer 単位の visibility 切替を観察するデモ。
+///
+/// Cell の通知 (`onValueChanged`) は `@Sendable` の閉包で受け取るが、呼ばれるのは
+/// 常にメインスレッドなので、`MainActor.assumeIsolated` の中で `@State` を書き換える。
 struct VisibilityDemoView: View {
     @State private var showTailCell: Bool = true
     @State private var showMiddleCell: Bool = true
@@ -28,37 +31,37 @@ struct VisibilityDemoView: View {
                     title: "末尾セル表示",
                     description: "「観察対象 Section A」の末尾 Cell を出し入れ",
                     isOn: showTailCell,
-                    onValueChanged: { v in showTailCell = v }
+                    onValueChanged: { newValue in MainActor.assumeIsolated { showTailCell = newValue } }
                 )
                 SwitchCell(
                     title: "中間セル表示",
                     description: "「観察対象 Section A」の中間 Cell を出し入れ",
                     isOn: showMiddleCell,
-                    onValueChanged: { v in showMiddleCell = v }
+                    onValueChanged: { newValue in MainActor.assumeIsolated { showMiddleCell = newValue } }
                 )
                 SwitchCell(
                     title: "末尾セクション表示",
                     description: "末尾の Section C をまるごと出し入れ",
                     isOn: showTailSection,
-                    onValueChanged: { v in showTailSection = v }
+                    onValueChanged: { newValue in MainActor.assumeIsolated { showTailSection = newValue } }
                 )
                 SwitchCell(
                     title: "中間セクション表示",
                     description: "中間の Section B をまるごと出し入れ",
                     isOn: showMiddleSection,
-                    onValueChanged: { v in showMiddleSection = v }
+                    onValueChanged: { newValue in MainActor.assumeIsolated { showMiddleSection = newValue } }
                 )
                 SwitchCell(
                     title: "ヘッダー表示",
                     description: "「観察対象 Section D」の Header だけを出し入れ",
                     isOn: showHeader,
-                    onValueChanged: { v in showHeader = v }
+                    onValueChanged: { newValue in MainActor.assumeIsolated { showHeader = newValue } }
                 )
                 SwitchCell(
                     title: "フッター表示",
                     description: "「観察対象 Section D」の Footer だけを出し入れ",
                     isOn: showFooter,
-                    onValueChanged: { v in showFooter = v }
+                    onValueChanged: { newValue in MainActor.assumeIsolated { showFooter = newValue } }
                 )
             }
 

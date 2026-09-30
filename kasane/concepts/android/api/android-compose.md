@@ -3,10 +3,10 @@ type: reference
 title: Android Compose Bridge と宣言 DSL
 description: KsSettingsView の Store 方式・DSL 方式、identity、modifier、Theme 伝播の利用契約
 tags: [android, compose, dsl, public-api]
-timestamp: 2026-09-06
+timestamp: 2026-09-30
 ---
 
-この文書は、Jetpack Compose から KsSettingsView を使うための公開 API 利用契約と責務境界を整理した reference である。読むと、Store 方式と DSL 方式の選び方、動的要素の identity、Root・Section・Cell の構築、Theme の更新経路が分かる。Android View Host を直接使う場合は [Android Native Host の利用と更新境界](android-native-host.md) を参照する。
+この文書は、Jetpack Compose から KsSettingsView を使うための公開 API 利用契約と責務境界を整理した reference である。読むと、Store 方式と DSL 方式の選び方、動的要素の identity、Root・Section・Cell の構築、Theme の更新経路、スクロール命令ハンドルの渡し方と DSL 方式での指し方が分かる。Android View Host を直接使う場合は [Android Native Host の利用と更新境界](android-native-host.md) を参照する。
 
 ## 目的
 
@@ -23,7 +23,19 @@ Compose 側は宣言ツリーの構築、Recomposition をまたぐ状態保持�
 | DSL | `KsSettingsView` の内部 | 静的・中規模の一般的な設定画面 | Compose state から宣言ツリーを再評価する |
 | Store | 利用者 | 大量データ、高頻度更新、命令型の部分操作 | 利用者が `SettingsRootStore` の公開操作を呼ぶ |
 
-両方式とも `modifier`、`style`、任意 Composable の `rootHeader` / `rootFooter` を受ける。`style` の既定値は `Classic` である。DSL 方式の `theme` の既定値は `KsSettingsViewDefaults.theme()` で、composition 時の `isSystemInDarkTheme()` に応じた light / dark の既定 Theme になる。
+両方式とも `modifier`、`style`、Root Header / Footer (下記)、スクロール命令ハンドル `scrollController` (下記「スクロール制御」) を受ける。`style` の既定値は `Classic` である。DSL 方式の `theme` の既定値は `KsSettingsViewDefaults.theme()` で、composition 時の `isSystemInDarkTheme()` に応じた light / dark の既定 Theme になる。
+
+### Root Header / Footer
+
+Root Header / Footer は任意 Composable と文字列のどちらでも渡せる。どちらも `SettingsRoot` には含まれず、画面側の指定として `AndroidView.update` から Host の `rootHeader` / `rootFooter` へ渡る。
+
+| 引数 | 描画 |
+|---|---|
+| `rootHeader` / `rootFooter` (`@Composable () -> Unit`) | 任意 Composable を行として置く |
+| `rootHeaderText` / `rootFooterText` (`String`) | View Host の文字列の Root Header / Footer の描画 (文字の大きさ・色・余白・同梱テーマ) で出す。iOS の `.rootHeader(_ text:)` と MAUI の `RootHeaderText` に当たる |
+| 同じ位置に両方 | Composable を表示し、文字列は使わない。例外にはしない |
+
+両方渡したときに Composable を優先するのは、MAUI の `RootHeaderView` が `RootHeaderText` より優先する扱いにそろえ、公開 API の意味を一つに定めて利用者のアプリを実行時に落とさないためである (オーナー合意)。DSL の `Section(...)` の Header / Footer は同じ位置への同時指定を失敗にしており、Root とは扱いが異なる。
 
 ## 利用例
 
@@ -95,7 +107,7 @@ Section 内には基本 Cell 7種と入力 Cell 5種を直接置ける。既存�
 
 | 対象 | 主な操作 |
 |---|---|
-| Root | `style` / `theme` 引数、`rootHeader` / `rootFooter` |
+| Root | `style` / `theme` 引数、`rootHeader` / `rootFooter`、`rootHeaderText` / `rootFooterText` |
 | SectionHandle | `sectionHeader`、`sectionFooter`、`sectionID` |
 | CellHandle / Cell | `font`、`cellHeight`、`titleColor`、`backgroundColor`、`icon`、`cellID` |
 
@@ -142,7 +154,7 @@ Compose は Recomposition ごとに Section / Cell の値を作り直すため�
 - `.sectionID(...)` / `.cellID(...)` は明示 hint を与えるが、引数値そのものを最終 ID 文字列にする API ではない。
 - title、選択値、CellStyle などの内容は identity に含めない。
 
-同じ要素では `forEach` key と `sectionID` / `cellID` を併用しない。どちらか一方だけを identity として指定する。両方を組み合わせた優先順位は [core/ADR-0008](../../../decisions/core/0008-stable-declarative-tree-identity.md) と現行 Android 実装で食い違うためである。
+同じ要素では `forEach` key と `sectionID` / `cellID` を併用しない。どちらか一方だけを identity として指定する。両方を指定すると明示 ID が採用され ([core/ADR-0036](../../../decisions/core/0036-explicit-id-wins-over-collection-key.md))、key による追跡が効かなくなるためである。
 
 位置 fallback は動的な挿入・削除・並べ替えに弱い。動的構造で位置を意味上の identity として使わない。一つの `forEach` item から同じ階層へ複数 Section / Cell を返すと、同じ hint により ID が衝突するため、一 item は一要素へ対応させる。
 
@@ -183,6 +195,41 @@ Store 方式には `theme` 引数がない。利用者は `SettingsRootStore(ini
 
 Theme と CellStyle は UI 層で Jetpack Compose 側の型 `Color`、`TextStyle`、`Dp` を直接持つ。色の未指定は `Color.Unspecified` で表し (Cell 固有の色引数と、`switchCell(accentColor = …)` / `entryCell(placeholderColor = …)` のような DSL の Cell 関数の色引数も同じ型・同じ既定値)、通常属性の解決順は CellStyle、Theme、ライブラリ既定 (現在の外観の light / dark セット。既定へ戻す・派生値を作る入口は `KsSettingsViewDefaults`) である。ホストの XML テーマと Compose の `MaterialTheme` はライブラリ UI の配色に影響しない — Native Host は同梱 Material3 派生テーマの常時ラップで描画し、アプリ側テーマへの前提を持たない ([android/ADR-0020](../../../decisions/android/0020-bundled-theme-always-wrap-host-independent.md))。詳細は [Android Native Host の利用と更新境界](android-native-host.md#ホストのテーマと-activity-型-前提なし) を参照する。
 
+## スクロール制御
+
+命令ハンドル `KsScrollController` の命令・位置・順序保証・何もしない条件は platform 共通で [スクロール制御](../../core/architecture/scroll-control.md) が正、View Host 側の接続口・スレッドの扱い・Activity の作り直しでの位置の復元は [Android Native Host](android-native-host.md) の「スクロール制御」にある。この節は Compose からの渡し方と、DSL 方式での指し方を扱う。
+
+`rememberScrollController()` (`jp.kamusoft.kssettingsview.compose`) は、再コンポジションをまたいで同じ `KsScrollController` を返す。画面の Composable がハンドルを持つときはこれを使い、ViewModel などが持つときは `KsScrollController()` を直接生成する。どちらも `KsSettingsView(..., scrollController = controller)` で渡し、Store 方式・DSL 方式の両方で有効である。`KsSettingsView(...)` がコンポジションを離れると接続は外れる。引数でハンドルを差し替えた・`null` にしたときは、まだ実行していない命令を捨てる (控えた位置の復元は捨てない)。
+
+| 方式 | ハンドルの接続先 | 命令で指す `id` |
+|---|---|---|
+| Store 方式 | 内部の View Host | Store の Cell / Section の `id` |
+| DSL 方式 | 内部の引き直しの受け口 (`DSLScrollCommandResolver`)。最終 ID に直してから View Host の待ち行列へ渡す | 利用者が書いた明示 ID (`cellID(...)` / `sectionID(...)`) か `forEach` の key |
+
+DSL 方式の利用者は、自分が書いた明示 ID か key しか知らず、最終 ID は知らない。受け口はそれを両方の形で最終 ID に計算し、いまの宣言ツリーにあるほうを採る。同じ値が明示 ID と key の両方にあるときは明示 ID の要素を採り ([core/ADR-0036](../../../decisions/core/0036-explicit-id-wins-over-collection-key.md) と同じ優先)、どちらにも無ければ何もしない (`KsCellRegistry.strictMode` なら警告ログ)。明示 ID も key も持たない静的要素 (位置 fallback の要素) は指せない。
+
+引き直しはコンポジションのフレームを 1 回待ってから行う。同じクリックの処理で状態を変えてから出した命令は、そのフレームまでに変更後の宣言ツリーが内部 Store へ流れているため、新しいツリーで解決される。
+
+```kotlin
+@Composable
+fun ItemsScreen(items: SnapshotStateList<Item>) {
+    val scroll = rememberScrollController()
+
+    KsSettingsView(scrollController = scroll, rootFooterText = "ここが内容の末尾です") {
+        Section(header = "項目") {
+            forEach(items) { item -> LabelCell(title = item.title) } // Item は KsIdentifiable
+        }.sectionID("items")
+        Section(header = "操作") {
+            ButtonCell(title = "追加して表示", onTap = {
+                items += Item(id = "new", title = "新しい項目")
+                scroll.scrollTo("new") // 追加後のツリーで key "new" の Cell を指す
+            })
+            ButtonCell(title = "項目の Section へ", onTap = { scroll.scrollToSection("items") })
+        }
+    }
+}
+```
+
 ## 保証すること
 
 - Store 方式と DSL 方式は同じ Native Host と Store / Diff 経路を使う。
@@ -192,6 +239,7 @@ Theme と CellStyle は UI 層で Jetpack Compose 側の型 `Color`、`TextStyle
 - 可視性変更は通常の内容更新へ押し込まず full 更新へ切り替える。
 - Cell modifier は元の Cell を破壊せず、対応する copy または Handle 上の置換として反映する。
 - Theme 更新は Section / Cell の ID と構造を変えない。
+- DSL 方式で状態の変更と同じ処理から出したスクロール命令は、変更後の宣言ツリーで解決される。
 
 ## してはいけないこと
 
@@ -203,6 +251,7 @@ Theme と CellStyle は UI 層で Jetpack Compose 側の型 `Color`、`TextStyle
 - 同じ要素で `forEach` key と明示 `sectionID` / `cellID` を併用しない。
 - 一つの `forEach` item から同階層へ複数要素を返さない。
 - `disabled(true)` を機能する無効化 API として案内しない。
+- DSL 方式のスクロール命令に、内部で解決された最終 ID を渡さない (指すのは明示 ID か `forEach` の key)。
 
 ## 用語
 
@@ -220,6 +269,7 @@ Theme と CellStyle は UI 層で Jetpack Compose 側の型 `Color`、`TextStyle
 ## 関連
 
 - [Android Native Host の利用と更新境界](android-native-host.md)
+- [スクロール制御](../../core/architecture/scroll-control.md)
 - [SettingsRoot・Section・Cell の設定ツリー](../../core/core-model/settings-tree.md)
 - [SettingsRootDiff による構造変更](../../core/core-model/structural-changes.md)
 - [基本 Cell](../../core/cells/basic-cells.md)

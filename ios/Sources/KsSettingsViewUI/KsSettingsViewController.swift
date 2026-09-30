@@ -85,6 +85,27 @@ public final class KsSettingsViewController: UIViewController {
         }
     }
 
+    /// スクロール命令を受け取るハンドル。
+    ///
+    /// 代入するとハンドルがこの画面へ接続され、ハンドルの命令 (`scrollTo(id:)` など) がこの画面に
+    /// 届きます。`nil` を代入したとき・`disconnectStore()` を呼んだとき・この画面が破棄されたときは
+    /// 接続が外れ、以後の命令は何もしません。`disconnectStore()` ではこのプロパティも `nil` に戻ります。
+    ///
+    /// 1 つのハンドルが命令を届ける先は、最後に接続した画面だけです。ハンドルはこの画面を保持しない
+    /// ため、ハンドルを画面より長く持っても画面の寿命は延びません。
+    ///
+    /// ID は Cell の `KsCellID` と Section の `id` です。
+    public var scrollController: KsScrollController? {
+        didSet {
+            guard oldValue !== scrollController else { return }
+            oldValue?.detach(self)
+            // 外した接続から届いていた未実行の命令は捨てる。控えた位置の復元は Host 自身への
+            // 要求なので残す。
+            dropPendingScrollCommands()
+            scrollController?.attach(self)
+        }
+    }
+
     // MARK: - 内部状態
 
     /// 内部 Cell レジストリ（DI 可能）
@@ -114,7 +135,7 @@ public final class KsSettingsViewController: UIViewController {
     /// `root.sections` から `Section.isVisible` および各 Cell の `VisibilityAware.isVisible` で
     /// フィルタした visible projection。`indexPath` 経由の描画系（layout / supplementary view /
     /// separator）はこの projection を参照する（仕様: `visible projection の二重管理`）。
-    private var visibleSections: [KsSettingsViewCore.Section] = []
+    internal private(set) var visibleSections: [KsSettingsViewCore.Section] = []
 
     /// 直近に Root Header / Footer へ適用した Section 単位余白。
     ///
@@ -135,6 +156,41 @@ public final class KsSettingsViewController: UIViewController {
     /// Store は Controller より長命になりうるため weak 参照とし、Store 側の購読者経由で
     /// Store 自身が retain され続ける循環を作らない。
     private weak var connectedStore: SettingsRootStore?
+
+    // MARK: - スクロール命令の待ち行列の状態
+
+    /// 進行中の snapshot 適用の数。全 apply 経路が `applySnapshot` を通り、完了で減る。
+    /// 0 でない間は行の位置が確定していないため、スクロール命令を実行しない。
+    internal private(set) var applyingSnapshotCount = 0
+
+    /// 最初の snapshot 適用が完了したか。未完了の間は命令の対象を解決できない。
+    internal private(set) var hasAppliedInitialSnapshot = false
+
+    /// 受け取ってから、まだ 1 回の遅延を経ていない命令。
+    internal var incomingScrollEntries: [KsScrollQueueEntry] = []
+
+    /// 遅延を経て、実行できる状態になるのを待っている命令。
+    internal var readyScrollEntries: [KsScrollQueueEntry] = []
+
+    /// 受け取った命令を遅らせる `main.async` を予約済みか。
+    internal var isScrollDeferralScheduled = false
+
+    /// 命令によるアニメーション付きスクロールの進行状態。進行中でなければ `nil`。
+    internal var activeScrollAnimation: KsActiveScrollAnimation?
+
+    /// 命令によるアニメーション付きスクロールを画面の更新ごとに進める。初めて要るときに作る。
+    internal var scrollAnimationTicker: KsScrollAnimationTicker?
+
+    /// 処理し終えた命令の数。対象が見つからず何もしなかった命令も数える
+    /// (表示に変化を起こさない命令でも、処理が済んだ時点をテストが待てるようにするため)。
+    internal var processedScrollCommandCount = 0
+
+    /// レイアウトの途中で命令を実行した後の、祖先の view への再レイアウトの要求を予約済みか。
+    internal var isAncestorRelayoutScheduled = false
+
+    /// 直近の命令の実行 (`flushScrollEntriesIfPossible()`) で、最後に位置を決めた行き先と合わせる位置。
+    /// その実行で行き先が 1 件も求まらなければ `nil`。祖先の再レイアウトの後に位置を解き直すために使う。
+    internal var lastSettledScroll: (target: KsScrollTarget, position: KsScrollPosition)?
 
     // MARK: - 初期化
 
@@ -306,7 +362,11 @@ public final class KsSettingsViewController: UIViewController {
     /// 表示中の内容はそのまま残るため、view 階層からの取り外しと参照の破棄は呼び出し側の責務。
     /// 冪等であり、Store 未接続および解除済みの状態で呼んでも何も起きない。
     /// 再接続用の API は持たない — 再接続は同じ Store から新しい Controller を生成して行う。
+    ///
+    /// `scrollController` の接続も外して `nil` に戻す。同じ Store から作り直した Controller へ
+    /// ハンドルをつなぐときは、その Controller の `scrollController` へ改めて代入する。
     public func disconnectStore() {
+        scrollController = nil
         storeSubscription?.cancel()
         storeSubscription = nil
         contentUpdateSubscription?.cancel()
@@ -404,7 +464,7 @@ public final class KsSettingsViewController: UIViewController {
         } else {
             snapshot.reloadItems(snapshot.itemIdentifiers)
         }
-        dataSource.apply(snapshot, animatingDifferences: false)
+        applySnapshot(snapshot, to: dataSource, animatingDifferences: false)
         // Section / Cell の identity は変えずに、装飾だけを新しい値で描き直す。
         collectionView?.collectionViewLayout.invalidateLayout()
     }
@@ -454,6 +514,19 @@ public final class KsSettingsViewController: UIViewController {
         applyScrollIndicatorVisibility(theme: currentTheme)
         // Section 単位の余白のうち list 端に接する分を反映
         applyListEdgeMargin()
+    }
+
+    public override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        // 読み込み前・画面外で受けた命令は、表示の寸法が決まったこの時点で実行する。
+        if flushScrollEntriesIfPossible() {
+            // レイアウトの途中で表示位置を動かすと、それに連動して祖先の寸法が変わることがある
+            // (大きいタイトルのナビゲーションバーが縮み、画面の表示領域が伸びる)。この変化は
+            // レイアウトの途中で起きるため、祖先の view の再レイアウトが行われず、
+            // 子の view が変化前の寸法のまま残ることがある。レイアウトを終えた後で祖先に
+            // レイアウトをもう一度求め、寸法を追従させる。
+            scheduleAncestorRelayout()
+        }
     }
 
     public override func viewWillAppear(_ animated: Bool) {
@@ -1034,7 +1107,7 @@ public final class KsSettingsViewController: UIViewController {
         } else {
             snapshot.reloadItems(snapshot.itemIdentifiers)
         }
-        dataSource.apply(snapshot, animatingDifferences: false)
+        applySnapshot(snapshot, to: dataSource, animatingDifferences: false)
     }
 
     /// 内部レイアウトを再構築する。`style` 変更時 / Root H/F の出現・消失時に呼ばれる。
@@ -1077,6 +1150,29 @@ public final class KsSettingsViewController: UIViewController {
         // 基本 Cell（CommandCell / ButtonCell / CheckboxCell / RadioCell / SimpleCheckCell）の
         // `tapHandler` を didSelectItemAt から呼び出して通知を発火する。
         self.collectionView.delegate = self
+    }
+
+    /// snapshot を data source へ適用する共通の入口。全 apply 経路はここを通す。
+    ///
+    /// 進行中の適用の数を数え、最後の適用が完了した時点で保留中のスクロール命令を実行する。
+    /// アニメーション付きの適用の途中では行の位置が確定しないため、命令はその完了を待つ。
+    /// 適用の順序・アニメーションの有無・呼び出し元の完了処理はそのまま保つ (呼び出し元の完了処理を
+    /// 先に走らせてから数を減らすので、命令は完了処理が整えたレイアウトの上で実行される)。
+    private func applySnapshot(
+        _ snapshot: NSDiffableDataSourceSnapshot<UUID, KsCellID>,
+        to dataSource: UICollectionViewDiffableDataSource<UUID, KsCellID>,
+        animatingDifferences: Bool,
+        completion: (() -> Void)? = nil
+    ) {
+        applyingSnapshotCount += 1
+        dataSource.apply(snapshot, animatingDifferences: animatingDifferences) { [weak self] in
+            completion?()
+            guard let self else { return }
+            self.applyingSnapshotCount = max(0, self.applyingSnapshotCount - 1)
+            self.hasAppliedInitialSnapshot = true
+            guard self.applyingSnapshotCount == 0 else { return }
+            self.flushScrollEntriesIfPossible()
+        }
     }
 
     // MARK: - Cell Provider
@@ -1539,7 +1635,18 @@ public final class KsSettingsViewController: UIViewController {
         } else {
             snapshot.reloadItems(targets)
         }
-        dataSource.apply(snapshot, animatingDifferences: false)
+        applySnapshot(snapshot, to: dataSource, animatingDifferences: false)
+    }
+
+    /// model (hidden を含む) に指定の Cell が存在するか。スクロール命令で「非表示」と「存在しない」を
+    /// 区別するために使う。
+    internal func modelContainsCell(_ cellID: KsCellID) -> Bool {
+        cellIndex[cellID] != nil
+    }
+
+    /// model (hidden を含む) に指定の Section が存在するか。
+    internal func modelContainsSection(_ sectionID: UUID) -> Bool {
+        sectionIndex[sectionID] != nil
     }
 
     /// `root.sections` から `sectionIndex` / `cellIndex` を作り直す。
@@ -1644,7 +1751,7 @@ public final class KsSettingsViewController: UIViewController {
             snapshot.reloadItems(contentTargets.reload)
         }
 
-        dataSource.apply(snapshot, animatingDifferences: animated) { [weak self] in
+        applySnapshot(snapshot, to: dataSource, animatingDifferences: animated) { [weak self] in
             // 案 A 適用後: sectionProvider は `self.visibleSections` を最新で参照するが、
             // 「section 構造は不変 + section 内部の header/footer 構造のみ変化」というケースでは
             // sectionProvider が自動再評価されないため、完了後に invalidate して再評価を促す。
@@ -1702,7 +1809,7 @@ public final class KsSettingsViewController: UIViewController {
         let itemIDs = visibleCells.map { KsCellID(cell: $0) }
         snapshot.appendItems(itemIDs, toSection: section.id)
 
-        dataSource.apply(snapshot, animatingDifferences: true) { [weak self] in
+        applySnapshot(snapshot, to: dataSource, animatingDifferences: true) { [weak self] in
             self?.collectionView?.collectionViewLayout.invalidateLayout()
         }
     }
@@ -1739,7 +1846,7 @@ public final class KsSettingsViewController: UIViewController {
         if snapshot.sectionIdentifiers.contains(sectionID) {
             snapshot.deleteSections([sectionID])
         }
-        dataSource.apply(snapshot, animatingDifferences: true) { [weak self] in
+        applySnapshot(snapshot, to: dataSource, animatingDifferences: true) { [weak self] in
             self?.collectionView?.collectionViewLayout.invalidateLayout()
         }
     }
@@ -1790,7 +1897,7 @@ public final class KsSettingsViewController: UIViewController {
             snapshot.moveSection(movedSection.id, beforeSection: beforeID)
         }
 
-        dataSource.apply(snapshot, animatingDifferences: true) { [weak self] in
+        applySnapshot(snapshot, to: dataSource, animatingDifferences: true) { [weak self] in
             self?.collectionView?.collectionViewLayout.invalidateLayout()
         }
     }
@@ -1893,7 +2000,7 @@ public final class KsSettingsViewController: UIViewController {
             let beforeID = existingItemIDs[visibleInsertIdx]
             snapshot.insertItems([cellID], beforeItem: beforeID)
         }
-        dataSource.apply(snapshot, animatingDifferences: true)
+        applySnapshot(snapshot, to: dataSource, animatingDifferences: true)
     }
 
     private func applyRemoveCell(
@@ -1950,7 +2057,7 @@ public final class KsSettingsViewController: UIViewController {
         var snapshot = dataSource.snapshot()
         if snapshot.itemIdentifiers.contains(cellID) {
             snapshot.deleteItems([cellID])
-            dataSource.apply(snapshot, animatingDifferences: true)
+            applySnapshot(snapshot, to: dataSource, animatingDifferences: true)
         }
     }
 
@@ -2037,7 +2144,7 @@ public final class KsSettingsViewController: UIViewController {
         } else {
             snapshot.reloadItems([cellID])
         }
-        dataSource.apply(snapshot, animatingDifferences: true)
+        applySnapshot(snapshot, to: dataSource, animatingDifferences: true)
     }
 
     private func applyMoveCell(
@@ -2123,7 +2230,7 @@ public final class KsSettingsViewController: UIViewController {
             let beforeID = working[clamped]
             snapshot.moveItem(cellID, beforeItem: beforeID)
         }
-        dataSource.apply(snapshot, animatingDifferences: true)
+        applySnapshot(snapshot, to: dataSource, animatingDifferences: true)
     }
 
     // MARK: - Diff: Accessory / Theme
@@ -2204,7 +2311,7 @@ public final class KsSettingsViewController: UIViewController {
             var snapshot = dataSource.snapshot()
             if snapshot.sectionIdentifiers.contains(sectionID) {
                 snapshot.reloadSections([sectionID])
-                dataSource.apply(snapshot, animatingDifferences: true) { [weak self] in
+                applySnapshot(snapshot, to: dataSource, animatingDifferences: true) { [weak self] in
                     self?.collectionView?.collectionViewLayout.invalidateLayout()
                 }
             }
@@ -2561,6 +2668,11 @@ extension KsSettingsViewController: UICollectionViewDelegate {
             self.pendingDeselectTask = nil
             self.deselectAllItems(animated: true)
         }
+    }
+
+    /// 利用者がドラッグを始めたら、命令によるスクロールをその場で止める。
+    public func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        stopActiveScrollAnimation()
     }
 }
 

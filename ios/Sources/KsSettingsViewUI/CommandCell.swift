@@ -28,7 +28,7 @@ public struct CommandCell: KsCell, DSLReidentifiable, DSLStyleModifiable, DSLIco
     public let hintText: String?
     /// Disclosure Indicator を非表示にするフラグ（既定 `false`、つまり表示）
     public let hideArrow: Bool
-    /// タップ時に発火するクロージャ
+    /// タップ時に発火するクロージャ。メインスレッドから呼ばれる (`KsCell` の「通知のクロージャが呼ばれるスレッド」を参照)。
     public let onTap: (@Sendable () -> Void)?
     /// 有効／無効フラグ（既定 `true`）。`false` のときはタップを受け付けず、
     /// テキスト色を `Theme.disabledTextColor` に置換する。

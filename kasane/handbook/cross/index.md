@@ -6,7 +6,7 @@
 |---|---|---|
 | [comment-policy.md](comment-policy.md) | **常時** (コメント構文を持つ全ソースコード。テスト・Sample を含む) | rule |
 | [test-execution.md](test-execution.md) | テストを実行するとき・テスト結果を報告するとき | rule |
-| [runtime-behavior-verification.md](runtime-behavior-verification.md) | 実行時挙動 (IME・フォーカス・アニメーション・タイミング) が絡む不具合を調査・修正し、完了を判定するとき | rule |
+| [runtime-behavior-verification.md](runtime-behavior-verification.md) | 実行時挙動 (IME・フォーカス・アニメーション・タイミング) が絡む不具合を調査・修正し、完了を判定するとき。スクロール制御 (命令・位置の計算・位置の控えと戻し) を変更して完了を判定するとき | rule |
 | [sample-parity.md](sample-parity.md) | `samples/` のデモ画面・文言・デモデータを追加・変更するとき | rule |
 | [public-identifiers.md](public-identifiers.md) | 公開識別子・namespace・application ID・配布座標を決めるとき (`**/build.gradle.kts` / `ios/Package.swift` / `**/*.csproj` を触るとき) | rule |
 | [diagnostic-message-language.md](diagnostic-message-language.md) | 本体コードに例外・ログ・assert・deprecated 警告などの開発者向け文字列を追加・変更するとき | rule |

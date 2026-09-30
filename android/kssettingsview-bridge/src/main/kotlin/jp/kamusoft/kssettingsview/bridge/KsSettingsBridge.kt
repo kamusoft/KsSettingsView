@@ -8,6 +8,8 @@ import jp.kamusoft.kssettingsview.core.RootAccessory
 import jp.kamusoft.kssettingsview.core.SectionAccessory
 import jp.kamusoft.kssettingsview.core.SettingsAccessory
 import jp.kamusoft.kssettingsview.core.SettingsRoot
+import jp.kamusoft.kssettingsview.ui.KsScrollAnchor
+import jp.kamusoft.kssettingsview.ui.KsScrollController
 import jp.kamusoft.kssettingsview.ui.KsSettingsView
 import jp.kamusoft.kssettingsview.ui.KsSettingsViewStyle
 import jp.kamusoft.kssettingsview.ui.SettingsRootStore
@@ -31,6 +33,9 @@ import jp.kamusoft.kssettingsview.ui.SettingsRootStore
  * 破棄（[dispose]）は冪等で、破棄後の操作 API と Host 生成はすべて no-op になる。破棄後は
  * Store を操作しないため、呼び出し側が保持し続けている Host の表示も変化しない。
  *
+ * スクロール命令（[scrollToCell] など）は Store を経由せず、Bridge が持つ 1 つの命令ハンドルを
+ * 通じて生きている Host へ届く。Host を手放すときはその表示位置を控え、次に作る Host で戻す。
+ *
  * ユーザー操作は [interactionListener] へ通知する（maui/ADR-0003）。listener は強参照で保持する
  * ため、不要になったら `null` を設定して解除する。未設定・解除後の通知は破棄される。
  *
@@ -49,6 +54,16 @@ class KsSettingsBridge {
     /** 生成済みの Native Host。未生成のときは `null`。 */
     private var hostView: KsSettingsView? = null
 
+    /**
+     * 生成済みの Host の表示位置を、window に取り付けられている間控え続けるもの。Host が無いときは `null`。
+     *
+     * Host は window から外れた後に解放されることがあり（MAUI の Handler の切断はページが画面から外れた
+     * 後に届く）、その時点の Host からは位置を控えられないため。
+     */
+    @get:JvmSynthetic
+    internal var hostAnchorTracker: KsBridgeHostAnchorTracker? = null
+        private set
+
     /** 破棄済みかどうか。 */
     @get:JvmSynthetic
     internal var isDisposed: Boolean = false
@@ -63,6 +78,24 @@ class KsSettingsBridge {
      */
     @get:JvmSynthetic
     internal var style: KsSettingsViewStyle = KsSettingsViewStyle.Classic
+        private set
+
+    /**
+     * スクロール命令を Host へ届けるハンドル。
+     *
+     * Host を作るたびにその Host へつなぎ直す。Host が無い間の命令はハンドルが未接続のため何も
+     * 起こさない（Host 不在の判定を Bridge 側で持たず、Native の契約にそのまま委ねる）。
+     */
+    @get:JvmSynthetic
+    internal val scrollController: KsScrollController = KsScrollController()
+
+    /**
+     * 手放した Host から控えた表示位置。次に作る Host へ渡した時点で使い切る。
+     *
+     * 位置は Host の世代をまたいで生きる Bridge が持つ（maui/ADR-0030）。
+     */
+    @get:JvmSynthetic
+    internal var scrollAnchor: KsScrollAnchor? = null
         private set
 
     /**
@@ -101,6 +134,10 @@ class KsSettingsBridge {
      * Host を view 階層へ取り付ける前に行ってよく、渡した値は最初の表示に含まれる。
      * 解放後は解放前と別の `Context` を渡してもよい。
      *
+     * 新しい Host を作ったときは、スクロール命令をその Host へ届くようにする。前の Host を
+     * [releaseHost] で手放したときに控えた表示位置があれば、その位置へ戻す要求を済ませてから返す。
+     * 戻すのは初回の表示の後で、この後に出したスクロール命令は戻した後に実行される。
+     *
      * @param context Host の生成に使う `Context`（Bridge のフィールドとしては保持しないが、
      *   生成された Host が保持する）
      * @return view 階層へ取り付ける Native Host
@@ -111,6 +148,13 @@ class KsSettingsBridge {
         val view = KsSettingsView(context)
         view.style = style
         view.bind(store)
+        view.scrollController = scrollController
+        hostAnchorTracker = KsBridgeHostAnchorTracker(view)
+        // 戻しは命令と同じ待ち行列に積まれるため、ここで積めば Host 生成後に届く命令より先に処理される。
+        scrollAnchor?.let {
+            view.restoreScrollAnchor(it)
+            scrollAnchor = null
+        }
         hostView = view
         return view
     }
@@ -125,11 +169,21 @@ class KsSettingsBridge {
      * root の header / footer は Store ではなく Host が持つプロパティのため、解放とともに失われる。
      * 再生成した Host へ引き継ぐ場合は、呼び出し側が値を保持して [updateAccessory] で再適用する。
      *
+     * 解放の前に Host の表示位置（表示範囲の上端にかかる要素と、そこからのずれ）を控え、次に生成する
+     * Host で戻す。Host が既に window から外れていれば、外れる直前に表示していた位置を控える。
+     * 控えられる内容が無い Host（一度も行を配置していないなど）を解放したときは控えを持たず、
+     * 次の Host は内容の先頭から表示する。解放した Host へはスクロール命令が届かなくなる。
+     *
      * 冪等であり、Host 不在時（未生成・解放済み）および破棄済みの Bridge では no-op になる。
      */
     fun releaseHost() {
         if (isDisposed) return
         val view = hostView ?: return
+        val tracker = hostAnchorTracker
+        scrollAnchor = tracker?.anchorForRelease() ?: view.captureScrollAnchor()
+        tracker?.stop()
+        hostAnchorTracker = null
+        // Store からの切断はスクロール命令ハンドルの接続も外す。
         view.unbind()
         hostView = null
     }
@@ -140,11 +194,16 @@ class KsSettingsBridge {
      * Bridge を破棄する。冪等であり、破棄後の操作 API と Host 生成は no-op になる。
      *
      * 破棄と同時に [interactionListener] を解除するため、破棄後のユーザー操作は通知されない。
+     * 控えていた表示位置も捨て、保持し続けている Host へもスクロール命令は届かなくなる。
      */
     fun dispose() {
         if (isDisposed) return
         isDisposed = true
+        hostView?.scrollController = null
+        hostAnchorTracker?.stop()
+        hostAnchorTracker = null
         hostView = null
+        scrollAnchor = null
         interactionRelay.listener = null
     }
 
@@ -445,8 +504,8 @@ class KsSettingsBridge {
      * 見た目スタイルを適用する。
      *
      * スタイルは Store を経由せず Host のプロパティへ直接適用する — Native 側でもスタイルは
-     * Store の管理外にあり、この操作だけが Store 公開操作との 1 対 1（maui/ADR-0002）の枠外に
-     * なる（maui/ADR-0023）。Host 未生成のときは値を控え、次の Host 生成時に適用する。
+     * Store の管理外にあり、この操作はスクロール命令と並んで Store 公開操作との 1 対 1
+     * （maui/ADR-0002）の枠外になる（maui/ADR-0023）。Host 未生成のときは値を控え、次の Host 生成時に適用する。
      *
      * @param style 見た目スタイルの序数（Classic = 0 / Modern = 1）。定義域外は Classic
      */
@@ -455,6 +514,63 @@ class KsSettingsBridge {
         val resolved = KsBridgeStyle.style(style)
         this.style = resolved
         hostView?.style = resolved
+    }
+
+    // MARK: - スクロール命令
+
+    /**
+     * 指定 ID の Cell の行へスクロールする。
+     *
+     * Store を経由しない更新 API で、[setStyle] と同じく Store 公開操作との 1 対 1 の枠外にある。
+     * 命令は、同じ処理の中で行った更新が表示に反映された後に実行される。非表示の Cell・未知の ID・
+     * canonical UUID として解釈できない ID、Host が無いとき、および破棄済みの Bridge では何もしない。
+     *
+     * @param cellID 対象 Cell の cellID
+     * @param position 行を表示範囲のどこへ合わせるか（Start = 0 / Center = 1 / End = 2）。定義域外は Start
+     * @param animated アニメーションするか
+     */
+    fun scrollToCell(cellID: String, position: Int, animated: Boolean) {
+        if (isDisposed) return
+        val id = KsBridgeIdentifier.canonical(cellID) ?: return
+        scrollController.scrollTo(id, KsBridgeScrollPosition.position(position), animated)
+    }
+
+    /**
+     * 指定 ID の Section へ、見出しごと見えるようにスクロールする。
+     *
+     * 何もしない条件は [scrollToCell] と同じ。
+     *
+     * @param sectionID 対象 Section の sectionID
+     * @param position Section の範囲を表示範囲のどこへ合わせるか（Start = 0 / Center = 1 / End = 2）。
+     *   定義域外は Start
+     * @param animated アニメーションするか
+     */
+    fun scrollToSection(sectionID: String, position: Int, animated: Boolean) {
+        if (isDisposed) return
+        val id = KsBridgeIdentifier.canonical(sectionID) ?: return
+        scrollController.scrollToSection(id, KsBridgeScrollPosition.position(position), animated)
+    }
+
+    /**
+     * 内容の最上端（Root Header を含む）へスクロールする。Host が無いときと破棄済みの Bridge では
+     * 何もしない。
+     *
+     * @param animated アニメーションするか
+     */
+    fun scrollToStart(animated: Boolean) {
+        if (isDisposed) return
+        scrollController.scrollToStart(animated)
+    }
+
+    /**
+     * 内容の最下端（Root Footer を含む）へスクロールする。Host が無いときと破棄済みの Bridge では
+     * 何もしない。
+     *
+     * @param animated アニメーションするか
+     */
+    fun scrollToEnd(animated: Boolean) {
+        if (isDisposed) return
+        scrollController.scrollToEnd(animated)
     }
 
     // MARK: - 内部ヘルパ
