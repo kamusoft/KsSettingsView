@@ -31,6 +31,7 @@ public struct TimePickerCell: KsCell, DSLReidentifiable, DSLStyleModifiable, DSL
     public let is24Hour: Bool
     public let pickerTitle: String?
     public let accentColor: UIColor?
+    /// 時刻を確定したときに呼ばれるクロージャ。メインスレッドから呼ばれる (`KsCell` の「通知のクロージャが呼ばれるスレッド」を参照)。
     public let onValueChanged: (@Sendable (Date) -> Void)?
     public let isEnabled: Bool
     public let isVisible: Bool

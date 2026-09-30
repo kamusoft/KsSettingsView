@@ -56,23 +56,28 @@ final class SpikeBoxAttributes: UICollectionViewLayoutAttributes {
         return copied
     }
 
+    // `isEqual` / `hash` は NSObject 由来でメインアクターに隔離されないが、layout からの
+    // 呼び出しは常にメインスレッドなので、`MainActor.assumeIsolated` の中で装飾値を読む。
     override func isEqual(_ object: Any?) -> Bool {
-        guard let other = object as? SpikeBoxAttributes else { return false }
-        return super.isEqual(object)
-            && cornerRadius == other.cornerRadius
-            && borderWidth == other.borderWidth
-            && borderColor == other.borderColor
-            && boxBackgroundColor == other.boxBackgroundColor
+        guard let other = object as? SpikeBoxAttributes, super.isEqual(object) else { return false }
+        return MainActor.assumeIsolated {
+            cornerRadius == other.cornerRadius
+                && borderWidth == other.borderWidth
+                && borderColor == other.borderColor
+                && boxBackgroundColor == other.boxBackgroundColor
+        }
     }
 
     override var hash: Int {
-        var hasher = Hasher()
-        hasher.combine(super.hash)
-        hasher.combine(cornerRadius)
-        hasher.combine(borderWidth)
-        hasher.combine(borderColor)
-        hasher.combine(boxBackgroundColor)
-        return hasher.finalize()
+        MainActor.assumeIsolated {
+            var hasher = Hasher()
+            hasher.combine(super.hash)
+            hasher.combine(cornerRadius)
+            hasher.combine(borderWidth)
+            hasher.combine(borderColor)
+            hasher.combine(boxBackgroundColor)
+            return hasher.finalize()
+        }
     }
 }
 

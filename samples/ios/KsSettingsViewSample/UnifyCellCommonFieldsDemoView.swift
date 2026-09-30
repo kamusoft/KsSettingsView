@@ -13,6 +13,9 @@ import KsSettingsViewSwiftUI
 
 /// 7 種 Cell の共通フィールド（description / valueText / icon / hintText）と
 /// Radio / SimpleCheck の accentColor を、組み合わせを変えながら一覧できるデモ画面。
+///
+/// Cell の通知 (`onValueChanged` / `onSelected` 等) は `@Sendable` の閉包で受け取るが、呼ばれるのは
+/// 常にメインスレッドなので、`MainActor.assumeIsolated` の中で `@State` を書き換える。
 struct UnifyCellCommonFieldsDemoView: View {
 
     @State private var switchOn1: Bool = true
@@ -33,7 +36,7 @@ struct UnifyCellCommonFieldsDemoView: View {
                     icon: KsImage.systemName("bell"),
                     hintText: "推奨",
                     isOn: switchOn1,
-                    onValueChanged: { switchOn1 = $0 }
+                    onValueChanged: { newValue in MainActor.assumeIsolated { switchOn1 = newValue } }
                 )
                 SwitchCell(
                     title: "Wi-Fi のみ同期",
@@ -41,7 +44,7 @@ struct UnifyCellCommonFieldsDemoView: View {
                     icon: KsImage.systemName("wifi"),
                     hintText: "省データ",
                     isOn: switchOn2,
-                    onValueChanged: { switchOn2 = $0 }
+                    onValueChanged: { newValue in MainActor.assumeIsolated { switchOn2 = newValue } }
                 )
             }
 
@@ -52,7 +55,7 @@ struct UnifyCellCommonFieldsDemoView: View {
                     description: "全文を読みました",
                     icon: KsImage.systemName("doc.text"),
                     isChecked: checkbox1,
-                    onValueChanged: { checkbox1 = $0 }
+                    onValueChanged: { newValue in MainActor.assumeIsolated { checkbox1 = newValue } }
                 )
             }
 
@@ -66,7 +69,7 @@ struct UnifyCellCommonFieldsDemoView: View {
                     value: "light",
                     selectedValue: selectedTheme,
                     accentColor: SampleTheme.demoAccentOrange,
-                    onSelected: { selectedTheme = $0 }
+                    onSelected: { newValue in MainActor.assumeIsolated { selectedTheme = newValue } }
                 )
                 RadioCell(
                     title: "ダーク",
@@ -78,7 +81,7 @@ struct UnifyCellCommonFieldsDemoView: View {
                     value: "dark",
                     selectedValue: selectedTheme,
                     accentColor: SampleTheme.demoAccentPurple,
-                    onSelected: { selectedTheme = $0 }
+                    onSelected: { newValue in MainActor.assumeIsolated { selectedTheme = newValue } }
                 )
                 RadioCell(
                     title: "自動",
@@ -88,7 +91,7 @@ struct UnifyCellCommonFieldsDemoView: View {
                     value: "auto",
                     selectedValue: selectedTheme,
                     accentColor: SampleTheme.demoAccentTeal,
-                    onSelected: { selectedTheme = $0 }
+                    onSelected: { newValue in MainActor.assumeIsolated { selectedTheme = newValue } }
                 )
             }
 
@@ -101,7 +104,7 @@ struct UnifyCellCommonFieldsDemoView: View {
                     hintText: "新規",
                     isChecked: simpleCheck1,
                     accentColor: SampleTheme.demoAccentPink,
-                    onValueChanged: { simpleCheck1 = $0 }
+                    onValueChanged: { newValue in MainActor.assumeIsolated { simpleCheck1 = newValue } }
                 )
                 SimpleCheckCell(
                     title: "通知 2",
@@ -109,7 +112,7 @@ struct UnifyCellCommonFieldsDemoView: View {
                     icon: KsImage.systemName("calendar"),
                     isChecked: simpleCheck2,
                     accentColor: SampleTheme.demoAccentGreen,
-                    onValueChanged: { simpleCheck2 = $0 }
+                    onValueChanged: { newValue in MainActor.assumeIsolated { simpleCheck2 = newValue } }
                 )
             }
 

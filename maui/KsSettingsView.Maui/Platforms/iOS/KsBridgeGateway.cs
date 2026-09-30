@@ -157,6 +157,20 @@ internal sealed class KsBridgeGateway : IKsSettingsGateway
     public void SetStyle(SettingsViewStyle style) => _bridge.SetStyle(KsWireValues.ListStyle(style));
 
     /// <inheritdoc/>
+    public void ScrollToCell(string cellId, ScrollPosition position, bool animated)
+        => _bridge.ScrollToCell(cellId, KsWireValues.ScrollPosition(position), animated);
+
+    /// <inheritdoc/>
+    public void ScrollToSection(string sectionId, ScrollPosition position, bool animated)
+        => _bridge.ScrollToSection(sectionId, KsWireValues.ScrollPosition(position), animated);
+
+    /// <inheritdoc/>
+    public void ScrollToStart(bool animated) => _bridge.ScrollToStart(animated);
+
+    /// <inheritdoc/>
+    public void ScrollToEnd(bool animated) => _bridge.ScrollToEnd(animated);
+
+    /// <inheritdoc/>
     public void AttachIcons(IKsIconStore icons)
     {
         ArgumentNullException.ThrowIfNull(icons);

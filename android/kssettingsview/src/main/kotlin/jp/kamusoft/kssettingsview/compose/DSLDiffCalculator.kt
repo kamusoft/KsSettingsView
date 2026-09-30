@@ -132,7 +132,6 @@ internal object DSLDiffCalculator {
         new: List<Section>,
     ): List<SettingsRootDiff> {
         val diffs = mutableListOf<SettingsRootDiff>()
-        val oldIds = old.map { it.id }.toSet()
         val newIds = new.map { it.id }.toSet()
 
         // 削除
@@ -142,26 +141,109 @@ internal object DSLDiffCalculator {
             }
         }
 
-        // 追加
-        for ((idx, section) in new.withIndex()) {
-            if (section.id !in oldIds) {
-                diffs.add(
-                    SettingsRootDiff.InsertSection(index = idx, section = section),
-                )
-            }
+        // 追加と移動（相対順序が変わった Section だけを移し、追加・削除でずれただけの Section は
+        // 動かさない）。index / from / to は適用時点の並び（削除 → 追加 → 移動の順に適用）で表す。
+        val plan = planReorder(old = old.map { it.id }, new = new.map { it.id })
+        val sectionsById = new.associateBy { it.id }
+        for (insert in plan.inserts) {
+            diffs.add(
+                SettingsRootDiff.InsertSection(index = insert.index, section = sectionsById.getValue(insert.id)),
+            )
         }
-
-        // 移動
-        for ((newIdx, section) in new.withIndex()) {
-            if (section.id in oldIds) {
-                val oldIdx = old.indexOfFirst { it.id == section.id }
-                if (oldIdx != newIdx) {
-                    diffs.add(SettingsRootDiff.MoveSection(from = oldIdx, to = newIdx))
-                }
-            }
+        for (move in plan.moves) {
+            diffs.add(SettingsRootDiff.MoveSection(from = move.from, to = move.to))
         }
 
         return diffs
+    }
+
+    // MARK: - 追加位置と最小移動の算出
+
+    /** 並びへの 1 回の追加。適用時点の並びの [index] へ [id] を挿入する。 */
+    internal data class Insert(val id: String, val index: Int)
+
+    /**
+     * 並びの中の 1 回の移動。適用時点の並びで [from] から取り除き、取り除いた後の並びの [to] へ
+     * 挿入する（Store の `moveSection` / `moveCell` と同じ解釈）。
+     */
+    internal data class Move(val id: String, val from: Int, val to: Int)
+
+    /** 旧の並びを新の並びへそろえる追加と移動の列。削除（新に無い ID）はこれより先に適用する前提。 */
+    internal data class ReorderPlan(val inserts: List<Insert>, val moves: List<Move>)
+
+    /**
+     * 旧の並び [old] を新の並び [new] へそろえる追加と移動を、移動が最小になるように求める。
+     *
+     * 両方にある ID のうち、新の順で見た最長増加部分列（相対順序を保てる最大の集合）に入るものは
+     * 動かさない。追加する ID は新の順で直前にある「動かさない ID か先に追加した ID」の直後へ
+     * 入れるため、動かさない ID と追加した ID は最初から新の相対順序に並ぶ。残りの ID だけを新の順に、
+     * 直前の ID の直後へ移す。直前の ID はいずれも配置済みなので、すべて適用すると [new] と一致する。
+     * 途中への追加や削除でずれただけの並びは移動 0 件になり、追加の位置は新の位置そのものになる。
+     */
+    internal fun planReorder(old: List<String>, new: List<String>): ReorderPlan {
+        val oldIds = old.toHashSet()
+        val newIndex = HashMap<String, Int>(new.size * 2)
+        for ((idx, id) in new.withIndex()) {
+            newIndex[id] = idx
+        }
+        // 削除を適用した後の並び
+        val current = old.filterTo(mutableListOf()) { it in newIndex }
+        val stable = longestIncreasingSubsequence(current.map { newIndex.getValue(it) })
+            .mapTo(HashSet()) { current[it] }
+
+        val inserts = mutableListOf<Insert>()
+        var lastPlaced: String? = null
+        for (id in new) {
+            if (id !in oldIds) {
+                val index = lastPlaced?.let { current.indexOf(it) + 1 } ?: 0
+                current.add(index, id)
+                inserts.add(Insert(id = id, index = index))
+                stable.add(id)
+            }
+            if (id in stable) lastPlaced = id
+        }
+
+        val moves = mutableListOf<Move>()
+        for ((idx, id) in new.withIndex()) {
+            if (id in stable) continue
+            val from = current.indexOf(id)
+            current.removeAt(from)
+            val to = if (idx == 0) 0 else current.indexOf(new[idx - 1]) + 1
+            current.add(to, id)
+            moves.add(Move(id = id, from = from, to = to))
+        }
+        return ReorderPlan(inserts = inserts, moves = moves)
+    }
+
+    /**
+     * [sequence] の狭義の最長増加部分列を、[sequence] 上の位置の昇順で返す (O(n log n))。
+     */
+    private fun longestIncreasingSubsequence(sequence: List<Int>): List<Int> {
+        if (sequence.isEmpty()) return emptyList()
+        // tails[k]: 長さ k + 1 の増加部分列の末尾のうち値が最小のものの位置
+        val tails = IntArray(sequence.size)
+        // previous[i]: 位置 i を末尾とする増加部分列の 1 つ前の位置（無ければ -1）
+        val previous = IntArray(sequence.size) { -1 }
+        var length = 0
+        for (i in sequence.indices) {
+            val value = sequence[i]
+            var lo = 0
+            var hi = length
+            while (lo < hi) {
+                val mid = (lo + hi) ushr 1
+                if (sequence[tails[mid]] < value) lo = mid + 1 else hi = mid
+            }
+            if (lo > 0) previous[i] = tails[lo - 1]
+            tails[lo] = i
+            if (lo == length) length++
+        }
+        val result = IntArray(length)
+        var cursor = tails[length - 1]
+        for (k in length - 1 downTo 0) {
+            result[k] = cursor
+            cursor = previous[cursor]
+        }
+        return result.toList()
     }
 
     // MARK: - Cell レベル突合（構造同期のみ）
@@ -177,7 +259,6 @@ internal object DSLDiffCalculator {
         new: List<Cell>,
     ): List<SettingsRootDiff> {
         val diffs = mutableListOf<SettingsRootDiff>()
-        val oldIds = old.map { it.id }.toSet()
         val newIds = new.map { it.id }.toSet()
 
         // 削除
@@ -187,23 +268,22 @@ internal object DSLDiffCalculator {
             }
         }
 
-        // 追加
-        for ((idx, cell) in new.withIndex()) {
-            if (cell.id !in oldIds) {
-                diffs.add(
-                    SettingsRootDiff.InsertCell(sectionId = sectionId, index = idx, cell = cell),
-                )
-            }
+        // 追加と移動（id 同一性のみ。内容変化での ReplaceCell は発行しない）
+        // 相対順序が変わった Cell だけを移し、追加・削除でずれただけの Cell は動かさない。
+        // index / toIndex は適用時点の並び（削除 → 追加 → 移動の順に適用）で表す。
+        val plan = planReorder(old = old.map { it.id }, new = new.map { it.id })
+        val cellsById = new.associateBy { it.id }
+        for (insert in plan.inserts) {
+            diffs.add(
+                SettingsRootDiff.InsertCell(
+                    sectionId = sectionId,
+                    index = insert.index,
+                    cell = cellsById.getValue(insert.id),
+                ),
+            )
         }
-
-        // 移動（id 同一性のみ。内容変化での ReplaceCell は発行しない）
-        for ((newIdx, cell) in new.withIndex()) {
-            if (cell.id !in oldIds) continue
-            val oldIdx = old.indexOfFirst { it.id == cell.id }
-            if (oldIdx < 0) continue
-            if (oldIdx != newIdx) {
-                diffs.add(SettingsRootDiff.MoveCell(cellId = cell.id, toIndex = newIdx))
-            }
+        for (move in plan.moves) {
+            diffs.add(SettingsRootDiff.MoveCell(cellId = move.id, toIndex = move.to))
         }
 
         return diffs

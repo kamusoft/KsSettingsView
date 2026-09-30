@@ -70,6 +70,10 @@ public sealed record SampleScreen(
             "Section 装飾デモ（style 切替）",
             static () => new SectionDecorationDemoPage()),
         new(
+            SampleScreenCategory.Demo,
+            "スクロール制御デモ",
+            static () => new ScrollControlDemoPage()),
+        new(
             SampleScreenCategory.MauiSpecific,
             "Header / Footer への View 配置デモ",
             static () => new AccessoryViewsDemoPage()),

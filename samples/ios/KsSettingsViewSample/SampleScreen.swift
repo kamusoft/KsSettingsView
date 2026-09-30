@@ -22,6 +22,7 @@ enum SampleScreen: String, CaseIterable, Identifiable {
     case unifyCommonFields
     case visibility
     case sectionDecoration
+    case scrollControl
     case minimalDiffable
     case sectionDecorationSpike
 
@@ -38,6 +39,7 @@ enum SampleScreen: String, CaseIterable, Identifiable {
         case .unifyCommonFields: "共通フィールド統合デモ"
         case .visibility: "isVisible デモ（条件付き非表示）"
         case .sectionDecoration: "Section 装飾デモ（style 切替）"
+        case .scrollControl: "スクロール制御デモ"
         case .minimalDiffable: "Minimal Diffable 検証"
         case .sectionDecorationSpike: "Section 装飾 decoration 検証"
         }
@@ -46,7 +48,7 @@ enum SampleScreen: String, CaseIterable, Identifiable {
     /// ライブラリの使い方を示すデモ画面。プラットフォーム間で一致させる対象。
     static let demos: [SampleScreen] = [
         .store, .dsl, .basicCells, .inputCells, .customCell, .unifyCommonFields, .visibility,
-        .sectionDecoration
+        .sectionDecoration, .scrollControl
     ]
 
     /// プラットフォーム固有の技術検証画面。デモ画面の集合には数えない。
@@ -69,6 +71,7 @@ enum SampleScreen: String, CaseIterable, Identifiable {
         case .unifyCommonFields: UnifyCellCommonFieldsDemoView()
         case .visibility: VisibilityDemoView()
         case .sectionDecoration: SectionDecorationDemoView()
+        case .scrollControl: ScrollControlDemoView()
         case .minimalDiffable: MinimalDiffableDemoView()
         case .sectionDecorationSpike: SectionDecorationSpikeView()
         }

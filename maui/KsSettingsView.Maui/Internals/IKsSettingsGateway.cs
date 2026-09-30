@@ -115,11 +115,38 @@ internal interface IKsSettingsGateway
     /// <summary>見た目スタイルを適用する。</summary>
     /// <remarks>
     /// Native 側でも見た目スタイルは Store ではなく View / Controller のプロパティであり、この
-    /// 操作だけは Store 公開操作との 1 対 1 (maui/ADR-0002) の枠外にある (maui/ADR-0023)。
+    /// 操作はスクロール命令と並んで Store 公開操作との 1 対 1 (maui/ADR-0002) の枠外にある
+    /// (maui/ADR-0023)。
     /// 設定ツリーの構造と Section / Cell の ID は変わらない。
     /// </remarks>
     /// <param name="style">適用する見た目スタイル</param>
     void SetStyle(SettingsViewStyle style);
+
+    /// <summary>指定 ID の Cell の行へスクロールさせる。</summary>
+    /// <remarks>
+    /// 見た目スタイルと同じく Store 公開操作との 1 対 1 の枠外にある更新で、設定ツリーの状態は
+    /// 変わらない。命令は同じ処理の中で行った構造変更が表示に反映された後に実行される。
+    /// Native Host が無いとき・未知の ID・非表示の Cell では何も起こらない。
+    /// </remarks>
+    /// <param name="cellId">対象 Cell の ID</param>
+    /// <param name="position">行を表示範囲のどこへ合わせるか</param>
+    /// <param name="animated">アニメーションするか</param>
+    void ScrollToCell(string cellId, ScrollPosition position, bool animated);
+
+    /// <summary>指定 ID の Section へ、見出しごと見えるようにスクロールさせる。</summary>
+    /// <remarks>何も起こらない条件は <see cref="ScrollToCell"/> と同じ。</remarks>
+    /// <param name="sectionId">対象 Section の ID</param>
+    /// <param name="position">Section の範囲を表示範囲のどこへ合わせるか</param>
+    /// <param name="animated">アニメーションするか</param>
+    void ScrollToSection(string sectionId, ScrollPosition position, bool animated);
+
+    /// <summary>内容の最上端へスクロールさせる。Native Host が無いときは何も起こらない。</summary>
+    /// <param name="animated">アニメーションするか</param>
+    void ScrollToStart(bool animated);
+
+    /// <summary>内容の最下端へスクロールさせる。Native Host が無いときは何も起こらない。</summary>
+    /// <param name="animated">アニメーションするか</param>
+    void ScrollToEnd(bool animated);
 
     /// <summary>Cell の icon として輸送する platform 画像の引き当て先を差し込む。</summary>
     /// <remarks>

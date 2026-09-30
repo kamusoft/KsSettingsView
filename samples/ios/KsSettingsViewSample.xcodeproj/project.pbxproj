@@ -30,6 +30,7 @@
 		A1000001000000000000A016 /* SectionDecorationDemoControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002000000000000A016 /* SectionDecorationDemoControls.swift */; };
 		A1000001000000000000A017 /* SampleIconBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002000000000000A017 /* SampleIconBadge.swift */; };
 		A1000001000000000000A018 /* SampleMember.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002000000000000A018 /* SampleMember.swift */; };
+		A1000001000000000000A01B /* ScrollControlDemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002000000000000A01B /* ScrollControlDemoView.swift */; };
 		A1000003000000000000B001 /* KsSettingsView in Frameworks */ = {isa = PBXBuildFile; productRef = A1000004000000000000B001 /* KsSettingsView */; };
 /* End PBXBuildFile section */
 
@@ -57,6 +58,7 @@
 		A1000002000000000000A016 /* SectionDecorationDemoControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SectionDecorationDemoControls.swift; sourceTree = "<group>"; };
 		A1000002000000000000A017 /* SampleIconBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SampleIconBadge.swift; sourceTree = "<group>"; };
 		A1000002000000000000A018 /* SampleMember.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SampleMember.swift; sourceTree = "<group>"; };
+		A1000002000000000000A01B /* ScrollControlDemoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrollControlDemoView.swift; sourceTree = "<group>"; };
 		A1000005000000000000C001 /* KsSettingsViewSample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KsSettingsViewSample.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -104,6 +106,7 @@
 				A1000002000000000000A016 /* SectionDecorationDemoControls.swift */,
 				A1000002000000000000A017 /* SampleIconBadge.swift */,
 				A1000002000000000000A018 /* SampleMember.swift */,
+				A1000002000000000000A01B /* ScrollControlDemoView.swift */,
 				A1000002000000000000A005 /* Assets.xcassets */,
 				A1000007000000000000E004 /* Preview Content */,
 			);
@@ -224,6 +227,7 @@
 				A1000001000000000000A016 /* SectionDecorationDemoControls.swift in Sources */,
 				A1000001000000000000A017 /* SampleIconBadge.swift in Sources */,
 				A1000001000000000000A018 /* SampleMember.swift in Sources */,
+				A1000001000000000000A01B /* ScrollControlDemoView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

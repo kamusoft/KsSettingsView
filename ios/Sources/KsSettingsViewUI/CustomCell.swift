@@ -91,7 +91,7 @@ public struct CustomCell: KsCell, DSLReidentifiable, DSLStyleModifiable, Visibil
 
     /// 行タップ時に発火するクロージャ（既定 `nil` = 行タップ非対応）。
     ///
-    /// content 内の操作可能要素がタップを消費した場合は発火しない。
+    /// content 内の操作可能要素がタップを消費した場合は発火しない。メインスレッドから呼ばれる (`KsCell` の「通知のクロージャが呼ばれるスレッド」を参照)。
     public let onTap: (@Sendable () -> Void)?
 
     /// 有効／無効フラグ（既定 `true`）。

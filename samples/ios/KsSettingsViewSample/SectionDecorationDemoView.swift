@@ -24,6 +24,9 @@ import KsSettingsViewUI
 import KsSettingsViewSwiftUI
 
 /// style 切替と Section 装飾プリセット切替を観察するデモ画面。
+///
+/// Cell の通知 (`onValueChanged`) は `@Sendable` の閉包で受け取るが、呼ばれるのは
+/// 常にメインスレッドなので、`MainActor.assumeIsolated` の中で `@State` を書き換える。
 struct SectionDecorationDemoView: View {
     @State private var style: KsSettingsViewStyle = .modern
     @State private var preset: SectionDecorationPreset = .standard
@@ -46,7 +49,7 @@ struct SectionDecorationDemoView: View {
                         title: "機内モード",
                         icon: KsImage.uiImage(SampleIconBadge.airplane),
                         isOn: airplaneMode,
-                        onValueChanged: { newValue in airplaneMode = newValue }
+                        onValueChanged: { newValue in MainActor.assumeIsolated { airplaneMode = newValue } }
                     )
                     CommandCell(
                         title: "Wi-Fi",
@@ -72,7 +75,7 @@ struct SectionDecorationDemoView: View {
                     SwitchCell(
                         title: "自動",
                         isOn: autoAppearance,
-                        onValueChanged: { newValue in autoAppearance = newValue }
+                        onValueChanged: { newValue in MainActor.assumeIsolated { autoAppearance = newValue } }
                     )
                     CommandCell(title: "テキストサイズを変更")
                 }
@@ -82,7 +85,7 @@ struct SectionDecorationDemoView: View {
                     SwitchCell(
                         title: "True Tone",
                         isOn: trueTone,
-                        onValueChanged: { newValue in trueTone = newValue }
+                        onValueChanged: { newValue in MainActor.assumeIsolated { trueTone = newValue } }
                     )
                 }
 

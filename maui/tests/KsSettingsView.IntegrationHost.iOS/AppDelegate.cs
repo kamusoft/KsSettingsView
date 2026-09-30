@@ -11,7 +11,8 @@ namespace KsSettingsView.IntegrationHost;
 /// 「Host 生成 → 操作 → view 階層へ取り付け」の順序で組み立て、取り付け前の操作が view load 時に
 /// Store の現在状態から復元されることを確認する (core/ADR-0019)。ナビゲーションバーの
 /// 「解放 → 再生成」ボタンは Host だけを解放し、解放中に Store を更新してから Host を作り直す
-/// 経路 (maui/ADR-0007) を通す。
+/// 経路 (maui/ADR-0007) を通す。左側の「末尾へ」「先頭へ」ボタンは C# から Bridge のスクロール命令を
+/// 呼ぶ。末尾へ送ってから「解放 → 再生成」すると、作り直した Host が同じ位置で表示される。
 /// </remarks>
 [Register("AppDelegate")]
 public sealed class AppDelegate : UIApplicationDelegate
@@ -97,7 +98,17 @@ public sealed class AppDelegate : UIApplicationDelegate
         navigation.SetViewControllers([Decorate(host)], animated: false);
     }
 
-    /// <summary>Host にタイトルと「解放 → 再生成」ボタンを付ける。</summary>
+    /// <summary>Bridge が生きていればスクロール命令を送る。</summary>
+    /// <param name="command">Bridge へ送る命令</param>
+    private void ScrollBridge(Action<KsSettingsBridge> command)
+    {
+        if (_bridge is { } bridge)
+        {
+            command(bridge);
+        }
+    }
+
+    /// <summary>Host にタイトルと「解放 → 再生成」・スクロール命令のボタンを付ける。</summary>
     /// <param name="host">Bridge が生成した Native Host</param>
     /// <returns>受け取った Host そのもの</returns>
     private UIViewController Decorate(UIViewController host)
@@ -107,6 +118,11 @@ public sealed class AppDelegate : UIApplicationDelegate
             "解放 → 再生成",
             UIBarButtonItemStyle.Plain,
             (_, _) => ReleaseAndRecreateHost());
+        host.NavigationItem.LeftBarButtonItems =
+        [
+            new UIBarButtonItem("末尾へ", UIBarButtonItemStyle.Plain, (_, _) => ScrollBridge(KsBridgeScenario.ScrollToEnd)),
+            new UIBarButtonItem("先頭へ", UIBarButtonItemStyle.Plain, (_, _) => ScrollBridge(KsBridgeScenario.ScrollToStart)),
+        ];
         return host;
     }
 }

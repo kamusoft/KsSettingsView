@@ -122,6 +122,13 @@ public class Section : Element
         typeof(Section),
         default(double?));
 
+    /// <summary><see cref="SectionId"/> のバッキングプロパティ。</summary>
+    public static readonly BindableProperty SectionIdProperty = BindableProperty.Create(
+        nameof(SectionId),
+        typeof(string),
+        typeof(Section),
+        default(string));
+
     /// <summary><see cref="Cells"/> のバッキングプロパティ。</summary>
     /// <remarks>
     /// 既定値は Section ごとに新しい observable なコレクションを作る。BindableProperty の
@@ -177,6 +184,18 @@ public class Section : Element
         _cellBinder = new KsItemsSourceBinder<CellBase>(this, () => Cells);
         _cellOwnership = new KsLogicalChildOwnership<CellBase>(this, () => Cells, "Cell");
         _cellOwnership.OnTargetChanged();
+    }
+
+    /// <summary>スクロール命令でこの Section を指すための ID。null で ID なし。</summary>
+    /// <remarks>
+    /// <see cref="IScrollController.ScrollToSection"/> に同じ値を渡すと、この Section を対象にする。
+    /// 同じ ID を持つ Section が複数あるときは表示順で最初のものが対象になる。表示と値の書き戻しには
+    /// 影響しない。
+    /// </remarks>
+    public string? SectionId
+    {
+        get => (string?)GetValue(SectionIdProperty);
+        set => SetValue(SectionIdProperty, value);
     }
 
     /// <summary>Section の上に表示するヘッダテキスト。null でヘッダなし。</summary>
@@ -329,4 +348,11 @@ public class Section : Element
         base.OnBindingContextChanged();
         _cellOwnership.Apply();
     }
+
+    /// <summary>
+    /// <see cref="ItemsSource"/> の項目のうち <paramref name="item"/> と等しいものから生成した Cell を、
+    /// 項目の並び順に返す。
+    /// </summary>
+    /// <param name="item">探す項目</param>
+    internal IEnumerable<CellBase> FindGeneratedCells(object item) => _cellBinder.FindGenerated(item);
 }

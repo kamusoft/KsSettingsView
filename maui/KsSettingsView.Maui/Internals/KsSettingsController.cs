@@ -21,7 +21,7 @@ namespace KsSettingsView.Internals;
 /// 全メソッドを UI スレッドから呼ぶ (呼び出し側契約であり、スレッド marshal は行わない)。
 /// </remarks>
 /// <param name="owner">この変換経路を持つ SettingsView。root accessory の論理上の所有者になる</param>
-internal sealed class KsSettingsController(SettingsView owner)
+internal sealed partial class KsSettingsController(SettingsView owner)
     : IKsCollectionObserver,
         IKsPropertyObserver,
         IKsInteractionSink,

@@ -153,6 +153,13 @@ internal static class KsWireValues
     /// <param name="value">写し取る見た目スタイル</param>
     public static int ListStyle(SettingsViewStyle value) => (int)value;
 
+    /// <summary>スクロール命令の位置を輸送する整数へ写す (Start = 0 / Center = 1 / End = 2)。</summary>
+    /// <remarks>
+    /// 列挙に定義されていない値も整数のまま運ぶ。定義域外の値を Start として扱うのは Bridge が行う。
+    /// </remarks>
+    /// <param name="value">写し取る位置</param>
+    public static int ScrollPosition(ScrollPosition value) => (int)value;
+
     /// <summary>Section の外側余白の上成分。null で未指定。</summary>
     /// <param name="margin">写し取る余白。null で未指定</param>
     public static double? MarginTop(Thickness? margin) => margin?.Top;

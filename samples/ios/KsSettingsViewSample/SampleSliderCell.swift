@@ -27,9 +27,13 @@ struct SampleSliderValue: Hashable {
 ///
 /// ```swift
 /// Section("再利用（SliderCell ラップ関数）") {
-///     SliderCell(label: "明るさ", value: brightness) { brightness = $0 }
+///     SliderCell(label: "明るさ", value: brightness) { value in
+///         MainActor.assumeIsolated { brightness = value }
+///     }
 /// }
 /// ```
+///
+/// 行 View を組み立てるため、メインアクターで呼ぶ (SwiftUI の `body` の中から呼ぶ前提)。
 ///
 /// - Parameters:
 ///   - label: 行頭のラベル
@@ -37,6 +41,7 @@ struct SampleSliderValue: Hashable {
 ///   - isEnabled: `false` で content 内部の操作（スライダーのドラッグ）が抑止される
 ///   - onValueChanged: ドラッグ確定時に呼ばれる。関数値は等価性に参加しない
 /// - Returns: そのまま DSL に直書きできる `CustomCell`
+@MainActor
 func SliderCell(
     label: String,
     value: Int,

@@ -120,4 +120,24 @@ internal abstract record GatewayCall
 
     /// <summary>Native Host の解放。</summary>
     internal sealed record ReleaseHost : GatewayCall;
+
+    /// <summary>Cell へのスクロール命令。</summary>
+    /// <param name="CellId">対象 Cell の ID</param>
+    /// <param name="Position">合わせる位置</param>
+    /// <param name="Animated">アニメーションするか</param>
+    internal sealed record ScrollToCell(string CellId, ScrollPosition Position, bool Animated) : GatewayCall;
+
+    /// <summary>Section へのスクロール命令。</summary>
+    /// <param name="SectionId">対象 Section の ID</param>
+    /// <param name="Position">合わせる位置</param>
+    /// <param name="Animated">アニメーションするか</param>
+    internal sealed record ScrollToSection(string SectionId, ScrollPosition Position, bool Animated) : GatewayCall;
+
+    /// <summary>内容の最上端へのスクロール命令。</summary>
+    /// <param name="Animated">アニメーションするか</param>
+    internal sealed record ScrollToStart(bool Animated) : GatewayCall;
+
+    /// <summary>内容の最下端へのスクロール命令。</summary>
+    /// <param name="Animated">アニメーションするか</param>
+    internal sealed record ScrollToEnd(bool Animated) : GatewayCall;
 }

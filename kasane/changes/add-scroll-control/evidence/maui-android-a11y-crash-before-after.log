@@ -1,0 +1,56 @@
+# MAUI Android Sample: アクセシビリティ経由の問い合わせでのクラッシュ (A/B)
+# 端末: この change 専用の Android Emulator (API 36)。ビルドは Sample・facade・Android binding の bin/obj を捨てたフルビルド + -t:Run で配備
+
+## 原因 (解決された版の組み合わせ。Sample の obj/project.assets.json、net10.0-android)
+- Microsoft.Maui.Controls / Microsoft.Maui.Core: 10.0.70 (修正前) → 10.0.71 (修正後)
+- Xamarin.AndroidX.Core: 1.19.0.1 (修正前後とも同じ)。MAUI 10.0.70 自身の依存だけなら 1.16.0.3 で済むが、
+  binding の依存 (Xamarin.AndroidX.Compose.* 1.11.4 / AppCompat 1.7.1.4 / ConstraintLayout 2.2.1.6 / RecyclerView 1.4.0.6 ほか) が 1.19.0.1 を要求して引き上げる
+- AccessibilityNodeInfoCompat.Checked の binding の形 (Xamarin.AndroidX.Core の assembly のメタデータを読んだ結果)
+    1.16.0.3: get_Checked() : Boolean / set_Checked(Boolean)
+    1.17.0.1: get_Checked() : Int32   / set_Checked(Int32)   (+ SetChecked(Boolean) メソッド)
+    1.19.0.1: get_Checked() : Int32   / set_Checked(Int32)   (+ SetChecked(Boolean) メソッド)
+- Microsoft.Maui.dll (Android) が参照する AccessibilityNodeInfoCompat の Checked 系メンバー
+    10.0.70 : set_Checked(Boolean) を参照する (1.17 以降には存在しない)
+    10.0.71 : 参照なし
+    10.0.100: 参照なし
+
+## MAUI の Android 向け assembly が参照する Xamarin.* / Microsoft.Maui* のメンバーを、解決後の assembly の定義と照合した結果
+(照合は scratch の検査スクリプトで MemberRef と定義の名前・シグネチャを突き合わせたもの)
+- MAUI 10.0.70 + 解決後の AndroidX (修正前の assets): checked=2042 missing=1
+    MEMBER MISSING Microsoft.Maui.dll -> [Xamarin.AndroidX.Core]AndroidX.Core.View.Accessibility.AccessibilityNodeInfoCompat::set_Checked(Boolean):Void
+- MAUI 10.0.71 + 解決後の AndroidX (修正後の assets): checked=2040 missing=0
+- 参考: MAUI 10.0.100 に差し替えた照合: checked=2097 missing=0
+
+## 修正前 (Microsoft.Maui.Controls 10.0.70)
+### uiautomator dump (アクセシビリティ経由の問い合わせ) を掛けた回 → プロセス終了
+09-30 11:10:06.061  5300  5300 E AndroidRuntime: FATAL EXCEPTION: main
+09-30 11:10:06.061  5300  5300 E AndroidRuntime: Process: jp.kamusoft.kssettingsview.samples.maui, PID: 5300
+09-30 11:10:06.061  5300  5300 E AndroidRuntime: android.runtime.JavaProxyThrowable: [System.MissingMethodException]: Method not found: void AndroidX.Core.View.Accessibility.AccessibilityNodeInfoCompat.set_Checked(bool)
+09-30 11:10:06.061  5300  5300 E AndroidRuntime: 	at Microsoft.Maui.Platform.MauiAccessibilityDelegateCompat.OnInitializeAccessibilityNodeInfo + 0x37(Unknown Source)
+09-30 11:10:06.061  5300  5300 E AndroidRuntime: 	at AndroidX.Core.View.AccessibilityDelegateCompat.n_OnInitializeAccessibilityNodeInfo_Landroid_view_View_Landroidx_core_view_accessibility_AccessibilityNodeInfoCompat_ + 0xe(Unknown Source)
+09-30 11:10:06.061  5300  5300 E AndroidRuntime: 	at crc6452ffdc5b34af3a0f.MauiAccessibilityDelegateCompat.n_onInitializeAccessibilityNodeInfo(Native Method)
+09-30 11:10:06.061  5300  5300 E AndroidRuntime: 	at crc6452ffdc5b34af3a0f.MauiAccessibilityDelegateCompat.onInitializeAccessibilityNodeInfo(MauiAccessibilityDelegateCompat.java:44)
+### TalkBack を有効にしてメニューから「基本 Cell 7 種デモ」を開いた回 → プロセス終了
+09-30 11:16:47.546  9369  9369 E AndroidRuntime: FATAL EXCEPTION: main
+09-30 11:16:47.546  9369  9369 E AndroidRuntime: Process: jp.kamusoft.kssettingsview.samples.maui, PID: 9369
+09-30 11:16:47.546  9369  9369 E AndroidRuntime: android.runtime.JavaProxyThrowable: [System.MissingMethodException]: Method not found: void AndroidX.Core.View.Accessibility.AccessibilityNodeInfoCompat.set_Checked(bool)
+09-30 11:16:47.546  9369  9369 E AndroidRuntime: 	at Microsoft.Maui.Platform.MauiAccessibilityDelegateCompat.OnInitializeAccessibilityNodeInfo + 0x37(Unknown Source)
+09-30 11:16:47.546  9369  9369 E AndroidRuntime: 	at AndroidX.Core.View.AccessibilityDelegateCompat.n_OnInitializeAccessibilityNodeInfo_Landroid_view_View_Landroidx_core_view_accessibility_AccessibilityNodeInfoCompat_ + 0xe(Unknown Source)
+
+## 修正後 (Microsoft.Maui.Controls 10.0.71)
+- メニューで uiautomator dump を 3 回 → プロセス継続 (pid 不変)、logcat の MissingMethodException / FATAL EXCEPTION: 0 件。dump にメニューの全項目が出る
+- 「基本 Cell 7 種デモ」で uiautomator dump → プロセス継続、checkable="true" のノード 2 件 (SwitchCell / CheckboxCell) が checked="true" で出る
+- TalkBack 有効のまま: SwitchCell と CheckboxCell を操作して値が切り替わる、戻る → 「スクロール制御デモ」→ 戻る → 「共通フィールド統合デモ」→ 戻る → 「Header / Footer への View 配置デモ」を開く。
+  TalkBack の読み上げ位置 (緑枠) が各画面のタイトルへ移る (TalkBack が画面ごとにノードを問い合わせている)。
+  操作は adb の input で送ったため TalkBack のタッチ探索 (1 回目で選択・2 回目で実行) を経ずに届く。読み上げ位置の移動を adb から送る手段は取れず、項目ごとの読み上げ操作は未確認。プロセス継続、MissingMethodException / FATAL EXCEPTION: 0 件
+- restore の警告: NU1605 / NU1608 / NU1107 とも 0 件
+- TalkBack は検証後に無効へ戻した (enabled_accessibility_services=null、accessibility_enabled=0、Bound services 空)
+
+## 静止画
+- maui-android-a11y-crash-before-1-launched.png: 修正前、起動直後のメニュー
+- maui-android-a11y-crash-before-2-after-dump.png: 修正前、dump の直後 (アプリが落ちてホーム画面)
+- maui-android-a11y-crash-before-3-talkback-open-demo.png: 修正前、TalkBack 有効でデモを開いた直後 (アプリが落ちてホーム画面)
+- maui-android-a11y-crash-after-1-after-dump.png: 修正後、メニューで dump 3 回の後もアプリが前面
+- maui-android-a11y-crash-after-2-basic-cells-dump.png: 修正後、基本 Cell 7 種デモで dump の後もアプリが前面
+- maui-android-a11y-crash-after-3-talkback-switch-toggled.png / -after-4-talkback-checkbox-toggled.png: 修正後、TalkBack 有効で SwitchCell / CheckboxCell を切り替えた後
+- maui-android-a11y-crash-after-5-talkback-scroll-demo.png / -after-6-talkback-header-footer-demo.png: 修正後、TalkBack 有効で各デモを開いた後 (読み上げ位置がタイトル)

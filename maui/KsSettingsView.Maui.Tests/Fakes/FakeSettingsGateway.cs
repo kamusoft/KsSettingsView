@@ -290,6 +290,20 @@ internal sealed class FakeSettingsGateway : IKsSettingsGateway
     }
 
     /// <inheritdoc/>
+    public void ScrollToCell(string cellId, ScrollPosition position, bool animated)
+        => _calls.Add(new GatewayCall.ScrollToCell(cellId, position, animated));
+
+    /// <inheritdoc/>
+    public void ScrollToSection(string sectionId, ScrollPosition position, bool animated)
+        => _calls.Add(new GatewayCall.ScrollToSection(sectionId, position, animated));
+
+    /// <inheritdoc/>
+    public void ScrollToStart(bool animated) => _calls.Add(new GatewayCall.ScrollToStart(animated));
+
+    /// <inheritdoc/>
+    public void ScrollToEnd(bool animated) => _calls.Add(new GatewayCall.ScrollToEnd(animated));
+
+    /// <inheritdoc/>
     public void AttachIcons(IKsIconStore icons)
     {
         ArgumentNullException.ThrowIfNull(icons);

@@ -31,6 +31,7 @@ public struct NumberPickerCell: KsCell, DSLReidentifiable, DSLStyleModifiable, D
     public let unit: String
     public let pickerTitle: String?
     public let accentColor: UIColor?
+    /// 値を確定したときに呼ばれるクロージャ。メインスレッドから呼ばれる (`KsCell` の「通知のクロージャが呼ばれるスレッド」を参照)。
     public let onValueChanged: (@Sendable (Int) -> Void)?
     public let isEnabled: Bool
     public let isVisible: Bool

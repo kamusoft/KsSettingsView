@@ -26,6 +26,9 @@ import KsSettingsViewUI
 /// ユーザー操作は `interactionDelegate` へ通知する (maui/ADR-0003)。delegate は弱参照で保持する
 /// ため、実装インスタンスの寿命は呼び出し側が保証する。未設定・解除後の通知は破棄される。
 ///
+/// スクロール命令 (`scrollToCell` など) は Store を経由せず、Bridge が持つ 1 つの命令ハンドルを
+/// 通じて生きている Host へ届く。Host を手放すときはその表示位置を控え、次に作る Host で戻す。
+///
 /// スレッド契約: 全 API を UI スレッド (main actor) から呼ぶ。Bridge 自身は marshal しない
 /// (maui/ADR-0005)。
 @MainActor
@@ -47,6 +50,23 @@ public final class KsSettingsBridge: NSObject {
     /// 設定ツリーと Theme を保つのと同じ生存性を与えるため、Bridge が Host の外で保持し、
     /// Host の生成のたびに適用する。
     internal private(set) var style: KsSettingsViewStyle = .classic
+
+    /// スクロール命令を Host へ届けるハンドル。
+    ///
+    /// Host を作るたびにその Host へつなぎ直す。Host が無い間の命令はハンドルが未接続のため何も
+    /// 起こさない (Host 不在の判定を Bridge 側で持たず、Native の契約にそのまま委ねる)。
+    internal let scrollController = KsScrollController()
+
+    /// 手放した Host から控えた表示位置。次に作る Host へ渡した時点で使い切る。
+    ///
+    /// 位置は Host の世代をまたいで生きる Bridge が持つ (maui/ADR-0030)。
+    internal private(set) var scrollAnchor: KsScrollAnchor?
+
+    /// 生成済みの Host が window から外れる直前の表示位置を控えるもの。Host が無いときは `nil`。
+    ///
+    /// Host は window から外れた後に解放されることがあり (MAUI の Handler の切断はページが画面から
+    /// 外れた後に届く)、その時点の Host からは見ていた位置を控えられないため。
+    internal private(set) var hostAnchorTracker: KsBridgeHostAnchorTracker?
 
     /// Cell のコールバックと `interactionDelegate` の間に立つ中継。
     ///
@@ -82,11 +102,24 @@ public final class KsSettingsBridge: NSObject {
     /// 再生成後も引き継ぐ場合は、呼び出し側が値を保持して `updateAccessory` で再適用する。
     /// 再適用は Host を view 階層へ取り付ける前に行ってよく、渡した値は Host の最初の表示に
     /// 含まれる。
+    ///
+    /// 新しい Host を作ったときは、スクロール命令をその Host へ届くようにする。前の Host を
+    /// `releaseHost()` で手放したときに控えた表示位置があれば、その位置へ戻す要求を済ませてから
+    /// 返す。戻すのは初回の表示の後で、この後に出したスクロール命令は戻した後に実行される。
+    /// 返す Host は view を読み込み済みで、その view には window から外れる直前の位置を控える
+    /// 見えない view を置いている。
     /// - Returns: view 階層へ取り付ける Native Host
     @objc public func makeHostViewController() -> UIViewController? {
         if isDisposed { return nil }
         if let hostController { return hostController }
         let controller = KsSettingsViewController(store: store, style: style)
+        controller.scrollController = scrollController
+        hostAnchorTracker = KsBridgeHostAnchorTracker(host: controller)
+        // 戻しは命令と同じ待ち行列に積まれるため、ここで積めば Host 生成後に届く命令より先に処理される。
+        if let anchor = scrollAnchor {
+            controller.restoreScrollAnchor(anchor)
+            scrollAnchor = nil
+        }
         hostController = controller
         return controller
     }
@@ -101,9 +134,18 @@ public final class KsSettingsBridge: NSObject {
     /// 再生成した Host へ引き継ぐ場合は、呼び出し側が値を保持して `updateAccessory` で再適用する。
     /// 再適用は再生成した Host を view 階層へ取り付ける前に行ってよい。
     ///
+    /// 解放の前に Host の表示位置 (表示範囲の上端にかかる要素と、そこからのずれ) を控え、次に
+    /// 生成する Host で戻す。Host が既に window から外れていれば、外れる直前に表示していた位置を
+    /// 控える。控えられる内容が無い Host (表示前など) を解放したときは控えを持たず、
+    /// 次の Host は内容の先頭から表示する。解放した Host へはスクロール命令が届かなくなる。
+    ///
     /// 冪等であり、Host 不在時 (未生成・解放済み) および破棄済みの Bridge では no-op になる。
     @objc public func releaseHost() {
         guard !isDisposed, let controller = hostController else { return }
+        scrollAnchor = hostAnchorTracker?.anchorForRelease() ?? controller.captureScrollAnchor()
+        hostAnchorTracker?.stop()
+        hostAnchorTracker = nil
+        // Store からの切断はスクロール命令ハンドルの接続も外す。
         controller.disconnectStore()
         hostController = nil
     }
@@ -113,10 +155,15 @@ public final class KsSettingsBridge: NSObject {
     /// Bridge を破棄する。冪等であり、破棄後の操作 API と Host 生成は no-op になる。
     ///
     /// 破棄と同時に `interactionDelegate` を解除するため、破棄後のユーザー操作は通知されない。
+    /// 控えていた表示位置も捨て、保持し続けている Host へもスクロール命令は届かなくなる。
     @objc public func dispose() {
         if isDisposed { return }
         isDisposed = true
+        hostController?.scrollController = nil
+        hostAnchorTracker?.stop()
+        hostAnchorTracker = nil
         hostController = nil
+        scrollAnchor = nil
         interactionRelay.delegate = nil
     }
 
@@ -372,14 +419,67 @@ public final class KsSettingsBridge: NSObject {
     /// 見た目スタイルを適用する。
     ///
     /// スタイルは Store を経由せず Host のプロパティへ直接適用する — Native 側でもスタイルは
-    /// Store の管理外にあり、この操作だけが Store 公開操作との 1 対 1 (maui/ADR-0002) の枠外に
-    /// なる (maui/ADR-0023)。Host 未生成のときは値を控え、次の Host 生成時に適用する。
+    /// Store の管理外にあり、この操作はスクロール命令と並んで Store 公開操作との 1 対 1
+    /// (maui/ADR-0002) の枠外になる (maui/ADR-0023)。Host 未生成のときは値を控え、次の Host 生成時に適用する。
     /// - Parameter style: 見た目スタイルの序数 (classic = 0 / modern = 1)。定義域外は classic
     @objc public func setStyle(_ style: Int) {
         guard !isDisposed else { return }
         let resolved = KsBridgeStyle.style(from: style)
         self.style = resolved
         hostController?.style = resolved
+    }
+
+    // MARK: - スクロール命令
+
+    /// 指定 ID の Cell の行へスクロールする。
+    ///
+    /// Store を経由しない更新 API で、setStyle と同じく Store 公開操作との 1 対 1 の枠外にある。
+    /// 命令は、同じ処理の中で行った更新が表示に反映された後に実行される。非表示の Cell・未知の ID・
+    /// canonical UUID として解釈できない ID、Host が無いとき、および破棄済みの Bridge では何もしない。
+    /// - Parameters:
+    ///   - cellID: 対象 Cell の cellID
+    ///   - position: 行を表示範囲のどこへ合わせるか (start = 0 / center = 1 / end = 2)。定義域外は start
+    ///   - animated: アニメーションするか
+    @objc public func scrollToCell(cellID: String, position: Int, animated: Bool) {
+        guard !isDisposed, let uuid = KsBridgeIdentifier.uuid(from: cellID) else { return }
+        scrollController.scrollTo(
+            id: KsCellID(id: uuid),
+            position: KsBridgeScrollPosition.position(from: position),
+            animated: animated
+        )
+    }
+
+    /// 指定 ID の Section へ、見出しごと見えるようにスクロールする。
+    ///
+    /// 何もしない条件は `scrollToCell(cellID:position:animated:)` と同じ。
+    /// - Parameters:
+    ///   - sectionID: 対象 Section の sectionID
+    ///   - position: Section の範囲を表示範囲のどこへ合わせるか (start = 0 / center = 1 / end = 2)。
+    ///     定義域外は start
+    ///   - animated: アニメーションするか
+    @objc public func scrollToSection(sectionID: String, position: Int, animated: Bool) {
+        guard !isDisposed, let uuid = KsBridgeIdentifier.uuid(from: sectionID) else { return }
+        scrollController.scrollToSection(
+            id: uuid,
+            position: KsBridgeScrollPosition.position(from: position),
+            animated: animated
+        )
+    }
+
+    /// 内容の最上端 (Root Header を含む) へスクロールする。Host が無いときと破棄済みの Bridge では
+    /// 何もしない。
+    /// - Parameter animated: アニメーションするか
+    @objc public func scrollToStart(animated: Bool) {
+        guard !isDisposed else { return }
+        scrollController.scrollToStart(animated: animated)
+    }
+
+    /// 内容の最下端 (Root Footer を含む) へスクロールする。Host が無いときと破棄済みの Bridge では
+    /// 何もしない。
+    /// - Parameter animated: アニメーションするか
+    @objc public func scrollToEnd(animated: Bool) {
+        guard !isDisposed else { return }
+        scrollController.scrollToEnd(animated: animated)
     }
 }
 #endif

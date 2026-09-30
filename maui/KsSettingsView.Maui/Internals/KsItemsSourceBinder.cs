@@ -16,6 +16,10 @@ namespace KsSettingsView.Internals;
 /// 構造操作として行うため、表示への反映は他の構造変更と同じ経路を通る。
 /// items コレクションの購読は弱参照で張り、外部が items を保持し続けても
 /// 生成先 (SettingsView / Section) を巻き添えで生かし続けない。
+/// 生成元の項目も生成物と同じ並びで控え、生成物からその生成元の項目を引けるようにする。
+/// 対応は生成物の BindingContext ではなく控えの並びで取るため、利用者が生成物の BindingContext を
+/// 差し替えても崩れない。items は列挙し直すたびに内容が変わりうるため、控えは変更通知と
+/// 生成・除去の経路でだけ更新し、照合のために items を列挙し直さない。
 /// </remarks>
 /// <typeparam name="T">生成する要素の型</typeparam>
 /// <param name="container">テンプレートが設定されている側。テンプレートの出し分けに渡す</param>
@@ -30,6 +34,11 @@ internal sealed class KsItemsSourceBinder<T>(BindableObject container, Func<ILis
 
     /// <summary>テンプレートから生成した要素 (items の並び順)。</summary>
     private readonly List<T> _generated = [];
+
+    /// <summary>
+    /// <see cref="_generated"/> の各要素の生成元の項目。<see cref="_generated"/> と常に同じ並び・同じ件数を保つ。
+    /// </summary>
+    private readonly List<object?> _items = [];
 
     private KsWeakCollectionSubscription? _subscription;
     private IEnumerable? _itemsSource;
@@ -75,7 +84,27 @@ internal sealed class KsItemsSourceBinder<T>(BindableObject container, Func<ILis
     public void OnTargetChanged()
     {
         _generated.Clear();
+        _items.Clear();
         Generate();
+    }
+
+    /// <summary>
+    /// 生成元の項目が <paramref name="item"/> と等しい生成物を、items の並び順に返す。
+    /// </summary>
+    /// <param name="item">探す項目</param>
+    public IEnumerable<T> FindGenerated(object item)
+    {
+        // 呼び出し側が列挙中に構造を変えても壊れないよう、一致したものを先に写し取る。
+        List<T> found = [];
+        for (int i = 0; i < _items.Count; i++)
+        {
+            if (Equals(_items[i], item))
+            {
+                found.Add(_generated[i]);
+            }
+        }
+
+        return found;
     }
 
     /// <inheritdoc/>
@@ -127,6 +156,7 @@ internal sealed class KsItemsSourceBinder<T>(BindableObject container, Func<ILis
             // 控えを先に更新する。差し込みが生成先の購読側で失敗しても、生成先に入った要素が
             // 控えから漏れず、後始末 (RemoveGenerated) で取り残されない。
             _generated.Add(created);
+            _items.Add(item);
             target.Insert(position, created);
             position++;
         }
@@ -148,6 +178,7 @@ internal sealed class KsItemsSourceBinder<T>(BindableObject container, Func<ILis
         }
 
         _generated.Clear();
+        _items.Clear();
     }
 
     private void MirrorAdd(IList<T> target, NotifyCollectionChangedEventArgs args)
@@ -164,7 +195,9 @@ internal sealed class KsItemsSourceBinder<T>(BindableObject container, Func<ILis
 
             // 差し込み位置は控えの現在の並びから求めるため、控えを更新する前に決める。
             int position = Math.Clamp(InsertPosition(target, itemIndex), 0, target.Count);
-            _generated.Insert(Math.Clamp(itemIndex, 0, _generated.Count), created);
+            int generatedIndex = Math.Clamp(itemIndex, 0, _generated.Count);
+            _generated.Insert(generatedIndex, created);
+            _items.Insert(generatedIndex, item);
             target.Insert(position, created);
             itemIndex++;
         }
@@ -187,6 +220,7 @@ internal sealed class KsItemsSourceBinder<T>(BindableObject container, Func<ILis
 
             T removed = _generated[args.OldStartingIndex];
             _generated.RemoveAt(args.OldStartingIndex);
+            _items.RemoveAt(args.OldStartingIndex);
             target.Remove(removed);
         }
     }
@@ -213,8 +247,10 @@ internal sealed class KsItemsSourceBinder<T>(BindableObject container, Func<ILis
             }
 
             int position = target.IndexOf(_generated[itemIndex]);
-            T created = Create(args.NewItems[i]);
+            object? item = args.NewItems[i];
+            T created = Create(item);
             _generated[itemIndex] = created;
+            _items[itemIndex] = item;
 
             if (position >= 0)
             {
@@ -255,6 +291,7 @@ internal sealed class KsItemsSourceBinder<T>(BindableObject container, Func<ILis
         }
 
         T moved = _generated[from];
+        object? movedItem = _items[from];
         int oldPosition = target.IndexOf(moved);
         if (oldPosition < 0)
         {
@@ -262,8 +299,10 @@ internal sealed class KsItemsSourceBinder<T>(BindableObject container, Func<ILis
         }
 
         _generated.RemoveAt(from);
+        _items.RemoveAt(from);
         int newPosition = PositionAfterRemoval(target, oldPosition, to);
         _generated.Insert(to, moved);
+        _items.Insert(to, movedItem);
 
         if (target is ObservableCollection<T> observable)
         {

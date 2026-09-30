@@ -57,6 +57,9 @@ struct SampleDummyItem: Hashable, Identifiable {
 // MARK: - デモ画面
 
 /// `CustomCell` の 5 構成を 1 画面に並べたデモ。
+///
+/// Cell の通知 (`onTap` / `onValueChanged` 等) は `@Sendable` の閉包で受け取るが、呼ばれるのは
+/// 常にメインスレッドなので、`MainActor.assumeIsolated` の中で `@State` を書き換える。
 struct CustomCellDemoView: View {
 
     // ② SliderCell ラップ関数に渡す値
@@ -122,10 +125,16 @@ struct CustomCellDemoView: View {
                 "再利用（SliderCell ラップ関数）",
                 footer: "SliderCell(label:value:) 関数が CustomCell を返す再利用例。"
             ) {
-                SliderCell(label: "明るさ", value: brightness) { brightness = $0 }
-                SliderCell(label: "音量", value: volume) { volume = $0 }
+                SliderCell(label: "明るさ", value: brightness) { value in
+                    MainActor.assumeIsolated { brightness = value }
+                }
+                SliderCell(label: "音量", value: volume) { value in
+                    MainActor.assumeIsolated { volume = value }
+                }
                 // isEnabled = false の行。無効 Cell では content 内のスライダーのドラッグも抑止される。
-                SliderCell(label: "無効", value: disabledValue, isEnabled: false) { disabledValue = $0 }
+                SliderCell(label: "無効", value: disabledValue, isEnabled: false) { value in
+                    MainActor.assumeIsolated { disabledValue = value }
+                }
             }
 
             // ③ 動的高さ
@@ -166,7 +175,7 @@ struct CustomCellDemoView: View {
                         subtitle: "showArrow: true / onTap で遷移"
                     ),
                     showArrow: true,
-                    onTap: { rowTapCount += 1 }
+                    onTap: { MainActor.assumeIsolated { rowTapCount += 1 } }
                 ) { content in
                     SampleAccentRow(
                         dotColor: nil,
@@ -186,7 +195,7 @@ struct CustomCellDemoView: View {
                 // タップしてもカウンタは進まず 0 に戻る（子要素の操作で行 onTap は発火しない）。
                 CustomCell(
                     content: SampleTapCounter(count: rowTapCount),
-                    onTap: { rowTapCount += 1 }
+                    onTap: { MainActor.assumeIsolated { rowTapCount += 1 } }
                 ) { content in
                     SampleAccentRow(
                         dotColor: nil,
@@ -215,7 +224,7 @@ struct CustomCellDemoView: View {
                 ForEach(dummyItems) { item in
                     CustomCell(
                         content: item,
-                        onTap: { toggleDummy(item.index) }
+                        onTap: { MainActor.assumeIsolated { toggleDummy(item.index) } }
                     ) { content in
                         SampleAccentRow(
                             dotColor: SampleTheme.demoAccentPalette[

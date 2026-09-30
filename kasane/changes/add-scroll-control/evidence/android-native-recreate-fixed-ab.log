@@ -1,0 +1,36 @@
+# Android Native Sample の Activity 作り直しの A/B 記録 (logcat 抜粋、sanitize 済み)
+# 画面: スクロール制御デモ (Compose DSL の KsSettingsView、NavHost 配下)。AVD Pixel 7 / API 36
+# A = 修正を外したビルド、B = 修正を入れたビルド。画像は android-native-recreate-fixed-{A,B}-*.png
+# 手順: デモ画面を開き 1000px 上へスワイプ → 夜間モード (cmd uimode night yes) / 回転 (accelerometer_rotation 0 → user_rotation 1 → 0)
+# 結果: A は作り直し後に内容の先頭から表示 (NG)。B は作り直す前と同じ「項目 1-2」が同じずれで上端にかかる (OK)
+
+## 原因の観測 (修正前のビルドに一時的な診断ログを入れて採取。診断ログは修正版から除去済み)
+# 1 回目: Activity の onSaveInstanceState から ViewFactoryHolder 経由で保存 (window 取り付け中、控えあり)
+D KSDBG   : save anchor=KsScrollAnchor(Cell(id=37403223cbee31556540885a479e979e), offsetFromTop=151) attached=true children=16
+# 2 回目: SaveableStateHolder (NavHost) が画面の Composition の破棄時に保存し直す (window から外れた後、控え無しで上書き)
+D KSDBG   : save anchor=null attached=false children=0
+D KSDBG   : restore anchor=null ambiguous=false attached=false count=1 root=ViewFactoryHolder
+# 修正後の同じ手順: 2 回目の保存も外れる直前の控えを使い、復元が実行される
+D KSDBG   : save anchor=KsScrollAnchor(Cell(id=37403223cbee31556540885a479e979e), offsetFromTop=142) attached=false children=0
+D KSDBG   : restore anchor=KsScrollAnchor(Cell(id=37403223cbee31556540885a479e979e), offsetFromTop=142) ambiguous=false attached=false count=1 root=ViewFactoryHolder
+D KSDBG   : exec restore KsScrollAnchor(Cell(id=37403223cbee31556540885a479e979e), offsetFromTop=142) pos=7
+
+## A night: relaunch の記録
+09-30 02:08:44.595   729  2304 I ActivityTaskManager: Config changes=200 {1.0 310mcc260mnc [en_US] ldltr sw411dp w411dp h914dp 420dpi nrml long port night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 1080, 2400) mAppBou
+09-30 02:08:44.728   729  1266 I WindowManager: finishDrawing of relaunch: Window{9fa9a19 u0 jp.kamusoft.kssettingsview.samples.android/jp.kamusoft.kssettingsview.samples.android.MainActivity} 123ms
+
+## A rotate: relaunch の記録
+09-30 02:09:00.180   729   782 I ActivityTaskManager: Config changes=20000480 {1.0 310mcc260mnc [en_US] ldltr sw411dp w914dp h411dp 420dpi nrml long land finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 2400, 1080) mAppBoun
+09-30 02:09:00.351   729   824 I WindowManager: finishDrawing of relaunch: Window{a44e3bf u0 jp.kamusoft.kssettingsview.samples.android/jp.kamusoft.kssettingsview.samples.android.MainActivity} 142ms
+09-30 02:09:04.457   729   782 I ActivityTaskManager: Config changes=20000480 {1.0 310mcc260mnc [en_US] ldltr sw411dp w411dp h914dp 420dpi nrml long port finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 1080, 2400) mAppBoun
+09-30 02:09:04.651   729   990 I WindowManager: finishDrawing of relaunch: Window{eb115f u0 jp.kamusoft.kssettingsview.samples.android/jp.kamusoft.kssettingsview.samples.android.MainActivity} 164ms
+
+## B night: relaunch の記録
+09-30 02:09:17.325   729  2335 I ActivityTaskManager: Config changes=200 {1.0 310mcc260mnc [en_US] ldltr sw411dp w411dp h914dp 420dpi nrml long port night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 1080, 2400) mAppBou
+09-30 02:09:17.489   729  2335 I WindowManager: finishDrawing of relaunch: Window{84efb21 u0 jp.kamusoft.kssettingsview.samples.android/jp.kamusoft.kssettingsview.samples.android.MainActivity} 149ms
+
+## B rotate: relaunch の記録
+09-30 02:09:32.875   729   782 I ActivityTaskManager: Config changes=20000480 {1.0 310mcc260mnc [en_US] ldltr sw411dp w914dp h411dp 420dpi nrml long land finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 2400, 1080) mAppBoun
+09-30 02:09:33.042   729   990 I WindowManager: finishDrawing of relaunch: Window{74b482a u0 jp.kamusoft.kssettingsview.samples.android/jp.kamusoft.kssettingsview.samples.android.MainActivity} 140ms
+09-30 02:09:37.095   729   782 I ActivityTaskManager: Config changes=20000480 {1.0 310mcc260mnc [en_US] ldltr sw411dp w411dp h914dp 420dpi nrml long port finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 1080, 2400) mAppBoun
+09-30 02:09:37.251   729  1781 I WindowManager: finishDrawing of relaunch: Window{c94269a u0 jp.kamusoft.kssettingsview.samples.android/jp.kamusoft.kssettingsview.samples.android.MainActivity} 135ms
