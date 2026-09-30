@@ -372,7 +372,7 @@ public sealed class ScrollControlTests
             Is.EqualTo(view.Controller.FindSectionId(hiddenSection)));
     }
 
-    /// <summary>どの明示 ID にも項目にも当たらない値では gateway を呼ばず、Debug に警告を出す。</summary>
+    /// <summary>どの明示 ID にも項目にも当たらない値では gateway を呼ばず、Debug ビルドでは警告を出す。</summary>
     [Test]
     public void UnresolvedTargetDoesNotCallGateway()
     {
@@ -395,7 +395,11 @@ public sealed class ScrollControlTests
         });
 
         Assert.That(scope.Calls, Is.Empty);
+#if DEBUG
+        // 警告は Debug.WriteLine で出すため、Release ビルドでは呼び出しごと取り除かれる。
+        // dotnet test -c は被テストのライブラリも同じ構成でビルドするので、件数の検査は Debug のときだけ行う。
         Assert.That(messages.Count(message => message.Contains("ignored a scroll command")), Is.EqualTo(4));
+#endif
     }
 
     // ---- 命令の gateway 経路と Host が無い間の扱い ----
