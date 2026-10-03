@@ -1,14 +1,14 @@
 ---
 type: concept
 title: Android ビルドツールチェーンの契約
-description: android/ と samples/android/ の Gradle ビルドにおける JDK の役割分担 (Gradle を動かす JDK と成果物ターゲット Java 17)・ビルド関連バージョンと GAV の宣言の単一元 (libs.versions.toml とルート build.gradle.kts)・Maven 発行の入口 (vanniktech maven publish)・MAUI binding など消費側が依存する前提と、ツールチェーン更新時に揃えるもの
+description: android/ と samples/android/ の Gradle ビルドにおける JDK の役割分担 (Gradle を動かす JDK・コンパイルとテストに使う JDK 21・成果物ターゲット Java 17)・ビルド関連バージョンと GAV の宣言の単一元 (libs.versions.toml とルート build.gradle.kts)・Maven 発行の入口 (vanniktech maven publish)・MAUI binding など消費側が依存する前提と、ツールチェーン更新時に揃えるもの
 tags: [android, build, gradle, toolchain, version-catalog, jdk, maven-publish]
-timestamp: 2026-09-04
+timestamp: 2026-10-04
 ---
 
 # Android ビルドツールチェーンの契約
 
-この文書を読むと、Android のライブラリと Sample をビルドするときに JDK が 2 つの役割 (Gradle を動かす JDK / 成果物が対象とする Java 版) に分かれていること、Gradle・AGP・Kotlin などのビルド関連バージョンをどこで宣言しているか、ツールチェーンを更新するときに何を同時に揃え何を壊してはいけないかが分かる。`android/` と `samples/android/` が別々の Gradle build である理由は [リポジトリとビルドの責務境界](../../cross/architecture/repository-boundaries.md) を先に読むと分かりやすい。
+この文書を読むと、Android のライブラリと Sample をビルドするときに JDK が 3 つの役割 (Gradle を動かす JDK / コンパイルとテストに使う JDK / 成果物が対象とする Java 版) に分かれていること、Gradle・AGP・Kotlin などのビルド関連バージョンをどこで宣言しているか、ツールチェーンを更新するときに何を同時に揃え何を壊してはいけないかが分かる。`android/` と `samples/android/` が別々の Gradle build である理由は [リポジトリとビルドの責務境界](../../cross/architecture/repository-boundaries.md) を先に読むと分かりやすい。
 
 用語: **build root** = Gradle build の入口 (`settings.gradle.kts` のあるディレクトリ)。**GAV** = Maven 座標 `group:artifact:version`。**宣言の単一元** = その値を書いてよい唯一の場所。
 
@@ -28,16 +28,21 @@ toml の `[versions]` の現行値はこの文書に転記しない (正は toml
 
 Android SDK の場所は各 build root の `local.properties` (`sdk.dir`、git 管理外) で解決する。`compileSdk` / `minSdk` は catalog ではなく各 module の `build.gradle.kts` の `android { }` ブロックで宣言する (配布物の互換性を決める値であり、ツールチェーン更新の対象ではない)。
 
-## 2 つの JDK の役割
+## JDK の役割
 
-「Gradle を動かす JDK」と「成果物が対象とする Java 版」は別物で、前者を変えても後者は変わらない。
+JDK は 3 つの役割に分かれ、それぞれ別の場所で決まる。コンパイルに使う JDK を替えても、成果物が対象とする Java 版は変わらない。
 
 | 役割 | 決め方 | 要件 |
 |---|---|---|
-| Gradle を実行する JVM (Gradle JVM。CLI では `JAVA_HOME`、Android Studio では Gradle JDK 設定) | 開発者環境・IDE・CI が選ぶ | 使用中の Gradle 版がサポートする範囲内であること。JDK 17 / JDK 21 / JDK 25 (JDK 25 は Android Studio 同梱 JBR) のそれぞれで sync・ビルド・全テストが通ることを実測済み (検証時の Gradle / AGP / Kotlin 版は toml のコメント参照) |
-| 成果物のターゲット | 各 module の `kotlin { jvmToolchain(17) }` と `compileOptions` (`VERSION_17`) | Java 17 固定。compileSdk / minSdk と同じく配布物の互換性を決める値であり、Gradle JVM の更新では変えない |
+| Gradle を実行する JVM (Gradle JVM。CLI では `JAVA_HOME`、Android Studio では Gradle JDK 設定) | 開発者環境・IDE・CI が選ぶ | 使用中の Gradle 版がサポートする範囲内であること。JDK 21 で全ビルド・全テストが通ることを実測済み (2026-10-04) |
+| コンパイルとテストに使う JDK | 各 module の `kotlin { jvmToolchain(21) }` | JDK 21。Gradle JVM が何であっても、コンパイルとテストはこの JDK で走る |
+| 成果物のターゲット | 各 module の `compileOptions` (`VERSION_17`) と Kotlin の `jvmTarget` (`JVM_17`) | Java 17 固定。compileSdk / minSdk と同じく配布物の互換性を決める値であり、使う JDK の更新では変えない |
 
-`jvmToolchain(17)` は Gradle の toolchain 機構で **ローカルにインストールされた JDK 17 を探す**。toolchain resolver plugin (自動ダウンロード) は入れていないため、Gradle JVM に JDK 21 や 25 を使う場合でも JDK 17 の実体が別途必要で、無いマシンや CI ランナーでは `No matching toolchains found` で失敗する。ランナーを用意するときは JDK 17 を同梱するか、resolver を追加するかを決める必要がある。
+`jvmToolchain(21)` は Gradle の toolchain 機構で **ローカルにインストールされた JDK 21 を探す**。toolchain resolver plugin (自動ダウンロード) は入れていないため、Gradle JVM に別の版を使う場合でも JDK 21 の実体が必要で、無いマシンや CI ランナーでは `No matching toolchains found` で失敗する。CI は `setup-java` の版をこの指定と揃えている。
+
+`jvmTarget` を明示しているのは、明示しないと Kotlin のバイトコード版が toolchain の JDK (21) に追随し、利用者に JDK 21 以上を要求する成果物になるためである。生成された class がすべて Java 17 相当 (major version 61) であり、発行メタデータが利用者に JDK 21 を要求しないことを実測で確認している (2026-10-04)。
+
+toolchain が 17 だった時点では、Gradle JVM を JDK 17 / 21 / 25 (JDK 25 は Android Studio 同梱 JBR) に替えても通ることを実測していた。toolchain を 21 にした後に実測したのは Gradle JVM が JDK 21 の構成だけで、Android Studio の sync は確かめていない。
 
 ## バージョンカタログの中身
 
@@ -67,7 +72,7 @@ mavenLocal 経由の解決と Release ビルドは `verification/android` の消
 
 ### MAUI binding
 
-MAUI binding (`maui/android/KsSettingsView.Binding.Android/KsSettingsView.Binding.Android.csproj`) は `android/gradlew … assembleRelease` を Exec で直接呼んで aar を作る ([maui/ADR-0006](../../../decisions/maui/0006-android-binding-gradlew-exec.md))。対象は aar 2 本 — `kssettingsview-bridge` を束縛 (Bind=true) し、本体 `kssettingsview` は同梱のみ (Bind=false)。統合により `.compose` 層のクラスも本体 aar に同梱されるが、MAUI は Bridge 経由で Android View の Host を使うため実行時依存は増えない。Exec の `JAVA_HOME` は .NET Android SDK が解決する `JavaSdkDirectory` (現状 JDK 21) で、その JDK が Gradle JVM の要件を満たし、かつ「2 つの JDK の役割」節のとおり JDK 17 の実体も別途ある必要がある。
+MAUI binding (`maui/android/KsSettingsView.Binding.Android/KsSettingsView.Binding.Android.csproj`) は `android/gradlew … assembleRelease` を Exec で直接呼んで aar を作る ([maui/ADR-0006](../../../decisions/maui/0006-android-binding-gradlew-exec.md))。対象は aar 2 本 — `kssettingsview-bridge` を束縛 (Bind=true) し、本体 `kssettingsview` は同梱のみ (Bind=false)。統合により `.compose` 層のクラスも本体 aar に同梱されるが、MAUI は Bridge 経由で Android View の Host を使うため実行時依存は増えない。Exec の `JAVA_HOME` は .NET Android SDK が解決する `JavaSdkDirectory` (現状 JDK 21) で、その JDK が Gradle JVM とコンパイル用 JDK (「JDK の役割」節) を兼ねる。MAUI 経由のビルドは JDK 21 が 1 つあれば足りる。
 
 binding csproj 内の MSBuild Target `_BuildKsSettingsViewAars` は Item `KsAndroidModuleSource` を Inputs として aar を作り直すかを判定する。Inputs には module ソースと `build.gradle.kts` のほか `android/gradle/libs.versions.toml`・`android/gradle/wrapper/gradle-wrapper.properties`・`android/gradle.properties` が入っている。catalog だけを変える更新でも aar が作り直されるのはこのためである。
 
@@ -79,7 +84,7 @@ Android Studio は `samples/android` を開く (composite build で `android/` �
 
 互換の制約は 3 方向から来る: (1) 使いたい Gradle JVM の JDK 版 → Gradle の最低版、(2) Kotlin Gradle Plugin がテスト済みとする Gradle の上限と AGP の範囲、(3) AGP が要求する Gradle の最低版。この 3 つの交差で Gradle / AGP / Kotlin の組を決め、公式互換表 (Gradle compatibility matrix・Kotlin の Gradle 設定ページ・AGP リリースノート) で裏を取る。公式表に明記のない組み合わせ (AGP の古い系列と新しい Gradle メジャー等) は、最小プロジェクトで実測してから本体へ適用する。
 
-更新で同時に変えるもの: toml の `[versions]` と wrapper 2 か所。wrapper は手で編集せず、各 build root で `./gradlew wrapper --gradle-version <版>` を実行して `gradle-wrapper.properties` / `gradlew` / jar を再生成し、`distributionSha256Sum` を公式チェックサムで設定する。
+更新で同時に変えるもの: toml の `[versions]` と wrapper 2 か所。コンパイル用 JDK (`jvmToolchain`) を替えるときは、4 つのビルド設定 (本体・bridge・Sample・消費者検証) と CI の `setup-java` の版を同時に揃える。wrapper は手で編集せず、各 build root で `./gradlew wrapper --gradle-version <版>` を実行して `gradle-wrapper.properties` / `gradlew` / jar を再生成し、`distributionSha256Sum` を公式チェックサムで設定する。
 
 完了条件: `android/` の `./gradlew test` が全件実行で失敗 0 ([テスト実行規約](../../../handbook/cross/test-execution.md) の件数確認を含む)、`samples/android` の `:app:assembleDebug`、MAUI binding の `dotnet build`、Android Studio の sync がすべて通ること。Gradle JVM の JDK 版を変える更新では、新しい JDK と従来の JDK の両方でこれを確認する (後方互換を壊さないため)。
 
@@ -99,7 +104,7 @@ Compose Material3 `DatePicker` は experimental API のため、BOM 更新時は
 ## してはいけないこと
 
 - `build.gradle.kts` への plugin 版 `version "…"`・`compose-bom:` のリテラル版・`version = "…"` の書き戻し: Sample と本体で版がずれ、catalog が宣言の単一元でなくなる。追加・変更は toml で行う
-- Gradle JVM の更新を理由にした `jvmToolchain(17)` / `compileOptions` / compileSdk / minSdk の変更: 配布物の互換性が変わるため、別の変更として扱う
+- 使う JDK の更新を理由にした成果物ターゲット (`compileOptions` と `jvmTarget`) / compileSdk / minSdk の変更: 配布物の互換性が変わるため、別の変更として扱う。`jvmToolchain` の版は成果物ターゲットを保ったまま替えてよい
 - 片方の build root だけの wrapper 更新: Studio の composite sync と MAUI の Exec が異なる Gradle 版で走り、症状が再現しなくなる
 
 ## 関連

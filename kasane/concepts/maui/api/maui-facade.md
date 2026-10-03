@@ -44,10 +44,10 @@ builder.UseMauiApp<App>().AddKsSettingsView();
 | 前提 | 値 | 満たさないときの現れ方 |
 |---|---|---|
 | `TargetFramework` | `net10.0-android` / `net10.0-ios` (.NET 10。参照用に素の `net10.0` も持つ) | .NET 10 より前の TFM ではパッケージを解決できない |
-| `Microsoft.Maui.Controls` | 10.0.71 以上 | テンプレート既定 (SDK 10.0.300 時点で 10.0.20) や 10.0.70 のままだと restore が NU1605 (ダウングレード) で失敗する。下限は検証済みの版で、理由は下記 |
+| `Microsoft.Maui.Controls` | 10.0.71 以上 | 下限未満の版 (SDK 10.0.300 のテンプレート既定 10.0.20 や、10.0.70) のままだと restore が NU1605 (ダウングレード) で失敗する。下限は検証済みの版で、理由は下記 |
 | `SupportedOSPlatformVersion` (Android) | 29 以上 | facade 同梱のビルド時ガードが `KSSV0001` で platform ビルドを止める (依存 AndroidX の manifest merger エラーより先に出る)。未設定時は SDK 既定 21 のため同じく止まる |
-| `SupportedOSPlatformVersion` (iOS) | 16.0 以上 | 同じく `KSSV0001` で止まる。未設定時は SDK 既定 (26.x) が要件を満たすためガードは発火しない |
-| TFM の API 版 (明示する場合のみ) | `net10.0-android36.0` / `net10.0-ios26.0` 以上 (パッケージの TFM group は SDK 10.0.300 の既定 platform 版で付く) | 失敗しない — 古い API 版 (例: `net10.0-android35.0` / `net10.0-ios18.0`) を固定すると restore は警告なく成功するが、`lib/net10.0` (platform 中立) の assembly が選ばれ binding 2 件が依存グラフに入らず native 実装が静かに欠ける。API 版なしの `net10.0-android` / `net10.0-ios` なら常に platform 版が選ばれる |
+| `SupportedOSPlatformVersion` (iOS) | 16.0 以上 | 同じく `KSSV0001` で止まる。未設定時は SDK 既定 (26.0 以上) が要件を満たすためガードは発火しない |
+| TFM の API 版 (明示する場合のみ) | `net10.0-android36.0` / `net10.0-ios26.0` 以上 (パッケージの TFM group は、SDK がライブラリに与える既定 platform 版で付く。SDK 10.0.300 と 10.0.401 で同じ値) | 失敗しない — 古い API 版 (例: `net10.0-android35.0` / `net10.0-ios18.0`) を固定すると restore は警告なく成功するが、`lib/net10.0` (platform 中立) の assembly が選ばれ binding 2 件が依存グラフに入らず native 実装が静かに欠ける。API 版なしの `net10.0-android` / `net10.0-ios` なら常に platform 版が選ばれる |
 
 `Microsoft.Maui.Controls` の下限は 2 つの事情で決まっている。iOS の icon 所有権分類 ([表示への反映と Host の寿命](maui-rendering-lifecycle.md) の「IconSource の解決」、maui/ADR-0026) が 10.0.60 以降の内部挙動に依存する。加えて 10.0.70 は、binding の依存 (AndroidX の Compose・RecyclerView 等) が引き上げる `Xamarin.AndroidX.Core` と合わない — その版では `AccessibilityNodeInfoCompat.Checked` の型が変わっており、10.0.70 の `Microsoft.Maui.dll` が呼ぶメンバーが無いため、Android でアクセシビリティの問い合わせ (TalkBack・uiautomator 等) が MAUI の経路を通った時点で `MissingMethodException` で落ちる。10.0.71 はこの呼び出しを持たない。実行時に落ちる代わりに restore の時点で気づけるよう、facade の依存の下限を 10.0.71 にしている (maui/ADR-0010 の範囲 — 版の競合は binding / CPM 側で吸収し、利用者に版のピンを書かせない)。
 
