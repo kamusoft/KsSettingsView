@@ -52,8 +52,13 @@ android {
     }
 }
 
+// コンパイルに使う JDK は 21、生成する class の対象は Java 17（本体 android/ モジュールと整合）。
+// `jvmToolchain` の版は Kotlin の `jvmTarget` の既定にもなるため、対象を 17 に明示する。
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
 }
 
 dependencies {

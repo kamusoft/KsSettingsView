@@ -62,9 +62,13 @@ android {
     }
 }
 
-// JDK 17 を採用（kssettingsview と整合）
+// コンパイルとテストに使う JDK は 21、成果物の対象は Java 17（kssettingsview と整合）。
+// `jvmToolchain` の版は Kotlin の `jvmTarget` の既定にもなるため、対象を 17 に明示する。
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
 }
 
 dependencies {

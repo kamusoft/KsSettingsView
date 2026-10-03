@@ -33,6 +33,7 @@ android {
         minSdk = 29
     }
 
+    // 配布物が対象とする Java 版。コンパイルに使う JDK（下の `jvmToolchain`）とは別に決める。
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -79,12 +80,19 @@ android {
     }
 }
 
-// JDK 17 を採用（リポジトリ全体の Android ビルド共通）
 kotlin {
     // Maven 公開面は visibility と型を明示した宣言だけで構成し、意図しない API の追加を
     // コンパイル時に拒否する (android/ADR-0022)。
     explicitApi()
-    jvmToolchain(17)
+
+    // コンパイルとテストに使う JDK は 21（リポジトリ全体の Android ビルド共通）。
+    jvmToolchain(21)
+
+    // 配布物の対象は Java 17。`jvmToolchain` の版はコンパイルに使う JDK を決めるだけでなく
+    // Kotlin の `jvmTarget` の既定にもなるため、対象を `compileOptions` と同じ 17 に明示する。
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
 }
 
 mavenPublishing {
