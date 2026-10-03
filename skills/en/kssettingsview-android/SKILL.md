@@ -64,7 +64,7 @@ The versions below describe the current library build. They are its toolchain, n
 | Kotlin | 2.4.10 |
 | Android Gradle Plugin | 8.13.2 |
 | Gradle | 9.5.0 |
-| JDK | 17 |
+| JDK | 21 (the published artifact still targets Java 17) |
 
 The library puts no prerequisites on the host application's theme or activity type. It draws everything inside a context wrapped in its own bundled Material3-derived theme, so any XML theme works - a minimal theme, AppCompat, or a MAUI template default - and any activity works, `ComponentActivity` included; the time and date pickers open everywhere. The consequences of that self-containment worth knowing are these:
 

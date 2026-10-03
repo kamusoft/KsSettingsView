@@ -48,7 +48,7 @@ That one line is the whole reference; the binding packages underneath arrive tra
 
 | Requirement | AiForms | KsSettingsView |
 |---|---|---|
-| .NET SDK | 9.0.314 | 10.0.300 |
+| .NET SDK | 9.0.314 | 10.0.401 |
 | Target frameworks | net9.0-ios, net9.0-android, net9.0-maccatalyst | net10.0-ios, net10.0-android |
 | API-versioned target frameworks, if specified | - | net10.0-android36.0, net10.0-ios26.0 or later |
 | Microsoft.Maui.Controls | 9.0.120 | 10.0.71 |
@@ -57,7 +57,7 @@ That one line is the whole reference; the binding packages underneath arrive tra
 
 The `Microsoft.Maui.Controls` floor is checked at restore: an AiForms project carries a `MauiVersion` below 10.0.71, and leaving it there - or raising it only to 10.0.70 - fails the restore with NU1605 (package downgrade), so raise `MauiVersion` to 10.0.71 or later. Do not suppress NU1605 to stay on 10.0.70: the Android bindings the package depends on raise `Xamarin.AndroidX.Core` to a version that no longer has a member the 10.0.70 `Microsoft.Maui.dll` calls, so the Android app crashes with `MissingMethodException` as soon as an accessibility service such as TalkBack queries the screen. 10.0.71 no longer makes that call. The OS floors are checked at build: the package brings a check into your project that stops the `net10.0-ios` / `net10.0-android` build with error `KSSV0001` when that target framework's `SupportedOSPlatformVersion` is below iOS 16.0 / Android API 29 - the AiForms values (14.2 / 27) trip it, so raise both.
 
-Prefer the unversioned platform TFMs shown in the table. They select the correct native binding packages. If you explicitly pin the platform API versions, use `net10.0-android36.0` / `net10.0-ios26.0` or later. Lower versions can restore without a warning while selecting the platform-neutral `lib/net10.0` asset instead, which silently omits the iOS and Android native binding dependencies. This behavior was verified with SDK 10.0.300.
+Prefer the unversioned platform TFMs shown in the table. They select the correct native binding packages. If you explicitly pin the platform API versions, use `net10.0-android36.0` / `net10.0-ios26.0` or later. Lower versions can restore without a warning while selecting the platform-neutral `lib/net10.0` asset instead, which silently omits the iOS and Android native binding dependencies. The package's TFM groups carry the default platform versions the SDK assigns to a library, and those values are the same for .NET SDK 10.0.300 and 10.0.401.
 
 Mac Catalyst is not a target. Android puts no requirement on the host activity type or theme: the library ships its own Material3 theme and draws its cells inside it, so the host theme does not restyle them - AiForms screens that relied on the host theme may look different until you restyle through the `SettingsView` properties - and light or dark follows the device's night mode.
 

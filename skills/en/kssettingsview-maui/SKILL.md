@@ -66,15 +66,15 @@ public static class MauiProgram
 
 | Requirement | Minimum |
 |---|---|
-| .NET SDK | 10.0.300 |
+| .NET SDK | 10.0.401 |
 | Target frameworks | net10.0-ios, net10.0-android |
 | Microsoft.Maui.Controls | 10.0.71 |
 | iOS | 16.0 |
 | Android | API 29 |
 
-The `Microsoft.Maui.Controls` floor is enforced at restore time: the version the .NET 10 project template writes into `MauiVersion` is lower than 10.0.71 (10.0.20 at SDK 10.0.300), and leaving it there - or at 10.0.70 - fails the restore with NU1605 (package downgrade), so set `MauiVersion` to 10.0.71 or later. Do not suppress NU1605 to stay on 10.0.70: the Android bindings the package depends on raise `Xamarin.AndroidX.Core` to a version that no longer has a member the 10.0.70 `Microsoft.Maui.dll` calls, so the Android app crashes with `MissingMethodException` as soon as an accessibility service such as TalkBack queries the screen. 10.0.71 no longer makes that call. The OS floors are enforced at build time: the package carries a check into your project that stops the `net10.0-ios` / `net10.0-android` build with error `KSSV0001` when the `SupportedOSPlatformVersion` of that target framework is below iOS 16.0 / Android API 29. On Android the check also fires when the value is unset, because the SDK default lies below the floor, so declare both values explicitly.
+The `Microsoft.Maui.Controls` floor is enforced at restore time: leaving `MauiVersion` below 10.0.71 - at the 10.0.20 that the SDK 10.0.300 project template writes, or at 10.0.70 - fails the restore with NU1605 (package downgrade), so set `MauiVersion` to 10.0.71 or later. Do not suppress NU1605 to stay on 10.0.70: the Android bindings the package depends on raise `Xamarin.AndroidX.Core` to a version that no longer has a member the 10.0.70 `Microsoft.Maui.dll` calls, so the Android app crashes with `MissingMethodException` as soon as an accessibility service such as TalkBack queries the screen. 10.0.71 no longer makes that call. The OS floors are enforced at build time: the package carries a check into your project that stops the `net10.0-ios` / `net10.0-android` build with error `KSSV0001` when the `SupportedOSPlatformVersion` of that target framework is below iOS 16.0 / Android API 29. On Android the check also fires when the value is unset, because the SDK default lies below the floor, so declare both values explicitly.
 
-Prefer the API-versionless target frameworks shown above. They select the platform asset and its transitive binding. If you pin an API version in the TFM, use `net10.0-android36.0` / `net10.0-ios26.0` or later. Older pins such as `net10.0-android35.0` / `net10.0-ios18.0` can restore without a warning but silently fall back to the platform-neutral `lib/net10.0` asset, so neither native binding enters the dependency graph. This package selection behavior was verified with .NET SDK 10.0.300.
+Prefer the API-versionless target frameworks shown above. They select the platform asset and its transitive binding. If you pin an API version in the TFM, use `net10.0-android36.0` / `net10.0-ios26.0` or later. Older pins such as `net10.0-android35.0` / `net10.0-ios18.0` can restore without a warning but silently fall back to the platform-neutral `lib/net10.0` asset, so neither native binding enters the dependency graph. The package's TFM groups carry the default platform versions the SDK assigns to a library, and those values are the same for .NET SDK 10.0.300 and 10.0.401.
 
 ```xml
 <PropertyGroup>

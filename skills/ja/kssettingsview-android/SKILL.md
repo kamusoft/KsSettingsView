@@ -64,7 +64,7 @@ artifact は Compose runtime / ui / foundation-layout・kotlinx-coroutines-core�
 | Kotlin | 2.4.10 |
 | Android Gradle Plugin | 8.13.2 |
 | Gradle | 9.5.0 |
-| JDK | 17 |
+| JDK | 21 (配布物の対象は Java 17 のまま) |
 
 ライブラリは利用アプリのテーマや Activity 型に前提を置かない。すべてを自前で同梱する Material3 派生テーマでラップした Context の中に描くため、XML テーマは何でもよく (最小構成のテーマ・AppCompat 系・MAUI テンプレート既定のいずれでも)、Activity も何でもよい (`ComponentActivity` を含む)。時刻・日付のピッカーもどの構成でも開く。この自己完結には知っておくべき帰結がある:
 
