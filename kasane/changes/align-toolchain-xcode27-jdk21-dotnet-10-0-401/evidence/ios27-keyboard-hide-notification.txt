@@ -1,0 +1,55 @@
+# iOS 27.0 Simulator (Xcode 27.0) での入力面の非表示完了通知の実測 (2026-10-04)
+
+## 1. テストランナー (xcodebuild test、ホストアプリなし)
+
+計測用の一時テストで、入力面の通知 6 種 (willShow / didShow / willHide / didHide / willChangeFrame / didChangeFrame) と
+callback の到着を記録した。数値は直前の区切り (行頭の +0.000) からの経過秒。
+通知は 1 件も届かず、閉じ切り callback は本体の打ち切り (1 秒) で届いた。素の UITextField + 通常キーボードでも通知は 0 件。
+UIApplication.shared.connectedScenes は 0 件 (window scene を指定する構成は作れず、4 回とも同じ構成の反復になった)。
+
+==== 日付ホイール 1 回目: 待たずに Done
++0.000 scenes=0 windowScene=_UIScreenBasedWindowScene (ForegroundActive)
++0.511 firstResponder
++0.000 --- done を呼ぶ
++0.023 changed
++0.023 --- done から戻る
++1.038 completed
+==== 日付ホイール 2 回目: 2 秒待って Done
++0.001 scenes=0 windowScene=_UIScreenBasedWindowScene (ForegroundActive)
++0.134 firstResponder
++0.000 --- done を呼ぶ
++0.122 changed
++0.122 --- done から戻る
++1.324 completed
+==== 日付ホイール 3 回目: 待たずに Done
++0.000 scenes=0 windowScene=_UIScreenBasedWindowScene (ForegroundActive)
++0.038 firstResponder
++0.000 --- done を呼ぶ
++0.012 changed
++0.012 --- done から戻る
++1.017 completed
+==== 日付ホイール 4 回目: 2 秒待って Done
++0.000 scenes=0 windowScene=_UIScreenBasedWindowScene (ForegroundActive)
++0.013 firstResponder
++0.000 --- done を呼ぶ
++0.001 changed
++0.001 --- done から戻る
++1.006 completed
+==== 素の UITextField
++0.407 become=true
++0.000 --- resign を呼ぶ
++0.041 resign=true
+
+## 2. 実アプリ (samples/ios の Sample: 入力 Cell 5 種デモ → 誕生日 (ホイール) → Done)
+
+本体に一時的な計測ログを入れてビルドした Sample で記録した。Done から 0.426 秒 (アニメーション 0.3833 秒) で didHide が届く。
+各通知が 2 行ずつ出るのは、画面上の日付行 2 つがそれぞれ計測用の購読を持つため。
+
+00:14:43.122 done-before-resign t=812733283.123
+00:14:43.145 willHide t=812733283.145 dur=Optional(0.3833)
+00:14:43.145 willHide t=812733283.145 dur=Optional(0.3833)
+00:14:43.147 done-after-resign t=812733283.148 was=1 did=1
+00:14:43.548 didHide t=812733283.549 dur=Optional(0.3833)
+00:14:43.548 didHide t=812733283.549 dur=Optional(0.3833)
+
+生ログの全文は手元保管。計測用のテストと計測ログは調査後に取り除いた。
