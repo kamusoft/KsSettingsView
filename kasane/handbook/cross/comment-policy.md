@@ -4,7 +4,7 @@ applies-when:
   always: true
 title: ソースコメント規約
 description: 全言語共通のソースコメントの許容参照・禁止類型・公開 doc コメントの書き方と書き換え基準
-timestamp: 2026-09-26
+timestamp: 2026-09-30
 managed-by: ksn-update
 ---
 
@@ -50,7 +50,7 @@ managed-by: ksn-update
 
 事後判定: 公開 doc コメントだけを抜き出して読んだとき、ライブラリの利用方法以外の予備知識なしで意味が通れば適合。
 
-機械検査は、このうち **ADR ID の混入** だけを要確認 (advisory) として報告する — doc コメント (`/** */` または `///` の連なり) の直後の宣言行に非公開修飾子 (`private` `internal` `protected` `fileprivate`) が無ければ公開とみなす (C# / Java は明示の `public` がある場合のみ)。可視性の推定はヒューリスティックなので書き込みは止めず、lint の `--advisory` で確認してコードレビューが判定する。
+機械検査は、このうち **ADR ID の混入** だけを要確認 (advisory) として報告する。公開かどうかは宣言の修飾子からの推定なので書き込みは止めず、コードレビューが判定する。
 
 ## 書き換え時の判断基準 (3 類型)
 
@@ -62,13 +62,9 @@ managed-by: ksn-update
 
 ## 適用範囲と機械検査
 
-- 対象: リポジトリ内でコメント構文を持つ全ソースファイル (テストコード・サンプルを含む)。対象拡張子の既定と追加・除外ディレクトリは `kasane/config.yaml` の `lint.comment-policy` (`scripts/comment-policy-lint.py` 冒頭に既定の列挙がある)
+- 対象: リポジトリ内でコメント構文を持つ全ソースファイル (テストコード・サンプルを含む)。対象拡張子の既定と追加・除外ディレクトリは `kasane/config.yaml` の `lint.comment-policy`
 - 適用契機: 新規コメントを書くとき・既存コメントに触れる実装をするとき・コードレビューのとき
 
-機械検査は `scripts/comment-policy-lint.py` 1 本 (Kasane 標準装備。配布・更新は ksn-update):
+機械検査は `scripts/comment-policy-lint.py` 1 本。書き込み時点の hook は禁止参照を新しく増やす書き込みを止める (書き込み前から在ったコメント行では止めない)。誤検知に当たった行は、行内に `comment-policy:allow` を書き添えれば個別に除外できる。lint のオプション・hook の仕組み・自己テストはスクリプト冒頭の説明と ksn-core の references/lint-gates.md。
 
-- **lint** (`python3 scripts/comment-policy-lint.py`) — 追跡中と未追跡の全対象ソースを走査する。`--summary` でファイル単位の件数、`--advisory` で要確認分 (履歴記述・公開 doc コメント内の ADR 参照) も表示する
-- **書き込み前 hook** (`--hook`、PreToolUse に登録) — 禁止参照を**新しく増やす**書き込みだけを拒否するラチェット方式。書き込み前から在ったコメント行は既存債務として見逃すため、違反を抱えたファイルの編集は巻き添えでは止まらない。エージェント経由の書き込みにのみ効き、人間がエディタで直接書いたコメントは lint でのみ検出される
-- **自己テスト** (`--selftest`) — 検査が壊れて無音になっていないかを確認する (許容形式を弾かないこと・worktree 配下でも発火することを含む)
-
-誤検知に当たった行は、行内に `comment-policy:allow` を書き添えれば個別に除外できる。**検査の検出範囲は本規約より狭い** — 履歴記述と公開 doc コメント内の ADR 参照は要確認 (advisory) として報告するだけで止めず、ADR ID 以外の内部用語 (change・デルタスペック・Kasane 等) は文脈依存で機械判定できないため、コードレビューが規約本文から判定する。検出 0 件は適合の証明にならない。
+**検査の検出範囲は本規約より狭い** — 履歴記述と公開 doc コメント内の ADR 参照は要確認 (advisory) として報告するだけで止めず (一覧は `python3 scripts/comment-policy-lint.py --advisory`)、ADR ID 以外の内部用語 (change・デルタスペック・Kasane 等) は文脈依存で機械判定できないため、コードレビューが規約本文から判定する。検出 0 件は適合の証明にならない。
