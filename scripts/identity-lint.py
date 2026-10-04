@@ -425,6 +425,25 @@ def selftest() -> int:
             check(proc.returncode == 0 and denied == expect_deny, name,
                   f"期待 deny={expect_deny} / 実際 deny={denied}")
 
+        # 別の Kasane プロジェクトへの書き込みは、そのプロジェクトの検査範囲と config で判定する
+        with tempfile.TemporaryDirectory() as other:
+            subprocess.run(["git", "init", "-q"], cwd=other, check=True, capture_output=True)
+            os.makedirs(os.path.join(other, "kasane"))
+            with open(os.path.join(other, "kasane", "config.yaml"), "w", encoding="utf-8") as f:
+                f.write("lint:\n  identity:\n    allow:\n      - aa:bb:cc:dd:ee:02\n")
+            for name, content, expect_deny in [
+                ("別プロジェクトの kasane/ への違反の書き込みは deny", "MAC: aa:bb:cc:dd:ee:01", True),
+                ("別プロジェクトの lint.identity.allow の値は通す", "MAC: aa:bb:cc:dd:ee:02", False),
+            ]:
+                payload = {"tool_name": "Write", "cwd": tmp,
+                           "tool_input": {"file_path": os.path.join(other, "kasane", "changes", "selftest", "new.md"),
+                                          "content": content}}
+                proc = subprocess.run([sys.executable, os.path.abspath(__file__), "--hook"],
+                                      input=json.dumps(payload), capture_output=True, text=True)
+                denied = '"deny"' in proc.stdout
+                check(proc.returncode == 0 and denied == expect_deny, name,
+                      f"期待 deny={expect_deny} / 実際 deny={denied}")
+
     print(f"\n自己テスト: {'全件 OK' if not failures else f'{failures} 件 NG'}")
     return 1 if failures else 0
 
@@ -437,13 +456,18 @@ def hook() -> int:
     except Exception:
         return 0
     cwd = data.get("cwd") or os.getcwd()
-    root = LP.repo_root(cwd)
-    settings = Settings(root)
+    settings_by_root: dict[str, Settings] = {}
+    targets: dict[str, tuple[str, str]] = {}  # 同じファイルへの複数編集で git を呼び直さない
     hits: list[str] = []
     for path, text in LP.texts_from_hook_input(data):
         if _is_self_file(path):
             continue
-        rel = LP.normalize_rel(path, root) if path else ""
+        if path not in targets:
+            targets[path] = LP.hook_target(path, cwd)
+        root, rel = targets[path]
+        if root not in settings_by_root:
+            settings_by_root[root] = Settings(root)
+        settings = settings_by_root[root]
         if rel and not settings.in_scope(rel):
             continue
         for i, line in enumerate(text.splitlines(), 1):
