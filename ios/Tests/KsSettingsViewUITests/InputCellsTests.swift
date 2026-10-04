@@ -1563,15 +1563,19 @@ final class InputCellsTests: XCTestCase {
         view._simulateWheelsChange(to: Calendar.current.date(from: DateComponents(year: 2025, month: 6, day: 14))!)
         view._simulateWheelsDone()
 
-        // 非表示完了の報告が `resignFirstResponder()` の中で届くか後から届くかは実行環境で変わる。
-        // 打ち切り (1 秒) より十分手前で届くことを条件にすることで、報告を拾う配線が外れれば落ちる。
-        awaitCondition(
-            "閉じ切り callback が非表示完了の報告で届く",
-            in: view,
-            deadline: 0.5,
-            actual: { "events = \(log.events)" },
-            until: { log.events.count == 2 }
-        )
+        // 非表示完了を UIKit が報告するかどうかと、その時点は実行環境で変わる
+        // (`resignFirstResponder()` の中で届く / アニメーションの後に届く / ホストアプリを持たない
+        // テストランナーでは届かない)。まだ報告されていなければ、閉じ切りが保留されていることを
+        // 確かめたうえでテストが報告を出す。どちらの場合も打ち切り (1 秒) を待たずに判定するため、
+        // 報告を拾う配線が外れれば落ちる。
+        if view._isAwaitingWheelsHide {
+            XCTAssertEqual(
+                log.events,
+                ["changed(2025-6-14)"],
+                "非表示完了が報告されるまで閉じ切り callback は届かない"
+            )
+            NotificationCenter.default.post(name: UIResponder.keyboardDidHideNotification, object: nil)
+        }
 
         XCTAssertEqual(
             log.events,

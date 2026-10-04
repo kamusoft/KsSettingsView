@@ -3,7 +3,7 @@ type: concept
 title: MAUI binding の Native artifact 統合
 description: MAUI binding が iOS xcframework と Android aar を生成・取り込みする構成、既知の制約、SDK 更新時の再検証箇所、NuGet 3 パッケージの pack 構成と利用者ビルドへ同梱する最低 OS 版ガード
 tags: [maui, binding, build, interop, nuget]
-timestamp: 2026-09-04
+timestamp: 2026-10-04
 ---
 
 # MAUI binding の Native artifact 統合
@@ -120,7 +120,7 @@ facade パッケージは `buildTransitive/KsSettingsView.Maui.props` (要件の
 | 性質 | 内容 |
 |---|---|
 | 有効になる範囲 | 複数 TFM のプロジェクトは TFM ごとの内部ビルド (inner build) に分かれるが、働くのは `TargetPlatformIdentifier` が `android` / `ios` の内部ビルドだけ (`TargetFramework` が空の外側のビルドは対象外)。`buildTransitive/` は推移的な全消費者へ import されるため、素の `net10.0`・間接参照するライブラリの非 platform TFM でも何もしない |
-| 未設定時 | .NET SDK が platform TFM に必ず既定値を与えるため空にはならない。Android の既定 21 は要件未満で止まり、iOS の既定 (26.x) は要件を満たすため発火しない |
+| 未設定時 | .NET SDK が platform TFM に必ず既定値を与えるため空にはならない。Android の既定 21 は要件未満で止まり、iOS の既定 (ライブラリは 26.0) は要件を満たすため発火しない |
 | タイミング | `BeforeTargets="CoreCompile"`。Android では依存 AndroidX の manifest merger (`XAAMM0000`) より先に、要件と設定方法を書いた文面で止まる |
 | 比較 | `[MSBuild]::VersionLessThan` で比較する。Android の `SupportedOSPlatformVersion` は SDK が `29` → `29.0` のように小数点付きへ揃えるため、iOS の `16.0` と同じ比較式で扱える |
 | リポジトリ内 | `Directory.Build.targets` が同じ targets を import し、facade / binding / 検証ホストのビルドにも同じ検査が当たる |
@@ -133,7 +133,7 @@ facade パッケージは `buildTransitive/KsSettingsView.Maui.props` (要件の
 |---|---|
 | 自 assembly 用 aar | .NET Android SDK が Android ライブラリ assembly ごとに自動生成する `KsSettingsView.Maui.aar` / `KsSettingsView.Binding.Android.aar` (中身は推移依存 `androidx.graphics.path` の ABI 別 `.so` のみ) を各 nupkg に入れようとする。facade 自身が native コードを持ち込んでいるのではなく、推移依存の `.so` を SDK が assembly ごとの aar に再梱包した結果である。nupkg に入ると利用者の Android Release ビルドで同じ `.so` が重複し XA4301 が出るため、pack 時に nupkg から除く (下の「自 assembly 用 aar の除外」) |
 | iOS manifest の絶対パス | binding resource package の `manifest` に pack した環境の絶対パスが載る。リリースは CI で pack するため CI ランナーのパスになる |
-| API 版付き TFM | nuspec の TFM group は `net10.0-android36.0` / `net10.0-ios26.0` のように SDK (10.0.300) の既定 platform 版が付く。消費者の TFM が API 版なしなら常にこの group が選ばれるが、古い API 版 (`net10.0-android35.0` / `net10.0-ios18.0`) を固定した利用者では restore が警告なく成功したうえで `lib/net10.0` へフォールバックし、binding 2 件が依存グラフに入らない (消費者検証で実測)。利用者向けの要件は [MAUI facade の公開契約](../api/maui-facade.md) の「導入と前提」が持つ |
+| API 版付き TFM | nuspec の TFM group は `net10.0-android36.0` / `net10.0-ios26.0` のように、SDK がライブラリに与える既定 platform 版が付く。ライブラリの既定はアプリの既定と別に決まり、SDK 10.0.401 (workload 10.0.401.1) では iOS のアプリの既定が 27.0 でもライブラリの既定は 26.0、Android は 36.1 に対応しつつ既定は 36.0 のままである。このため SDK を 10.0.300 から 10.0.401 へ上げても group は変わらなかった (pack して実測)。消費者の TFM が API 版なしなら常にこの group が選ばれるが、古い API 版 (`net10.0-android35.0` / `net10.0-ios18.0`) を固定した利用者では restore が警告なく成功したうえで `lib/net10.0` へフォールバックし、binding 2 件が依存グラフに入らない (消費者検証で実測)。利用者向けの要件は [MAUI facade の公開契約](../api/maui-facade.md) の「導入と前提」が持つ |
 | facade → binding の依存版 | 完全一致 `[x.y.z]` ではなく下限指定。lockstep で同時発行される ([cross/ADR-0019](../../../decisions/cross/0019-lockstep-single-version.md)) ため、NuGet は下限を満たす最小の版を選ぶ (lowest applicable version) 規則で同版の binding を解決する |
 | NU1507 | CPM のため、複数の NuGet ソースを構成した環境では restore で出る (単一ソースでは出ない)。`maui/nuget.config` が restore 元を nuget.org だけに固定するため、`maui/` 配下では環境側のソース構成に関わらず出ない (上の「共通設定の置き場と評価順序」) |
 
@@ -165,7 +165,7 @@ dotnet build maui/macios/KsSettingsView.Binding.iOS/KsSettingsView.Binding.iOS.c
 
 Swift の増分判定は、上のコマンドで得た `_XcbInputs` の一覧に `ios/Sources/KsSettingsViewBridge` と取り込まれる Core・UI source が含まれ、binding target に含まれない source が含まれないことで確認する。一覧を見たうえで実際に片方だけを触ってビルドすると、過剰・不足の両方を検出できる。
 
-pack 成果物についても、SDK 更新後に「SDK 挙動として受け入れているもの」の各事象が同じ形で現れるかを確認する。`dotnet pack` した nupkg を展開し (`unzip -o <pkg>.nupkg -d <dir>`)、nuspec の TFM group と依存、同梱物 (自 assembly 用 aar の有無と中身) を見る。あわせて platform TFM の `SupportedOSPlatformVersion` の SDK 既定値が変わっていないかを確認する — 変わると「最低 OS 版のビルド時ガード」の未設定時の前提 (Android 21 / iOS 26.x) が崩れる。
+pack 成果物についても、SDK 更新後に「SDK 挙動として受け入れているもの」の各事象が同じ形で現れるかを確認する。`dotnet pack` した nupkg を展開し (`unzip -o <pkg>.nupkg -d <dir>`)、nuspec の TFM group と依存、同梱物 (自 assembly 用 aar の有無と中身) を見る。あわせて platform TFM の `SupportedOSPlatformVersion` の SDK 既定値が変わっていないかを確認する — 変わると「最低 OS 版のビルド時ガード」の未設定時の前提 (Android 21 / iOS 26.0) が崩れる。
 
 ## 関連
 

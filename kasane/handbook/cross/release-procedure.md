@@ -23,7 +23,7 @@ timestamp: 2026-09-14
 3. **失敗したとき** — 実行が止まったときだけ開く
 4. **リハーサル** — 配信先を変えずに経路を通したいときだけ開く
 
-リリース用スキル (`.agents/skills/release/SKILL.md`) は、実行時にこの文書を読んで書かれた順に従う薄い層である。段の順序・節の並び・コマンドはいずれもこの文書が持ち、スキルの側には写しを持たない。手順を変えるときはこの文書だけを直せばよい ([cross/ADR-0030](../../decisions/cross/0030-release-notes-from-pr-body-and-handbook-as-procedure-source.md))。判断 — version 番号の決定、`## Changes` の最終的な文面、失敗したときに再実行するかどうか — は人が行い、スキルは代行しない。
+リリース用スキル (`.agents/skills/release/SKILL.md`) は、実行時にこの文書を読んで書かれた順に従う薄い層である。段の順序・節の並び・コマンドはいずれもこの文書が持ち、スキルの側には写しを持たない。手順を変えるときはこの文書だけを直せばよい ([cross/ADR-0030](../../decisions/cross/0030-release-notes-from-pr-body-and-handbook-as-procedure-source.md))。判断 — version 番号の決定、`## Changes` の最終的な文面、失敗したときに再実行するかどうか — は人が行い、スキルは代行しない。人への確認は version と `## Changes` の文面を 1 回でまとめて行い、確定した後は 2. から 5. までを段ごとの確認なしで進める (CI の完了待ちもスキルが監視する)。止まるのは失敗したときと、この文書に書かれていない状況に当たったときだけである。
 
 ## ブランチの役割
 
@@ -132,6 +132,8 @@ nuget.org 側には、この monorepo の `release.yml` と Environment `release
 
 到達状態: `develop` の検証 CI が緑で、利用者向けドキュメントの追随の要否が判断できている。
 
+ローカルの `develop` が `origin/develop` より先行していれば (`git status -sb` の `ahead N`)、先に push して、その push で走った検証 CI の完了を待つ。未 push の commit は検証 CI を一度も通っておらず、リリース対象にも入らない。
+
 `develop` の先端に対する検証 CI が成功していることを確かめる。
 
 ```bash
@@ -145,7 +147,7 @@ gh run list --branch develop --workflow=ci.yml --limit 1 \
 
 ### 2. リリース PR
 
-到達状態: `develop` → `main` の pull request が 7 件の check を通してマージされ、`main` の先端がリリース対象の commit になっている。
+到達状態: `develop` → `main` の pull request が 7 件の check を通して merge commit でマージされ、`main` の先端がリリース対象の commit になっている。
 
 1. `## Changes` に書く材料を集める。範囲は**この pull request が `main` へ新しく持ち込む差分**だけで、前回のリリース以降の全変更ではない (既に `main` へ入った変更は、それを持ち込んだ pull request の記載が既に持っている。両方に書くとノートへ二重に載る)。
 
@@ -155,7 +157,9 @@ git log --no-merges --reverse origin/main..origin/develop --pretty=format:'%h %s
 ```
 
 2. pull request を `develop` → `main` で作り、本文の `## Changes` セクションに利用者向けの変更だけを書く
-3. 7 件の check が通ったらマージする
+3. 7 件の check が通ったら **merge commit で**マージする (`gh pr merge <番号> --merge`)
+
+squash や rebase でマージしない。`main` の commit が `develop` の履歴につながらず、次のリリース PR が conflict する。それを解くために `main` を `develop` へ取り込むと、squash 前の `develop` の commit が次の範囲に入り、前の版の pull request の項目が次の Release 本文に重複して載る (KsDialogs の 0.1.0-beta.3 で発生)。
 
 本文は `.github/pull_request_template.md` の雛形から始める。書式と種別の一覧は雛形の「記入の仕方」が持つ (利用者向けの変更が無いときは `- none` を単独で置く)。**説明は英語で書く** — Release ページは閲覧者の言語圏を仮定しない利用者向けの公開物であり、種別の見出しと定型文言も英語で出る。**このセクションの項目が GitHub Release 本文の材料になる** — 書いた順や字面がそのまま出るのではなく、workflow が項目を種別別に再編し、種別の見出し・pull request 番号・前回の版との比較リンクを付けて整形する。
 

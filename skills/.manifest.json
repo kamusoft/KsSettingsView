@@ -1,10 +1,10 @@
 {
   "version": 3,
-  "generatedAt": "2026-09-30T05:11:39Z",
+  "generatedAt": "2026-10-03T16:48:37Z",
   "concepts": {
     "android/api/android-compose.md": "ae0ffd58ccbf9c7cd26ca176dfba7917b1abcc94f06f60446422c4e581c6b1a4",
     "android/api/android-native-host.md": "8534e99a533b941a44fc8b07f49cbf88620736f27dada7881832438e4c390f87",
-    "android/architecture/build-toolchain.md": "ad234c936fc9778fc747aeea8b596ff618728729a44b0c9bc1340f82b82ab45e",
+    "android/architecture/build-toolchain.md": "f9c2264aa7e5c8f31a92ddbf57583e84b07835c1c477315e3626738daf816cd8",
     "core/architecture/cell-renderer-registry.md": "ec4662e4ce6d69bdfc2de8d99a33e9bb7b949d52ba7124899687073b5af962b1",
     "core/architecture/declarative-tree-identity.md": "e606623d24df1d0ef571af44f6ec9a220977522397dbbdb587adddd9126d96ea",
     "core/architecture/declarative-ui-bridge.md": "e3da4ff1971961cd114c47d0fbd8006907db5f8716b505f941fb81dd8b95c559",
@@ -32,11 +32,11 @@
     "ios/api/ios-native-host.md": "707d9c2f0d937f1c9f22cf0dc6b6f105d91e1cb01de029ddc80661651cfd3dca",
     "ios/api/ios-swiftui.md": "14989f4268c022b4d101de9cfd9d3a63124f364f17d8e82d922392e56a3bc328",
     "maui/api/maui-cells.md": "0cedb20f4419d3ee07b44144d6957ce25c29e2a6ac9321cf0077ec73c4d0b61a",
-    "maui/api/maui-facade.md": "e77c2a59796410f9c002dd405686725a6d0fc3418c138d718fc8ea1f7a061379",
+    "maui/api/maui-facade.md": "971956f4e45c18426d84b7d609f64a32241222b2e499349921ede4337fd61ac9",
     "maui/api/maui-rendering-lifecycle.md": "11cde117ce9be05ed6c1bcee0e5818267619501cafb610e67677c6d4ddbc2c33",
     "maui/api/maui-styling.md": "062877e245b3777ce5dbdf52907828f05cc5f5a1c569363441e2aa63251fe84d",
     "maui/api/native-bridge.md": "a127acf1356b33561bbbcd2bdf0ed6ac23d52b1d6f78899d9c53294ac8908bce",
-    "maui/architecture/binding-build-integration.md": "cdd870a95adf0d2203385dd1f7e3456430db3dc82cd2938c43f5329be2d8c6a0",
+    "maui/architecture/binding-build-integration.md": "46874a950585cb00a70b2d3260bbe7bd8f4249eb13b89736f7b57a77de448185",
     "maui/architecture/view-materialization.md": "b365407ea51d1b828f44f7b9938eb66a0ddbd055061a2ed13b0a6a8e22571ecb"
   },
   "targets": {
@@ -220,22 +220,10 @@
     "skills/en/kssettingsview-aiforms-migration/SKILL.md",
     "skills/en/kssettingsview-aiforms-migration/references/api-mapping.md",
     "skills/en/kssettingsview-android/SKILL.md",
-    "skills/en/kssettingsview-android/references/styling.md",
-    "skills/en/kssettingsview-android/references/updates.md",
-    "skills/en/kssettingsview-ios/SKILL.md",
-    "skills/en/kssettingsview-ios/references/cells.md",
-    "skills/en/kssettingsview-ios/references/updates.md",
     "skills/en/kssettingsview-maui/SKILL.md",
-    "skills/en/kssettingsview-maui/references/updates.md",
     "skills/ja/kssettingsview-aiforms-migration/SKILL.md",
     "skills/ja/kssettingsview-aiforms-migration/references/api-mapping.md",
     "skills/ja/kssettingsview-android/SKILL.md",
-    "skills/ja/kssettingsview-android/references/styling.md",
-    "skills/ja/kssettingsview-android/references/updates.md",
-    "skills/ja/kssettingsview-ios/SKILL.md",
-    "skills/ja/kssettingsview-ios/references/cells.md",
-    "skills/ja/kssettingsview-ios/references/updates.md",
-    "skills/ja/kssettingsview-maui/SKILL.md",
-    "skills/ja/kssettingsview-maui/references/updates.md"
+    "skills/ja/kssettingsview-maui/SKILL.md"
   ]
 }

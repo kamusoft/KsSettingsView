@@ -18,9 +18,9 @@ timestamp: 2026-09-19
 
 | 対象 | 必要な環境 |
 |---|---|
-| iOS Native | macOS、Xcode 16 以上、Swift 6、iOS 16 以上の Simulator または実機 |
-| Android Native | macOS / Linux / Windows、JDK 17、Android SDK Platform 35 + Build-Tools 35.0.0 以上、API 29 以上の Emulator または実機。Android Studio は Hedgehog (2023.1.1) 以上を推奨 |
-| MAUI | .NET 10 SDK と MAUI workload。iOS target には macOS・Xcode・iOS 16 以上の Simulator、Android target には Android SDK と API 29 以上の Emulator または実機 |
+| iOS Native | macOS、Xcode 27.0 (開発機と CI が使う版)、iOS 16 以上の Simulator または実機 |
+| Android Native | macOS / Linux / Windows、JDK 21、Android SDK Platform 35 + Build-Tools 35.0.0 以上、API 29 以上の Emulator または実機。Android Studio は Hedgehog (2023.1.1) 以上を推奨 |
+| MAUI | .NET 10 SDK と MAUI workload (版は `global.json`)。iOS target には macOS・workload が要求する Xcode (SDK 10.0.401 / workload 10.0.401.1 では Xcode 27.0)・iOS 16 以上の Simulator、Android target には Android SDK と API 29 以上の Emulator または実機 |
 
 固定されている版の正は次のとおり。手元の版が要件に合うか調べるときはここを見る。
 
@@ -28,6 +28,8 @@ timestamp: 2026-09-19
 |---|---|
 | .NET SDK | `global.json` |
 | AGP・Kotlin・Compose 等 | `android/gradle/libs.versions.toml` |
+| コンパイルとテストに使う JDK | 各 module の `build.gradle.kts` の `jvmToolchain` |
+| CI が使う Xcode | `.github/workflows/` の `KS_XCODE_VERSION` |
 | Gradle | `android/gradle/wrapper/gradle-wrapper.properties` |
 | 各 application / library の target | `Package.swift`・Xcode project・csproj の宣言 |
 

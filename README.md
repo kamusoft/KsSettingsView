@@ -28,8 +28,8 @@ The public API may introduce breaking changes while the project remains on `0.x`
 | Platform | Minimum platform | Toolchain used by the library |
 | --- | --- | --- |
 | iOS Native | iOS 16.0 | Swift tools 5.10 |
-| Android Native | Android API 29; compileSdk 35 | Kotlin 2.4.10; AGP 8.13.2; Gradle 9.5.0; JDK 17 |
-| .NET MAUI | iOS 16.0; Android API 29 | .NET SDK 10.0.300; `net10.0-ios` / `net10.0-android`; Microsoft.Maui.Controls 10.0.71 |
+| Android Native | Android API 29; compileSdk 35 | Kotlin 2.4.10; AGP 8.13.2; Gradle 9.5.0; JDK 21 (the published artifact still targets Java 17) |
+| .NET MAUI | iOS 16.0; Android API 29 | .NET SDK 10.0.401; `net10.0-ios` / `net10.0-android`; Microsoft.Maui.Controls 10.0.71 |
 
 Android is distributed as the single Maven artifact `jp.kamusoft:kssettingsview`. Its Core, UI, and Compose layers remain separated by the Kotlin packages `jp.kamusoft.kssettingsview.core`, `.ui`, and `.compose`. Android consumers need Kotlin 2.3 or later, minSdk 29, and compileSdk 35. Kotlin 2.4.10 in the table is the toolchain used to build the library, not the minimum consumer Kotlin version.
 
@@ -89,7 +89,7 @@ Compatibility requirements: Microsoft.Maui.Controls (`MauiVersion`) 10.0.71 or l
 </PropertyGroup>
 ```
 
-Use the API-unversioned TFMs `net10.0-android` and `net10.0-ios` for the normal configuration. If you explicitly pin platform API versions, use `net10.0-android36.0` and `net10.0-ios26.0` or later. With lower pinned versions, restore can succeed without warnings while silently falling back to `lib/net10.0`; the two native binding packages are then omitted. This resolution behavior was verified with .NET SDK 10.0.300.
+Use the API-unversioned TFMs `net10.0-android` and `net10.0-ios` for the normal configuration. If you explicitly pin platform API versions, use `net10.0-android36.0` and `net10.0-ios26.0` or later. With lower pinned versions, restore can succeed without warnings while silently falling back to `lib/net10.0`; the two native binding packages are then omitted. The package's TFM groups carry the default platform versions the SDK assigns to a library, and those values are the same for .NET SDK 10.0.300 and 10.0.401.
 
 Name collision: `KsSettingsView.SwitchCell` and `KsSettingsView.EntryCell` share their names with types in `Microsoft.Maui.Controls`. In C#, combining `using KsSettingsView;` with the MAUI implicit usings makes these two names ambiguous (CS0104). The XAML `ks:` prefix is not affected. Use the fully qualified name (`KsSettingsView.SwitchCell`) or a using alias (`using SwitchCell = KsSettingsView.SwitchCell;`) in C#.
 

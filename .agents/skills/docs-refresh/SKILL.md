@@ -169,20 +169,26 @@ python3 .agents/skills/docs-refresh/scripts/concepts-coverage-check.py
 
 出力の読み方: `UNCOVERED` は未参照かつ未除外の concept (配置判断が必要)、`DELETED` は manifest にあるが実在しない concept (`targets` / `excluded` の整理が必要)。どちらも出なければ `concepts coverage OK`。
 
-#### 3d. コードを正とする機械チェック (2 種)
+#### 3d. コードを正とする機械チェック (4 種)
 
-concepts ハッシュ差分とは独立に、**コードを正**として次の 2 種を突合する。源泉が concepts ではないため manifest には載せず、この手順として持つ。差分があった項目は該当 README / Skill ファイルを要追従リストへ追加する。ただし `--readme-only` 実行時は、この突合で Skill ファイル (各 `SKILL.md` の導入節・aiforms-migration の `references/api-mapping.md`) 側に差分が出ても要追従リストへは載せず**報告のみ**とする — 「skills/ 本体は検出・更新の対象にしない」というフラグの意味を優先し、完了サマリに「次回の通常実行で処理される」旨を添える。
+concepts ハッシュ差分とは独立に、**コードを正**として次の 4 種を突合する。源泉が concepts ではないため manifest には載せず、この手順として持つ。差分があった項目は該当 README / Skill ファイルを要追従リストへ追加する。ただし `--readme-only` 実行時は、この突合で Skill ファイル (各 `SKILL.md` の導入節・aiforms-migration の `references/api-mapping.md`) 側に差分が出ても要追従リストへは載せず**報告のみ**とする — 「skills/ 本体は検出・更新の対象にしない」というフラグの意味を優先し、完了サマリに「次回の通常実行で処理される」旨を添える。
 
 | 項目 | 取得元 (コード = 正) | 抽出方法 | 突合先 |
 | --- | --- | --- | --- |
 | ツール最低バージョン | AGP・Kotlin: `android/gradle/libs.versions.toml` (`[versions]` の `agp` / `kotlin`) / Gradle: `android/gradle/wrapper/gradle-wrapper.properties` (`distributionUrl`) / minSdk・compileSdk: `android/kssettingsview/build.gradle.kts` / Swift tools・iOS Deployment Target: `ios/Package.swift` (`// swift-tools-version:` と `.iOS(.vNN)`) / .NET TFM: `maui/KsSettingsView.Maui/KsSettingsView.Maui.csproj` (`<TargetFrameworks>`) | 各ファイルの該当行を読む | ルート README 群の対応プラットフォーム表・開発環境要件、および該当記載を持つ場合は各 `SKILL.md` の導入節 |
 | MAUI の Microsoft.Maui.Controls 最低バージョン | `maui/Directory.Packages.props` (`<PackageVersion Include="Microsoft.Maui.Controls" Version="..." />`) | 該当行を読む。あわせて `samples/maui/KsSettingsView.Sample.Maui/KsSettingsView.Sample.Maui.csproj` の `<MauiVersion>` が同じ版かを照合する | ルート README 群 (対応プラットフォーム表・互換要件の本文・`<MauiVersion>` のコード例)、`kssettingsview-maui` と `kssettingsview-aiforms-migration` の `SKILL.md` 導入節、`kssettingsview-aiforms-migration/references/api-mapping.md` の platform 要件節 |
+| MAUI の .NET SDK バージョン | リポジトリ直下の `global.json` (`sdk.version`) | 該当行を読む | ルート README 群の対応プラットフォーム表 (.NET MAUI 行の toolchain 列)、`kssettingsview-maui` の `SKILL.md` 導入節のバージョン表、`kssettingsview-aiforms-migration` の `SKILL.md` 導入節の要件表と `references/api-mapping.md` の platform 要件節 (どちらも KsSettingsView 側の列) |
+| Android のライブラリのビルドに使う JDK | `android/kssettingsview/build.gradle.kts` (`jvmToolchain(NN)`) | 該当行を読む。あわせて同じファイルの `compileOptions` (`sourceCompatibility` / `targetCompatibility`) と Kotlin の `jvmTarget` から、配布物が対象とする Java 版を読む | ルート README 群の対応プラットフォーム表 (Android Native 行の toolchain 列)、`kssettingsview-android` の `SKILL.md` 導入節の「ライブラリのツールチェーン」表 |
 
 > 従前の「モジュール一覧」と「Sample デモ画面一覧」の突合は**行わない**。前者の突合先だったルート README のモジュール表・`android/README.md`・`maui/README.md` と、後者の突合先だった `samples/*/README.md` がいずれも存在しなくなったため (cross/ADR-0023)。Sample の実ソースにデモ画面が増減しても、この手順は要追従リストに何も追加しない。
 
 > 取得元の注記: AGP / Kotlin の単一宣言元は version catalog (`android/gradle/libs.versions.toml`) であり、各 module の `build.gradle.kts` は `version.ref` で参照するだけなので取得元にしない。
 
 > 取得元の注記 (Microsoft.Maui.Controls): `maui/` ビルドルートの PackageReference の版は Central Package Management の `maui/Directory.Packages.props` が単一の宣言元で、`KsSettingsView.Maui.csproj` は `Version` を持たないので取得元にしない。TFM (`<TargetFrameworks>`) を見るだけでは、TFM を変えずに Controls の版だけが上がったとき (例: 10.0.70 → 10.0.71) を検出できないため、別の行として持つ。`samples/maui` は別のビルドルートで、利用者が真似する形 (`MauiVersion` の直書き) を保つため props の管理外にある。ルート README のコード例はこの Sample と同じ形を示すので、Sample の `<MauiVersion>` も照合する。props と Sample の版が食い違っていたら、README / Skill を直す前に食い違いそのものをユーザーへ報告する (どちらへ揃えるかはコード側の判断で、このスキルでは決めない)。
+
+> 取得元の注記 (.NET SDK): 利用者に課す .NET SDK の下限を定める concept は無く、README と Skill の表の値は初期生成時から `global.json` を取得元にしている。TFM (`<TargetFrameworks>`) は SDK のパッチ版が上がっても変わらない (例: 10.0.300 → 10.0.401) ため、別の行として持つ。突合するのは表の値だけである。地の文に出てくる SDK の版 (プロジェクトテンプレートが書く `MauiVersion` の既定値や、パッケージの TFM group の値が同じになる SDK の範囲を述べる文) は concepts 由来の記述なので、この突合では書き換えない — concept が変わったときに 3a・3b の経路で追従する。
+
+> 取得元の注記 (JDK): 値は 2 つある — コンパイルに使う JDK (`jvmToolchain`) と、配布物が対象とする Java 版 (`compileOptions`・`jvmTarget`)。README と Skill には「ライブラリのビルドに使う JDK」として前者を書き、後者が前者より低いときは配布物の対象 Java 版を添える (コンパイルに使う JDK が上がっても、利用アプリへ課す要件は上がっていないことを示すため)。`jvmToolchain` はほかの module (`android/kssettingsview-bridge`・`samples/android` など) にも書かれているが、公開 artifact の module である `android/kssettingsview` を取得元にする。module の間で値が食い違っていたら、README / Skill を直す前に食い違いそのものをユーザーへ報告する (どちらへ揃えるかはコード側の判断で、このスキルでは決めない)。
 
 #### 3e. API 名の網羅検査 (concepts → skills の内容突き合わせ)
 

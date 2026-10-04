@@ -215,11 +215,83 @@ final class DSLScrollControlTests: XCTestCase {
         awaitCondition(
             "命令 \(count) 件の処理",
             in: view,
-            actual: { "processed=\(controller.processedScrollCommandCount)" },
+            actual: { scrollCommandState(controller) },
             file: file,
             line: line,
             until: { controller.processedScrollCommandCount >= count && controller.activeScrollAnimation == nil }
         )
+    }
+
+    // MARK: - 命令の処理を待つ待機の失敗報告
+
+    /// 命令を出した時点の記録。
+    @MainActor
+    private final class IssuedCommand {
+        /// 命令を出したハンドル。受け口の状態を読むために持つ。
+        let handle: KsScrollController
+        let issuedAt = DispatchTime.now()
+        /// 命令の直後に積んだ `main.async` が回ったか。
+        var mainQueueRan = false
+
+        init(handle: KsScrollController) {
+            self.handle = handle
+        }
+    }
+
+    /// 直近に出した命令の記録。次の命令を記録するまで残る。
+    private var lastIssuedCommand: IssuedCommand?
+
+    /// 命令を出した直後に呼び、命令からの経過時間と main キューの消化を失敗報告に載せられるようにする。
+    private func markIssued(_ handle: KsScrollController) {
+        let issued = IssuedCommand(handle: handle)
+        lastIssuedCommand = issued
+        DispatchQueue.main.async { issued.mainQueueRan = true }
+    }
+
+    /// 命令の処理を待つ待機が deadline を超えたときに載せる観測値。
+    ///
+    /// 命令が止まった位置を切り分けるため、受け口 (ID の引き直し)・Host の待ち行列・実行の条件・
+    /// main キューの消化をまとめて出す。
+    private func scrollCommandState(_ controller: KsSettingsViewController) -> String {
+        let cv: UICollectionView? = controller.isViewLoaded ? controller.collectionView : nil
+        let queue = "待ち行列: 遅延前=\(controller.incomingScrollEntries.count)"
+            + " 遅延後=\(controller.readyScrollEntries.count)"
+            + " 遅延の予約中=\(controller.isScrollDeferralScheduled)"
+        let conditions = "実行の条件: 最初の反映済み=\(controller.hasAppliedInitialSnapshot)"
+            + " 適用中の snapshot=\(controller.applyingSnapshotCount)"
+            + " window=\(cv?.window != nil)"
+            + " 高さ=\(cv.map { "\($0.bounds.height)" } ?? "view 未読込")"
+        let animation = "アニメーション中=\(controller.activeScrollAnimation != nil)"
+        return [
+            "processed=\(controller.processedScrollCommandCount)",
+            receiverState(controller),
+            queue,
+            conditions,
+            animation,
+            issueState(),
+        ].joined(separator: " / ")
+    }
+
+    /// ハンドルの接続先の状態。DSL 方式では引き直しの受け口、Store 方式では Host へ直接つながる。
+    private func receiverState(_ controller: KsSettingsViewController) -> String {
+        guard let handle = lastIssuedCommand?.handle else { return "受け口: 命令の記録なし" }
+        guard let receiver = handle.currentReceiver else { return "受け口: 未接続" }
+        if receiver === controller { return "受け口: Host へ直接接続" }
+        guard let resolver = receiver as? DSLScrollCommandResolver else {
+            return "受け口: 想定外の接続先 \(type(of: receiver))"
+        }
+        let resolved = resolver.lastResolvedGenerations.map { "世代 \($0.received) → \($0.resolved)" } ?? "未実施"
+        return "受け口: 引き直し=\(resolved)"
+            + " 宣言ツリーの世代=\(resolver.treeGeneration)"
+            + " 受け口の Host が同一=\(resolver.host === controller)"
+    }
+
+    /// 命令を出してからの経過時間と、命令の直後に積んだ `main.async` が回ったか。
+    private func issueState() -> String {
+        guard let issued = lastIssuedCommand else { return "命令の記録なし" }
+        let seconds = Double(DispatchTime.now().uptimeNanoseconds - issued.issuedAt.uptimeNanoseconds) / 1_000_000_000
+        return "命令から \(String(format: "%.3f", seconds)) 秒"
+            + " 命令の直後の main.async=\(issued.mainQueueRan ? "回った" : "未実行")"
     }
 
     private func findSettingsController(in parent: UIViewController) -> KsSettingsViewController? {
@@ -272,6 +344,7 @@ final class DSLScrollControlTests: XCTestCase {
         let cv = controller.internalCollectionView
 
         scrollController.scrollTo(id: "wifi", position: .center, animated: false)
+        markIssued(scrollController)
 
         awaitProcessed(controller, 1, in: hosting.view)
         XCTAssertEqual(rowFrame(controller, title: "Wi-Fi")?.midY ?? .nan, visibleCenter(cv), accuracy: 0.5,
@@ -284,6 +357,7 @@ final class DSLScrollControlTests: XCTestCase {
         let cv = controller.internalCollectionView
 
         scrollController.scrollToSection(id: 42, animated: false)
+        markIssued(scrollController)
 
         awaitProcessed(controller, 1, in: hosting.view)
         XCTAssertEqual(headerFrame(controller, title: "Item 42")?.minY ?? .nan, visibleTop(cv), accuracy: 0.5,
@@ -296,6 +370,7 @@ final class DSLScrollControlTests: XCTestCase {
         let cv = controller.internalCollectionView
 
         scrollController.scrollTo(id: "a", animated: false)
+        markIssued(scrollController)
 
         awaitProcessed(controller, 1, in: hosting.view)
         XCTAssertEqual(rowFrame(controller, title: "Explicit a")?.minY ?? .nan, visibleTop(cv), accuracy: 0.5,
@@ -314,6 +389,7 @@ final class DSLScrollControlTests: XCTestCase {
         scrollController.scrollToSection(id: "missing", animated: false)
         // 解決できない命令は Host へ渡らない。後続の命令が処理されたことを完了の合図にする。
         scrollController.scrollToStart(animated: false)
+        markIssued(scrollController)
 
         awaitProcessed(controller, 1, in: hosting.view)
         XCTAssertEqual(controller.processedScrollCommandCount, 1, "解決できない 2 件は Host へ届かない")
@@ -338,6 +414,7 @@ final class DSLScrollControlTests: XCTestCase {
         XCTAssertNil(rowFrame(controller, title: "new"), "前提: 追加前は存在しない")
 
         appendAndScroll()
+        markIssued(scrollController)
 
         awaitProcessed(controller, 1, in: hosting.view)
         let generations = try XCTUnwrap(resolver.lastResolvedGenerations)
@@ -376,6 +453,7 @@ final class DSLScrollControlTests: XCTestCase {
 
         // 差し替え後のハンドルの命令は届く。
         second.scrollToSection(id: 5, animated: false)
+        markIssued(second)
 
         awaitProcessed(controller, 1, in: hosting.view)
         XCTAssertEqual(controller.processedScrollCommandCount, 1, "差し替え後の命令だけが処理される")
@@ -431,12 +509,15 @@ final class DSLScrollControlTests: XCTestCase {
 
         // 受け口の引き直し (main.async) → Host の遅延 (main.async) の間に割り込んで差し替える。
         first.scrollToEnd(animated: false)
+        // 割り込みの処理が回らないまま待機が deadline を超えても、命令を出した時点の記録が残るようにする。
+        markIssued(first)
         DispatchQueue.main.async {
             handedToHost = controller.incomingScrollEntries.count + controller.readyScrollEntries.count
             controller.restoreScrollAnchor(anchor)
             setController(second)
             // SwiftUI の更新を待たずに、更新で行われるのと同じ接続の差し替えをこの時点で行う。
             resolver.connect(second)
+            self.markIssued(second)
         }
 
         awaitProcessed(controller, 1, in: hosting.view)
@@ -493,6 +574,7 @@ final class DSLScrollControlTests: XCTestCase {
         XCTAssertTrue(controller.scrollController === scrollController, "Store 方式では Host へ直接接続する")
 
         scrollController.scrollTo(id: target, animated: false)
+        markIssued(scrollController)
 
         awaitProcessed(controller, 1, in: hosting.view)
         XCTAssertEqual(rowFrame(controller, title: "Row 7-2")?.minY ?? .nan, visibleTop(cv), accuracy: 0.5,

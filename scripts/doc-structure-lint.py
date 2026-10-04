@@ -53,7 +53,7 @@ def _load_sibling():
 
 LP = _load_sibling()
 
-# 既定の検査範囲。規約既定は ksn-core references/config.md の lint.doc-structure.scope と揃える
+# 既定の検査範囲。規約既定は ksn-init templates/config.yaml の lint.doc-structure.scope と揃える
 DEFAULT_SCOPE = ["kasane/concepts", "kasane/handbook", "kasane/roadmaps"]
 # index.md / log.md / rules.md は目次・履歴・定義表であり、項目の列挙が正しい形なので対象外
 SKIP_NAMES = {"index.md", "log.md", "rules.md"}

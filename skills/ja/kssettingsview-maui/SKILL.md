@@ -66,15 +66,15 @@ public static class MauiProgram
 
 | 要件 | 最低バージョン |
 |---|---|
-| .NET SDK | 10.0.300 |
+| .NET SDK | 10.0.401 |
 | ターゲットフレームワーク | net10.0-ios, net10.0-android |
 | Microsoft.Maui.Controls | 10.0.71 |
 | iOS | 16.0 |
 | Android | API 29 |
 
-`Microsoft.Maui.Controls` の下限は restore 時に効く: .NET 10 のプロジェクトテンプレートが `MauiVersion` に書く版は 10.0.71 より低く (SDK 10.0.300 時点で 10.0.20)、そのまま、あるいは 10.0.70 にしていると restore が NU1605 (パッケージのダウングレード) で失敗するので、`MauiVersion` は 10.0.71 以上にする。NU1605 を抑止して 10.0.70 に留めてはいけない — パッケージが依存する Android の Binding が `Xamarin.AndroidX.Core` を引き上げ、その版には 10.0.70 の `Microsoft.Maui.dll` が呼ぶメンバーが無いため、TalkBack などのアクセシビリティサービスが画面を問い合わせた時点で Android アプリが `MissingMethodException` で落ちる。10.0.71 はこの呼び出しを持たない。OS の下限はビルド時に効く: パッケージが利用側プロジェクトへ持ち込む検査が、その TFM の `SupportedOSPlatformVersion` が iOS 16.0 / Android API 29 を下回ると `net10.0-ios` / `net10.0-android` のビルドをエラー `KSSV0001` で止める。Android は未設定でも SDK 既定値が下限を下回るため同じく止まるので、両方の値を明示的に宣言しておく。
+`Microsoft.Maui.Controls` の下限は restore 時に効く: `MauiVersion` が 10.0.71 より低い版 (SDK 10.0.300 のプロジェクトテンプレートが書く 10.0.20 や、10.0.70) のままだと restore が NU1605 (パッケージのダウングレード) で失敗するので、`MauiVersion` は 10.0.71 以上にする。NU1605 を抑止して 10.0.70 に留めてはいけない — パッケージが依存する Android の Binding が `Xamarin.AndroidX.Core` を引き上げ、その版には 10.0.70 の `Microsoft.Maui.dll` が呼ぶメンバーが無いため、TalkBack などのアクセシビリティサービスが画面を問い合わせた時点で Android アプリが `MissingMethodException` で落ちる。10.0.71 はこの呼び出しを持たない。OS の下限はビルド時に効く: パッケージが利用側プロジェクトへ持ち込む検査が、その TFM の `SupportedOSPlatformVersion` が iOS 16.0 / Android API 29 を下回ると `net10.0-ios` / `net10.0-android` のビルドをエラー `KSSV0001` で止める。Android は未設定でも SDK 既定値が下限を下回るため同じく止まるので、両方の値を明示的に宣言しておく。
 
-ターゲットフレームワークは上表の API 版なしを推奨する。この形なら platform asset と推移依存の Binding が選ばれる。TFM に API 版を固定する場合は `net10.0-android36.0` / `net10.0-ios26.0` 以上にする。`net10.0-android35.0` / `net10.0-ios18.0` など古い版を固定すると、restore が警告なく成功しても platform 中立の `lib/net10.0` asset へ静かにフォールバックし、Native Binding 2 件が依存グラフに入らない。このパッケージ選択の挙動は .NET SDK 10.0.300 で検証済み。
+ターゲットフレームワークは上表の API 版なしを推奨する。この形なら platform asset と推移依存の Binding が選ばれる。TFM に API 版を固定する場合は `net10.0-android36.0` / `net10.0-ios26.0` 以上にする。`net10.0-android35.0` / `net10.0-ios18.0` など古い版を固定すると、restore が警告なく成功しても platform 中立の `lib/net10.0` asset へ静かにフォールバックし、Native Binding 2 件が依存グラフに入らない。パッケージの TFM group には SDK がライブラリに与える既定の platform 版が付いており、その値は .NET SDK 10.0.300 と 10.0.401 で同じである。
 
 ```xml
 <PropertyGroup>

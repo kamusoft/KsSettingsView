@@ -48,7 +48,7 @@ KsSettingsView は AiForms.SettingsView の骨格 — `SettingsView` に `Sectio
 
 | 要件 | AiForms | KsSettingsView |
 |---|---|---|
-| .NET SDK | 9.0.314 | 10.0.300 |
+| .NET SDK | 9.0.314 | 10.0.401 |
 | ターゲットフレームワーク | net9.0-ios, net9.0-android, net9.0-maccatalyst | net10.0-ios, net10.0-android |
 | API 版付きターゲットフレームワーク (明示する場合) | - | net10.0-android36.0, net10.0-ios26.0 以上 |
 | Microsoft.Maui.Controls | 9.0.120 | 10.0.71 |
@@ -57,7 +57,7 @@ KsSettingsView は AiForms.SettingsView の骨格 — `SettingsView` に `Sectio
 
 `Microsoft.Maui.Controls` の下限は restore 時に効く: AiForms のプロジェクトが持つ `MauiVersion` は 10.0.71 より低く、そのまま、あるいは 10.0.70 に上げただけだと restore が NU1605 (パッケージのダウングレード) で失敗するので、`MauiVersion` を 10.0.71 以上に上げる。NU1605 を抑止して 10.0.70 に留めてはいけない — パッケージが依存する Android の Binding が `Xamarin.AndroidX.Core` を引き上げ、その版には 10.0.70 の `Microsoft.Maui.dll` が呼ぶメンバーが無いため、TalkBack などのアクセシビリティサービスが画面を問い合わせた時点で Android アプリが `MissingMethodException` で落ちる。10.0.71 はこの呼び出しを持たない。OS の下限はビルド時に効く: パッケージが利用側プロジェクトへ持ち込む検査が、その TFM の `SupportedOSPlatformVersion` が iOS 16.0 / Android API 29 を下回ると `net10.0-ios` / `net10.0-android` のビルドをエラー `KSSV0001` で止める。AiForms の値 (14.2 / 27) はこれに引っかかるので両方を上げる。
 
-表に示した API 版なしの platform TFM を優先する。この形なら正しい native binding パッケージが選ばれる。platform API 版を明示する場合は `net10.0-android36.0` / `net10.0-ios26.0` 以上にする。それより低い版では警告なく restore が成功しても platform 中立の `lib/net10.0` asset が選ばれ、iOS / Android の native binding 依存が静かに欠ける。この挙動は SDK 10.0.300 で検証済み。
+表に示した API 版なしの platform TFM を優先する。この形なら正しい native binding パッケージが選ばれる。platform API 版を明示する場合は `net10.0-android36.0` / `net10.0-ios26.0` 以上にする。それより低い版では警告なく restore が成功しても platform 中立の `lib/net10.0` asset が選ばれ、iOS / Android の native binding 依存が静かに欠ける。パッケージの TFM group には SDK がライブラリに与える既定の platform 版が付いており、その値は .NET SDK 10.0.300 と 10.0.401 で同じである。
 
 Mac Catalyst は対象外になった。Android はホスト Activity の型・テーマに要求を置かない: ライブラリが自前の Material3 テーマを同梱してその中で Cell を描くため、ホストテーマでは Cell の見た目が変わらず — ホストテーマ頼みだった AiForms の画面は `SettingsView` のプロパティで整え直すまで見た目が変わり得る — ライト / ダークは端末の夜間モードに追従する。
 

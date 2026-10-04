@@ -5,7 +5,7 @@ applies-when:
   tasks: [テスト実行, テスト結果の報告]
 title: テスト実行規約
 description: iOS / Android / MAUI のテストの正しい実行コマンドと、黙って検証にならない範囲 (macOS 上の swift test で失われるテスト・Robolectric の描画検証限界・MAUI facade テストが触らない platform TFM)。収束を待つアサーションの書き方は platform 共通
-timestamp: 2026-09-26
+timestamp: 2026-10-04
 ---
 
 # テスト実行規約
@@ -63,7 +63,8 @@ xcodebuild test -scheme KsSettingsView -destination 'platform=iOS Simulator,name
 - `<機種名>` は手元で利用可能な Simulator の機種名に置き換える。一覧は `xcrun simctl list devices available` で得られる
 - 実行件数は `xcodebuild` 出力の `Executed N tests, with M failures` で確認する
 - **出力末尾の 1 行だけを見ない** — この行はテストバンドル単位の集計であり、バンドルが複数あるパッケージでは最後に実行されたバンドルの値しか映らない
-- 全体件数は**バンドル集計行** (`Test Suite '<名>.xctest' passed/failed` の直後の `Executed` 行) だけを拾って合算する。クラス・スイート単位の `Executed` 行まで含めると多重集計になる
+- 全体件数は**バンドル集計行** (`Test Suite '<名>.xctest' passed/failed` の直後の `Executed` 行) だけを拾って合算する。クラス・スイート単位の `Executed` 行まで含めると多重集計になる (2026-10-04 実測: 全件 1201 件。件数は変動する)
+- 失敗を見込む実行 (改変して落ちることの確認など) には `-collect-test-diagnostics never` を付ける。Xcode 27.0 はテストが失敗すると Simulator からの診断収集を約 10 分待つためで、CI の実行にも同じ指定を置いている
 
 ### `swift test` では検証にならない
 
@@ -110,6 +111,12 @@ xcodebuild test -scheme KsSettingsView -destination 'platform=iOS Simulator,name
 
 固定秒数で RunLoop をまわす待機は、3 つ目 (負の検証) 以外に定義・呼び出しとも `ios/Tests/` に存在しない。新しいテストを書くときも、収束を待つ場面で固定秒数の待機を持ち込まない。
 
+### 入力面の通知はテストランナーに届かない
+
+Xcode 27.0 / iOS 27.0 の、ホストアプリを持たないテストランナーでは、入力面の開閉の通知 (`keyboardWillShow` / `keyboardDidHide` など) が 1 件も届かない (2026-10-04 実測。日付ホイールでも通常のキーボードでも同じ)。実アプリでは届く。
+
+入力面の通知を受けて動く処理をテストするときは、通知の到着を UIKit 任せで待たず、テスト自身が通知を出して配線を確かめる。書いた後は、本体の通知処理を外す改変でテストが落ちることを実測する。本体が持つ打ち切り (通知が来ないときの時間切れ) で偶然通る待ち方にしない。
+
 ### `swift test` を案内している文書は無い
 
 リポジトリ内のどの文書も `swift test` をテスト手順として案内していない。ルート README は利用者の入口に純化されており開発者向けのビルド / テスト手順を持たず ([cross/ADR-0023](../../decisions/cross/0023-readme-root-only-and-developer-knowledge-in-concepts.md))、利用者向けドキュメント (`skills/` の Agent Skills) もテスト実行手順を案内していない。**完了判定に使うのは上の Simulator 実行だけ**であり、他所で見かけた `swift test` を代替に使わない。
@@ -123,13 +130,13 @@ cd android
 ./gradlew test
 ```
 
-- Gradle ビルドルートは `android/`。テストは Robolectric を含む JVM 単体テストで、debug / release の両 variant が実行される (2026-09-01 実測: 1350 件 × 2 = 2700 件。件数は変動する)。instrumented test (`androidTest/`) は現状存在しない
+- Gradle ビルドルートは `android/`。テストは Robolectric を含む JVM 単体テストで、debug / release の両 variant が実行される (2026-10-04 実測: 1587 件 × 2 = 3174 件。件数は変動する)。instrumented test (`androidTest/`) は現状存在しない
 - Gradle は up-to-date なテストタスクをスキップするため、**差分なしの再実行は「テスト 0 件で BUILD SUCCESSFUL」になり得る**。全件を確実に回し直して件数を確認するときは `--rerun-tasks` を付ける
 - 反復中に絞り込むときは `./gradlew :kssettingsview:testDebugUnitTest --tests '<クラス名のパターン>'` を使えるが、**完了判定には絞り込みなしの全件実行を使う** (iOS と同じ規律)
 
 実行件数はコンソールに出ない。各モジュールの `build/test-results/testDebugUnitTest/TEST-*.xml` (release は `testReleaseUnitTest/`) の `tests` / `failures` 属性の合計、または `build/reports/tests/testDebugUnitTest/index.html` で確認する。**ディレクトリ名は variant 名 (`debug` / `release`) ではなくタスク名**であり、`debugUnitTest` 等と読み替えると集計対象が 0 件になる。
 
-Gradle を動かす JDK は `JAVA_HOME` で選ぶ (JDK 17 / 21 / 25 で実測済み)。成果物のターゲットが Java 17 のため、どの JDK で動かす場合も JDK 17 がローカルにインストールされている必要がある ([Android ビルドツールチェーンの契約](../../concepts/android/architecture/build-toolchain.md))。
+Gradle を動かす JDK は `JAVA_HOME` で選ぶ。コンパイルとテストは JDK 21 で走る指定のため、どの JDK で Gradle を動かす場合も JDK 21 がローカルにインストールされている必要がある ([Android ビルドツールチェーンの契約](../../concepts/android/architecture/build-toolchain.md))。
 
 Robolectric を多く含むモジュールのテストワーカーは、Gradle 既定の heap (512m) では結果ファイルを書き切れずに基盤エラー (`EOFException` / 結果ファイル欠落) で落ちることがある。本体と bridge のテストタスクは `maxHeapSize = "2g"` を明示しており、新しいモジュールにテストを足すときも同じ設定を置く。この形の失敗はテストの失敗ではなく実行環境の問題で、`build/` を捨てての再実行と heap 設定で切り分ける。
 

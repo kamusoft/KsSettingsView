@@ -37,12 +37,13 @@ permissions:
 env:
   # Xcode はメジャー.マイナーで固定し、パッチはランナーイメージ同梱の版に任せる。
   # 版を上げるときはこの値を変える PR として意図的に行う。
-  KS_XCODE_VERSION: "26.5"
+  KS_XCODE_VERSION: "27.0"
 
 jobs:
   verify:
     name: verify
-    runs-on: macos-26
+    # Xcode 27 は `macos-26` イメージに含まれず、専用イメージ `xcode-27` が持つ。
+    runs-on: xcode-27
     # 既定の 360 分は長すぎる。スナップショット生成と Simulator 向けビルドに対する
     # 上限として置き、ハングで高コストな macOS ランナーを占有し続けないようにする。
     timeout-minutes: 30
