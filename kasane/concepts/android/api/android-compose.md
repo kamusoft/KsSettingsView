@@ -197,7 +197,7 @@ Theme と CellStyle は UI 層で Jetpack Compose 側の型 `Color`、`TextStyle
 
 ## スクロール制御
 
-命令ハンドル `KsScrollController` の命令・位置・順序保証・何もしない条件は platform 共通で [スクロール制御](../../core/architecture/scroll-control.md) が正、View Host 側の接続口・スレッドの扱い・Activity の作り直しでの位置の復元は [Android Native Host](android-native-host.md) の「スクロール制御」にある。この節は Compose からの渡し方と、DSL 方式での指し方を扱う。
+命令ハンドル `KsScrollController` の命令・位置・順序保証・何もしない条件は platform 共通で [スクロール制御](../../core/architecture/scroll-control.md) が正、View Host 側の接続口・スレッドの扱い・Activity の作り直しでの位置の復元は [Android Native Host](android-native-host.md) の「スクロール制御」にある。この節は Compose からの渡し方と、DSL 方式での指し方を扱う。`KsSettingsView(...)` は置いたものごとに別の入れ物へ状態を保存するため、複数の画面・タブで使っても、1 画面に複数置いても、それぞれの位置が Activity の作り直しと `NavHost` での行き来をまたいで戻る (id の指定は要らない)。
 
 `rememberScrollController()` (`jp.kamusoft.kssettingsview.compose`) は、再コンポジションをまたいで同じ `KsScrollController` を返す。画面の Composable がハンドルを持つときはこれを使い、ViewModel などが持つときは `KsScrollController()` を直接生成する。どちらも `KsSettingsView(..., scrollController = controller)` で渡し、Store 方式・DSL 方式の両方で有効である。`KsSettingsView(...)` がコンポジションを離れると接続は外れる。引数でハンドルを差し替えた・`null` にしたときは、まだ実行していない命令を捨てる (控えた位置の復元は捨てない)。
 

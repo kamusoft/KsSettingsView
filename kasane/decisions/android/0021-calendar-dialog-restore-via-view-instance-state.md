@@ -3,6 +3,7 @@ id: 0021
 title: カレンダー選択面の回転復元は KsSettingsView の View インスタンス状態で自前化し、既定 ID の自前付与で成立させる
 status: accepted
 date: 2026-08-27
+amended-by: 0023
 ---
 
 ## Context

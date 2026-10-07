@@ -1,7 +1,7 @@
 ---
 id: 0023
 title: 既定 ID の View Host が複数あるかは、保存の入れ物を共有する範囲で数える
-status: proposed
+status: accepted
 date: 2026-10-07
 amends: 0021
 ---
@@ -24,7 +24,8 @@ android/ADR-0021 は、ライブラリ既定の ID を持つ `KsSettingsView` �
 
 android/ADR-0021 の決定のうち、縮退条件の範囲 (「ライブラリ既定 ID のインスタンスが同一階層に複数ある構成では復元しない」) を本決定で置き換える。他の決定 (View インスタンス状態での保存・既定 ID の自前付与・復元の成立条件・保存と閉じの分離) は維持する。
 
-- 範囲の境目は、ホストが入れ物を分けるときに付ける Android 標準の設定 (親からの保存を受けない) で見分ける。境目が無ければ階層全体が範囲で、従来と同じ数え方になる
+- 範囲の境目は、ホストが入れ物を分けるときに付ける Android 標準の設定 (親からの保存を受けない) で見分ける。View Host 自身にこの設定が付いていれば、自身が範囲の根になる。境目が無ければ階層全体が範囲で、従来と同じ数え方になる
+- 範囲の中にさらに境目があれば、その下は別の入れ物なので数えない
 - 同じ入れ物の中に既定 ID の View Host が複数ある構成は、従来どおり保存も復元もしない。ホストが個別の ID を与えれば成立する点も変えない
 - 対象は、この保存状態に載るものすべて (カレンダー選択面の状態とスクロール位置) とする
 - Composable だけの特例にはしない。混ざる条件は「同じ入れ物へ書くこと」であって、ホストの種類ではないためである
@@ -39,6 +40,7 @@ android/ADR-0021 の決定のうち、縮退条件の範囲 (「ライブラリ�
 
 - 正: Composable の `KsSettingsView` を複数の画面・タブで使うアプリで、利用者の追加作業なしに、スクロール位置とカレンダー選択面の状態が保存・復元される。
 - 正: 1 画面に Composable を複数置いた構成も、それぞれが別の入れ物を持つため保存・復元される。
+- 正: 同じ window に直置きの View Host と Composable の View Host がある構成でも、直置きの側が 1 つなら保存・復元される。
 - 正: Fragment ごとに置いた View Host と、利用者が自分で `AndroidView` に包んだ View Host も、同じ理由で成立する。
 - 正: 公開 API を変えない。
 - 負: 範囲の見分けを Android 標準の設定に頼る。この設定を付けずに独自の入れ物へ保存するホストでは、従来どおり階層全体で数えるため保存されず、個別の ID の付与が要る。
@@ -50,4 +52,4 @@ android/ADR-0021 の決定のうち、縮退条件の範囲 (「ライブラリ�
 - Compose の `AndroidView` または AndroidX Fragment が、View ごとに入れ物を分ける形か、「親からの保存を受けない」設定をやめたとき
 - 入れ物を分けているのにこの設定を付けないホスト、または設定を付けたまま入れ物を共有するホストで、保存されない・状態が混ざるという報告が出たとき
 
-出典: kasane/changes/android-compose-scroll-restore-with-multiple-hosts/exploration.md (探索で確かめたこと / 検討した選択肢 / 決定事項)
+出典: kasane/changes/archive/2026-10-07-android-compose-scroll-restore-with-multiple-hosts/exploration.md (探索で確かめたこと / 検討した選択肢 / 決定事項) / kasane/changes/archive/2026-10-07-android-compose-scroll-restore-with-multiple-hosts/deviation.md (範囲の根に自身を含める・入れ子の境目の下は数えない)

@@ -147,7 +147,7 @@ override fun onConfigurationChanged(newConfig: Configuration) {
 `DatePickerCell` (uiStyle `Material`) のカレンダーダイアログは、`KsSettingsView` の View インスタンス状態で回転をまたいで表示継続する ([android/ADR-0021](../../../decisions/android/0021-calendar-dialog-restore-via-view-instance-state.md))。復元が効く条件は次の2つ:
 
 - **再生成の前後で `Cell.id` が同じであること**。明示 id の指定、または Compose DSL の identity hint 由来の安定 ID で成立する。再生成時に Cell を再構築すると既定のランダム id は変わり、成立しない。回転復元を効かせたい画面では安定 id を推奨する
-- **View インスタンス状態の保存先が一意であること**。`KsSettingsView` は ID 未設定のときライブラリ既定 ID を自前付与するため通常は追加作業なしで成立するが、既定 ID のインスタンスが同一階層に複数ある構成では保存先が衝突するため復元しない — ホストが個別の ID を与えれば成立する
+- **View インスタンス状態の保存先が一意であること**。`KsSettingsView` は ID 未設定のときライブラリ既定 ID を自前付与するため通常は追加作業なしで成立するが、同じ保存の入れ物に既定 ID のインスタンスが複数ある構成では保存先が衝突するため復元しない (範囲の数え方は下記「保存の入れ物と既定 id」) — ホストが個別の ID を与えれば成立する
 
 条件を満たさない場合は再表示せず、別の Cell へ確定値が書き込まれることはない — 復元できないときは常に閉じる側へ倒れる。構成変更を in-place で処理するホスト (MAUI テンプレート既定等) では Activity 再生成自体が起きず、ダイアログは開いたまま生存する。ボトムシート系の選択 UI (PickerCell / NumberPickerCell / DatePickerCell (Spinner) / TimePickerCell) は回転で閉じる挙動のままで、この復元の対象外である。挙動契約の全体は [DatePickerCell の選択面](../../core/cells/date-picker-selection-surface.md) を正とする。
 
@@ -198,14 +198,29 @@ Android ライブラリは `BuildConfig` を持たないため、共通契約が
 
 View Host は保存状態 (`SavedState`。カレンダー選択面の状態と同じもの) に `KsScrollAnchor` を載せ、Activity を作り直した後、attach と root の反映・レイアウトがそろった時点でその位置へ戻す。内部の `RecyclerView` は id を持たず `LayoutManager` の状態は保存されないうえ、行番号で戻すと作り直しの間の項目の増減で別の場所へ戻るため、要素の ID で控える形を使う。Compose の `KsSettingsView(...)` の中の View Host も同じ経路で戻る。
 
-既定 id の View Host が同じ階層に複数あるときは、カレンダー選択面と同じく保存も復元もしない (保存先が衝突するため — [android/ADR-0021](../../../decisions/android/0021-calendar-dialog-restore-via-view-instance-state.md))。ホストが個別の id を与えれば成立する。
+#### 保存の入れ物と既定 id
+
+保存状態は、View の id をキーにして 1 つの入れ物へ書かれる。同じ入れ物に既定 id の View Host が複数あると互いの状態を上書きするため、その構成ではカレンダー選択面の状態もスクロール位置も保存せず、復元もしない ([android/ADR-0021](../../../decisions/android/0021-calendar-dialog-restore-via-view-instance-state.md))。ホストが個別の id を与えれば成立する。
+
+複数あるかは、window の階層全体ではなく、入れ物を共有する範囲で数える ([android/ADR-0023](../../../decisions/android/0023-default-id-ambiguity-scoped-to-save-container.md))。範囲の根は、View Host 自身または最も近い祖先のうち「親からの保存を受けない」設定 (`isSaveFromParentEnabled` が `false`) の View で、無ければ階層全体である。範囲の中にある別の境目の下は、別の入れ物なので数えない。
+
+| 置き方 | 入れ物 | 既定 id のままでの保存・復元 |
+|---|---|---|
+| Compose の `KsSettingsView(...)` (複数の画面・タブ・1 画面に複数) | Composable ごとに別 | する |
+| Fragment ごとに 1 つ | Fragment ごとに別 | する |
+| 同じ Activity のレイアウトに 2 つ以上を直置き | 共有 | しない |
+| 1 つの Fragment、または自前の `AndroidView` 1 つの中に 2 つ以上 | 共有 | しない |
+
+Compose の `AndroidView` と AndroidX Fragment は、入れ物を分けた範囲の根にこの設定を付ける (Compose UI 1.11.4・Fragment 1.8.9 で確認)。設定を付けずに独自の入れ物へ保存するホストでは階層全体で数えるため、個別の id の付与が要る。
 
 | 命令を出した時点 | 最終位置 |
 |---|---|
 | 作り直した Activity の `onCreate` の中 | 復元した位置 (命令は復元より先に待ち行列に積まれ、復元が後から位置を決める) |
 | `onCreate` より後 | 命令の位置 (復元の後に実行される) |
 
-Host は window から外れる直前に、保存状態に載せる控えを取っておき、外れた後に保存を求められたときはそれを使う。Navigation Compose の `NavHost` が画面ごとに使う `SaveableStateHolder` は、画面の Composition を破棄するときに同じ画面の状態を保存し直し、その時点の Host は window から外れて行を持たないためである。この結果、`NavHost` で別の画面へ進んで戻ったときも、離れる前の位置へ戻る (Android 標準の一覧と iOS の戻る操作での位置の保持にそろう挙動で、オーナー合意済み)。
+Host は window から外れる直前に、保存状態に載せる控えを取っておき、外れた後に保存を求められたときはそれを使う。Navigation Compose の `NavHost` が画面ごとに使う `SaveableStateHolder` は、画面の Composition を破棄するときに同じ画面の状態を保存し直し、その時点の Host は window から外れて行を持たないためである。この結果、`NavHost` で別の画面へ進んで戻ったときも、離れる前の位置へ戻る (Android 標準の一覧と iOS の戻る操作での位置の保持にそろう挙動で、オーナー合意済み)。行き先の画面が `KsSettingsView(...)` でも、タブの切り替えで複数の画面が階層に居合わせても同じである。
+
+複数あるかの判定も、レイアウトの時点と外れる直前に済ませて控える。Compose は View を入れ物から取り外した後に保存を求めるため、その時点では親をたどれず、範囲を見分けられない。
 
 ### 送り方
 
@@ -234,7 +249,7 @@ Host は window から外れる直前に、保存状態に載せる控えを取�
 ### 取り付け・付け外しをまたぐ復元
 
 - detach → 再 attach をまたいでも表示は Store の現在値と一致して復帰する。detach 中に発行された Store 更新も、再 attach 時の Store 現在状態の取り込み直しにより失われない。スクロール位置も同じ View 内の付け外しでは保たれる。
-- Activity の再生成と `NavHost` の画面の破棄・作り直しでは、スクロール位置が保存状態から戻る (既定 id の Host が同じ階層に複数ある構成を除く。上記「Activity の作り直しと保存状態」)。
+- Activity の再生成と `NavHost` の画面の破棄・作り直しでは、スクロール位置が保存状態から戻る (既定 id の Host が同じ保存の入れ物に複数ある構成を除く。上記「保存の入れ物と既定 id」)。
 - `bind` から attach までの間の Store 更新も、attach 後にメインスレッドのキューが空になった時点までに表示へ収束する (取り付け順序に依存しない。[core/ADR-0019](../../../decisions/core/0019-host-restores-from-store-on-attach.md))。
 - `bind` 中に `store.updateAccessory` の Root 対象で渡した値は、attach 前・detach 中でも失われず次の表示に反映される ([core/ADR-0033](../../../decisions/core/0033-root-accessory-survives-pre-attach-delivery.md))。
 - 同じ Store に bind した複数の Host は Root 対象の更新をすべて受け取り、一方の `unbind` は他方を妨げない。
