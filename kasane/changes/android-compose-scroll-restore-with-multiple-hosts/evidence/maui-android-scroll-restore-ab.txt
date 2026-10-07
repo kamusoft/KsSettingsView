@@ -1,0 +1,95 @@
+端末での確かめ: MAUI Android で SettingsView のページが重なる構成のスクロール位置 (修正前後の A/B)
+
+環境: Android Emulator (API 36、1080x2400)、samples/maui の Debug ビルド (net10.0-android)
+ビルド: before = 既定 id の View Host を window の階層全体 (rootView) で数える判定に一時的に戻したライブラリ / after = 保存の入れ物の範囲で数える判定のライブラリ。サンプル側のコードは両方とも同じ (ナビゲーションバーに「次のデモへ進む」を足したもの)
+配備: ビルドを替えるたびに Sample・facade・Android binding の bin / obj を捨ててフルビルドし、-t:Run でエミュレータへ配備した
+取り込みの確認: 各ビルドで、生成された aar (kssettingsview-release.aar) と配備した apk の dex の両方から KsSettingsView.hasAmbiguousLibraryDefaultId の呼び出し先を読んだ
+  before: aar も apk も getRootView を呼ぶ
+  after:  aar も apk も saveContainerRoot を呼ぶ
+一時的な戻しの後始末: ライブラリのソースは確かめの後で after の内容へ書き戻し、戻す前に取った SHA-256 と一致することを確かめた。最後にもう一度 after でフルビルドして配備し、apk が saveContainerRoot を呼ぶことを確かめた
+
+経路: ルートメニュー (CollectionView。SettingsView ではない) → スクロール制御デモ (SettingsView) → バーの「次のデモへ進む」→ Header / Footer への View 配置デモ (SettingsView) → 戻る
+手順 (各ビルドで同じ。アプリを止めて起動し直してから始める。夜間モードは切った状態から):
+  場面 A: ルートメニュー → スクロール制御デモ →「Section へ」→「次のデモへ進む」→ 戻る (戻る動きは録画した)
+  場面 B: 場面 A の続きで「次のデモへ進む」→ 上のページを下へ送る → 夜間モードを入れる (Activity が作り直される) → 戻る → 夜間モードを切る (もう一度作り直される)
+  遷移の途中: 進む操作と戻る操作のそれぞれについて、操作を出してから約 2 秒の間に画面の階層を 90 回読んだ
+観測の読み方:
+  title / top-rows: 画面の要素一覧から読んだ、バーの文字と、内容の上から 4 つの文字の要素と上端の座標 (px)。下のページで「Section 4@279」が上端にあれば位置が保たれている
+  階層の中の KsSettingsView: Activity の View の階層の一覧に出た View Host の数と id
+  ページの Fragment: MAUI がページごとに持つ Fragment の状態。mState=7 は表示中、mState=1 は View を持たない状態。「View の保存状態」は Fragment が控えている View の保存状態に View Host の分があるか
+
+---- before ----
+## 場面 A: 進んで戻る
+[before] A 進む前 (下のページ): title=['スクロール制御デモ'] top-rows=['Section 4@279', '項目 4-1@383', '項目 4-2@540', '項目 4-3@697']
+[before] A 進む前: 階層の中の KsSettingsView=1 ['既定 id'] / ページの Fragment=2 (mState=7 mAdded=true View=あり View の保存状態=なし) (mState=1 mAdded=false View=なし View の保存状態=なし)
+[before] A 行き先 (上のページ): title=['Header / Footer への View 配置デモ'] top-rows=['① Root Header View@311', '② Section Header View@482', 'ViewModel の初期値@538', 'Header View のバインド@621']
+[before] A 行き先: 階層の中の KsSettingsView=1 ['既定 id'] / ページの Fragment=3 (mState=1 mAdded=false View=なし View の保存状態=KsSettingsView の分あり) (mState=7 mAdded=true View=あり View の保存状態=なし) (mState=1 mAdded=false View=なし View の保存状態=なし)
+[before] A 戻った後 (下のページ): title=['スクロール制御デモ'] top-rows=['Section 4@279', '項目 4-1@383', '項目 4-2@540', '項目 4-3@697']
+[before] A 戻った後: 階層の中の KsSettingsView=1 ['既定 id'] / ページの Fragment=2 (mState=7 mAdded=true View=あり View の保存状態=なし) (mState=1 mAdded=false View=なし View の保存状態=なし)
+## 場面 B: 重なった状態で Activity を作り直す
+[before] B 作り直し前 (上のページ): title=['Header / Footer への View 配置デモ'] top-rows=['折り返しによる高さの決定@279', 'Footer の Label が複数行へ折り返され、その行数に応じた高さで領域が確保される@293', '③ Footer View（折り返す Label）。この文は 1 行には収まらない長さがあり、画面の幅に合わせて数行へ折り返される。折り返した結果の行数で決まる高さが、そのまま Footer 領域の高さになる@439', '④ Header View（Header Text より優先）@695']
+[before] B 作り直し後 (上のページ): title=['Header / Footer への View 配置デモ'] top-rows=['折り返しによる高さの決定@279', 'Footer の Label が複数行へ折り返され、その行数に応じた高さで領域が確保される@293', '③ Footer View（折り返す Label）。この文は 1 行には収まらない長さがあり、画面の幅に合わせて数行へ折り返される。折り返した結果の行数で決まる高さが、そのまま Footer 領域の高さになる@439', '④ Header View（Header Text より優先）@695']
+[before] B 作り直し後: 階層の中の KsSettingsView=1 ['既定 id'] / ページの Fragment=3 (mState=7 mAdded=true View=あり View の保存状態=なし) (mState=1 mAdded=false View=なし View の保存状態=なし) (mState=1 mAdded=false View=なし View の保存状態=なし)
+[before] B 作り直し後に戻った後 (下のページ): title=['スクロール制御デモ'] top-rows=['Section 4@279', '項目 4-1@383', '項目 4-2@540', '項目 4-3@697']
+[before] B 作り直し後に戻った後: 階層の中の KsSettingsView=1 ['既定 id'] / ページの Fragment=2 (mState=1 mAdded=false View=なし View の保存状態=なし) (mState=7 mAdded=true View=あり View の保存状態=なし)
+[before] B 夜間モードを戻した後 (下のページ): title=['スクロール制御デモ'] top-rows=['Section 4@279', '項目 4-1@383', '項目 4-2@540', '項目 4-3@697']
+## 遷移の途中の階層
+[before] 戻る操作の途中 (約 2388ms の間に 90 回読んだうち、数か先頭の View が変わった時点): 操作からの経過と階層の中の KsSettingsView の数 = 29ms:1 55ms:1(入れ替わり)
+[before] 進む操作の途中 (約 2155ms の間に 90 回読んだうち、数か先頭の View が変わった時点): 操作からの経過と階層の中の KsSettingsView の数 = 59ms:1 192ms:1(入れ替わり)
+[before] 最後に戻った後 (下のページ): title=['スクロール制御デモ'] top-rows=['Section 4@279', '項目 4-1@383', '項目 4-2@540', '項目 4-3@697']
+
+---- after ----
+## 場面 A: 進んで戻る
+[after] A 進む前 (下のページ): title=['スクロール制御デモ'] top-rows=['Section 4@279', '項目 4-1@383', '項目 4-2@540', '項目 4-3@697']
+[after] A 進む前: 階層の中の KsSettingsView=1 ['既定 id'] / ページの Fragment=2 (mState=7 mAdded=true View=あり View の保存状態=なし) (mState=1 mAdded=false View=なし View の保存状態=なし)
+[after] A 行き先 (上のページ): title=['Header / Footer への View 配置デモ'] top-rows=['① Root Header View@311', '② Section Header View@482', 'ViewModel の初期値@538', 'Header View のバインド@621']
+[after] A 行き先: 階層の中の KsSettingsView=1 ['既定 id'] / ページの Fragment=3 (mState=1 mAdded=false View=なし View の保存状態=KsSettingsView の分あり) (mState=1 mAdded=false View=なし View の保存状態=なし) (mState=7 mAdded=true View=あり View の保存状態=なし)
+[after] A 戻った後 (下のページ): title=['スクロール制御デモ'] top-rows=['Section 4@279', '項目 4-1@383', '項目 4-2@540', '項目 4-3@697']
+[after] A 戻った後: 階層の中の KsSettingsView=1 ['既定 id'] / ページの Fragment=2 (mState=7 mAdded=true View=あり View の保存状態=なし) (mState=1 mAdded=false View=なし View の保存状態=なし)
+## 場面 B: 重なった状態で Activity を作り直す
+[after] B 作り直し前 (上のページ): title=['Header / Footer への View 配置デモ'] top-rows=['折り返しによる高さの決定@279', 'Footer の Label が複数行へ折り返され、その行数に応じた高さで領域が確保される@291', '③ Footer View（折り返す Label）。この文は 1 行には収まらない長さがあり、画面の幅に合わせて数行へ折り返される。折り返した結果の行数で決まる高さが、そのまま Footer 領域の高さになる@437', '④ Header View（Header Text より優先）@693']
+[after] B 作り直し後 (上のページ): title=['Header / Footer への View 配置デモ'] top-rows=['折り返しによる高さの決定@279', 'Footer の Label が複数行へ折り返され、その行数に応じた高さで領域が確保される@291', '③ Footer View（折り返す Label）。この文は 1 行には収まらない長さがあり、画面の幅に合わせて数行へ折り返される。折り返した結果の行数で決まる高さが、そのまま Footer 領域の高さになる@437', '④ Header View（Header Text より優先）@693']
+[after] B 作り直し後: 階層の中の KsSettingsView=1 ['既定 id'] / ページの Fragment=3 (mState=7 mAdded=true View=あり View の保存状態=なし) (mState=1 mAdded=false View=なし View の保存状態=なし) (mState=1 mAdded=false View=なし View の保存状態=なし)
+[after] B 作り直し後に戻った後 (下のページ): title=['スクロール制御デモ'] top-rows=['Section 4@279', '項目 4-1@383', '項目 4-2@540', '項目 4-3@697']
+[after] B 作り直し後に戻った後: 階層の中の KsSettingsView=1 ['既定 id'] / ページの Fragment=2 (mState=7 mAdded=true View=あり View の保存状態=なし) (mState=1 mAdded=false View=なし View の保存状態=なし)
+[after] B 夜間モードを戻した後 (下のページ): title=['スクロール制御デモ'] top-rows=['Section 4@279', '項目 4-1@383', '項目 4-2@540', '項目 4-3@697']
+## 遷移の途中の階層
+[after] 戻る操作の途中 (約 2503ms の間に 90 回読んだうち、数か先頭の View が変わった時点): 操作からの経過と階層の中の KsSettingsView の数 = 30ms:1 68ms:1(入れ替わり)
+[after] 進む操作の途中 (約 2137ms の間に 90 回読んだうち、数か先頭の View が変わった時点): 操作からの経過と階層の中の KsSettingsView の数 = 142ms:1 173ms:1(入れ替わり)
+[after] 最後に戻った後 (下のページ): title=['スクロール制御デモ'] top-rows=['Section 4@279', '項目 4-1@383', '項目 4-2@540', '項目 4-3@697']
+
+---- 下のページの View の保存状態の中身 (ヒープの読み取り) ----
+手順 (各ビルドで同じ): アプリを止めて起動し直す → スクロール制御デモ →「Section へ」→「次のデモへ進む」→ この時点でアプリのヒープを書き出し、KsSettingsView の保存状態のインスタンスを読む → 戻る
+[before] 上のページ: title=['Header / Footer への View 配置デモ'] top-rows=['① Root Header View@311', '② Section Header View@482', 'ViewModel の初期値@538', 'Header View のバインド@621']
+[before] 上のページを表示中: 階層の中の KsSettingsView=1 ['既定 id'] / ページの Fragment=3 (mState=7 mAdded=true View=あり View の保存状態=なし) (mState=1 mAdded=false View=なし View の保存状態=KsSettingsView の分あり) (mState=1 mAdded=false View=なし View の保存状態=なし)
+[before] ヒープの中の保存状態 (起動から 1 回だけ進んだ時点):
+  KsSettingsView$SavedState: scrollAnchor=あり (型 KsScrollAnchor、フィールド ['element', 'offsetFromTop']) calendarCellId=無し
+[before] 戻った後 (下のページ): title=['スクロール制御デモ'] top-rows=['Section 4@279', '項目 4-1@383', '項目 4-2@540', '項目 4-3@697']
+[after] 上のページ: title=['Header / Footer への View 配置デモ'] top-rows=['① Root Header View@311', '② Section Header View@482', 'ViewModel の初期値@538', 'Header View のバインド@621']
+[after] 上のページを表示中: 階層の中の KsSettingsView=1 ['既定 id'] / ページの Fragment=3 (mState=1 mAdded=false View=なし View の保存状態=KsSettingsView の分あり) (mState=1 mAdded=false View=なし View の保存状態=なし) (mState=7 mAdded=true View=あり View の保存状態=なし)
+[after] ヒープの中の保存状態 (起動から 1 回だけ進んだ時点):
+  KsSettingsView$SavedState: scrollAnchor=あり (型 KsScrollAnchor、フィールド ['element', 'offsetFromTop']) calendarCellId=無し
+[after] 戻った後 (下のページ): title=['スクロール制御デモ'] top-rows=['Section 4@279', '項目 4-1@383', '項目 4-2@540', '項目 4-3@697']
+
+結果:
+  観測点 (上にページを積んだとき、下のページの Fragment の View が階層に残るか): 残らない。before / after とも、落ち着いた状態では下のページの Fragment は View を持たず (mState=1)、階層の一覧にある View Host は上のページの 1 つだけ。遷移の途中に 90 回読んだ中でも、View Host が 2 つ並んだ時点は 1 度も無く、1 つのまま別の View へ入れ替わった。録画では戻る動きの間 2 つのページが重なって描かれている (クロスフェード) が、階層の一覧に出るのは常に 1 つだった
+  (1) 進んで戻った後の位置: before 保たれる / after 保たれる (進む前も戻った後も Section 4@279)
+  (2) View の保存状態からの戻しと Bridge の戻しの食い違い: before / after とも無し
+      - 戻った後の位置は進む前と同じで、別の位置にならない
+      - 戻る動きの連続フレーム (maui-android-back-frames-<before|after>.png。録画の全フレームを左上から右へ並べたもの) で、下のページは現れ始めから Section 4 が上端にあり、途中で位置が動くフレームが無い
+      - 操作の間にアプリの異常終了は無く、logcat に AndroidRuntime の E 行・FATAL EXCEPTION・未処理例外の行は無い。アプリのプロセスは最後まで生きていた
+  (3) ページが重なった状態で Activity を作り直した後の位置: before 保たれる / after 保たれる
+      - 上のページ: 作り直す前と後で上から 4 つの要素と座標が同じ
+      - 戻った後の下のページ: Section 4@279 のまま。夜間モードを切ってもう一度作り直した後も同じ
+      - 作り直した後は、どの Fragment も View の保存状態を持たない (MAUI は Activity の作り直しで Fragment を引き継がない)。この場面で位置を戻しているのは Bridge の側だけ
+  before と after の差: この経路では観測に差が無い。下のページの View の保存状態は before でも after でも位置を持っていた (ヒープの読み取り)。MAUI は下のページの View を階層から外してから上のページを載せるため、before の数え方 (階層全体) でも View Host は 1 つと数えられ、修正前から View の保存状態に位置が載っていた。修正で新しく保存されるようになる経路ではなかった
+確かめていない点:
+  - 夜間モードの切り替え以外の作り直し (画面の回転)。このサンプルの Activity は回転を自分で受け取る設定で、回転では作り直されない
+  - 遷移の途中の一瞬 (読み取りの間隔は 25〜130ms) に View Host が 2 つ並ぶ時点があるかどうかは、この読み方では否定しきれない
+  - タブやモーダルなど、NavigationPage の Push / Pop 以外でページが重なる構成
+静止画:
+  maui-android-push-pre-after.png: 場面 A の進む前 (after)
+  maui-android-push-return-<before|after>.png: 場面 A の戻った後
+  maui-android-recreate-upper-<pre|post>-after.png: 場面 B の上のページの作り直す前と後 (after)
+  maui-android-recreate-lower-return-<before|after>.png: 場面 B の作り直した後に戻った下のページ
+  maui-android-back-frames-<before|after>.png: 場面 A の戻る動きの連続フレーム

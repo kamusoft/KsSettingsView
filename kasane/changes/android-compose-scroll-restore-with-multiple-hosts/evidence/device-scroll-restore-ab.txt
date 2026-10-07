@@ -1,0 +1,36 @@
+端末での確かめ: 進んで戻った後のスクロール位置 (修正前後の A/B)
+
+環境: Android Emulator (API 36、1080x2400)、samples/android の debug ビルド
+ビルド: before = 既定 id の View Host を window の階層全体 (rootView) で数える判定に戻したライブラリ / after = 保存の入れ物の範囲で数える判定のライブラリ。サンプル側のコードは両方とも同じ
+手順 (各ビルドで同じ。場面 1 と場面 2 の前にアプリのデータを消して起動し直す):
+  場面 1: ルートメニュー → スクロール制御デモ →「Section へ」→ TopAppBar の「メニューを開く」(KsSettingsView を使わない画面) → 戻る
+  場面 2: ルートメニュー → スクロール制御デモ →「Section へ」→ TopAppBar の「次のデモへ進む」(Store 方式デモ = KsSettingsView の画面) → 戻る
+  場面 4: 場面 2 の続きで (位置が先頭へ戻っていたら「Section へ」をもう一度押してから)「メニューを開く」→ 戻る
+観測: 画面の要素一覧から、タイトルと、上から 4 つの文字の要素と上端の座標 (px) を読んだもの。「Section 4@300」が上端にあれば位置が保たれている。「操作@358」が上端にあれば内容の先頭へ戻っている
+静止画: 各場面の「戻った後」を scroll-control-scene<場面>-return-<before|after>.png に置いた
+
+[before] 場面1 進む前: title=['戻る'] top-rows=['Section 4@300', '項目 4-1@404', '項目 4-2@561', '項目 4-3@718']
+[before] 場面1 行き先: title=['KsSettingsView Sample'] top-rows=['外観@342', 'システム@458', '選択中@458', 'ライト@608']
+[before] 場面1 戻った後: title=['戻る'] top-rows=['Section 4@300', '項目 4-1@404', '項目 4-2@561', '項目 4-3@718']
+[before] 場面2 進む前: title=['戻る'] top-rows=['Section 4@300', '項目 4-1@404', '項目 4-2@561', '項目 4-3@718']
+[before] 場面2 行き先: title=['戻る'] top-rows=['項目追加@358', '項目削除@358', 'PoC Section@526', 'Sample Row 1@632']
+[before] 場面2 戻った後: title=['戻る'] top-rows=['操作@358', '末尾へ@465', 'Section へ@622', 'Cell を中央へ@779']
+[before] 場面4 進む前: title=['戻る'] top-rows=['Section 4@300', '項目 4-1@404', '項目 4-2@561', '項目 4-3@718']
+[before] 場面4 行き先: title=['KsSettingsView Sample'] top-rows=['外観@342', 'システム@458', '選択中@458', 'ライト@608']
+[before] 場面4 戻った後: title=['戻る'] top-rows=['操作@358', '末尾へ@465', 'Section へ@622', 'Cell を中央へ@779']
+
+[after] 場面1 進む前: title=['戻る'] top-rows=['Section 4@300', '項目 4-1@404', '項目 4-2@561', '項目 4-3@718']
+[after] 場面1 行き先: title=['KsSettingsView Sample'] top-rows=['外観@342', 'システム@458', '選択中@458', 'ライト@608']
+[after] 場面1 戻った後: title=['戻る'] top-rows=['Section 4@300', '項目 4-1@404', '項目 4-2@561', '項目 4-3@718']
+[after] 場面2 進む前: title=['戻る'] top-rows=['Section 4@300', '項目 4-1@404', '項目 4-2@561', '項目 4-3@718']
+[after] 場面2 行き先: title=['戻る'] top-rows=['項目追加@358', '項目削除@358', 'PoC Section@526', 'Sample Row 1@632']
+[after] 場面2 戻った後: title=['戻る'] top-rows=['Section 4@300', '項目 4-1@404', '項目 4-2@561', '項目 4-3@718']
+[after] 場面4 進む前: title=['戻る'] top-rows=['Section 4@300', '項目 4-1@404', '項目 4-2@561', '項目 4-3@718']
+[after] 場面4 行き先: title=['KsSettingsView Sample'] top-rows=['外観@342', 'システム@458', '選択中@458', 'ライト@608']
+[after] 場面4 戻った後: title=['戻る'] top-rows=['Section 4@300', '項目 4-1@404', '項目 4-2@561', '項目 4-3@718']
+
+結果:
+  場面 1: before 保たれる / after 保たれる
+  場面 2: before 先頭に戻る / after 保たれる
+  場面 4: before 先頭に戻る / after 保たれる
+操作の間にアプリの異常終了は無かった (logcat の AndroidRuntime に出力なし)
