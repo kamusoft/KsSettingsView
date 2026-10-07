@@ -2,9 +2,12 @@ package jp.kamusoft.kssettingsview.ui
 
 import android.os.Bundle
 import android.os.Looper
+import android.os.Parcelable
+import android.util.SparseArray
 import android.view.View
 import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
+import androidx.core.os.BundleCompat
 import androidx.compose.material3.DisplayMode
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.ui.graphics.Color
@@ -54,10 +57,18 @@ class DateCalendarRecreationTest {
      *
      * 再生成後も同じ手順で組み直されるよう、View の生成と root の反映を `onCreate` に置く。
      * 生成内容はコンパニオンの設定値から読む（テストごとに差し替える）。
+     *
+     * [separatesSaveContainers] を立てると、AndroidX Fragment が Fragment の View に対して行うのと同じ形で、
+     * `KsSettingsView` ごとに保存の入れ物を分ける。`KsSettingsView` を 1 つだけ持つ親に「親からの保存を
+     * 受けない」設定を付け、その親以下の状態を Activity の保存状態の中の専用の入れ物へ保存し、
+     * 再生成の後にそこから戻す。
      */
     class HostActivity : ComponentActivity() {
 
         lateinit var container: FrameLayout
+
+        /** 保存の入れ物を分けた範囲の根（並びは [rootsProvider] と対応する）。分けないときは空。 */
+        private var separatedRoots: List<View> = emptyList()
 
         override fun onCreate(savedInstanceState: Bundle?) {
             // Material3 派生ではないフレームワーク標準テーマ。
@@ -65,15 +76,40 @@ class DateCalendarRecreationTest {
             super.onCreate(savedInstanceState)
             container = FrameLayout(this)
             setContentView(container)
+            val roots = mutableListOf<View>()
             settingsViews = rootsProvider().mapIndexed { index, root ->
                 KsSettingsView(this).also { view ->
                     explicitViewIds.getOrNull(index)?.let { view.id = it }
                     view.restoreTodayProvider = todayProvider
-                    container.addView(view)
+                    if (separatesSaveContainers) {
+                        val separatedRoot = FrameLayout(this).also { it.addView(view) }
+                        separatedRoot.isSaveFromParentEnabled = false
+                        container.addView(separatedRoot)
+                        roots += separatedRoot
+                    } else {
+                        container.addView(view)
+                    }
                     view.setRootDirect(root, hostTheme)
                 }
             }
+            separatedRoots = roots
+            roots.forEachIndexed { index, separatedRoot ->
+                savedInstanceState
+                    ?.let { BundleCompat.getSparseParcelableArray(it, separatedStateKey(index), Parcelable::class.java) }
+                    ?.let { separatedRoot.restoreHierarchyState(it) }
+            }
         }
+
+        override fun onSaveInstanceState(outState: Bundle) {
+            super.onSaveInstanceState(outState)
+            separatedRoots.forEachIndexed { index, separatedRoot ->
+                val states = SparseArray<Parcelable>()
+                separatedRoot.saveHierarchyState(states)
+                outState.putSparseParcelableArray(separatedStateKey(index), states)
+            }
+        }
+
+        private fun separatedStateKey(index: Int): String = "separated-view-state-$index"
 
         companion object {
             /** `onCreate` で組み立てる `KsSettingsView` の数と、それぞれに反映する root。 */
@@ -90,6 +126,9 @@ class DateCalendarRecreationTest {
 
             /** 直近の `onCreate` で組み立てた View 群。 */
             var settingsViews: List<KsSettingsView> = emptyList()
+
+            /** `KsSettingsView` ごとに保存の入れ物を分けるか（分けないときは Activity の保存に任せる）。 */
+            var separatesSaveContainers: Boolean = false
         }
     }
 
@@ -102,6 +141,7 @@ class DateCalendarRecreationTest {
         HostActivity.hostTheme = Theme()
         HostActivity.todayProvider = { FIXED_TODAY }
         HostActivity.settingsViews = emptyList()
+        HostActivity.separatesSaveContainers = false
     }
 
     @After
@@ -368,6 +408,35 @@ class DateCalendarRecreationTest {
         moveTo(openDialog(HostActivity.settingsViews.first()), selected = PICKED_DATE)
 
         HostActivity.explicitViewIds = listOf(android.R.id.list, android.R.id.text1)
+        recreate(
+            ctrl,
+            rootOf(dateCell(id = FIRST_CELL_ID, onValueChanged = { notified.add("first") })),
+            rootOf(dateCell(id = SECOND_CELL_ID, onValueChanged = { notified.add("second") })),
+        )
+
+        val restored = requireNotNull(shownDialog()) { "対象の View で選択面が提示されていない" }
+        assertEquals(PICKED_DATE, selectedDate(restored))
+        assertEquals(
+            "提示された選択面が 1 つでない",
+            1,
+            ShadowDialog.getShownDialogs().filterIsInstance<DateCalendarDialog>().count { it.isShowing },
+        )
+        restored.confirmSelection()
+        assertEquals(listOf("first"), notified)
+    }
+
+    @Test
+    fun `保存の入れ物を分けたホストの下の ID 未設定の複数インスタンスでは対象の View だけが復元する`() {
+        val notified = mutableListOf<String>()
+        HostActivity.separatesSaveContainers = true
+        val ctrl = launch(rootOf(dateCell(id = FIRST_CELL_ID)), rootOf(dateCell(id = SECOND_CELL_ID)))
+        assertEquals(
+            "どちらも既定 ID の 2 インスタンス構成になっていない",
+            listOf(R.id.ks_settings_view, R.id.ks_settings_view),
+            HostActivity.settingsViews.map { it.id },
+        )
+        moveTo(openDialog(HostActivity.settingsViews.first()), selected = PICKED_DATE)
+
         recreate(
             ctrl,
             rootOf(dateCell(id = FIRST_CELL_ID, onValueChanged = { notified.add("first") })),

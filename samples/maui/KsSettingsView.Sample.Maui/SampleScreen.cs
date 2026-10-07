@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using KsSettingsView.Sample.Maui.Pages;
 using Microsoft.Maui.Controls;
+using Microsoft.Maui.Graphics;
 
 namespace KsSettingsView.Sample.Maui;
 
@@ -101,13 +102,51 @@ public sealed record SampleScreen(
     /// </summary>
     /// <remarks>
     /// タイトルをページ側に書かずここで与えることで、一覧の項目文言との一致を構造的に保証する。
+    ///
+    /// ナビゲーションバーには、今のページを残したまま並びの次のデモページを上に重ねる操作を置く。
+    /// デモページはどれも <c>SettingsView</c> を持つので、<c>SettingsView</c> のページが 2 つ重なった
+    /// 状態と、そこから戻った後のスクロール位置をここから確かめられる。デモの内容 (行) には足さない。
+    /// 行の構成は platform 間でそろえる対象で、バーは platform ごとの chrome に当たるためである
+    /// (cross/ADR-0016)。
     /// </remarks>
-    /// <returns>タイトルを設定済みのページ</returns>
+    /// <returns>タイトルと、次のデモページへ進む操作を設定済みのページ</returns>
     public Page CreateTitledPage()
     {
         Page page = CreatePage();
         page.Title = Title;
+        page.ToolbarItems.Add(CreateNextDemoItem(page));
         return page;
+    }
+
+    private ToolbarItem CreateNextDemoItem(Page page)
+    {
+        SampleScreen next = NextScreen();
+        ToolbarItem item = new()
+        {
+            // 文言は読み上げと操作の特定に使われる。Android Sample の同じ操作と同じ文言にしてある。
+            Text = "次のデモへ進む",
+            IconImageSource = new FontImageSource
+            {
+                Glyph = "→",
+                Color = Colors.White,
+            },
+        };
+        item.Clicked += async (_, _) => await page.Navigation.PushAsync(next.CreateTitledPage());
+        return item;
+    }
+
+    /// <summary>並びの次の画面 (最後の画面からは最初の画面)。</summary>
+    private SampleScreen NextScreen()
+    {
+        for (int index = 0; index < All.Count; index++)
+        {
+            if (ReferenceEquals(All[index], this))
+            {
+                return All[(index + 1) % All.Count];
+            }
+        }
+
+        throw new InvalidOperationException($"{nameof(All)} does not contain the screen \"{Title}\".");
     }
 }
 
