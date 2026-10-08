@@ -552,7 +552,16 @@ override fun onCreate(savedInstanceState: Bundle?) {
 }
 ```
 
-保存状態は View の id で区別される。同じ View 階層の複数の `KsSettingsView` がライブラリ既定の id のまま — 1 画面に `KsSettingsView` の Composable を 2 つ置いた場合や、`android:id` を付けていない XML の View — だと、どれも位置を保存も復元もしない。XML の View にはそれぞれ固有の `android:id` を付ける。
+保存状態は View の id で区別され、固有の id を持たない `KsSettingsView` の View にはライブラリ既定の id が付く。既定の id のまま同じ入れ物へ保存される View が複数あると互いの状態を上書きしてしまうため、その構成ではどれも位置を保存も復元もしない — `DatePickerCell` のカレンダーダイアログも回転後に再表示されない。数える範囲は window 全体ではなく、状態が保存される入れ物である。
+
+| View の置き方 | 既定の id のままでの復元 |
+|---|---|
+| `KsSettingsView` の Composable (複数の画面・タブに置く、1 画面に複数置く) | する |
+| Fragment ごとに 1 つ | する |
+| 同じ Activity のレイアウトに 2 つ以上を直接置く | しない |
+| 1 つの Fragment の中、または自前の `AndroidView` 1 つの中に 2 つ以上 | しない |
+
+「しない」の構成では、それぞれの View に固有の id (XML なら別々の `android:id`) を付ければ、各自の位置へ戻る。Composable には id の指定は要らない。
 
 ## 自分で作り直す View へスクロール位置を引き継ぐ
 
