@@ -2,12 +2,13 @@
 scope: process
 kind: pain
 severity: normal
-count: 2
+count: 3
 first-seen: 2026-08-11
-last-seen: 2026-09-19
+last-seen: 2026-10-07
 evidence:
   - colorPrimary 宣言元参照への是正 (S 級・2026-08-11。レビューワーカーにテスト実行を依頼した状態でオーケストレーターも同じ Gradle ビルドツリーへ `clean` と `--stop` を実行し、双方の実行が BUILD FAILED。release variant の ClassNotFoundException 8 件と依存モジュール型の Unresolved reference が出て、変更起因の失敗との切り分けに 2 往復を要した)
   - picker-selection-after-dismiss (review-002 と verify-001 を同じ作業ツリーで並行起動。レビュアーのミューテーション確認が本体ソース `KsSettingsView.kt` を一時的に書き換え、並行中の verifier がそれを「第三者による作業ツリーの改変」として観測し所見に載せた。復元は shasum 一致で完了しており実害なし)
+  - android-test-hang-calendar-then-compose-scroll-control (review-002 が走っている最中に、オーナー指摘を受けて同じ作業ツリーで実装ワーカーに作り直しを始めさせた。レビュー中に対象が少なくとも 3 回書き換わり、一時テストと観測用コードが作業ツリーに置かれ、レビュアーは「どの版の結果か特定できない」として Critical を出した。以後は、実装の完了報告で shasum を固定してからレビューを起動し、レビュアーの改変は作業用ディレクトリの写しで行わせた)
 ---
 
 ## ルール文
