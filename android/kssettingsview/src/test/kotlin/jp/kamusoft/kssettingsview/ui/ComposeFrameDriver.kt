@@ -19,15 +19,26 @@ import kotlin.coroutines.CoroutineContext
  *
  * # なぜ必要か
  *
- * Compose の再 composition は `Choreographer` のフレームで走る。Robolectric はテストごとに
- * `Choreographer` を作り直すが、Compose 側でフレームを要求する dispatcher はプロセス内で一度だけ
- * 生成され、最初に取得した `Choreographer` を握り続ける。その結果、同一クラスの 2 件目以降のテストでは
- * window の `Recomposer` が要求したフレームが誰にも届かず、**初回 composition だけが走り、以降の更新が
- * 永久に保留される**。メインループを何度流しても、システム時刻を進めても解消しない。
+ * window 既定の `Recomposer` は、プロセス内で一度だけ生成される Compose の UI dispatcher
+ * （`AndroidUiDispatcher.Main`）の上で動く。この dispatcher はテストをまたいで使い回され、Robolectric が
+ * テストごとに行う初期化と噛み合わない。噛み合わない点は 2 つある。
+ *
+ * 1. dispatcher は、処理をメインスレッドへ予約すると「予約済み」の印を立て、予約した処理が
+ *    実行されるまで次の予約を出さない。Robolectric はテストの終わりにメインスレッドのキューを
+ *    中身ごと捨てるので、予約が消化されないままテストが終わると、印だけが立ったまま残る。その
+ *    プロセスで後に走るテストでは、window の `Recomposer` は**初回 composition だけを行い、以降の
+ *    更新が永久に保留される**（実測）
+ * 2. dispatcher は、最初に Compose を使ったテストの `Choreographer` を握り続ける。Robolectric は
+ *    テストごとに時計を戻し、`Choreographer` を作り直すので、握られた `Choreographer` は後のテストで
+ *    フレームを配れなくなることがある。先のテストが時計を大きく進めていた場合と、フレームの配信を
+ *    止める API を使った場合に、フレームが届かなくなる（実測。時計が先のテストの時刻へ追いつくまで
+ *    フレームを見送ること、止めていた間のフレームを配る合図が古い `Choreographer` へ届かないことが
+ *    原因、というのは推定）
  *
  * そこでテスト側で `Recomposer` を用意し、フレームは [frame] から明示的に送る。view ツリーの上位へ
- * 差し込んでおけば、配下の `ComposeView` はこれを親 `CompositionContext` として composition を作るため、
- * `Choreographer` に依存しない決定的な駆動になる。
+ * 差し込んでおけば、配下の `ComposeView` はこれを親 `CompositionContext` として composition を作る。
+ * この駆動器は自前の `Recomposer`・dispatcher・フレームの時計を使い、Compose の UI dispatcher も
+ * `Choreographer` も通らないので、上の 2 つのどちらにも左右されない決定的な駆動になる。
  *
  * # 使い方
  *
@@ -97,9 +108,9 @@ internal class ComposeFrameDriver {
     /**
      * メインスレッドの `Handler` へ委譲するだけの dispatcher。
      *
-     * Compose 標準の dispatcher は `Choreographer` と結び付いており、テストごとに作り直される
-     * `Choreographer` を跨げない。フレームは [frameClock] から送るため、ここでは実行スレッドを
-     * メインへ揃えることだけを担う。
+     * Compose 標準の dispatcher は、先に走ったテストの影響（残った「予約済み」の印、握り続ける
+     * `Choreographer`）で止まりうるため使わない。フレームは [frameClock] から送るため、ここでは
+     * 実行スレッドをメインへ揃えることだけを担う。
      */
     private object MainLooperDispatcher : CoroutineDispatcher() {
         private val handler = Handler(Looper.getMainLooper())

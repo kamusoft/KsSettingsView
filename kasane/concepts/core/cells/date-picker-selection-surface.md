@@ -103,7 +103,7 @@ iOS の `accentColor` は埋め込み picker の `tintColor` と入力ツール�
 
 ### 再生成をまたぐ復元の成立条件
 
-View 階層の状態保存は ID を持つ View にしか働かないため、`KsSettingsView` は ID 未設定のときライブラリ既定 ID を自前付与する (ホストの明示 ID は尊重)。ライブラリ既定 ID のインスタンスが同一階層に複数ある構成では保存先が衝突するため復元しない — ホストが個別 ID を与えれば成立する。
+View 階層の状態保存は ID を持つ View にしか働かないため、`KsSettingsView` は ID 未設定のときライブラリ既定 ID を自前付与する (ホストの明示 ID は尊重)。同じ保存の入れ物にライブラリ既定 ID のインスタンスが複数ある構成では保存先が衝突するため復元しない — ホストが個別 ID を与えれば成立する。Compose の `KsSettingsView(...)` と Fragment ごとに置いた View は入れ物が分かれるため、既定 ID のまま複数あっても成立する (範囲の数え方は [Android Native Host](../../android/api/android-native-host.md) の「保存の入れ物と既定 id」)。
 
 再生成の前後で `cell.id` が一致することも対応付けの前提である。一致は Cell への明示 id 指定、または Compose 宣言 DSL が識別のために導出する安定 ID ([Android Compose Bridge](../../android/api/android-compose.md)) で成り立つ。
 

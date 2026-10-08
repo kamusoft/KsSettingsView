@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -35,7 +37,8 @@ import jp.kamusoft.kssettingsview.ui.KsCellRegistry
  * ルートメニュー → 各デモ画面への遷移は、iOS Sample の `NavigationStack` +
  * `NavigationLink` 構造に合わせて、Android では Navigation Compose の `NavHost` +
  * `composable` ルートで構成する。デモ画面からは `TopAppBar` の戻るアイコン or システム
- * バックで Menu に戻れる。
+ * バックで Menu に戻れる。デモ画面の `TopAppBar` には、次のデモ画面へ進む操作とルートメニューを
+ * 重ねて開く操作も置く（[DemoScaffold]）。
  *
  * 基底クラスは Compose テンプレート標準の [ComponentActivity]。本体 UI 層は選択面を
  * ライブラリ自身のシート／ダイアログで提示し、Fragment にも Material3 の XML テーマにも
@@ -112,11 +115,15 @@ private fun SampleApp() {
                 onSelect = { screen -> navController.navigate(screen.route) },
             )
         }
-        SampleScreen.demos.forEach { screen ->
+        SampleScreen.demos.forEachIndexed { index, screen ->
+            // 並びの次のデモ画面（最後の画面からは最初の画面）。
+            val next = SampleScreen.demos[(index + 1) % SampleScreen.demos.size]
             composable(screen.route) {
                 DemoScaffold(
                     title = screen.title,
                     onBack = { navController.popBackStack() },
+                    onOpenNextDemo = { navController.navigate(next.route) },
+                    onOpenMenu = { navController.navigate(MENU_ROUTE) },
                 ) {
                     screen.Content()
                 }
@@ -155,12 +162,26 @@ private fun SampleAppTheme(content: @Composable () -> Unit) {
 /**
  * デモ画面を `TopAppBar` で包む Scaffold。`TopAppBar` の戻るアイコンで Menu に戻れる
  * ようにすることで、iOS の `NavigationStack` 自動戻るボタンと同じ操作性を提供する。
+ *
+ * `TopAppBar` の右側には、今の画面を残したまま別の画面を上に重ねる操作を 2 つ置く。Navigation Compose は
+ * 下になった画面のコンポジションを破棄し、戻ったときに保存した状態から組み直す。デモ画面の
+ * `KsSettingsView` が、進んで戻った後も同じスクロール位置を表示することをここから確かめられる。
+ * 行き先が `KsSettingsView` の画面の場合（次のデモ画面）と、そうでない画面の場合（ルートメニュー）の
+ * 両方を確かめられるよう、操作を分けてある。
+ *
+ * @param title 画面タイトル
+ * @param onBack 戻るアイコンをタップしたときの通知
+ * @param onOpenNextDemo 「次のデモへ進む」をタップしたときの通知
+ * @param onOpenMenu 「メニューを開く」をタップしたときの通知
+ * @param content デモ画面の内容
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DemoScaffold(
     title: String,
     onBack: () -> Unit,
+    onOpenNextDemo: () -> Unit,
+    onOpenMenu: () -> Unit,
     content: @Composable () -> Unit,
 ) {
     Scaffold(
@@ -172,6 +193,20 @@ private fun DemoScaffold(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "戻る",
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onOpenMenu) {
+                        Icon(
+                            imageVector = Icons.Filled.Menu,
+                            contentDescription = "メニューを開く",
+                        )
+                    }
+                    IconButton(onClick = onOpenNextDemo) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = "次のデモへ進む",
                         )
                     }
                 },

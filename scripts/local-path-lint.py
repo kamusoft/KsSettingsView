@@ -67,15 +67,19 @@ def is_violation(line: str) -> bool:
     return any(p.search(line) for p in PATTERNS)
 
 
-def repo_root(cwd: str | None = None) -> str:
+def _git_toplevel(cwd: str | None = None) -> str:
+    """cwd が属するリポジトリのルート。リポジトリ外なら空文字。"""
     try:
-        out = subprocess.run(
+        return subprocess.run(
             ["git", "rev-parse", "--show-toplevel"],
             cwd=cwd, capture_output=True, text=True, check=True,
         ).stdout.strip()
-        return out or (cwd or os.getcwd())
     except Exception:
-        return cwd or os.getcwd()
+        return ""
+
+
+def repo_root(cwd: str | None = None) -> str:
+    return _git_toplevel(cwd) or (cwd or os.getcwd())
 
 
 def normalize_rel(path: str, root: str) -> str:
@@ -94,6 +98,33 @@ def normalize_rel(path: str, root: str) -> str:
         rel = path
     rel = rel.replace(os.sep, "/")
     return WORKTREE_PREFIX.sub("", rel)
+
+
+def hook_target(path: str, cwd: str) -> tuple[str, str]:
+    """hook 入力の対象パスから (判定に使うルート, そのルート相対のパス) を返す。
+
+    hook は起動したセッションの cwd で動く。relations の相手リポジトリへ別のリポジトリの
+    セッションから書くとき、cwd のルートで相対化すると相手のパスは `../<相手>/...` になり、
+    検査範囲 (scope) の外として素通りする。対象ファイルの場所から辿ったリポジトリが `kasane/` を
+    持つなら、そのリポジトリをルートにして、そのリポジトリの config で判定する。
+    リポジトリ外・`kasane/` の無いリポジトリのファイルは cwd のリポジトリ基準のまま。
+    相対パスは cwd 基準で絶対化してから相対化する (cwd がリポジトリのサブディレクトリのとき、
+    そのまま使うとルート相対にならず検査範囲から外れるため)。
+    """
+    base = repo_root(cwd)
+    if not path:
+        return base, ""
+    abs_path = path if os.path.isabs(path) else os.path.join(cwd, path)
+    d = os.path.dirname(os.path.realpath(abs_path))
+    while not os.path.isdir(d):
+        parent = os.path.dirname(d)
+        if parent == d:
+            break
+        d = parent
+    top = _git_toplevel(d)
+    if top and os.path.realpath(top) != os.path.realpath(base) and os.path.isdir(os.path.join(top, "kasane")):
+        return top, normalize_rel(abs_path, top)
+    return base, normalize_rel(abs_path, base)
 
 
 def _strip_comment(line: str) -> str:
@@ -379,6 +410,31 @@ def selftest() -> int:
             check(proc.returncode == 0 and denied == expect_deny, name,
                   f"期待 deny={expect_deny} / 実際 deny={denied}")
 
+        # cwd がサブディレクトリでも、相対パスはリポジトリルート相対に直して判定する
+        root_real = os.path.realpath(tmp)
+        check(hook_target("../vendor/new.md", os.path.join(tmp, "notes")) == (root_real, "vendor/new.md"),
+              "サブディレクトリの cwd からの相対パスをルート相対に直す")
+
+        # 別の Kasane プロジェクトへの書き込みは、そのプロジェクトの config で判定する
+        with tempfile.TemporaryDirectory() as other:
+            subprocess.run(["git", "init", "-q"], cwd=other, check=True, capture_output=True)
+            os.makedirs(os.path.join(other, "kasane"))
+            with open(os.path.join(other, "kasane", "config.yaml"), "w", encoding="utf-8") as f:
+                f.write("lint:\n  exclude:\n    - samples\n")
+            for name, seg, expect_deny in [
+                ("別プロジェクトへの違反の書き込みは deny", "notes", True),
+                ("別プロジェクトの lint.exclude のパスは通す", "samples", False),
+                ("cwd 側の lint.exclude は別プロジェクトに効かない", "vendor", True),
+            ]:
+                payload = {"tool_name": "Write", "cwd": tmp,
+                           "tool_input": {"file_path": os.path.join(other, seg, "new.md"),
+                                          "content": "log: /Users/taro/proj/build.log"}}
+                proc = subprocess.run([sys.executable, os.path.abspath(__file__), "--hook"],
+                                      input=json.dumps(payload), capture_output=True, text=True)
+                denied = '"deny"' in proc.stdout
+                check(proc.returncode == 0 and denied == expect_deny, name,
+                      f"期待 deny={expect_deny} / 実際 deny={denied}")
+
     print(f"\n自己テスト: {'全件 OK' if not failures else f'{failures} 件 NG'}")
     return 1 if failures else 0
 
@@ -424,14 +480,18 @@ def hook() -> int:
     except Exception:
         return 0
     cwd = data.get("cwd") or os.getcwd()
-    root = repo_root(cwd)
-    excludes = load_excludes(root)
+    excludes_by_root: dict[str, list[str]] = {}
+    targets: dict[str, tuple[str, str]] = {}  # 同じファイルへの複数編集で git を呼び直さない
     hits: list[str] = []
     for path, text in texts_from_hook_input(data):
         if is_self_file(path):
             continue
-        rel = normalize_rel(path, root) if path else ""
-        if rel and is_excluded(rel, excludes):
+        if path not in targets:
+            targets[path] = hook_target(path, cwd)
+        root, rel = targets[path]
+        if root not in excludes_by_root:
+            excludes_by_root[root] = load_excludes(root)
+        if rel and is_excluded(rel, excludes_by_root[root]):
             continue
         for i, line in enumerate(text.splitlines(), 1):
             if is_violation(line):

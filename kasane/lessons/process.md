@@ -1,6 +1,6 @@
 ---
 scope: process
-timestamp: 2026-10-04
+timestamp: 2026-10-08
 ---
 
 # lessons: process
@@ -14,3 +14,4 @@ timestamp: 2026-10-04
 - [L-007] レビュー・セカンドオピニオンを起動する前に、渡す成果物が実態を反映しているかを確認する。確認済みで反映すべきものは 2 つ — (1) 既知の切り出し済み先送り問題 (関連 change のスタブ一覧と 1 行サマリ)、(2) 実施済みだが成果物に未反映の作業 (tasks.md のチェック・証跡ファイルの追加)。レビュアー、特にプロジェクト文脈を持たない相方は成果物だけを見るため、実態とのずれはそのまま blocking Major になり、判定の突き合わせとオーナー確認の往復が変更のたびに再発する。経緯は [details/known-deferred-issues-not-passed-to-reviewers.md](details/known-deferred-issues-not-passed-to-reviewers.md)。(昇格: 2026-08-31、出典: timepickercell-color-adjust / datepickercell-today-shortcut / add-verification-ci)
 - [L-008] `workers.*: counterpart` のプロジェクトで委譲パッケージを書くときは、counterpart の sandbox が届かない範囲を先に確認する。作業の一部だけが届かない (外部ボリューム上での `trash` 削除・dot ディレクトリ配下の既存ファイル編集) なら、その部分を指揮側 (ホスト) の担当に切り分けて同じ委譲に混ぜない。作業の完了条件が届かない (Simulator / Emulator での実行を完了条件とするタスク — codex sandbox は CoreSimulator へ接続できない) なら、切り分けでは解決しないため、その change ではワーカーの backend を host に切り替える。委譲前にゲートとなるコマンドをホストで 1 回通しておくと backend の選択を誤らない。経緯は [details/counterpart-sandbox-blocks-file-operations.md](details/counterpart-sandbox-blocks-file-operations.md)。(昇格: 2026-09-01、出典: consolidate-readmes-and-contribution (2 件) / fix-ios-test-pump-condition-wait)
 - [L-009] 合意済みスコープが名指ししていないファイルへ手を入れた瞬間に、同じ作業単位で `changes/<id>/deviation.md` へ 1 行書く。名指しの基準は、tasks.md を持つ変更では tasks が挙げたファイル、tasks.md を持たない S 級では exploration.md の決定事項が挙げた範囲。書く対象は付随修正 (`- [付随修正] <箇所>: <何を直したか>。理由: <一言> (YYYY-MM-DD)`) と、決定事項と違う形に落ち着いた実装 (レビュー指摘で設計・修正先が変わった場合を含む) の両方で、既存の付随修正を別ファイル・別箇所へ広げたときも行を足す。実装フェーズの終わりや蒸留時にまとめて書こうとすると、lint を通すための設定変更・メッセージ文言の追随・「指摘に従っただけ」と感じる数行修正から漏れる。事後判定: `git show --stat` に現れるファイルのうち合意済みスコープが名指ししていないものが、すべて deviation.md の行に箇所として現れている。経緯は [details/incidental-fix-recorded-after-the-fact-in-deviation.md](details/incidental-fix-recorded-after-the-fact-in-deviation.md)。(昇格: 2026-09-07、出典: add-consumer-verification / skills-install-version-drift / english-diagnostic-messages)
+- [L-010] ワーカーにテスト・ビルドを含むタスクを委譲している間は、指揮側が同じビルドツリーでビルド・テスト・`clean`・デーモン停止を実行しない。レビューと verify のように読み取りの役割どうしでも、ソースを一時的に書き換えうるものは同じ作業ツリーで並行させず、逐次に起動する。レビューは、実装の完了報告で対象のファイルの shasum を固定してから起動し、レビュー中に実装へ修正を頼まない (頼むならレビューを止めてから)。レビュアーの改変は作業用ディレクトリの写しで行わせる。経緯は [details/build-tree-shared-by-orchestrator-and-worker.md](details/build-tree-shared-by-orchestrator-and-worker.md)。(昇格: 2026-10-08、出典: colorPrimary 宣言元参照への是正 (2026-08-11、change なし) / picker-selection-after-dismiss / android-test-hang-calendar-then-compose-scroll-control)

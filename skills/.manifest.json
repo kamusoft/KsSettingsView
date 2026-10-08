@@ -1,9 +1,9 @@
 {
   "version": 3,
-  "generatedAt": "2026-10-03T16:48:37Z",
+  "generatedAt": "2026-10-08T01:10:42Z",
   "concepts": {
-    "android/api/android-compose.md": "ae0ffd58ccbf9c7cd26ca176dfba7917b1abcc94f06f60446422c4e581c6b1a4",
-    "android/api/android-native-host.md": "8534e99a533b941a44fc8b07f49cbf88620736f27dada7881832438e4c390f87",
+    "android/api/android-compose.md": "8449a63a057b0e75b1921b427c0256cfaa84857978336e597957271644eb7c0e",
+    "android/api/android-native-host.md": "f1a86586a0955083c747cbde5ae81f86f9ad4d96193e62667ed3612aa3eaf944",
     "android/architecture/build-toolchain.md": "f9c2264aa7e5c8f31a92ddbf57583e84b07835c1c477315e3626738daf816cd8",
     "core/architecture/cell-renderer-registry.md": "ec4662e4ce6d69bdfc2de8d99a33e9bb7b949d52ba7124899687073b5af962b1",
     "core/architecture/declarative-tree-identity.md": "e606623d24df1d0ef571af44f6ec9a220977522397dbbdb587adddd9126d96ea",
@@ -14,7 +14,7 @@
     "core/architecture/store-and-update-streams.md": "13455b557b7f443b69be13e63ce6d822b233cd30d0ca66ab61ee49a2a6eee49b",
     "core/cells/basic-cells.md": "2db1db9ea34c04f105bfc1e8cdcd366a9ea96f39719e32faa93aebbbf5519488",
     "core/cells/custom-cell.md": "f4cfdba4662b6e3c4a8867ed297846b34bff123a9eb89028e129dac80dcefab0",
-    "core/cells/date-picker-selection-surface.md": "f06fa8e6836dd05c4812af078f4e510a3d8f507786d4ad71ec3b0c25f43f34be",
+    "core/cells/date-picker-selection-surface.md": "e90d6c28e18448436a9159470c9cc81b2073d516a933ec7ce217fbb33a8bcd90",
     "core/cells/input-cells.md": "7efb6f8ae3fb907796bfc3619129f6328c90b907414e83470eadfcae4ff78ec2",
     "core/cells/ks-image.md": "00c6fe74b223639e6ac7c38c6708d523f3ff1bc0b951ccd5f1db5ed6a4f6b480",
     "core/cells/number-picker-selection-surface.md": "10888201879594bccfe0445603260c71c576eb24bfedb82a8011acdfd5988435",
@@ -215,15 +215,7 @@
     "README_ja.md"
   ],
   "lastUpdatedFiles": [
-    "README.md",
-    "README_ja.md",
-    "skills/en/kssettingsview-aiforms-migration/SKILL.md",
-    "skills/en/kssettingsview-aiforms-migration/references/api-mapping.md",
-    "skills/en/kssettingsview-android/SKILL.md",
-    "skills/en/kssettingsview-maui/SKILL.md",
-    "skills/ja/kssettingsview-aiforms-migration/SKILL.md",
-    "skills/ja/kssettingsview-aiforms-migration/references/api-mapping.md",
-    "skills/ja/kssettingsview-android/SKILL.md",
-    "skills/ja/kssettingsview-maui/SKILL.md"
+    "skills/en/kssettingsview-android/references/updates.md",
+    "skills/ja/kssettingsview-android/references/updates.md"
   ]
 }

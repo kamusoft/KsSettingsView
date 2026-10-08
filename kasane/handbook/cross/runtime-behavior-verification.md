@@ -63,9 +63,9 @@ Host の作り直しは次の操作で起こす。作り直す前に、先頭か
 
 | 対象 | 作り直しの起こし方 |
 |---|---|
-| MAUI (両 OS) | 戻る操作で Pop したページと同じインスタンスをもう一度 Push する (Sample の「離れて戻る（Handler 切断 → 再接続）」、MauiHost のページ再訪問)。上に別のページを Push して戻るだけでは Host は作り直されず、観測にならない |
+| MAUI (両 OS) | 戻る操作で Pop したページと同じインスタンスをもう一度 Push する (Sample の「離れて戻る（Handler 切断 → 再接続）」、MauiHost のページ再訪問)。上に別のページを Push して戻るだけでは Host は作り直されず、観測にならない。ページが重なる構成そのものを確かめるときは、Sample のナビゲーションバーの「次のデモへ進む」で SettingsView のページを積む (Android では、上に積むと下のページの View は階層から外れる) |
 | Android の Activity | 夜間モードの切り替え (`adb shell cmd uimode night yes` / `no`) か画面の回転。Navigation Compose の `NavHost` 配下の画面 (Android Sample のデモ画面はこれに当たる) で行う — `NavHost` は Activity の保存の後に画面の状態を保存し直すため、`NavHost` の外で確かめても観測にならない |
-| Android の Navigation Compose | `NavHost` 配下の画面から別の画面へ進んで戻る (Sample のデモ画面には進む先が無いため、進む先のある構成で確かめる) |
+| Android の Navigation Compose | `NavHost` 配下の画面から別の画面へ進んで戻る (Sample のデモ画面の上部バーの「次のデモへ進む」で KsSettingsView の画面へ、「メニューを開く」で KsSettingsView を使わない画面へ進む。行き先が KsSettingsView の場合と、その後に使わない画面へ進んで戻る場合の両方を見る) |
 
 一方向の着地は、アプリを起動し直した直後の 1 回目の命令で見る。行の高さが推定のまま実測で確定していない間のほうが、スクロール中に行き先が手前へ移って行き過ぎが出やすい。2 回目以降は高さが確定していて、行き過ぎがあっても現れにくい。
 

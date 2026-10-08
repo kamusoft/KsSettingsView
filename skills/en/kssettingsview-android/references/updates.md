@@ -552,7 +552,16 @@ override fun onCreate(savedInstanceState: Bundle?) {
 }
 ```
 
-The saved state is keyed by the view id. When several `KsSettingsView`s in one view hierarchy keep the library's default id - two `KsSettingsView` Composables on one screen, or XML views without an `android:id` - none of them saves or restores the position. Give each XML view an `android:id` of its own.
+The saved state is keyed by the view id, and a `KsSettingsView` view without an id of its own gets the library's default id. Views that keep the default id and are saved into the same container would overwrite each other, so in that setup none of them saves or restores the position - and the calendar dialog of `DatePickerCell` does not come back after a rotation either. What counts is the container the state is saved into, not the whole window.
+
+| Where the views are | Restored with the default id |
+|---|---|
+| `KsSettingsView` Composables - on several screens or tabs, or several on one screen | Yes |
+| One view per Fragment | Yes |
+| Two or more placed directly in the layout of one activity | No |
+| Two or more inside one Fragment, or inside one `AndroidView` of your own | No |
+
+In the "No" setups, give each view an id of its own - a distinct `android:id` in XML - and each one returns to its own position. The Composable needs no id.
 
 ## Carry the scroll position into a view you rebuild yourself
 

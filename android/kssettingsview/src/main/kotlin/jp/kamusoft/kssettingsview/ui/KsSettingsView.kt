@@ -238,12 +238,15 @@ public class KsSettingsView @JvmOverloads constructor(
     private var scrollAnchorAtDetach: KsScrollAnchor? = null
 
     /**
-     * window に取り付けられている間に、ライブラリ既定の ID を持つ Host が同一階層に複数あったか。
+     * window に取り付けられている間に、ライブラリ既定の ID を持つ Host が同じ保存の入れ物に複数あったか
+     * （数える範囲は [saveContainerRoot]）。
      *
-     * 外れた後は親をたどれず数え直せないため、この判定を外れた後の保存状態の要否に使う（android/ADR-0021）。
-     * 外れる時点だけで数えると足りない。window から外れるときは Host が 1 つずつ外れ、Compose の
-     * `AndroidView` では外れた Host から順に階層を離れるため、後に外れる Host には先の Host が数えられない。
-     * そこで、同じ階層の Host がそろっているレイアウトの時点でも数えておく。
+     * 外れた後は親をたどれず数え直せないため、この判定を外れた後の保存状態の要否に使う
+     * （android/ADR-0021、android/ADR-0023）。Compose の `AndroidView` は、中の View を自身から取り外した後に
+     * 保存を求めるので、その時点の View からは入れ物の境目も見えない。
+     * 外れる時点だけで数えると足りない。window から外れるときは Host が 1 つずつ階層を離れるため、
+     * 後に外れる Host には先に離れた Host が数えられない。そこで、同じ入れ物の Host がそろっている
+     * レイアウトの時点でも数えておく。
      */
     private var wasAmbiguousWhileAttached: Boolean = false
 
@@ -590,7 +593,7 @@ public class KsSettingsView @JvmOverloads constructor(
 
     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
         super.onLayout(changed, left, top, right, bottom)
-        // 外れた後の保存状態の要否のため、同じ階層の Host がそろっているこの時点で複数あるかを数えておく。
+        // 外れた後の保存状態の要否のため、同じ保存の入れ物の Host がそろっているこの時点で複数あるかを数えておく。
         if (isAttachedToHostWindow) wasAmbiguousWhileAttached = hasAmbiguousLibraryDefaultId()
         // 内部 RecyclerView の行の配置が済んだこの時点で、反映とレイアウトを待っていたスクロール命令と
         // 位置の復元を実行する（取り付け前・画面外で受けたものを含む）。
@@ -1337,8 +1340,8 @@ public class KsSettingsView @JvmOverloads constructor(
      * 利用者から、開いていた選択面と途中まで進めた選択が失われる。破棄をまたぐ場合に選択面を
      * 閉じるのは、選択面自身がホストの破棄を購読して行う（[Dialog.showAnchoredTo]）。
      *
-     * ライブラリ既定の ID を持つインスタンスが同一階層に複数あるときは、保存先が互いに衝突して
-     * 状態が混ざるため保存しない。ホストが個別の ID を与えていれば衝突しない。
+     * ライブラリ既定の ID を持つインスタンスが同じ保存の入れ物に複数あるときは、保存先が互いに衝突して
+     * 状態が混ざるため保存しない（android/ADR-0023）。ホストが個別の ID を与えていれば衝突しない。
      *
      * window から外れた後に求められたとき (Compose の `SaveableStateHolder` が画面の破棄時に保存し直す
      * 場合) は、外れる直前に控えた位置と保存の要否を使う。
@@ -1378,23 +1381,49 @@ public class KsSettingsView @JvmOverloads constructor(
     }
 
     /**
-     * ライブラリ既定の ID を持つ [KsSettingsView] が、同一の View 階層に複数あるか。
+     * ライブラリ既定の ID を持つ [KsSettingsView] が、自身と同じ保存の入れ物に複数あるか。
      *
-     * インスタンス状態は ID をキーに保存されるため、既定 ID のインスタンスが複数あると
-     * 互いの状態を上書きし合う。所有者を一意に決められない構成では復元へ進まない。
+     * インスタンス状態は入れ物ごとに ID をキーにして保存されるため、同じ入れ物に既定 ID の
+     * インスタンスが複数あると互いの状態を上書きし合う。所有者を一意に決められない構成では
+     * 保存にも復元にも進まない。別の入れ物へ保存されるインスタンスとは衝突しないので、数えるのは
+     * [saveContainerRoot] 以下のうち、同じ入れ物へ保存される範囲に限る（android/ADR-0023）。
      */
     private fun hasAmbiguousLibraryDefaultId(): Boolean {
         if (id != R.id.ks_settings_view) return false
-        return countLibraryDefaultIdViews(rootView) > 1
+        val root = saveContainerRoot()
+        return countLibraryDefaultIdViews(root, root) > 1
     }
 
-    /** [view] 以下にある、ライブラリ既定の ID を持つ [KsSettingsView] の数を数える。 */
-    private fun countLibraryDefaultIdViews(view: View): Int {
+    /**
+     * 自身の状態が書き込まれる保存の入れ物を共有する範囲の根。
+     *
+     * 保存の入れ物を分けるホスト（Compose の `AndroidView`、AndroidX Fragment など）は、分けた範囲の根に
+     * 「親からの保存を受けない」設定（[View.isSaveFromParentEnabled] が `false`）を付ける。自身から親へ
+     * たどって最初に当たるその View を根とする（自身に付いていれば自身）。当たらなければ、たどり着いた
+     * 最上位の View が根になり、階層全体を 1 つの入れ物として数える（android/ADR-0023）。
+     */
+    private fun saveContainerRoot(): View {
+        var current: View = this
+        while (current.isSaveFromParentEnabled) {
+            current = current.parent as? View ?: break
+        }
+        return current
+    }
+
+    /**
+     * [view] 以下にある、ライブラリ既定の ID を持つ [KsSettingsView] のうち、[containerRoot] と同じ
+     * 保存の入れ物へ保存されるものの数を数える。
+     *
+     * [containerRoot] 以外の「親からの保存を受けない」View の下へは降りない。その下は別の入れ物へ
+     * 保存され、[containerRoot] の入れ物には書き込まれないためである（android/ADR-0023）。
+     */
+    private fun countLibraryDefaultIdViews(view: View, containerRoot: View): Int {
+        if (view !== containerRoot && !view.isSaveFromParentEnabled) return 0
         if (view is KsSettingsView) return if (view.id == R.id.ks_settings_view) 1 else 0
         if (view !is ViewGroup) return 0
         var count = 0
         for (index in 0 until view.childCount) {
-            count += countLibraryDefaultIdViews(view.getChildAt(index))
+            count += countLibraryDefaultIdViews(view.getChildAt(index), containerRoot)
         }
         return count
     }
