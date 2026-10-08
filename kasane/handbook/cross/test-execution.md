@@ -2,10 +2,10 @@
 kind: rule
 applies-when:
   always: false
-  tasks: [テスト実行, テスト結果の報告]
+  tasks: [テスト実行, テスト結果の報告, Android の Robolectric テストの作成]
 title: テスト実行規約
 description: iOS / Android / MAUI のテストの正しい実行コマンドと、黙って検証にならない範囲 (macOS 上の swift test で失われるテスト・Robolectric の描画検証限界・MAUI facade テストが触らない platform TFM)。収束を待つアサーションの書き方は platform 共通
-timestamp: 2026-10-04
+timestamp: 2026-10-08
 ---
 
 # テスト実行規約
@@ -130,8 +130,9 @@ cd android
 ./gradlew test
 ```
 
-- Gradle ビルドルートは `android/`。テストは Robolectric を含む JVM 単体テストで、debug / release の両 variant が実行される (2026-10-04 実測: 1587 件 × 2 = 3174 件。件数は変動する)。instrumented test (`androidTest/`) は現状存在しない
+- Gradle ビルドルートは `android/`。テストは Robolectric を含む JVM 単体テストで、debug / release の両 variant が実行される (2026-10-07 実測: 1594 件 × 2 = 3188 件。件数は変動する)。instrumented test (`androidTest/`) は現状存在しない
 - Gradle は up-to-date なテストタスクをスキップするため、**差分なしの再実行は「テスト 0 件で BUILD SUCCESSFUL」になり得る**。全件を確実に回し直して件数を確認するときは `--rerun-tasks` を付ける
+- `--rerun-tasks` も `clean` も付けない実行では、Gradle が前回失敗したテストクラスを先に走らせ、クラスの実行順が変わる。実行順に依存する失敗を切り分けるときは、この性質で順序を入れ替えられる
 - 反復中に絞り込むときは `./gradlew :kssettingsview:testDebugUnitTest --tests '<クラス名のパターン>'` を使えるが、**完了判定には絞り込みなしの全件実行を使う** (iOS と同じ規律)
 
 実行件数はコンソールに出ない。各モジュールの `build/test-results/testDebugUnitTest/TEST-*.xml` (release は `testReleaseUnitTest/`) の `tests` / `failures` 属性の合計、または `build/reports/tests/testDebugUnitTest/index.html` で確認する。**ディレクトリ名は variant 名 (`debug` / `release`) ではなくタスク名**であり、`debugUnitTest` 等と読み替えると集計対象が 0 件になる。
@@ -149,9 +150,42 @@ Robolectric の既定 (legacy graphics モード) では一部の描画処理が
 | 実 ellipsize (末尾省略の発生) | legacy graphics では `TextUtils.ellipsize` が動作せず、`Layout.getEllipsisCount` が**常に 0 を返す** | クラスへ `@GraphicsMode(GraphicsMode.Mode.NATIVE)` を付けて実 Skia を動かす (Robolectric nativeruntime の取得を伴い、起動コストと CI の環境依存が増える) |
 | singleLine な TextView の実描画位置 | `isSingleLine = true` の TextView は内部 `Layout` の幅が `VERY_WIDE` (約 100 万 px) になり、`Layout` 座標は View 座標と一致しない。`root.draw(Canvas)` を呼ぶだけでは補正が入らない | `viewTreeObserver.dispatchOnPreDraw()` で `TextView.bringTextIntoView()` の `scrollX` 補正を発火させてから `layout.getLineLeft(0) - scrollX` で測る。得られる値は **content box (padding を除いた領域) の左端起点**。この経路は実機で毎フレーム描画前に走る補正そのものなので Robolectric 固有の抜け道ではない |
 
-### カレンダーの選択面を提示した後に `idle()` を呼ばない
+### カレンダーの選択面を提示した後に looper を空にしない
 
-Compose の `DatePicker` を載せたカレンダーの選択面 (`DateCalendarDialog`) を Robolectric で提示した後に `shadowOf(Looper.getMainLooper()).idle()` を呼ぶと、Compose の `PopupLayout.pollForLocationOnScreenChange` が main looper を占有して `idle()` が戻らず、テストが無言で固まる。カレンダーを提示するテストでは提示後の `idle()` を避け、観測したい状態を条件ベース待機 (上の「収束を待つアサーション」) か、提示前に済ませておく (適用実例: `android/kssettingsview/src/test/kotlin/jp/kamusoft/kssettingsview/ui/DateCalendarDialogTest.kt` / `DateCalendarRecreationTest.kt` の流儀)。ボトムシート系の選択面 (`PickerSelectionSheet` 等) にはこの制約は無い。
+Compose の `DatePicker` を載せたカレンダーの選択面 (`DateCalendarDialog`) を提示した後に main looper を空にすると、テストが無言で固まる。選択面の中の Compose の `Popup` が毎フレーム次のフレームを要求し (`PopupLayout.pollForLocationOnScreenChange`)、Robolectric は要求のたびにその場でフレームを配るので、キューが空にならない。
+
+固まるのは、テストが自分で呼ぶ `shadowOf(Looper.getMainLooper()).idle()` だけではない。Robolectric の `ActivityController` は `setup()` / `visible()` / `recreate()` の中で同じ処理を呼ぶ。選択面が提示されている状態でこれらを通るテストは、次のどちらかで書く。
+
+| テストの形 | 書き方 | 適用実例 |
+|---|---|---|
+| 提示した後に looper を空にする必要が無い | 提示後の `idle()` を避け、観測したい状態を条件ベース待機か、提示前に済ませる | `android/kssettingsview/src/test/kotlin/jp/kamusoft/kssettingsview/ui/DateCalendarDialogTest.kt` |
+| 提示したまま Activity を作り直す (`recreate()` を通る) | テストクラスに公式の Compose テスト用 rule (`createEmptyComposeRule()`) を足す。フレームが rule の時計で進むので、キューが空になる | `android/kssettingsview/src/test/kotlin/jp/kamusoft/kssettingsview/ui/DateCalendarRecreationTest.kt` |
+
+終わらないアニメーションを含む Compose を Activity の中身にして `setup()` を呼ぶ形も、同じ理由で固まる (2026-10-08 実測)。ボトムシート系の選択面 (`PickerSelectionSheet` 等) にはこの制約は無い。テストの終わりに選択面を表示したままにするのは構わない (次の節の片付けが閉じる)。
+
+### テストの終わりの片付け (`kssettingsview` モジュール)
+
+`kssettingsview` の Robolectric のテストは、テストごとの終わりに共通の片付けが走る。テスト用の Application (`android/kssettingsview/src/test/kotlin/jp/kamusoft/kssettingsview/MainLooperDrainingApplication.kt`) が、表示中のダイアログを閉じ、残る window を取り外してから、main looper を空にする。`src/test/resources/robolectric.properties` の `application=` で全テストに掛かる。
+
+片付けが要るのは、Compose のプロセス共有の dispatcher (`AndroidUiDispatcher.Main`) が Robolectric のテストごとの初期化をまたいで残るためである。テストが消化されない予約を残して終わると、Robolectric はキューだけを捨て、dispatcher の「予約済み」の印が JVM の終わりまで残る。印が残った JVM では、後続のテストで rule も `ComposeFrameDriver` も通さない Compose が最初の合成だけで止まり、rule を使うテストも順序が狂って落ちる ([出典](../../changes/archive/2026-10-08-android-test-hang-calendar-then-compose-scroll-control/exploration.md))。
+
+テストを書く側が知っておくこと:
+
+- 選択面やダイアログを表示したままテストを終えてよい。表示したまま終えたダイアログの dismiss リスナーは、テストの終わりに呼ばれる
+- テストの終わりにキューへ残っていた処理は、捨てられずに実行される。その処理が例外を投げると、そのテストが失敗する (本体が既に失敗しているときは本体の失敗が報告される)
+- window に載っていない発生源 (フレームを待ち続けるコルーチン、自分を登録し直し続ける callback) を残すと、片付けが 100,000 件で打ち切られ、そのテストが失敗する。この失敗が出た実行では、後続のテストの結果を当てにしない
+- この片付けを外さない。`robolectric.properties` を消す・別の Application に差し替えるときは、実行順を入れ替えた全件実行 (「Android の実行方法」) で `ComposeScrollControlTest` が通ることを確かめる
+
+片付けは既知の漏れ方を防ぐもので、プロセス共有の状態そのものは初期化しない。次の使い方は、片付けでは守れない (2026-10-08 実測。該当するテストは現状存在しない):
+
+| 使い方 | 起きること |
+|---|---|
+| 仮想の時計を約 100 秒以上進めて終える | 後続のテストの終わりの片付けが打ち切りに達して、後続のテストが落ちうる。遅れは同じ JVM のそれ以降のテストに残る (現状の最大は約 6 秒) |
+| フレームの配信を止める API (`ShadowChoreographer.setPaused`) と Compose を併用する | 同じ JVM の後続のテストで Compose の再合成が届かない。先に Compose を使ったテストがあるときは、そのテストの中でも届かない |
+| `@Config(application = ...)` で別の Application を指定する | そのテストには片付けが掛からない |
+| ダイアログ以外の window を外す処理をキューに残して終える | 終わりにその処理が実行され、外す相手が無いので例外でそのテストが落ちる |
+
+片付けや同種の後始末を書き換えるときは、次の 2 点を守る。表示した直後の window は `isAttachedToWindow` が偽のままなので、表示中かどうかの判定に使わない。main looper を流した後にキューを見直して空かを判定しない (他スレッドの投稿と競合する。流している間の観測で決める)。
 
 ### 非同期反映を待たないアサーション
 
