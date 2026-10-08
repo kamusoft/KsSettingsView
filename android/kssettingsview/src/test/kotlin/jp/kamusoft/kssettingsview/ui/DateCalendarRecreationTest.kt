@@ -11,6 +11,7 @@ import androidx.core.os.BundleCompat
 import androidx.compose.material3.DisplayMode
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.recyclerview.widget.RecyclerView
 import androidx.test.core.app.ApplicationProvider
 import jp.kamusoft.kssettingsview.R
@@ -24,6 +25,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
@@ -131,6 +133,18 @@ class DateCalendarRecreationTest {
             var separatesSaveContainers: Boolean = false
         }
     }
+
+    /**
+     * 選択面の Compose を、Compose のテスト基盤が管理するフレームで動かす。
+     *
+     * Activity の再生成（`ActivityController.recreate`）は、Robolectric の内部でメインスレッドの
+     * キューを流し切る。再生成で提示し直された選択面は Compose の `Popup` を含み、これが毎フレーム
+     * 次のフレームを要求し続けるため、既定のままでは流し切りが終わらない（Robolectric は
+     * フレームの要求を受けるたびに、次のフレームをその場で配る）。この rule の下では、選択面の
+     * Compose は rule が用意する `Recomposer` とフレームの時計で動き、流し切りが終わる。
+     */
+    @get:Rule
+    val composeRule = createEmptyComposeRule()
 
     private var controller: ActivityController<HostActivity>? = null
 
