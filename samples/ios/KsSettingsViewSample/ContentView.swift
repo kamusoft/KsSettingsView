@@ -53,6 +53,13 @@ struct ContentView: View {
                         NavigationLink(screen.title) { screen.destination }
                     }
                 }
+
+                // スクリーンショット撮影用の見本 (iOS のみ。パリティ対象外)。
+                SwiftUI.Section("撮影用") {
+                    ForEach(ShowcaseScreen.allCases) { screen in
+                        NavigationLink(screen.title) { screen.destination }
+                    }
+                }
             }
             .navigationTitle("KsSettingsView Sample")
         }
