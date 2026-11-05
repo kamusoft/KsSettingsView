@@ -174,9 +174,14 @@ enum ShowcaseIcon {
         }
     }()
 
-    /// 撮影用 Theme。色は既定 (OS の外観に追随) のまま、アクセントとアイコン寸法だけを決める。
+    /// 撮影用 Theme。下地を明るいグレー・Cell を白にして (ダークでは OS の対応色)、
+    /// Modern の角丸の箱がライトでも見えるようにする。色はすべて OS の外観に追随する。
     static let theme = Theme(
+        backgroundColor: .systemGroupedBackground,
+        cellBackgroundColor: .secondarySystemGroupedBackground,
         cellAccentColor: .systemGreen,
+        headerBackgroundColor: .systemGroupedBackground,
+        footerBackgroundColor: .systemGroupedBackground,
         cellIconSize: SampleIconBadge.size,
         cellIconRadius: SampleIconBadge.cornerRadius
     )
