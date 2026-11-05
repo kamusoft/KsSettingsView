@@ -38,7 +38,7 @@ enum SampleIconBadge {
     /// - Parameters:
     ///   - systemName: SF Symbols 名
     ///   - background: バッジの地色
-    private static func make(systemName: String, background: UIColor) -> UIImage {
+    static func make(systemName: String, background: UIColor) -> UIImage {
         let canvas = CGSize(width: size, height: size)
         return UIGraphicsImageRenderer(size: canvas).image { context in
             background.setFill()
