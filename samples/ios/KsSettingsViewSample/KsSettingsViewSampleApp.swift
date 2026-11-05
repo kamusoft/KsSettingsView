@@ -14,7 +14,14 @@ import SwiftUI
 struct KsSettingsViewSampleApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            // 起動引数 `--showcase <画面>` があれば撮影用の画面だけを表示する (ShowcaseScreen.swift)。
+            if let showcase = ShowcaseScreen.launchTarget {
+                NavigationStack {
+                    showcase.destination
+                }
+            } else {
+                ContentView()
+            }
         }
     }
 }
